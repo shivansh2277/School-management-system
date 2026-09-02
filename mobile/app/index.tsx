@@ -1,0 +1,123 @@
+import { Redirect } from "expo-router";
+import { useState } from "react";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+import { useAuth, type Role } from "../src/auth/AuthContext";
+import { Button, Loading, s } from "../src/components/ui";
+import { theme } from "../src/theme";
+
+/** Demo credentials are printed on the login screen so a reviewer gets in unaided. */
+const DEMO: Record<Role, { loginId: string; password: string; hint: string }> = {
+  student: { loginId: "SPS2024001", password: "Student@123", hint: "Admission number" },
+  parent: { loginId: "9876500001", password: "Parent@123", hint: "Registered mobile number" },
+  teacher: { loginId: "TCH001", password: "Teacher@123", hint: "Employee ID" },
+};
+
+const ROLES: Role[] = ["student", "parent", "teacher"];
+
+export default function Login() {
+  const { me, loading, login } = useAuth();
+  const [role, setRole] = useState<Role>("student");
+  const [loginId, setLoginId] = useState(DEMO.student.loginId);
+  const [password, setPassword] = useState(DEMO.student.password);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  if (loading) return <Loading />;
+  if (me) return <Redirect href={`/(${me.user.role})/dashboard`} />;
+
+  const pickRole = (next: Role) => {
+    setRole(next);
+    setLoginId(DEMO[next].loginId);
+    setPassword(DEMO[next].password);
+    setError(null);
+  };
+
+  const submit = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await login(role, loginId.trim(), password);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.ground }}>
+      <ScrollView contentContainerStyle={{ padding: 20, gap: 16, flexGrow: 1, justifyContent: "center" }}>
+        <View style={{ gap: 4 }}>
+          <Text style={{ fontSize: 22, fontWeight: "700", color: theme.ink }}>
+            Sunrise Public School
+          </Text>
+          <Text style={{ color: theme.inkSoft }}>Sign in to continue</Text>
+        </View>
+
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          {ROLES.map((r) => (
+            <Pressable
+              key={r}
+              onPress={() => pickRole(r)}
+              style={{
+                flex: 1,
+                paddingVertical: 10,
+                borderRadius: theme.radius.input,
+                alignItems: "center",
+                backgroundColor: role === r ? theme.primary : theme.surface,
+                borderWidth: 1,
+                borderColor: role === r ? theme.primary : theme.rule,
+              }}
+            >
+              <Text
+                style={{
+                  color: role === r ? "#fff" : theme.inkSoft,
+                  fontWeight: "600",
+                  textTransform: "capitalize",
+                }}
+              >
+                {r}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <View style={{ gap: 10 }}>
+          <Text style={s.meta}>{DEMO[role].hint}</Text>
+          <TextInput
+            style={s.input}
+            value={loginId}
+            onChangeText={setLoginId}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <TextInput
+            style={s.input}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            autoCapitalize="none"
+          />
+        </View>
+
+        {error ? <Text style={{ color: theme.danger }}>{error}</Text> : null}
+
+        <Button label={busy ? "Signing in..." : "Sign in"} onPress={submit} disabled={busy} />
+
+        <View style={{ gap: 2 }}>
+          <Text style={s.meta}>Demo accounts</Text>
+          {ROLES.map((r) => (
+            <Text key={r} style={s.meta}>
+              {r}: {DEMO[r].loginId} / {DEMO[r].password}
+            </Text>
+          ))}
+          <Text style={[s.meta, { marginTop: 6 }]}>
+            Admin signs in on the web dashboard, not this app.
+          </Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}

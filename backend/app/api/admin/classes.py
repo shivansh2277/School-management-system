@@ -1,0 +1,188 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.core.db import get_db
+from app.core.deps import require_role
+from app.models import (
+    ClassSection,
+    ClassSubjectTeacher,
+    Homework,
+    HomeworkSubmission,
+    Student,
+    Subject,
+    Teacher,
+    TimetableSlot,
+    User,
+    UserRole,
+)
+from app.schemas.common import HomeworkOut, SlotOut
+from app.services import homework as homework_svc
+from app.services.common import roster, section_labels, subject_names
+
+router = APIRouter(prefix="/admin", tags=["admin"])
+admin_only = require_role(UserRole.admin)
+
+
+class ClassCreate(BaseModel):
+    class_name: str
+    section: str
+    academic_year: str
+    class_teacher_id: int | None = None
+
+
+class ClassUpdate(BaseModel):
+    class_teacher_id: int | None = None
+
+
+def _row(db: Session, c: ClassSection) -> dict:
+    subjects = subject_names(db)
+    owned = db.scalars(
+        select(ClassSubjectTeacher).where(ClassSubjectTeacher.class_section_id == c.id)
+    ).all()
+    teacher = db.get(Teacher, c.class_teacher_id) if c.class_teacher_id else None
+    return {
+        "id": c.id,
+        "class_name": c.class_name,
+        "section": c.section,
+        "class_label": c.label,
+        "academic_year": c.academic_year,
+        "class_teacher_id": c.class_teacher_id,
+        "class_teacher": teacher.user.full_name if teacher else None,
+        "student_count": db.query(Student).filter(Student.class_section_id == c.id).count(),
+        "subjects": sorted(subjects[o.subject_id] for o in owned),
+    }
+
+
+@router.get("/classes")
+def list_classes(user: User = Depends(admin_only), db: Session = Depends(get_db)) -> list[dict]:
+    return [
+        _row(db, c)
+        for c in db.scalars(select(ClassSection).order_by(ClassSection.class_name, ClassSection.section))
+    ]
+
+
+@router.post("/classes", status_code=status.HTTP_201_CREATED)
+def create_class(
+    body: ClassCreate, user: User = Depends(admin_only), db: Session = Depends(get_db)
+) -> dict:
+    exists = db.scalar(
+        select(ClassSection).where(
+            ClassSection.class_name == body.class_name,
+            ClassSection.section == body.section,
+            ClassSection.academic_year == body.academic_year,
+        )
+    )
+    if exists:
+        raise HTTPException(status.HTTP_409_CONFLICT, "This class section already exists")
+    c = ClassSection(**body.model_dump())
+    db.add(c)
+    db.commit()
+    return _row(db, c)
+
+
+@router.patch("/classes/{class_id}")
+def update_class(
+    class_id: int,
+    body: ClassUpdate,
+    user: User = Depends(admin_only),
+    db: Session = Depends(get_db),
+) -> dict:
+    c = db.get(ClassSection, class_id)
+    if c is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Class section not found")
+    if body.class_teacher_id is not None:
+        c.class_teacher_id = body.class_teacher_id
+    db.commit()
+    return _row(db, c)
+
+
+@router.get("/classes/{class_id}/students")
+def class_roster(
+    class_id: int, user: User = Depends(admin_only), db: Session = Depends(get_db)
+) -> list[dict]:
+    return [
+        {
+            "id": s.id,
+            "full_name": s.user.full_name,
+            "roll_no": s.roll_no,
+            "admission_no": s.admission_no,
+        }
+        for s in roster(db, class_id)
+    ]
+
+
+@router.get("/subjects")
+def list_subjects(user: User = Depends(admin_only), db: Session = Depends(get_db)) -> list[dict]:
+    return [
+        {"id": s.id, "name": s.name, "code": s.code}
+        for s in db.scalars(select(Subject).order_by(Subject.name))
+    ]
+
+
+@router.get("/timetable", response_model=list[SlotOut])
+def timetable(
+    class_section_id: int, user: User = Depends(admin_only), db: Session = Depends(get_db)
+) -> list[SlotOut]:
+    labels = section_labels(db)
+    subjects = subject_names(db)
+    teachers = {t.id: t.user.full_name for t in db.scalars(select(Teacher))}
+    slots = db.scalars(
+        select(TimetableSlot)
+        .where(TimetableSlot.class_section_id == class_section_id)
+        .order_by(TimetableSlot.day_of_week, TimetableSlot.period_no)
+    )
+    return [
+        SlotOut(
+            period=s.period_no,
+            day_of_week=s.day_of_week,
+            start_time=s.start_time,
+            end_time=s.end_time,
+            class_section_id=s.class_section_id,
+            class_label=labels.get(s.class_section_id, ""),
+            subject=subjects.get(s.subject_id, ""),
+            teacher=teachers.get(s.teacher_id, ""),
+            room=s.room,
+        )
+        for s in slots
+    ]
+
+
+@router.get("/assignments", response_model=list[HomeworkOut])
+def assignments(
+    class_section_id: int | None = None,
+    user: User = Depends(admin_only),
+    db: Session = Depends(get_db),
+) -> list[HomeworkOut]:
+    """All homework across sections, read only (BLUEPRINT section 9 matrix)."""
+    q = select(Homework)
+    if class_section_id is not None:
+        q = q.where(Homework.class_section_id == class_section_id)
+    return homework_svc.to_out(db, list(db.scalars(q.order_by(Homework.due_date.desc()))))
+
+
+@router.get("/assignments/{homework_id}/submissions")
+def assignment_submissions(
+    homework_id: int, user: User = Depends(admin_only), db: Session = Depends(get_db)
+) -> list[dict]:
+    hw = db.get(Homework, homework_id)
+    if hw is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Homework not found")
+    submitted = {
+        s.student_id: s
+        for s in db.scalars(
+            select(HomeworkSubmission).where(HomeworkSubmission.homework_id == hw.id)
+        )
+    }
+    return [
+        {
+            "student_id": s.id,
+            "full_name": s.user.full_name,
+            "roll_no": s.roll_no,
+            "submitted": s.id in submitted,
+            "submitted_at": submitted[s.id].submitted_at if s.id in submitted else None,
+            "late": s.id in submitted and submitted[s.id].submitted_at.date() > hw.due_date,
+        }
+        for s in roster(db, hw.class_section_id)
+    ]

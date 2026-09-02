@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.venv/
+*.db
+backend/.env
+web/.env
+mobile/.env
+node_modules/
+dist/
+.expo/

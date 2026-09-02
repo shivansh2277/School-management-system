@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "Sunrise School",
+    "slug": "sunrise-school",
+    "scheme": "sunrise",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": { "backgroundColor": "#5B4BE0", "resizeMode": "contain" },
+    "ios": { "supportsTablet": true },
+    "android": { "package": "edu.sunrisepublic.app" },
+    "plugins": ["expo-router"],
+    "experiments": { "typedRoutes": false }
+  }
+}
