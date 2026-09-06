@@ -12,6 +12,7 @@ from app.api.admin import settings as admin_settings
 from app.api.admin import stats as admin_stats
 from app.api.admin import students as admin_students
 from app.api.admin import teachers as admin_teachers
+from app.api.public import admission as public_admission
 from app.api.parent import children as parent_children
 from app.api.parent import fees as parent_fees
 from app.api.student import academics as student_academics
@@ -42,6 +43,7 @@ for module in (
     teacher_homework, teacher_marks, teacher_announcements,
     student_dashboard, student_academics,
     parent_children, parent_fees,
+    public_admission,
 ):
     app.include_router(module.router)
 
