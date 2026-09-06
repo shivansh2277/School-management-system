@@ -1,0 +1,193 @@
+# Sunrise ERP — Session Handoff
+
+**Written:** 6 September 2026
+**Branch:** `part-1-foundation` — **8 commits ahead of `main`, nothing pushed**
+**Repo:** `C:\Users\SHIVANSH\OneDrive\Documents\AGENTS\school-management-system\`
+**Remote:** https://github.com/shivansh2277/School-management-system
+
+Every number below was measured on 6 September 2026, not recalled. Anything
+unverified says so.
+
+> This supersedes `Sunrise-HANDOFF.md` (in the parent AGENTS folder) for
+> everything about the ERP work. That document still describes the v0 demo
+> accurately, **except the demo logins, which have changed** — see §5.
+
+---
+
+## 1. What this project now is
+
+A **multi-tenant School ERP sold to separate, independent schools** — not
+branches of one school. That distinction was confirmed explicitly and shapes
+the whole data model: a tenant is a customer.
+
+The design document is `docs/ERP_BLUEPRINT.md`. **§0 holds the 21 locked
+product decisions and wins over anything else in that document.** Read §0 first;
+the rest was written before those answers.
+
+Delivery is **four checkpointed parts** (§12). Four checkpoints is not four
+sessions — Parts 3 and 4 will each span several.
+
+| Part | Scope | State |
+|---|---|---|
+| 1 | Foundation: tenancy, enrolments, RBAC, audit, jobs, documents | ~80% done |
+| 2 | Admission, including the public online portal | not started |
+| 3 | Fees rebuild + attendance + timetable | not started |
+| 4 | Examinations, HR/payroll, transport, communication, reports | not started |
+
+---
+
+## 2. Verified current state
+
+| Measure | Value |
+|---|---|
+| Backend tests | **132 passing**, ~18 s |
+| Database tables | 33 |
+| Alembic migrations | 7 (chain applies cleanly from empty) |
+| API surface | 62 paths, 77 operations |
+| Permissions / system roles | 33 / 10 |
+| Job handlers | `fees.overdue_sweep`, `fees.generate_invoices`, `system.heartbeat` |
+| Demo school | 100 students, 10 sections, 12 teachers, 98 guardians |
+
+```bash
+cd backend
+../.venv/Scripts/python.exe -m pytest -q                    # 132 passed
+../.venv/Scripts/python.exe -m alembic upgrade head
+../.venv/Scripts/python.exe seed.py
+../.venv/Scripts/python.exe worker.py --once                # runs due jobs
+```
+
+---
+
+## 3. The eight commits, and why each exists
+
+1. **`2df73e8` Tenancy + academic years** — `schools` is the tenant root and
+   replaces `school_settings` (which was reached via a hardcoded `id=1`).
+   `academic_years` replaces the `String(9)` that was denormalised onto two
+   tables with nothing keeping them in agreement. A partial unique index allows
+   at most one current year per school.
+2. **`965f1e6` Enrolments** — the largest change. `class_section_id` and
+   `roll_no` moved off `students` onto `enrolments`. A student's class is a fact
+   about a *year*; promotion used to overwrite it and silently re-parent all
+   history.
+3. **`c37687d` Promotion** — year-end rollover that only creates rows. Preview
+   is separate from commit and writes nothing.
+4. **`f490044` RBAC** — 33 permissions, 10 system roles, scoped grants,
+   replacing four hardcoded roles.
+5. **`e6a2186` Audit + sequences** — append-only log with mandatory reasons on
+   destructive actions; gapless document numbering under a row lock.
+6. **`2ca4dd7` Demo school + Assignments retired** — 10 classes × 10 students;
+   web Assignments removed per §0.17 (kept in the mobile app).
+7. **`843250a` Worker + CI** — Postgres-backed job queue, worker process,
+   GitHub Actions, Dockerfile, compose stack, `DEPLOY.md`.
+8. **`02c5f56` Documents** — polymorphic documents + object storage. This is
+   what Part 2 was blocked on.
+
+---
+
+## 4. Things that would be expensive to rediscover
+
+**The test suite does not exercise the migrations.** `tests/conftest.py` builds
+its schema with `Base.metadata.create_all`, straight from the models. A batch
+`alter_column` in the tenancy migration dropped `updated_at`'s `server_default`,
+leaving a NOT NULL column nothing could insert into — and no test could see it.
+`tests/test_migrations.py` now migrates, seeds and runs a worker for real, and
+CI does the same. **Do not delete that test to make the suite faster.**
+
+**`BCRYPT_ROUNDS` is configurable and tests use 4.** Seeding 210 accounts at the
+production work factor was ~70 s of every run. This changes the work factor, not
+the behaviour. Never lower it outside tests.
+
+**Reads must not write.** v0's `fees.refresh_overdue()` committed from inside a
+GET. That is gone: `presented_status()` computes how an invoice reads *now*, and
+the scheduled `fees.overdue_sweep` job moves the stored value.
+
+**Scope is not the same as permission.** A guardian and an office clerk both
+hold `students.profile.read`. The guardian holds it at `self` scope; admin
+routes pass `school_wide=True`. Getting this wrong once already exposed the
+whole student roster to a parent in development.
+
+**SQLite returns naive datetimes** even for `timestamptz` columns, and comparing
+one against an aware `now` raises rather than returning False. `services/jobs.py`
+normalises with `_utc()`.
+
+---
+
+## 5. Demo logins — **these changed**
+
+Admission numbers now come from a sequence in the format decided in §0.21:
+`YYYY` + a six-digit counter. The old `SPS2024001` no longer exists.
+
+| Role | Login | Password |
+|---|---|---|
+| Admin | `admin@sunrisepublic.edu` | `Admin@123` |
+| Teacher | `TCH001` | `Teacher@123` |
+| Student | `2024000001` | `Student@123` |
+| Parent | `9876500001` | `Parent@123` |
+
+`TCH001` still class-teaches 10-A and teaches it Mathematics — the walkthrough
+depends on it, and the seed pins that deliberately. `2024000001` is roll 1 of
+10-A. The demo parent still has exactly two children so the child switcher has
+something to switch between.
+
+Tests no longer hard-code these: `conftest._login_id_in()` resolves a student by
+where they sit, so seed ordering can change without breaking the suite.
+
+---
+
+## 6. Open work in Part 1
+
+Two items, neither blocking Part 2:
+
+1. **Settings, custom fields and feature flags** — §3.15 levels 1–3. This is the
+   customization story for a product sold to many schools, and the reason the
+   plugin *runtime* was deferred: config plus custom fields plus flags covers
+   about nine requests in ten.
+2. **`employees` replacing `teachers`, `guardians` replacing `parents`** —
+   mechanical but wide. Blueprint §3.4 says do it before HR is built on top,
+   which means before Part 4.
+
+---
+
+## 7. Known limits and things not verified
+
+- **Docker is not installed on this machine.** `docker-compose.yml` and
+  `backend/Dockerfile` are syntax-checked only. They need a real
+  `docker compose up` on the Oracle box before anyone trusts them.
+- **Nothing is pushed.** All eight commits exist only on this laptop. The owner
+  wants the exact file list shown before any push.
+- **CI has never run.** The workflow is written but no push has triggered it.
+- **The web dashboard has not been opened** against the new backend. It
+  typechecks and builds, but several API shapes changed (settings, class
+  creation, student rows). Expect breakage; it is not yet fixed.
+- **The mobile app has not been touched or tested** since the enrolment change.
+  Its API calls almost certainly need updating.
+- **Zero frontend tests** still. Unchanged from v0 and still a real gap.
+- **The old Vercel/Neon deployment is now stale** — the schema there predates
+  all seven migrations. Hosting moves to Oracle Cloud (`DEPLOY.md`).
+
+---
+
+## 8. Still open for product discussion
+
+From ERP_BLUEPRINT §16, none blocking Part 1:
+
+| # | Question | Needed by |
+|---|---|---|
+| A | A real Lucknow school's payroll structure to validate the component model | Part 4 |
+| B | Confirm Uttar Pradesh levies no professional tax (assumed, shipped disabled) | Part 4 |
+| C | Does the late-fee clock stop when the next invoice generates, or keep accruing? | Part 3 |
+| D | The exact CBSE report card layout the target school expects | Part 4 |
+
+---
+
+## 9. Where to start next session
+
+1. Read `docs/ERP_BLUEPRINT.md` **§0** (decisions) and **§12** (the four parts).
+2. `git log --oneline main..HEAD` for what changed and why — the commit messages
+   carry the reasoning, deliberately.
+3. Run the suite to confirm the state above.
+4. Then either finish Part 1 (§6 here) or start Part 2 — Admission, specified in
+   depth at ERP_BLUEPRINT §5.1.
+
+The memory file `sunrise-erp-build.md` carries the same state in short form for
+a session that starts cold.
