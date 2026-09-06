@@ -58,7 +58,9 @@ cd backend
 
 ---
 
-## 3. The eight commits, and why each exists
+## 3. The commits, and why each exists
+
+### Part 1, 6 September
 
 1. **`2df73e8` Tenancy + academic years** — `schools` is the tenant root and
    replaces `school_settings` (which was reached via a hardcoded `id=1`).
@@ -82,7 +84,7 @@ cd backend
 8. **`02c5f56` Documents** — polymorphic documents + object storage. This is
    what Part 2 was blocked on.
 
-Four more since (6 September, later the same day):
+Five more later the same day:
 
 9. **`71be808` Test-schema reset** — the suite would not start: `sunrise_test`
     still held the v0 schema and `drop_all` orders drops from the model
@@ -157,10 +159,20 @@ not enforce foreign keys and it accepts `1` for a boolean; both cost time on
 run) or by hand:
 
 ```bash
-python -c "from sqlalchemy import create_engine, text; import os;   [c.execute(text('DROP SCHEMA public CASCADE; CREATE SCHEMA public'))    for c in [create_engine(os.environ['DATABASE_URL']).begin().__enter__()]]"
-../.venv/Scripts/python.exe -m alembic upgrade head
-../.venv/Scripts/python.exe seed.py && ../.venv/Scripts/python.exe worker.py --once
+cd backend
+export DATABASE_URL=postgresql+psycopg://sunrise:sunrise@localhost:5432/sunrise_test
+../.venv/Scripts/python.exe -c "
+from sqlalchemy import create_engine, text
+import os
+with create_engine(os.environ['DATABASE_URL']).begin() as c:
+    c.execute(text('DROP SCHEMA public CASCADE; CREATE SCHEMA public'))"
+../.venv/Scripts/python.exe -m alembic upgrade head     # 14 revisions
+BCRYPT_ROUNDS=4 ../.venv/Scripts/python.exe seed.py
+../.venv/Scripts/python.exe worker.py --once            # should run 1 job
 ```
+
+Run this before believing any migration works. It caught three defects on
+6 September that the whole test suite could not see.
 
 **The test suite does not exercise the migrations.** `tests/conftest.py` builds
 its schema with `Base.metadata.create_all`, straight from the models. A batch
@@ -245,7 +257,7 @@ read have moved (§7).
 - **Docker is not installed on this machine.** `docker-compose.yml` and
   `backend/Dockerfile` are syntax-checked only. They need a real
   `docker compose up` on the Oracle box before anyone trusts them.
-- **Nothing is pushed.** All eight commits exist only on this laptop. The owner
+- **Nothing is pushed.** All 28 commits exist only on this laptop. The owner
   wants the exact file list shown before any push.
 - **CI has never run.** The workflow is written but no push has triggered it.
 - **The web dashboard has not been opened** against the new backend. It
@@ -277,14 +289,50 @@ From ERP_BLUEPRINT §16, none blocking Part 1:
 
 ---
 
-## 9. Where to start next session
+## 9. Where to start next session — Part 3
 
-1. Read `docs/ERP_BLUEPRINT.md` **§0** (decisions) and **§12** (the four parts).
-2. `git log --oneline main..HEAD` for what changed and why — the commit messages
-   carry the reasoning, deliberately.
-3. Run the suite to confirm the state above.
-4. Then either finish Part 1 (§6 here) or start Part 2 — Admission, specified in
-   depth at ERP_BLUEPRINT §5.1.
+Part 3 is **fees rebuild + attendance + timetable** (§12). Read `docs/ERP_BLUEPRINT.md`
+**§0.6** (the fee policy, locked), **§5.5** (fees), **§5.8** (attendance) and
+**§5.7** (timetable) before touching code.
+
+**One product question blocks a Part 3 rule** — §8 item C: does the late-fee
+clock stop when the next invoice generates, or keep accruing? Ask before
+building the late-fee job; either answer is cheap to implement and expensive to
+retrofit once invoices exist with the wrong ones.
+
+### What exists today, and what Part 3 replaces
+
+| Today | Where | Part 3 |
+|---|---|---|
+| `fee_structures` — one flat monthly amount per class | `models/fees.py` | Replaced by `fee_heads` + `fee_plans` + `fee_plan_items` |
+| `fee_invoices` — one amount, no lines | `models/fees.py` | Replaced by invoices **with lines** |
+| `fee_payments` — a payment against one invoice | `models/fees.py` | Replaced by **allocation-based** payments so a part payment can span invoices |
+| no concessions, no late fee, no adjustments | — | §0.6: 10% sibling concession · ₹300 at day 5, +₹100/day, capped at 50% |
+| `services/fees.py`, 221 lines | `services/fees.py` | Rewritten; keep `presented_status()`'s rule that reads never write |
+| `attendance` — daily, marked by a teacher | `models/ops.py`, `services/attendance.py` | Add corrections **with reason**, absentee list, leave requests |
+| `timetable_slots` — seeded, read-only | `models/academic.py` | Make editable with live conflict detection, plus substitutions |
+| `application_payments` — admission money | `models/application_payment.py` | **Leave alone.** Applicants have no ledger; this is deliberately separate |
+
+Three things Part 1 and 2 already built that Part 3 should reuse rather than
+reinvent: `audit.next_number()` for gapless receipt numbers, the job queue for
+anything that bills a whole school, and `services/school_settings.py` for the
+fee rule values — §3.15 says fee amounts and the late-fee rule are settings, and
+`core/settings_registry.py` is deliberately still nearly empty because the
+keys arrive with the code that reads them.
+
+**Checkpoint 3 passes when** a month is billed, partially paid, late-feed,
+chased, fully collected and closed — and the closed period refuses further
+writes; and a week of attendance is marked and corrected with an audit trail.
+
+### Before starting
+
+1. `git log --oneline main..HEAD` — 28 commits, and the messages carry the
+   reasoning deliberately.
+2. Run the suite (§2) and the Postgres check (§4). Believe neither number until
+   you have seen it.
+3. Decide with the owner whether to push first. Nothing has ever been pushed and
+   CI has never run, so the first push is also the first CI run — expect it to
+   find something.
 
 The memory file `sunrise-erp-build.md` carries the same state in short form for
 a session that starts cold.
