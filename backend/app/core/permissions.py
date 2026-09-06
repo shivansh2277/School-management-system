@@ -47,6 +47,7 @@ PERMISSIONS: list[tuple[str, str]] = [
     ("admission.enquiry.write", "Record and follow up enquiries"),
     ("admission.application.read", "View applications"),
     ("admission.application.write", "Create and edit applications, and move them along"),
+    ("admission.document.verify", "Verify or reject an applicant's documents"),
     (
         "admission.medical.read",
         "View and edit an applicant's medical and special-needs section",
@@ -91,6 +92,7 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "admission.enquiry.write",
             "admission.cycle.write",
             "admission.application.write",
+            "admission.document.verify",
             "admission.medical.read",
             "admin.settings.write",
             "admin.year.write",
@@ -166,6 +168,15 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
         ],
     ),
     (
+        "document_verifier",
+        "Document Verifier",
+        [
+            # Verifies and nothing else: no decisions, no scores, no register.
+            "admission.application.read",
+            "admission.document.verify",
+        ],
+    ),
+    (
         "admission_officer",
         "Admission Officer",
         [
@@ -176,6 +187,7 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "admission.enquiry.write",
             "admission.application.read",
             "admission.application.write",
+            "admission.document.verify",
             # Not admission.medical.read: §15 keeps a child's medical section
             # behind its own permission, held by the school nurse and the
             # principal rather than by everyone who works the pipeline.

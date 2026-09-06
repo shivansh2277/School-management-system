@@ -26,12 +26,16 @@ from app.models import (
     ApplicationSibling,
     ApplicationStatus,
     AuditAction,
+    Document,
+    DocumentStatus,
+    DocumentType,
     Employee,
     Enrolment,
+    OwnerType,
     Student,
     User,
 )
-from app.services import admission, audit
+from app.services import admission, audit, documents
 
 # The order the pipeline normally runs in. Anything not in this list — the
 # terminal and exception states — is reachable from anywhere, which is what
@@ -203,6 +207,91 @@ def submit(db: Session, app: Application, *, actor: User | None) -> dict:
     return {"warnings": warnings, "possible_duplicates": duplicates}
 
 
+# ------------------------------------------------------------------ documents
+
+
+def checklist(db: Session, app: Application) -> list[dict]:
+    """What this applicant owes, and where each item stands (§5.1.9(4)).
+
+    Two lists decide what is required: the class's own checklist on the cycle,
+    and the document types the school marks mandatory. Category-conditional
+    types — an income certificate for EWS — count only when the category is
+    actually claimed, so a General applicant is never chased for one.
+    """
+    config = admission.class_config(
+        db, app.cycle_id, app.class_applying_for, app.stream
+    )
+    class_codes = set((config.required_document_codes or []) if config else [])
+
+    types = db.scalars(
+        select(DocumentType).where(
+            DocumentType.school_id == app.school_id,
+            DocumentType.applies_to == OwnerType.application,
+        )
+    ).all()
+    uploaded = {
+        d.document_type_id: d
+        for d in documents.for_owner(
+            db, app.school_id, OwnerType.application, app.id
+        )
+    }
+    category = (app.caste_category or "").upper() or None
+
+    out = []
+    for t in sorted(types, key=lambda t: (t.sort_order, t.code)):
+        conditional = t.required_if_category is not None
+        applies = (not conditional) or t.required_if_category.upper() == category
+        # A class checklist replaces the school-wide mandatory list, but never
+        # overrides a category claim: whoever claims EWS owes the income
+        # certificate whatever class they are applying to.
+        by_class = t.code in class_codes if class_codes else t.is_mandatory
+        required = applies and (by_class or (conditional and t.is_mandatory))
+        doc = uploaded.get(t.id)
+        if not required and doc is None:
+            # Not asked for and not supplied: it does not belong on the list at
+            # all, or every applicant sees twenty rows of nothing.
+            continue
+        out.append(
+            {
+                "code": t.code,
+                "name": t.name,
+                "document_type_id": t.id,
+                "required": required,
+                "status": doc.status.value if doc else "pending",
+                "document_id": doc.id if doc else None,
+                "original_seen": doc.original_seen if doc else False,
+                "rejection_reason": doc.rejection_reason if doc else None,
+            }
+        )
+    return out
+
+
+def outstanding_documents(db: Session, app: Application) -> list[str]:
+    """The names of required documents that are not verified yet."""
+    return [
+        item["name"]
+        for item in checklist(db, app)
+        if item["required"] and item["status"] != DocumentStatus.verified.value
+    ]
+
+
+def on_document_rejected(db: Session, app: Application, *, actor: User) -> None:
+    """§5.1.9(5): a rejected document puts the application back into
+    verification. The guardian has to be told and something has to be
+    resubmitted, and an application sitting in `documents_verified` with a
+    rejected document in it is exactly the inconsistency that gets missed."""
+    if app.status in TERMINAL or app.status is ApplicationStatus.draft:
+        return
+    if app.status is not ApplicationStatus.under_document_verification:
+        move(
+            db,
+            app,
+            ApplicationStatus.under_document_verification,
+            actor=actor,
+            reason="A document was rejected and must be resubmitted",
+        )
+
+
 def move(
     db: Session,
     app: Application,
@@ -220,6 +309,14 @@ def move(
         )
     if to is app.status:
         return app
+
+    if to is ApplicationStatus.decision_pending:
+        missing = outstanding_documents(db, app)
+        if missing:
+            raise HTTPException(
+                http.HTTP_409_CONFLICT,
+                "These documents are still not verified: " + ", ".join(missing),
+            )
 
     forward = (
         to in FORWARD_ORDER
