@@ -1,7 +1,7 @@
 # Sunrise ERP — Session Handoff
 
-**Written:** 6 September 2026 (revised later the same day)
-**Branch:** `part-1-foundation` — **19 commits ahead of `main`, nothing pushed** (14 code, 5 documentation)
+**Written:** 6 September 2026 · **revised 7 September 2026** (Part 2)
+**Branch:** `part-1-foundation` — **27 commits ahead of `main`, nothing pushed** (22 code, 5 documentation)
 **Repo:** `C:\Users\SHIVANSH\OneDrive\Documents\AGENTS\school-management-system\`
 **Remote:** https://github.com/shivansh2277/School-management-system
 
@@ -30,7 +30,7 @@ sessions — Parts 3 and 4 will each span several.
 | Part | Scope | State |
 |---|---|---|
 | 1 | Foundation: tenancy, enrolments, RBAC, audit, jobs, documents | **backend complete** |
-| 2 | Admission, including the public online portal | not started |
+| 2 | Admission, including the public online portal | **backend complete; Checkpoint 2 passes in tests** |
 | 3 | Fees rebuild + attendance + timetable | not started |
 | 4 | Examinations, HR/payroll, transport, communication, reports | not started |
 
@@ -40,17 +40,17 @@ sessions — Parts 3 and 4 will each span several.
 
 | Measure | Value |
 |---|---|
-| Backend tests | **148 passing**, ~22 s |
-| Database tables | 35 |
-| Alembic migrations | 9 (verified from empty **on Postgres**, then seed, then worker) |
-| API surface | 65 paths, 82 operations |
-| Permissions / system roles | 33 / 10 |
-| Job handlers | `fees.overdue_sweep`, `fees.generate_invoices`, `system.heartbeat` |
+| Backend tests | **222 passing**, ~33 s |
+| Database tables | 50 |
+| Alembic migrations | 14 (verified from empty **on Postgres**, then seed, then worker) |
+| API surface | 109 paths, 135 operations |
+| Permissions / system roles | 46 / 13 |
+| Job handlers | `fees.overdue_sweep`, `fees.generate_invoices`, `admission.offer_sweep`, `system.heartbeat` |
 | Demo school | 100 students, 10 sections, 12 teachers, 98 guardians |
 
 ```bash
 cd backend
-../.venv/Scripts/python.exe -m pytest -q                    # 147 passed
+../.venv/Scripts/python.exe -m pytest -q                    # 222 passed
 ../.venv/Scripts/python.exe -m alembic upgrade head
 ../.venv/Scripts/python.exe seed.py
 ../.venv/Scripts/python.exe worker.py --once                # runs due jobs
@@ -106,6 +106,46 @@ Four more since (6 September, later the same day):
     per child under a partial unique index. `class_teacher_id`,
     `class_subject_teacher.teacher_id` and the /teacher and /parent URL
     prefixes deliberately kept.
+
+---
+
+### Part 2, 7 September
+
+| Commit | What |
+|---|---|
+| `cb41e5d` | Cycles, seat configuration, enquiry register with a follow-up log |
+| `487228b` | Applications: drafts, submission, the soft-warning rules |
+| `b1fea5d` | The public portal — the only unauthenticated surface |
+| `ce475c5` | Document checklist and the gate before a decision |
+| `7e07107` | Assessments and interviews, panel scores kept independent |
+| `bdd958d` | Merit list, decisions, offers, waitlist, expiry job |
+| `e03576d` | Atomic conversion — **Checkpoint 2** |
+| `4af03bd` | Dashboard, funnel, seat utilisation, rejection analysis |
+
+**Checkpoint 2 is a test, not a claim:**
+`tests/test_admission_conversion.py::test_checkpoint_2_portal_to_enrolled_student`
+applies on the public portal, verifies documents, admits, offers, collects the
+fee, converts — then logs in as the new student, checks the enrolment, the
+guardian link, the migrated documents and an invoice from the next billing run.
+No manual database work anywhere in it.
+
+Design decisions in Part 2 that a later session should not undo:
+
+- **Address, previous school and declarations are JSON columns on
+  `applications`.** A form step writes and reads each whole and nothing queries
+  inside them; a column each would be forty columns and three tables for
+  nothing. Medical is the exception — its own table, its own permission (§15).
+- **Applicant documents reuse the polymorphic `documents` table**, and are
+  re-pointed at the student at conversion rather than copied.
+- **`admission_decisions.reason` and `admission_offers.expires_on` are NOT
+  NULL.** Both are §5.1.9 rules expressed as constraints rather than
+  intentions.
+- **The public portal returns identical 404s** for an unknown school, a
+  suspended one, and one with the module off — and for a wrong application
+  number versus a wrong date of birth. Weakening that turns it into an
+  enumeration oracle.
+- **Assessment and interview are their own tables, not `exams`/`marks`.** Those
+  hang off an enrolment, which an applicant does not have.
 
 ---
 
@@ -170,7 +210,24 @@ where they sit, so seed ordering can change without breaking the suite.
 
 ---
 
-## 6. Open work in Part 1
+## 6. Open work
+
+### Part 2 — what is not built
+
+- **No admission UI at all.** The whole module is API-only; §5.1.3 lists
+  eighteen screens and the web dashboard has none of them.
+- **No communication.** §5.1.6 wants every stage transition to trigger a
+  notification — acknowledgement, document reminder, hall ticket, offer letter,
+  expiry warning. Email is a Part 4 deliverable, so the triggers have nowhere
+  to go yet and are not stubbed.
+- **No hall tickets or offer letters as documents.** The data is all there;
+  nothing renders a PDF.
+- **Transport interest is captured and goes nowhere** — `transport_required` is
+  stored, and Part 4 builds the assignment request it should seed.
+- **Reapplication linking exists as a column** (`previous_application_id`) but
+  no endpoint sets it.
+
+### Part 1 — infrastructure still owed
 
 **The backend list from §12 is now done.** What Part 1 still owes is
 infrastructure and proof rather than code: a real `docker compose up` on the

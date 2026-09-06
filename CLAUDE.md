@@ -23,7 +23,7 @@ branches of one school. A tenant is a customer. Work is on branch
 
 ```bash
 cd backend
-../.venv/Scripts/python.exe -m pytest -q          # 132 tests, ~18s
+../.venv/Scripts/python.exe -m pytest -q          # 222 tests, ~33s
 ../.venv/Scripts/python.exe -m pytest tests/test_rbac.py -q       # one file
 ../.venv/Scripts/python.exe -m alembic upgrade head
 ../.venv/Scripts/python.exe seed.py               # idempotent
@@ -56,6 +56,10 @@ Postgres runs natively on this machine, not in Docker. `make testdb` uses
   columns that name a teaching role in context — `class_teacher_id`,
   `class_subject_teacher.teacher_id` — keep their names on purpose, as do the
   `/teacher` and `/parent` URL prefixes the mobile app calls.
+- **An applicant is not a user.** Nothing in Admission may require a
+  `students` or `users` row: most applicants never get one. The links that do
+  exist — a sibling, a staff parent — are claims until verified, and an
+  unverified claim must never influence a decision.
 - **Per-school configuration goes through the registries**, not through new
   columns: `core/settings_registry.py` for settings and feature flags,
   `custom_fields` for school-invented attributes. A feature flag is a boolean
@@ -79,6 +83,12 @@ Postgres runs natively on this machine, not in Docker. `make testdb` uses
   and module switches are `/admin/configuration`.
 - **The Postgres test database is dropped by schema, not by `drop_all`** — a
   leftover v0 table once made the whole suite unable to start.
+- **`/public/{school_code}/...` is unauthenticated.** Its 404s are deliberately
+  identical across unknown school, suspended school, module off, wrong
+  application number and wrong date of birth. Do not make any of them more
+  helpful.
+- **Local date against UTC midnight is a bug**, and it has already bitten once:
+  the office is five and a half hours ahead of the column.
 
 ## Working style for this project
 
