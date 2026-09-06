@@ -6,6 +6,10 @@ ever runs this.
 
 from datetime import date, timedelta
 
+from sqlalchemy import select
+
+from app.models import ClassSection
+
 
 def test_no_token_is_401(client):
     assert client.get("/student/dashboard").status_code == 401
@@ -169,3 +173,31 @@ def test_admin_cannot_mark_attendance(client, admin, ids):
         headers=admin,
     )
     assert r.status_code == 403
+
+
+def test_parent_sees_only_their_own_childrens_class_notices(client, admin, parent, db):
+    """notices.visible_to() once selected enrolment sections without joining
+    Student, so the parent branch matched every section in the school."""
+    from app.models import User
+    from app.services.common import enrolment_sections
+    from app.services import scoping
+
+    parent_user = db.scalar(select(User).where(User.login_id == "9876500001"))
+    own = set(enrolment_sections(db, scoping.child_ids_for(db, parent_user)).values())
+    outsider = db.scalar(select(ClassSection.id).where(ClassSection.id.not_in(own)))
+    assert outsider is not None
+
+    r = client.post(
+        "/admin/notices",
+        json={
+            "title": "Someone else's class",
+            "body": "Not for this parent.",
+            "audience": "class",
+            "class_section_id": outsider,
+        },
+        headers=admin,
+    )
+    assert r.status_code == 201, r.text
+
+    seen = client.get("/parent/notices", headers=parent).json()
+    assert outsider not in [n["class_section_id"] for n in seen]

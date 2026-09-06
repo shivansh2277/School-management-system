@@ -4,13 +4,11 @@ from fastapi import HTTPException, status
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from app.services.common import require_current_enrolment
+from app.services.common import enrolment_sections, require_current_enrolment
 from app.models import (
     ClassSection,
-    Enrolment,
     Notice,
     NoticeAudience,
-    Student,
     User,
     UserRole,
 )
@@ -93,12 +91,10 @@ def visible_to(db: Session, user: User) -> list[NoticeOut]:
             Notice.class_section_id == enrolment.class_section_id,
         ]
     else:
+        # Enrolment and Student were never joined here, so this read every
+        # section in the school and showed a parent every class's notices.
         child_sections = list(
-            db.scalars(
-                select(Enrolment.class_section_id).where(
-                    Student.id.in_(scoping.child_ids_for(db, user))
-                )
-            )
+            enrolment_sections(db, scoping.child_ids_for(db, user)).values()
         )
         clauses = [
             Notice.audience.in_([NoticeAudience.all, NoticeAudience.parents]),
