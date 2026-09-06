@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import Base, SessionLocal, engine
 from app.core.security import hash_password
+from app.core.document_types import DEFAULT_TYPES
 from app.core.permissions import LEGACY_ROLE_MAP
 from app.services import audit as audit_svc
 from app.services import rbac
@@ -26,6 +27,8 @@ from app.models import (
     AttendanceStatus,
     ClassSection,
     ClassSubjectTeacher,
+    DocumentType,
+    OwnerType,
     DayOfWeek,
     Exam,
     ExamSchedule,
@@ -255,6 +258,31 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
 
     # This school's copy of the roles that ship with the product.
     roles = rbac.install_system_roles(db, school.id)
+
+    # The document checklist a new tenant starts with. Idempotent, because the
+    # migration installs these too and the seed runs on top of a migrated
+    # database as often as a freshly created one.
+    have = set(
+        db.scalars(
+            select(DocumentType.code).where(DocumentType.school_id == school.id)
+        )
+    )
+    for i, (code, name, applies, mand, cat, exp, conf) in enumerate(DEFAULT_TYPES):
+        if code in have:
+            continue
+        db.add(
+            DocumentType(
+                code=code,
+                name=name,
+                applies_to=OwnerType(applies),
+                is_mandatory=mand,
+                required_if_category=cat,
+                has_expiry=exp,
+                is_confidential=conf,
+                sort_order=(i + 1) * 10,
+            )
+        )
+    db.flush()
     db.add_all(GradeBand(min_percent=Decimal(p), grade=g) for p, g in GRADE_BANDS)
 
     # --- people -----------------------------------------------------------

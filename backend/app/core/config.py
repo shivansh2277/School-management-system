@@ -9,6 +9,14 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "change-me-in-production"
     # 12 is passlib's default. Tests override this to 4 via the environment.
     BCRYPT_ROUNDS: int = 12
+
+    # Empty endpoint means the local filesystem backend, so neither the tests
+    # nor a bare `uvicorn` need a bucket running.
+    STORAGE_ENDPOINT: str = ""
+    STORAGE_ACCESS_KEY: str = ""
+    STORAGE_SECRET_KEY: str = ""
+    STORAGE_BUCKET: str = "sunrise-documents"
+    STORAGE_LOCAL_PATH: str = "./var/documents"
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30

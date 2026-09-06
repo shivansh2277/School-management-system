@@ -42,6 +42,26 @@ class EnrolmentStatus(StrEnum):
     passed_out = "passed_out"
 
 
+class OwnerType(StrEnum):
+    """What a document is attached to. `application` exists before the student
+    does, which is why documents are polymorphic rather than a student column."""
+
+    student = "student"
+    application = "application"
+    guardian = "guardian"
+    employee = "employee"
+    vehicle = "vehicle"
+    school = "school"
+
+
+class DocumentStatus(StrEnum):
+    pending = "pending"
+    submitted = "submitted"
+    verified = "verified"
+    rejected = "rejected"
+    resubmit_required = "resubmit_required"
+
+
 class JobStatus(StrEnum):
     pending = "pending"
     running = "running"
