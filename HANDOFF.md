@@ -1,7 +1,7 @@
 # Sunrise ERP — Session Handoff
 
 **Written:** 6 September 2026 (revised later the same day)
-**Branch:** `part-1-foundation` — **17 commits ahead of `main`, nothing pushed** (13 code, 4 documentation)
+**Branch:** `part-1-foundation` — **19 commits ahead of `main`, nothing pushed** (14 code, 5 documentation)
 **Repo:** `C:\Users\SHIVANSH\OneDrive\Documents\AGENTS\school-management-system\`
 **Remote:** https://github.com/shivansh2277/School-management-system
 
@@ -40,9 +40,9 @@ sessions — Parts 3 and 4 will each span several.
 
 | Measure | Value |
 |---|---|
-| Backend tests | **147 passing**, ~24 s |
+| Backend tests | **148 passing**, ~22 s |
 | Database tables | 35 |
-| Alembic migrations | 9 (chain applies cleanly from empty) |
+| Alembic migrations | 9 (verified from empty **on Postgres**, then seed, then worker) |
 | API surface | 65 paths, 82 operations |
 | Permissions / system roles | 33 / 10 |
 | Job handlers | `fees.overdue_sweep`, `fees.generate_invoices`, `system.heartbeat` |
@@ -110,6 +110,17 @@ Four more since (6 September, later the same day):
 ---
 
 ## 4. Things that would be expensive to rediscover
+
+**The migration test runs on SQLite, and SQLite hides Postgres bugs.** It does
+not enforce foreign keys and it accepts `1` for a boolean; both cost time on
+6 September. The Postgres path is exercised only by CI (which has still never
+run) or by hand:
+
+```bash
+python -c "from sqlalchemy import create_engine, text; import os;   [c.execute(text('DROP SCHEMA public CASCADE; CREATE SCHEMA public'))    for c in [create_engine(os.environ['DATABASE_URL']).begin().__enter__()]]"
+../.venv/Scripts/python.exe -m alembic upgrade head
+../.venv/Scripts/python.exe seed.py && ../.venv/Scripts/python.exe worker.py --once
+```
 
 **The test suite does not exercise the migrations.** `tests/conftest.py` builds
 its schema with `Base.metadata.create_all`, straight from the models. A batch
