@@ -10,6 +10,8 @@ from app.services.rbac import require_permission
 from app.core.security import hash_password
 from app.models import (
     AuditAction,
+    ClassSection,
+    Enrolment,
     Gender,
     Parent,
     ParentStudent,
@@ -35,7 +37,8 @@ class ParentInput(BaseModel):
 
 class StudentCreate(BaseModel):
     full_name: str
-    admission_no: str
+    # Omit it and the school's gapless sequence allocates one (§0.21).
+    admission_no: str | None = None
     class_section_id: int
     roll_no: int
     dob: Date | None = None
@@ -113,13 +116,19 @@ def list_students(
 def create_student(
     body: StudentCreate, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> dict:
-    if db.scalar(select(User).where(User.login_id == body.admission_no)):
+    section = db.get(ClassSection, body.class_section_id)
+    if section is None or section.school_id != user.school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Class section not found")
+    admission_no = body.admission_no or audit.admission_number(
+        db, user.school_id, (body.admission_date or Date.today()).year
+    )
+    if db.scalar(select(User).where(User.login_id == admission_no)):
         raise HTTPException(status.HTTP_409_CONFLICT, "Admission number already exists")
     # Student login + student row + (new or linked) parent, in one transaction.
     su = User(
         school_id=user.school_id,
         role=UserRole.student,
-        login_id=body.admission_no,
+        login_id=admission_no,
         password_hash=hash_password(body.password),
         full_name=body.full_name,
         email=body.email,
@@ -130,7 +139,7 @@ def create_student(
     student = Student(
         school_id=user.school_id,
         user_id=su.id,
-        admission_no=body.admission_no,
+        admission_no=admission_no,
         dob=body.dob,
         gender=body.gender,
         address=body.address,
@@ -139,10 +148,7 @@ def create_student(
     db.add(student)
     db.flush()
     # The class and roll number belong to a year, so creating a student also
-    # creates their enrolment in the school's current one.
-    section = db.get(ClassSection, body.class_section_id)
-    if section is None or section.school_id != user.school_id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Class section not found")
+    # creates their enrolment in the section's.
     db.add(
         Enrolment(
             school_id=user.school_id,
@@ -231,7 +237,24 @@ def update_student(
     s = db.get(Student, student_id)
     if s is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Student not found")
-    for field in ("class_section_id", "roll_no", "dob", "gender", "address"):
+    # class_section_id and roll_no live on the enrolment now. Setting them on
+    # the Student silently did nothing: SQLAlchemy accepts the attribute, the
+    # column is not there, and the move was lost.
+    if body.class_section_id is not None or body.roll_no is not None:
+        enrolment = current_enrolment(db, s.id)
+        if enrolment is None:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "This student has no enrolment in the current academic year",
+            )
+        if body.class_section_id is not None:
+            section = db.get(ClassSection, body.class_section_id)
+            if section is None or section.school_id != user.school_id:
+                raise HTTPException(status.HTTP_404_NOT_FOUND, "Class section not found")
+            enrolment.class_section_id = section.id
+        if body.roll_no is not None:
+            enrolment.roll_no = body.roll_no
+    for field in ("dob", "gender", "address"):
         value = getattr(body, field)
         if value is not None:
             setattr(s, field, value)
