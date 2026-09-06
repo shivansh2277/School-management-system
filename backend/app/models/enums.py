@@ -281,3 +281,25 @@ class InterviewRecommendation(StrEnum):
     admit = "admit"
     waitlist = "waitlist"
     reject = "reject"
+
+
+class DecisionOutcome(StrEnum):
+    admitted = "admitted"
+    waitlisted = "waitlisted"
+    rejected = "rejected"
+
+
+class OfferStatus(StrEnum):
+    issued = "issued"
+    accepted = "accepted"
+    declined = "declined"
+    expired = "expired"
+    withdrawn = "withdrawn"
+
+
+class WaitlistStatus(StrEnum):
+    waiting = "waiting"
+    offered = "offered"
+    converted = "converted"
+    lapsed = "lapsed"
+    withdrawn = "withdrawn"

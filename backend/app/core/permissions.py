@@ -49,6 +49,11 @@ PERMISSIONS: list[tuple[str, str]] = [
     ("admission.application.write", "Create and edit applications, and move them along"),
     ("admission.document.verify", "Verify or reject an applicant's documents"),
     ("admission.assessment.enter", "Schedule applicant tests and enter their marks"),
+    ("admission.decision.make", "Admit, waitlist or reject an applicant"),
+    (
+        "admission.decision.override",
+        "Approve admitting past the seats configured for a class",
+    ),
     ("admission.interview.enter", "Enter interview feedback as a panel member"),
     (
         "admission.medical.read",
@@ -97,6 +102,8 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "admission.document.verify",
             "admission.assessment.enter",
             "admission.interview.enter",
+            "admission.decision.make",
+            "admission.decision.override",
             "admission.medical.read",
             "admin.settings.write",
             "admin.year.write",
@@ -194,6 +201,9 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "admission.document.verify",
             "admission.assessment.enter",
             "admission.interview.enter",
+            "admission.decision.make",
+            # Not admission.decision.override: admitting past capacity is the
+            # principal's call, not the pipeline's (§5.1.9(11)).
             # Not admission.medical.read: §15 keeps a child's medical section
             # behind its own permission, held by the school nurse and the
             # principal rather than by everyone who works the pipeline.

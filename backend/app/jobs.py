@@ -67,6 +67,19 @@ def generate_invoices(db: Session, job: Job) -> dict:
     return {"created": result.created, "skipped": result.skipped}
 
 
+@handler("admission.offer_sweep")
+def offer_sweep(db: Session, job: Job) -> dict:
+    """Expire lapsed offers and move the waitlist behind them.
+
+    ERP_BLUEPRINT §5.1.2(6) calls this a large part of the module's value, and
+    it is: without it a seat sits behind a family who stopped answering the
+    phone in March, and everyone below them waits for nothing.
+    """
+    from app.services import selection
+
+    return selection.expire_offers(db, job.school_id)
+
+
 @handler("system.heartbeat")
 def heartbeat(db: Session, job: Job) -> dict:
     """Proves the scheduler and worker are actually alive.

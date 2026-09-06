@@ -158,6 +158,8 @@ def drain(db: Session, limit: int = 100) -> int:
 # `create_all` — every test database — have a schedule at all.
 DEFAULT_SCHEDULES: list[tuple[str, int, int | None]] = [
     ("fees.overdue_sweep", 1440, 2),
+    # 06:00, so a seat released overnight is offered on before the office opens.
+    ("admission.offer_sweep", 1440, 6),
     ("system.heartbeat", 60, None),
 ]
 
