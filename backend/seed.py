@@ -19,6 +19,7 @@ from app.core.document_types import DEFAULT_TYPES
 from app.core.permissions import LEGACY_ROLE_MAP
 from app.services import jobs as jobs_svc
 from app.services import audit as audit_svc
+from app.services import admission as admission_svc
 from app.services import rbac
 from app.models import (
     AcademicYear,
@@ -30,7 +31,13 @@ from app.models import (
     ClassSubjectTeacher,
     DocumentType,
     CustomField,
+    AdmissionCycle,
+    AdmissionCycleStatus,
     CustomFieldType,
+    CycleClassConfig,
+    Enquiry,
+    EnquirySource,
+    EnquiryStatus,
     GuardianRelation,
     OwnerType,
     DayOfWeek,
@@ -69,6 +76,23 @@ TODAY = date(2026, 9, 1)  # deterministic "today" so the seeded window never dri
 # Delete children before parents. ClassSection must go before Employee because
 # class_sections.class_teacher_id references it — SQLite does not enforce
 # foreign keys by default, so only Postgres catches a wrong order here.
+# (class, seats, min age, max age on 31 March, written test, interview)
+ADMISSION_CLASSES = [
+    ("1", 40, "5.5", "7.0", False, True),
+    ("6", 20, "10.0", "12.0", True, True),
+    ("9", 15, "13.0", "15.0", True, False),
+]
+
+# A funnel that looks like a real one: most enquiries never become anything.
+ENQUIRIES = [
+    ("Ramesh Gupta", "9811100001", "Aarav Gupta", "1", EnquirySource.walk_in, EnquiryStatus.new),
+    ("Neha Saxena", "9811100002", "Ira Saxena", "1", EnquirySource.website, EnquiryStatus.contacted),
+    ("Imran Qureshi", "9811100003", "Zoya Qureshi", "6", EnquirySource.referral, EnquiryStatus.interested),
+    ("Deepak Rawat", "9811100004", "Kabir Rawat", "6", EnquirySource.hoarding, EnquiryStatus.application_form_issued),
+    ("Sunita Pandey", "9811100005", "Myra Pandey", "9", EnquirySource.phone, EnquiryStatus.not_interested),
+    ("Alok Tiwari", "9811100006", "Vivaan Tiwari", "9", EnquirySource.digital_ad, EnquiryStatus.lost_to_competitor),
+]
+
 SUBJECTS = [
     ("English", "ENG"),
     ("Hindi", "HIN"),
@@ -255,6 +279,8 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
     )
     db.add(year)
     db.flush()
+    # `year` gets rebound to a calendar year further down; hold the id.
+    academic_year_id = year.id
 
     # From here on every row is stamped with this school automatically.
     _stamp_tenant(db, school.id)
@@ -657,6 +683,56 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
                 ),
             )
         )
+
+    # --- admission: an open cycle with seats and a live enquiry register ----
+    cycle = AdmissionCycle(
+        academic_year_id=academic_year_id,
+        name=f"Admissions {ACADEMIC_YEAR}",
+        status=AdmissionCycleStatus.open,
+        starts_on=date(start_year, 1, 5),
+        ends_on=date(start_year, 3, 31),
+        application_fee=Decimal("500.00"),
+        late_fee=Decimal("250.00"),
+        admission_fee_refund_policy=(
+            "The application fee is non-refundable. The admission fee is "
+            "refunded in full if the seat is declined before the session begins."
+        ),
+    )
+    db.add(cycle)
+    db.flush()
+    for class_name, seats, min_age, max_age, test, interview in ADMISSION_CLASSES:
+        db.add(
+            CycleClassConfig(
+                cycle_id=cycle.id,
+                class_name=class_name,
+                total_seats=seats,
+                reserved_seats={"EWS": max(1, seats // 10)},
+                age_on=date(start_year, 3, 31),
+                min_age_years=Decimal(min_age),
+                max_age_years=Decimal(max_age),
+                requires_test=test,
+                requires_interview=interview,
+                required_document_codes=["birth_certificate", "photo", "address_proof"],
+            )
+        )
+    for i, (name, mobile, child, klass, source, enq_status) in enumerate(ENQUIRIES):
+        db.add(
+            Enquiry(
+                cycle_id=cycle.id,
+                enquirer_name=name,
+                mobile=mobile,
+                child_name=child,
+                class_of_interest=klass,
+                source=source,
+                status=enq_status,
+                next_follow_up_on=(
+                    None
+                    if enq_status in admission_svc.CLOSED_ENQUIRY_STATUSES
+                    else TODAY + timedelta(days=i % 5)
+                ),
+            )
+        )
+    db.flush()
 
     _assign_roles(db, roles, sections)
     db.commit()

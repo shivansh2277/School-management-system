@@ -40,6 +40,11 @@ PERMISSIONS: list[tuple[str, str]] = [
     ("homework.item.read", "View homework"),
     ("homework.item.write", "Set homework"),
     ("homework.submission.submit", "Submit homework"),
+    # --- admission
+    ("admission.cycle.read", "View admission cycles and seat configuration"),
+    ("admission.cycle.write", "Set up cycles, seats and document checklists"),
+    ("admission.enquiry.read", "View the enquiry register"),
+    ("admission.enquiry.write", "Record and follow up enquiries"),
     # --- communication
     ("comms.notice.read", "Read notices"),
     ("comms.notice.publish", "Publish a notice"),
@@ -77,6 +82,8 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "fees.payment.void",
             "comms.notice.publish",
             "hr.employee.write",
+            "admission.enquiry.write",
+            "admission.cycle.write",
             "admin.settings.write",
             "admin.year.write",
             "admin.audit.read",
@@ -93,6 +100,8 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "attendance.record.correct",
             "exam.definition.write",
             "comms.notice.publish",
+            "admission.enquiry.write",
+            "admission.cycle.write",
             "admin.settings.write",
         ],
     ),
@@ -131,6 +140,31 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "exam.marks.read",
             "exam.marks.enter",
             "exam.result.publish",
+            "comms.notice.read",
+        ],
+    ),
+    (
+        "receptionist",
+        "Receptionist",
+        [
+            # Deliberately narrow: the front desk creates and chases enquiries
+            # and sees nothing about how an applicant scored or was decided
+            # (ERP_BLUEPRINT §5.1.8).
+            "admission.cycle.read",
+            "admission.enquiry.read",
+            "admission.enquiry.write",
+            "comms.notice.read",
+        ],
+    ),
+    (
+        "admission_officer",
+        "Admission Officer",
+        [
+            "students.profile.read",
+            "academics.class.read",
+            "admission.cycle.read",
+            "admission.enquiry.read",
+            "admission.enquiry.write",
             "comms.notice.read",
         ],
     ),

@@ -1,6 +1,16 @@
+from app.models.admission import (
+    AdmissionCycle,
+    CycleClassConfig,
+    Enquiry,
+    EnquiryInteraction,
+)
 from app.models.academic import ClassSection, ClassSubjectTeacher, Subject, TimetableSlot
 from app.models.assessment import Exam, ExamSchedule, GradeBand, Mark
 from app.models.enums import (
+    AdmissionCycleStatus,
+    EnquiryChannel,
+    EnquirySource,
+    EnquiryStatus,
     AcademicYearStatus,
     AttendanceStatus,
     AuditAction,

@@ -162,3 +162,46 @@ class DayOfWeek(StrEnum):
     thu = "thu"
     fri = "fri"
     sat = "sat"
+
+
+class AdmissionCycleStatus(StrEnum):
+    planning = "planning"
+    open = "open"
+    closed = "closed"
+    archived = "archived"
+
+
+class EnquiryStatus(StrEnum):
+    """A funnel stage, not a formality: a school takes 800 enquiries to fill
+    120 seats, and conversion by source is a number management asks for
+    (ERP_BLUEPRINT §5.1.7)."""
+
+    new = "new"
+    contacted = "contacted"
+    interested = "interested"
+    application_form_issued = "application_form_issued"
+    converted = "converted"
+    not_interested = "not_interested"
+    lost_to_competitor = "lost_to_competitor"
+    invalid = "invalid"
+
+
+class EnquirySource(StrEnum):
+    walk_in = "walk_in"
+    phone = "phone"
+    website = "website"
+    referral = "referral"
+    alumni = "alumni"
+    hoarding = "hoarding"
+    digital_ad = "digital_ad"
+    other = "other"
+
+
+class EnquiryChannel(StrEnum):
+    """How one interaction in the follow-up log happened."""
+
+    phone = "phone"
+    visit = "visit"
+    email = "email"
+    whatsapp = "whatsapp"
+    sms = "sms"
