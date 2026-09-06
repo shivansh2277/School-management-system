@@ -132,10 +132,14 @@ def upgrade() -> None:
             bind.execute(
                 sa.text(
                     "INSERT INTO roles (school_id, code, name, is_system, created_at,"
-                    " updated_at) VALUES (:sid, :code, :name, 1, CURRENT_TIMESTAMP,"
+                    # Bound, not the literal 1: Postgres will not take an integer for a
+                    # boolean column, and this chain had only ever been run on
+                    # SQLite, where it is accepted.
+                    " updated_at) VALUES (:sid, :code, :name, :is_system,"
+                    " CURRENT_TIMESTAMP,"
                     " CURRENT_TIMESTAMP)"
                 ),
-                {"sid": school_id, "code": code, "name": name},
+                {"sid": school_id, "code": code, "name": name, "is_system": True},
             )
             role_id = bind.execute(
                 sa.text(

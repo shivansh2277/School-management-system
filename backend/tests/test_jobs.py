@@ -123,10 +123,20 @@ def test_reading_invoices_does_not_write(client, parent, db):
     assert db.get(FeeInvoice, invoice.id).status is InvoiceStatus.pending
 
 
+def _heartbeat(db):
+    """The schedule the seed installs, rather than a second one inserted here:
+    `kind` is unique, and the row that ships is the row worth testing."""
+    from sqlalchemy import select
+
+    sched = db.scalar(select(ScheduledJob).where(ScheduledJob.kind == "system.heartbeat"))
+    assert sched is not None, "seed should install the default schedules"
+    return sched
+
+
 def test_the_scheduler_queues_a_due_job_once_per_slot(db):
-    db.add(
-        ScheduledJob(kind="system.heartbeat", enabled=True, every_minutes=60)
-    )
+    sched = _heartbeat(db)
+    sched.enabled = True
+    sched.next_run_at = None
     db.commit()
 
     now = datetime.now(UTC)
@@ -138,6 +148,35 @@ def test_the_scheduler_queues_a_due_job_once_per_slot(db):
 
 
 def test_a_disabled_schedule_queues_nothing(db):
-    db.add(ScheduledJob(kind="system.heartbeat", enabled=False, every_minutes=1))
+    from sqlalchemy import select
+
+    for sched in db.scalars(select(ScheduledJob)):
+        sched.enabled = False
     db.commit()
     assert jobs.tick_schedules(db, datetime.now(UTC)) == []
+
+
+def test_a_schedule_queues_one_job_per_school(db):
+    """The schedule is global — "sweep overdue invoices nightly" — but the work
+    belongs to a tenant. This used to enqueue a single job hardcoded to
+    school_id 1, which skipped every other customer and failed outright once
+    school 1 was not the demo school any more."""
+    from sqlalchemy import select
+
+    from app.models import Job, School, SchoolStatus
+    from tests.test_tenancy import make_school
+
+    other, _ = make_school(db, code="SECOND", name="Second Public School")
+    suspended, _ = make_school(db, code="THIRD", name="Third Public School")
+    suspended.status = SchoolStatus.suspended
+
+    sched = _heartbeat(db)
+    sched.enabled = True
+    sched.next_run_at = None
+    db.commit()
+
+    queued = jobs.tick_schedules(db, datetime.now(UTC))
+    active = set(db.scalars(select(School.id).where(School.status == SchoolStatus.active)))
+    assert {j.school_id for j in queued} == active
+    assert other.id in active and suspended.id not in active
+    assert all(isinstance(j, Job) for j in queued)

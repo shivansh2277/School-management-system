@@ -60,9 +60,23 @@ jobs:
       - name: Tests
         run: pytest -q
 
+      - name: Empty the database again
+        # pytest leaves behind a schema built by create_all, with no
+        # alembic_version row. Without this the next step is not "from empty"
+        # at all — it is alembic trying to create tables that already exist.
+        run: |
+          python - <<'PY'
+          import os
+          from sqlalchemy import create_engine, text
+          with create_engine(os.environ["DATABASE_URL"]).begin() as conn:
+              conn.execute(text("DROP SCHEMA public CASCADE; CREATE SCHEMA public"))
+          PY
+
       - name: Migrations apply from empty
         # Catches a migration that only works against a database the author
-        # already had.
+        # already had — or against SQLite, where the migration test runs and
+        # where Postgres's stricter typing and enforced foreign keys are both
+        # absent. Two defects reached this branch through exactly that gap.
         run: alembic upgrade head
 
       - name: Seed the migrated schema

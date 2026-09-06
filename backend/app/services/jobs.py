@@ -10,7 +10,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Job, JobStatus, ScheduledJob
+from app.models import Job, JobStatus, ScheduledJob, School, SchoolStatus
 
 log = logging.getLogger("jobs")
 
@@ -152,6 +152,29 @@ def drain(db: Session, limit: int = 100) -> int:
     return done
 
 
+# (kind, every_minutes, at_hour). 02:00 IST for the daily sweep: after the
+# day's collections are in, before the office opens. The migration inserts
+# these too; keeping the list here as well is what lets a database built by
+# `create_all` — every test database — have a schedule at all.
+DEFAULT_SCHEDULES: list[tuple[str, int, int | None]] = [
+    ("fees.overdue_sweep", 1440, 2),
+    ("system.heartbeat", 60, None),
+]
+
+
+def install_schedules(db: Session) -> None:
+    """Idempotent: adds any default schedule the database is missing, and
+    leaves the timings of one already there alone — they are a school's to
+    change."""
+    have = set(db.scalars(select(ScheduledJob.kind)))
+    for kind, every, hour in DEFAULT_SCHEDULES:
+        if kind not in have:
+            db.add(
+                ScheduledJob(kind=kind, every_minutes=every, at_hour=hour, enabled=True)
+            )
+    db.flush()
+
+
 def tick_schedules(db: Session, now: datetime | None = None) -> list[Job]:
     """Enqueue any recurring job that has come due.
 
@@ -176,17 +199,24 @@ def tick_schedules(db: Session, now: datetime | None = None) -> list[Job]:
             continue
 
         slot = now.strftime("%Y%m%d%H%M")
-        job = enqueue(
-            db,
-            sched.kind,
-            school_id=(sched.payload or {}).get("school_id", 1),
-            payload=sched.payload,
-            idempotency_key=f"sched:{sched.kind}:{slot}",
-        )
+        # One job per school, not one job for school 1. The schedule is global
+        # — "sweep overdue invoices nightly" — but the work is a tenant's, and
+        # a hardcoded id both skipped every other customer and crashed outright
+        # once school 1 no longer existed.
+        for school_id in db.scalars(
+            select(School.id).where(School.status == SchoolStatus.active)
+        ):
+            job = enqueue(
+                db,
+                sched.kind,
+                school_id=school_id,
+                payload=sched.payload,
+                idempotency_key=f"sched:{sched.kind}:{school_id}:{slot}",
+            )
+            if job is not None:
+                queued.append(job)
         sched.last_run_at = now
         sched.next_run_at = now + timedelta(minutes=sched.every_minutes)
-        if job is not None:
-            queued.append(job)
 
     db.commit()
     return queued

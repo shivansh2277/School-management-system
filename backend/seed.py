@@ -17,6 +17,7 @@ from app.core.db import Base, SessionLocal, engine
 from app.core.security import hash_password
 from app.core.document_types import DEFAULT_TYPES
 from app.core.permissions import LEGACY_ROLE_MAP
+from app.services import jobs as jobs_svc
 from app.services import audit as audit_svc
 from app.services import rbac
 from app.models import (
@@ -68,14 +69,6 @@ TODAY = date(2026, 9, 1)  # deterministic "today" so the seeded window never dri
 # Delete children before parents. ClassSection must go before Employee because
 # class_sections.class_teacher_id references it — SQLite does not enforce
 # foreign keys by default, so only Postgres catches a wrong order here.
-WIPE_ORDER = [
-    FeePayment, FeeInvoice, FeeStructure, Mark, ExamSchedule, Exam, GradeBand,
-    HomeworkSubmission, Homework, Attendance, Notice, TimetableSlot,
-    ClassSubjectTeacher, StudentGuardian, Enrolment, Student, ClassSection,
-    Guardian, Employee, Subject, UserRoleAssignment, RolePermission, Role,
-    User, AcademicYear, School,
-]
-
 SUBJECTS = [
     ("English", "ENG"),
     ("Hindi", "HIN"),
@@ -221,8 +214,15 @@ def _stamp_tenant(db: Session, school_id: int) -> None:
 
 
 def wipe(db: Session) -> None:
-    for model in WIPE_ORDER:
-        db.query(model).delete()
+    """Empty every table, children first.
+
+    This used to be a hand-ordered list of models, which went stale the moment
+    a migration added a table nobody remembered to add to it: seeding a
+    migrated Postgres database failed on `document_types` still referencing
+    `schools`. SQLAlchemy already knows the dependency order, so ask it.
+    """
+    for table in reversed(Base.metadata.sorted_tables):
+        db.execute(table.delete())
     db.commit()
 
 
@@ -261,6 +261,7 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
 
     # This school's copy of the roles that ship with the product.
     roles = rbac.install_system_roles(db, school.id)
+    jobs_svc.install_schedules(db)
 
     # The document checklist a new tenant starts with. Idempotent, because the
     # migration installs these too and the seed runs on top of a migrated
