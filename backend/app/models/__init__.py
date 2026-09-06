@@ -4,6 +4,7 @@ from app.models.enums import (
     AcademicYearStatus,
     AttendanceStatus,
     AuditAction,
+    CustomFieldType,
     DocumentStatus,
     JobStatus,
     OwnerType,
@@ -25,4 +26,5 @@ from app.models.audit import AuditLog, NumberSequence
 from app.models.documents import Document, DocumentType
 from app.models.jobs import Job, ScheduledJob
 from app.models.rbac import Permission, Role, RolePermission, UserRoleAssignment
+from app.models.settings import CustomField, Setting
 from app.models.tenancy import AcademicYear, School

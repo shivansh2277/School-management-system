@@ -16,6 +16,7 @@ from app.schemas.common import (
 )
 from app.services import assessment, attendance, homework, scoping
 from app.services.common import require_current_enrolment
+from app.services.school_settings import module_enabled
 
 router = APIRouter(prefix="/student", tags=["student"])
 student_only = require_permission("homework.item.read")
@@ -33,14 +34,14 @@ def my_attendance(
     return attendance.student_month(db, s.id, month or today.month, year or today.year)
 
 
-@router.get("/homework", response_model=list[StudentHomeworkOut])
+@router.get("/homework", response_model=list[StudentHomeworkOut], dependencies=[Depends(module_enabled("homework"))])
 def my_homework(
     status: str = "all", user: User = Depends(student_only), db: Session = Depends(get_db)
 ) -> list[StudentHomeworkOut]:
     return homework.for_student(db, scoping.student_id_for(db, user), status)
 
 
-@router.post("/homework/{homework_id}/submit", response_model=StudentHomeworkOut, dependencies=[Depends(require_permission("homework.submission.submit"))])
+@router.post("/homework/{homework_id}/submit", response_model=StudentHomeworkOut, dependencies=[Depends(require_permission("homework.submission.submit")), Depends(module_enabled("homework"))])
 def submit(
     homework_id: int,
     body: SubmitRequest,

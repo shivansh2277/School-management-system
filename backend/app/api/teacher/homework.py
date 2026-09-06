@@ -8,8 +8,14 @@ from app.models import Homework, User, UserRole
 from app.schemas.common import HomeworkCreate, HomeworkOut, HomeworkUpdate, SubmissionRow
 from app.services import homework as svc
 from app.services import scoping
+from app.services.school_settings import module_enabled
 
-router = APIRouter(prefix="/teacher", tags=["teacher"])
+router = APIRouter(
+    prefix="/teacher",
+    tags=["teacher"],
+    # Homework is a module a school can switch off (§3.15 level 3).
+    dependencies=[Depends(module_enabled("homework"))],
+)
 teacher_only = require_permission("homework.item.read")
 
 

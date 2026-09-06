@@ -54,6 +54,17 @@ class OwnerType(StrEnum):
     school = "school"
 
 
+class CustomFieldType(StrEnum):
+    """What a school-defined attribute holds. Deliberately few: every type
+    here has an obvious form control and an obvious validation rule."""
+
+    text = "text"
+    number = "number"
+    date = "date"
+    boolean = "boolean"
+    select = "select"
+
+
 class DocumentStatus(StrEnum):
     pending = "pending"
     submitted = "submitted"

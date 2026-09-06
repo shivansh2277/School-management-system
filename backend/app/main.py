@@ -6,6 +6,7 @@ from app.api.admin import classes as admin_classes
 from app.api.admin import exams as admin_exams
 from app.api.admin import fees as admin_fees
 from app.api.admin import notices as admin_notices
+from app.api.admin import settings as admin_settings
 from app.api.admin import stats as admin_stats
 from app.api.admin import students as admin_students
 from app.api.admin import teachers as admin_teachers
@@ -34,7 +35,7 @@ app.add_middleware(
 for module in (
     auth,
     admin_stats, admin_students, admin_teachers, admin_classes,
-    admin_exams, admin_notices, admin_fees,
+    admin_exams, admin_notices, admin_fees, admin_settings,
     teacher_dashboard, teacher_classes, teacher_attendance,
     teacher_homework, teacher_marks, teacher_announcements,
     student_dashboard, student_academics,

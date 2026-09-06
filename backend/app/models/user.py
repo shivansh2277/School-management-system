@@ -1,6 +1,16 @@
 from datetime import date
 
-from sqlalchemy import BigInteger, Boolean, Date, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Boolean,
+    Date,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TenantBase, enum_col
@@ -46,6 +56,11 @@ class Student(TenantBase):
     gender: Mapped[Gender | None] = enum_col(Gender)
     address: Mapped[str | None] = mapped_column(Text)
     admission_date: Mapped[date | None] = mapped_column(Date)
+
+    # School-defined attributes (§3.15 level 2). Validated against
+    # `custom_fields` on write; never read without going through
+    # services/custom_fields.py, which drops definitions that were retired.
+    custom: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
 
     user: Mapped[User] = relationship(lazy="joined")
 

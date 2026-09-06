@@ -28,6 +28,8 @@ from app.models import (
     ClassSection,
     ClassSubjectTeacher,
     DocumentType,
+    CustomField,
+    CustomFieldType,
     OwnerType,
     DayOfWeek,
     Exam,
@@ -283,6 +285,31 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
             )
         )
     db.flush()
+
+    # Two school-defined attributes, so the demo shows what level 2 of the
+    # customization ladder (§3.15) actually looks like on a student form.
+    if not db.scalar(select(CustomField.id).where(CustomField.school_id == school.id)):
+        db.add_all(
+            [
+                CustomField(
+                    entity=OwnerType.student,
+                    key="father_occupation",
+                    label="Father's occupation",
+                    field_type=CustomFieldType.text,
+                    sort_order=10,
+                ),
+                CustomField(
+                    entity=OwnerType.student,
+                    key="house",
+                    label="House",
+                    field_type=CustomFieldType.select,
+                    options=["Ganga", "Yamuna", "Saraswati", "Narmada"],
+                    sort_order=20,
+                ),
+            ]
+        )
+        db.flush()
+
     db.add_all(GradeBand(min_percent=Decimal(p), grade=g) for p, g in GRADE_BANDS)
 
     # --- people -----------------------------------------------------------

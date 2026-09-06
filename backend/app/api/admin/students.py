@@ -15,12 +15,14 @@ from app.models import (
     Gender,
     Parent,
     ParentStudent,
+    OwnerType,
     Student,
     User,
     UserRole,
 )
 from app.schemas.common import Page
 from app.services import assessment, attendance, audit, homework
+from app.services import custom_fields as cf
 from app.services.common import current_enrolment
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -50,6 +52,8 @@ class StudentCreate(BaseModel):
     password: str = "Student@123"
     parent: ParentInput | None = None
     parent_id: int | None = None
+    # School-defined attributes (§3.15 level 2), keyed by custom field key.
+    custom: dict | None = None
 
 
 class StudentUpdate(BaseModel):
@@ -61,6 +65,7 @@ class StudentUpdate(BaseModel):
     address: str | None = None
     phone: str | None = None
     email: str | None = None
+    custom: dict | None = None
 
 
 def _row(db: Session, s: Student) -> dict:
@@ -81,6 +86,7 @@ def _row(db: Session, s: Student) -> dict:
         "is_active": s.user.is_active,
         "parent_name": guardians[0].user.full_name if guardians else None,
         "parent_phone": guardians[0].user.phone if guardians else None,
+        "custom": s.custom or {},
     }
 
 
@@ -119,6 +125,7 @@ def create_student(
     section = db.get(ClassSection, body.class_section_id)
     if section is None or section.school_id != user.school_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Class section not found")
+    custom = cf.validate(db, user.school_id, OwnerType.student, body.custom)
     admission_no = body.admission_no or audit.admission_number(
         db, user.school_id, (body.admission_date or Date.today()).year
     )
@@ -144,6 +151,7 @@ def create_student(
         gender=body.gender,
         address=body.address,
         admission_date=body.admission_date or Date.today(),
+        custom=custom,
     )
     db.add(student)
     db.flush()
@@ -258,6 +266,11 @@ def update_student(
         value = getattr(body, field)
         if value is not None:
             setattr(s, field, value)
+    if body.custom is not None:
+        s.custom = cf.validate(
+            db, user.school_id, OwnerType.student, body.custom,
+            existing=s.custom, partial=True,
+        )
     for field in ("full_name", "phone", "email"):
         value = getattr(body, field)
         if value is not None:
