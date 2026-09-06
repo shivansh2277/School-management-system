@@ -54,6 +54,14 @@ class ChildRef(BaseModel):
 
 class MeOut(BaseModel):
     user: UserOut
+    # The clients render their navigation from these rather than from the role
+    # name, so adding a role never requires a web deploy or an app release
+    # (ERP_BLUEPRINT §14).
+    permissions: list[str] = []
+    roles: list[str] = []
+    school_code: str | None = None
+    school_name: str | None = None
+    academic_year: str | None = None
     # exactly one of these is populated, by role
     admission_no: str | None = None
     class_label: str | None = None

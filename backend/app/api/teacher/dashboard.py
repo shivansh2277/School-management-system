@@ -3,14 +3,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import require_role
+from app.services.rbac import require_permission
 from app.models import ClassSubjectTeacher, ExamSchedule, Homework, Mark, User, UserRole
 from app.services import homework as hw_svc
 from app.services import scoping, stats
 from app.services.common import section_labels
 
 router = APIRouter(prefix="/teacher", tags=["teacher"])
-teacher_only = require_role(UserRole.teacher)
+teacher_only = require_permission("academics.class.read")
 
 
 @router.get("/dashboard")

@@ -153,6 +153,19 @@ def test_teacher_cannot_reach_admin_routes(client, teacher):
     assert client.get("/admin/fees/invoices", headers=teacher).status_code == 403
 
 
-def test_admin_cannot_mark_attendance(client, admin):
-    # There is no admin write endpoint at all — read only (BLUEPRINT §9 matrix).
-    assert client.post("/teacher/attendance", json={}, headers=admin).status_code == 403
+def test_admin_cannot_mark_attendance(client, admin, ids):
+    """A super_admin holds every *permission*, including attendance.record.mark.
+    What stops them here is scope, not permission: they are not a teacher of any
+    section, so services/scoping refuses. The body has to be valid to reach that
+    check — an empty one fails validation first and would pass this test for the
+    wrong reason."""
+    r = client.post(
+        "/teacher/attendance",
+        json={
+            "class_section_id": ids["section_10a"],
+            "date": "2026-09-01",
+            "entries": [],
+        },
+        headers=admin,
+    )
+    assert r.status_code == 403

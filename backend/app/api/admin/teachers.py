@@ -6,13 +6,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import require_role
+from app.services.rbac import require_permission
 from app.core.security import hash_password
 from app.models import ClassSection, ClassSubjectTeacher, Teacher, User, UserRole
 from app.services.common import section_labels, subject_names
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-admin_only = require_role(UserRole.admin)
+admin_only = require_permission("hr.employee.read", school_wide=True)
 
 
 class TeacherCreate(BaseModel):
@@ -63,7 +63,7 @@ def list_teachers(user: User = Depends(admin_only), db: Session = Depends(get_db
     ]
 
 
-@router.post("/teachers", status_code=status.HTTP_201_CREATED)
+@router.post("/teachers", status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_permission("hr.employee.write"))])
 def create_teacher(
     body: TeacherCreate, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> dict:
@@ -92,7 +92,7 @@ def create_teacher(
     return _row(db, t)
 
 
-@router.patch("/teachers/{teacher_id}")
+@router.patch("/teachers/{teacher_id}", dependencies=[Depends(require_permission("hr.employee.write"))])
 def update_teacher(
     teacher_id: int,
     body: TeacherUpdate,
@@ -112,7 +112,7 @@ def update_teacher(
     return _row(db, t)
 
 
-@router.delete("/teachers/{teacher_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/teachers/{teacher_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_permission("hr.employee.write"))])
 def deactivate_teacher(
     teacher_id: int, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> Response:

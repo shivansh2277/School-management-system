@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import require_role
+from app.services.rbac import require_permission
 from app.models import Exam, ExamSchedule, User, UserRole
 from app.schemas.common import (
     AttendanceSummary,
@@ -19,7 +19,7 @@ from app.services import assessment
 from app.services import attendance as attendance_svc
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-admin_only = require_role(UserRole.admin)
+admin_only = require_permission("exam.definition.read", school_wide=True)
 
 
 @router.get("/exams", response_model=list[ExamOut])
@@ -27,7 +27,7 @@ def list_exams(user: User = Depends(admin_only), db: Session = Depends(get_db)) 
     return list(db.scalars(select(Exam).order_by(Exam.start_date.desc())))
 
 
-@router.post("/exams", response_model=ExamOut, status_code=status.HTTP_201_CREATED)
+@router.post("/exams", response_model=ExamOut, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_permission("exam.definition.write"))])
 def create_exam(
     body: ExamCreate, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> Exam:

@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import require_role
+from app.services.rbac import require_permission
 from app.models import (
     Enrolment,
     FeeInvoice,
@@ -24,7 +24,7 @@ from app.schemas.common import (
 from app.services import fees as svc
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-admin_only = require_role(UserRole.admin)
+admin_only = require_permission("fees.invoice.read", school_wide=True)
 
 
 @router.get("/fees/structures")
@@ -63,7 +63,7 @@ def invoices(
     return [i for i in out if status is None or i.status == status]
 
 
-@router.post("/fees/invoices/generate", response_model=GenerateInvoicesResult)
+@router.post("/fees/invoices/generate", response_model=GenerateInvoicesResult, dependencies=[Depends(require_permission("fees.invoice.generate"))])
 def generate(
     body: GenerateInvoicesRequest,
     user: User = Depends(admin_only),

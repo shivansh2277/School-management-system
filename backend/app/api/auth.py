@@ -11,7 +11,17 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
-from app.models import ClassSection, School, SchoolStatus, Student, User, UserRole
+from app.models import (
+    AcademicYear,
+    ClassSection,
+    Role,
+    School,
+    SchoolStatus,
+    Student,
+    User,
+    UserRole,
+    UserRoleAssignment,
+)
 from app.schemas.auth import (
     AccessToken,
     ChangePasswordRequest,
@@ -22,7 +32,7 @@ from app.schemas.auth import (
     TokenPair,
     UserOut,
 )
-from app.services import scoping
+from app.services import rbac, scoping
 from app.services.common import class_label_map, current_enrolment
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -76,7 +86,28 @@ def refresh(body: RefreshRequest, db: Session = Depends(get_db)) -> AccessToken:
 
 @router.get("/me", response_model=MeOut)
 def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> MeOut:
-    out = MeOut(user=UserOut.model_validate(user, from_attributes=True))
+    authz = rbac.authz_for(db, user)
+    school = db.get(School, user.school_id)
+    year = db.scalar(
+        select(AcademicYear).where(
+            AcademicYear.school_id == user.school_id,
+            AcademicYear.is_current.is_(True),
+        )
+    )
+    out = MeOut(
+        user=UserOut.model_validate(user, from_attributes=True),
+        permissions=authz.codes,
+        roles=sorted(
+            db.scalars(
+                select(Role.code)
+                .join(UserRoleAssignment, UserRoleAssignment.role_id == Role.id)
+                .where(UserRoleAssignment.user_id == user.id)
+            )
+        ),
+        school_code=school.code if school else None,
+        school_name=school.name if school else None,
+        academic_year=year.code if year else None,
+    )
     if user.role == UserRole.student:
         s = scoping.student_for(db, user)
         out.admission_no = s.admission_no

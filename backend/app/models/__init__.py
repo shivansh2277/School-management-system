@@ -8,6 +8,7 @@ from app.models.enums import (
     Gender,
     InvoiceStatus,
     NoticeAudience,
+    ScopeType,
     SchoolStatus,
     StudentStatus,
     UserRole,
@@ -16,4 +17,5 @@ from app.models.fees import FeeInvoice, FeePayment, FeeStructure
 from app.models.ops import Attendance, Homework, HomeworkSubmission, Notice
 from app.models.user import Parent, ParentStudent, Student, Teacher, User
 from app.models.enrolment import Enrolment
+from app.models.rbac import Permission, Role, RolePermission, UserRoleAssignment
 from app.models.tenancy import AcademicYear, School

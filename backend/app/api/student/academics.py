@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import require_role
+from app.services.rbac import require_permission
 from app.models import Exam, ExamSchedule, Mark, User, UserRole
 from app.schemas.common import (
     AttendanceMonth,
@@ -18,7 +18,7 @@ from app.services import assessment, attendance, homework, scoping
 from app.services.common import require_current_enrolment
 
 router = APIRouter(prefix="/student", tags=["student"])
-student_only = require_role(UserRole.student)
+student_only = require_permission("homework.item.read")
 
 
 @router.get("/attendance", response_model=AttendanceMonth)
@@ -40,7 +40,7 @@ def my_homework(
     return homework.for_student(db, scoping.student_id_for(db, user), status)
 
 
-@router.post("/homework/{homework_id}/submit", response_model=StudentHomeworkOut)
+@router.post("/homework/{homework_id}/submit", response_model=StudentHomeworkOut, dependencies=[Depends(require_permission("homework.submission.submit"))])
 def submit(
     homework_id: int,
     body: SubmitRequest,

@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import require_role
+from app.services.rbac import require_permission
 from app.models import (
     AcademicYear,
     ClassSection,
@@ -24,7 +24,7 @@ from app.services import tenancy
 from app.services.common import roster, section_labels, subject_names
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-admin_only = require_role(UserRole.admin)
+admin_only = require_permission("academics.class.read", school_wide=True)
 
 
 class ClassCreate(BaseModel):
@@ -75,7 +75,7 @@ def list_classes(user: User = Depends(admin_only), db: Session = Depends(get_db)
     ]
 
 
-@router.post("/classes", status_code=status.HTTP_201_CREATED)
+@router.post("/classes", status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_permission("academics.class.write"))])
 def create_class(
     body: ClassCreate, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> dict:
@@ -107,7 +107,7 @@ def create_class(
     return _row(db, c)
 
 
-@router.patch("/classes/{class_id}")
+@router.patch("/classes/{class_id}", dependencies=[Depends(require_permission("academics.class.write"))])
 def update_class(
     class_id: int,
     body: ClassUpdate,

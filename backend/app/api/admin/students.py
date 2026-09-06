@@ -6,7 +6,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import require_role
+from app.services.rbac import require_permission
 from app.core.security import hash_password
 from app.models import (
     Gender,
@@ -21,7 +21,7 @@ from app.services import assessment, attendance, homework
 from app.services.common import current_enrolment
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-admin_only = require_role(UserRole.admin)
+admin_only = require_permission("students.profile.read", school_wide=True)
 
 
 class ParentInput(BaseModel):
@@ -108,7 +108,7 @@ def list_students(
     return Page(items=[_row(db, s) for s in rows], total=total, page=page, page_size=page_size)
 
 
-@router.post("/students", status_code=status.HTTP_201_CREATED)
+@router.post("/students", status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_permission("students.profile.write"))])
 def create_student(
     body: StudentCreate, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> dict:
@@ -220,7 +220,7 @@ def student_detail(
     }
 
 
-@router.patch("/students/{student_id}")
+@router.patch("/students/{student_id}", dependencies=[Depends(require_permission("students.profile.write"))])
 def update_student(
     student_id: int,
     body: StudentUpdate,
@@ -242,7 +242,7 @@ def update_student(
     return _row(db, s)
 
 
-@router.delete("/students/{student_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/students/{student_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_permission("students.profile.write"))])
 def deactivate_student(
     student_id: int, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> Response:

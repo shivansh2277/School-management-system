@@ -4,14 +4,14 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import require_role
+from app.services.rbac import require_permission
 from app.models import User, UserRole
 from app.schemas.common import AttendanceMarkRequest, RollRow
 from app.services import attendance as svc
 from app.services import scoping
 
 router = APIRouter(prefix="/teacher", tags=["teacher"])
-teacher_only = require_role(UserRole.teacher)
+teacher_only = require_permission("attendance.record.read")
 
 
 @router.get("/attendance", response_model=list[RollRow])
@@ -25,7 +25,7 @@ def roll_sheet(
     return svc.roll_sheet(db, class_section_id, date)
 
 
-@router.post("/attendance", response_model=list[RollRow])
+@router.post("/attendance", response_model=list[RollRow], dependencies=[Depends(require_permission("attendance.record.mark"))])
 def mark(
     body: AttendanceMarkRequest,
     user: User = Depends(teacher_only),

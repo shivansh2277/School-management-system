@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import require_role
+from app.services.rbac import require_permission
 from pydantic import BaseModel
 
 from app.models import Notice, User, UserRole
@@ -12,7 +12,7 @@ from app.services import stats as svc
 from app.services import tenancy
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-admin_only = require_role(UserRole.admin)
+admin_only = require_permission("admin.settings.read", school_wide=True)
 
 
 @router.get("/dashboard/stats")
@@ -77,7 +77,7 @@ def get_settings(user: User = Depends(admin_only), db: Session = Depends(get_db)
     }
 
 
-@router.patch("/settings")
+@router.patch("/settings", dependencies=[Depends(require_permission("admin.settings.write"))])
 def update_settings(
     body: SettingsUpdate, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> dict:

@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import require_role
+from app.services.rbac import require_permission
 from app.models import ExamSchedule, Student, TimetableSlot, User, UserRole
 from app.schemas.common import SlotOut
 from app.services import assessment, attendance, homework, notices, scoping
@@ -13,7 +13,7 @@ from app.services.common import require_current_enrolment, section_labels, subje
 from app.services.stats import DAY_KEYS
 
 router = APIRouter(prefix="/student", tags=["student"])
-student_only = require_role(UserRole.student)
+student_only = require_permission("attendance.record.read")
 
 
 def _slots(db: Session, student: Student, day_key: str | None) -> list[SlotOut]:

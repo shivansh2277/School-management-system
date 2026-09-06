@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import require_role
+from app.services.rbac import require_permission
 from app.models import (
     Exam,
     ExamSchedule,
@@ -24,7 +24,7 @@ from app.services import assessment, attendance, fees, homework, notices, scopin
 from app.services.common import current_enrolment, enrolment_map
 
 router = APIRouter(prefix="/parent", tags=["parent"])
-parent_only = require_role(UserRole.parent)
+parent_only = require_permission("students.profile.read")
 
 
 @router.get("/children")

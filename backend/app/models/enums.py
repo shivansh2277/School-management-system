@@ -42,6 +42,16 @@ class EnrolmentStatus(StrEnum):
     passed_out = "passed_out"
 
 
+class ScopeType(StrEnum):
+    """How far a role assignment reaches."""
+
+    school = "school"          # everywhere in this tenant
+    academic_year = "academic_year"
+    class_section = "class_section"
+    department = "department"
+    self_only = "self"         # own record only
+
+
 class UserRole(StrEnum):
     admin = "admin"
     teacher = "teacher"

@@ -10,10 +10,13 @@ import random
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import Base, SessionLocal, engine
 from app.core.security import hash_password
+from app.core.permissions import LEGACY_ROLE_MAP
+from app.services import rbac
 from app.models import (
     AcademicYear,
     AcademicYearStatus,
@@ -43,8 +46,12 @@ from app.models import (
     Subject,
     Teacher,
     TimetableSlot,
+    Role,
+    RolePermission,
+    ScopeType,
     User,
     UserRole,
+    UserRoleAssignment,
 )
 
 ACADEMIC_YEAR = "2025-26"
@@ -58,7 +65,8 @@ WIPE_ORDER = [
     FeePayment, FeeInvoice, FeeStructure, Mark, ExamSchedule, Exam, GradeBand,
     HomeworkSubmission, Homework, Attendance, Notice, TimetableSlot,
     ClassSubjectTeacher, ParentStudent, Enrolment, Student, ClassSection,
-    Parent, Teacher, Subject, User, AcademicYear, School,
+    Parent, Teacher, Subject, UserRoleAssignment, RolePermission, Role,
+    User, AcademicYear, School,
 ]
 
 SUBJECTS = [
@@ -220,6 +228,9 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
 
     # From here on every row is stamped with this school automatically.
     _stamp_tenant(db, school.id)
+
+    # This school's copy of the roles that ship with the product.
+    roles = rbac.install_system_roles(db, school.id)
     db.add_all(GradeBand(min_percent=Decimal(p), grade=g) for p, g in GRADE_BANDS)
 
     # --- people -----------------------------------------------------------
@@ -524,7 +535,42 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
             )
         )
 
+    _assign_roles(db, roles, sections)
     db.commit()
+
+
+def _assign_roles(db: Session, roles: dict, sections: list) -> None:
+    """Give every seeded account the system role matching its primary role.
+
+    Class teachers additionally get a `class_section`-scoped grant, which is
+    what "Class Teacher" actually is: the teacher role plus authority over one
+    section (ERP_BLUEPRINT §3.5).
+    """
+    for user in db.scalars(select(User)):
+        code = LEGACY_ROLE_MAP[user.role.value]
+        # Students and guardians hold their permissions over their own records
+        # only. Granting them school-wide would let a parent read the admin
+        # roster, since both hold students.profile.read.
+        scope = (
+            ScopeType.self_only
+            if code in ("student", "guardian")
+            else ScopeType.school
+        )
+        rbac.assign(db, user, roles[code], scope_type=scope)
+
+    class_teacher_role = roles["teacher"]
+    for sec in sections:
+        if sec.class_teacher_id is None:
+            continue
+        teacher = db.get(Teacher, sec.class_teacher_id)
+        rbac.assign(
+            db,
+            teacher.user,
+            class_teacher_role,
+            scope_type=ScopeType.class_section,
+            scope_id=sec.id,
+        )
+    db.flush()
 
 
 def main() -> None:

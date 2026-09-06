@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import require_role
+from app.services.rbac import require_permission
 from app.models import FeeInvoice, FeePayment, InvoiceStatus, User, UserRole
 from app.pdf.receipt import build_receipt
 from app.schemas.common import InvoiceOut, PaymentResult
@@ -11,7 +11,7 @@ from app.services import fees as svc
 from app.services import scoping
 
 router = APIRouter(prefix="/parent", tags=["parent"])
-parent_only = require_role(UserRole.parent)
+parent_only = require_permission("fees.invoice.read")
 
 
 def _own_invoice(db: Session, user: User, invoice_id: int) -> FeeInvoice:
@@ -43,7 +43,7 @@ def invoices(
     return svc.to_out(db, rows)
 
 
-@router.post("/fees/{invoice_id}/pay", response_model=PaymentResult)
+@router.post("/fees/{invoice_id}/pay", response_model=PaymentResult, dependencies=[Depends(require_permission("fees.payment.pay_own"))])
 def pay(
     invoice_id: int, user: User = Depends(parent_only), db: Session = Depends(get_db)
 ) -> PaymentResult:

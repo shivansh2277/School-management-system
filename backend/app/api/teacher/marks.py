@@ -3,14 +3,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import require_role
+from app.services.rbac import require_permission
 from app.models import ExamSchedule, User, UserRole
 from app.schemas.common import ExamScheduleOut, MarksRequest, MarksRosterRow
 from app.services import assessment as svc
 from app.services import scoping
 
 router = APIRouter(prefix="/teacher", tags=["teacher"])
-teacher_only = require_role(UserRole.teacher)
+teacher_only = require_permission("exam.marks.read")
 
 
 @router.get("/exams", response_model=list[ExamScheduleOut])
@@ -42,7 +42,7 @@ def roster(
     return svc.marks_roster(db, user, exam_schedule_id)
 
 
-@router.post("/marks", response_model=list[MarksRosterRow])
+@router.post("/marks", response_model=list[MarksRosterRow], dependencies=[Depends(require_permission("exam.marks.enter"))])
 def enter(
     body: MarksRequest, user: User = Depends(teacher_only), db: Session = Depends(get_db)
 ) -> list[MarksRosterRow]:
