@@ -151,9 +151,10 @@ class Enquiry(TenantBase):
     )
     assigned_to: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id"))
     next_follow_up_on: Mapped[date | None] = mapped_column(Date)
-    # Not a foreign key yet: `applications` arrives in the next migration, and
-    # an enquiry is perfectly valid without one.
-    converted_application_id: Mapped[int | None] = mapped_column(BigInteger)
+    # Nullable, and usually null: most enquiries never become an application.
+    converted_application_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("applications.id")
+    )
 
 
 class EnquiryInteraction(TenantBase):

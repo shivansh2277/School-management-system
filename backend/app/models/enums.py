@@ -205,3 +205,55 @@ class EnquiryChannel(StrEnum):
     email = "email"
     whatsapp = "whatsapp"
     sms = "sms"
+
+
+class ApplicationStatus(StrEnum):
+    """The pipeline of ERP_BLUEPRINT §5.1.7.
+
+    Forward moves are permission-gated; backward moves are allowed but always
+    audited with a reason, because a real admissions office does reopen
+    decisions and a system that forbids it just gets a second application
+    record instead.
+    """
+
+    draft = "draft"
+    submitted = "submitted"
+    under_document_verification = "under_document_verification"
+    documents_verified = "documents_verified"
+    documents_rejected = "documents_rejected"
+    assessment_scheduled = "assessment_scheduled"
+    assessment_completed = "assessment_completed"
+    interview_scheduled = "interview_scheduled"
+    interview_completed = "interview_completed"
+    decision_pending = "decision_pending"
+    admitted = "admitted"
+    waitlisted = "waitlisted"
+    rejected = "rejected"
+    offer_issued = "offer_issued"
+    offer_accepted = "offer_accepted"
+    offer_expired = "offer_expired"
+    fee_paid = "fee_paid"
+    enrolled = "enrolled"
+    withdrawn_by_parent = "withdrawn_by_parent"
+    cancelled_after_admission = "cancelled_after_admission"
+
+
+class AdmissionCategory(StrEnum):
+    """Why this applicant might be treated differently. Sibling and staff-ward
+    are claims until verified against real records (§5.1.9(6))."""
+
+    general = "general"
+    sibling = "sibling"
+    staff_ward = "staff_ward"
+    management = "management"
+    rte = "rte"
+    sports = "sports"
+    alumni_child = "alumni_child"
+
+
+class CasteCategory(StrEnum):
+    general = "general"
+    obc = "obc"
+    sc = "sc"
+    st = "st"
+    ews = "ews"

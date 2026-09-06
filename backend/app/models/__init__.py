@@ -1,3 +1,9 @@
+from app.models.application import (
+    Application,
+    ApplicationGuardian,
+    ApplicationMedical,
+    ApplicationSibling,
+)
 from app.models.admission import (
     AdmissionCycle,
     CycleClassConfig,
@@ -7,7 +13,10 @@ from app.models.admission import (
 from app.models.academic import ClassSection, ClassSubjectTeacher, Subject, TimetableSlot
 from app.models.assessment import Exam, ExamSchedule, GradeBand, Mark
 from app.models.enums import (
+    AdmissionCategory,
     AdmissionCycleStatus,
+    ApplicationStatus,
+    CasteCategory,
     EnquiryChannel,
     EnquirySource,
     EnquiryStatus,
