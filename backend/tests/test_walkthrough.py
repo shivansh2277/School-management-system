@@ -8,12 +8,16 @@ from datetime import date, timedelta
 
 
 def test_cross_role_walkthrough(client, admin, teacher, student, parent, db, ids):
-    from app.models import Student
+    from app.models import Enrolment, Student
 
     section = ids["section_10a"]
     today = date.today().isoformat()
     roster = (
-        db.query(Student).filter(Student.class_section_id == section).order_by(Student.roll_no).all()
+        db.query(Student)
+        .join(Enrolment, Enrolment.student_id == Student.id)
+        .filter(Enrolment.class_section_id == section)
+        .order_by(Enrolment.roll_no)
+        .all()
     )
     absent_two = {roster[0].id, roster[1].id}
 

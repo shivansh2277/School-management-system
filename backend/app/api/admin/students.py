@@ -18,6 +18,7 @@ from app.models import (
 )
 from app.schemas.common import Page
 from app.services import assessment, attendance, homework
+from app.services.common import current_enrolment
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 admin_only = require_role(UserRole.admin)
@@ -59,6 +60,7 @@ class StudentUpdate(BaseModel):
 
 
 def _row(db: Session, s: Student) -> dict:
+    enrolment = current_enrolment(db, s.id)
     guardians = db.scalars(
         select(Parent)
         .join(ParentStudent, ParentStudent.parent_id == Parent.id)
@@ -68,9 +70,9 @@ def _row(db: Session, s: Student) -> dict:
         "id": s.id,
         "full_name": s.user.full_name,
         "admission_no": s.admission_no,
-        "class_section_id": s.class_section_id,
-        "class_label": s.class_section.label,
-        "roll_no": s.roll_no,
+        "class_section_id": enrolment.class_section_id if enrolment else None,
+        "class_label": enrolment.class_section.label if enrolment else "",
+        "roll_no": enrolment.roll_no if enrolment else None,
         "photo_url": s.user.photo_url,
         "is_active": s.user.is_active,
         "parent_name": guardians[0].user.full_name if guardians else None,
@@ -89,7 +91,13 @@ def list_students(
 ) -> Page:
     stmt = select(Student).join(User, User.id == Student.user_id)
     if class_section_id is not None:
-        stmt = stmt.where(Student.class_section_id == class_section_id)
+        stmt = stmt.where(
+            Student.id.in_(
+                select(Enrolment.student_id).where(
+                    Enrolment.class_section_id == class_section_id
+                )
+            )
+        )
     if q:
         like = f"%{q}%"
         stmt = stmt.where(or_(User.full_name.ilike(like), Student.admission_no.ilike(like)))
@@ -122,14 +130,28 @@ def create_student(
         school_id=user.school_id,
         user_id=su.id,
         admission_no=body.admission_no,
-        class_section_id=body.class_section_id,
-        roll_no=body.roll_no,
         dob=body.dob,
         gender=body.gender,
         address=body.address,
         admission_date=body.admission_date or Date.today(),
     )
     db.add(student)
+    db.flush()
+    # The class and roll number belong to a year, so creating a student also
+    # creates their enrolment in the school's current one.
+    section = db.get(ClassSection, body.class_section_id)
+    if section is None or section.school_id != user.school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Class section not found")
+    db.add(
+        Enrolment(
+            school_id=user.school_id,
+            student_id=student.id,
+            academic_year_id=section.academic_year_id,
+            class_section_id=section.id,
+            roll_no=body.roll_no,
+            joined_on=body.admission_date or Date.today(),
+        )
+    )
     db.flush()
 
     parent = None
@@ -179,7 +201,10 @@ def student_detail(
     s = db.get(Student, student_id)
     if s is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Student not found")
-    exam = assessment.latest_exam_with_marks(db, s.school_id, s.class_section_id)
+    enrolment = current_enrolment(db, s.id)
+    exam = assessment.latest_exam_with_marks(
+        db, s.school_id, enrolment.class_section_id if enrolment else None
+    )
     hw = homework.for_student(db, s.id)
     return {
         **_row(db, s),

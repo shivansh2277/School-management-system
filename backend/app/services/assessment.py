@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Exam, ExamSchedule, Mark, Student, User
+from app.models import Enrolment, Exam, ExamSchedule, Mark, Student, User
 from app.schemas.common import (
     ExamScheduleOut,
     MarksRequest,
@@ -13,7 +13,14 @@ from app.schemas.common import (
     ReportCardRow,
 )
 from app.services import scoping
-from app.services.common import grade_for, roster, section_labels, subject_names
+from app.services.common import (
+    current_enrolment,
+    grade_for,
+    require_current_enrolment,
+    roster,
+    section_labels,
+    subject_names,
+)
 
 
 def schedule_out(db: Session, rows: list[ExamSchedule]) -> list[ExamScheduleOut]:
@@ -61,19 +68,19 @@ def marks_roster(db: Session, user: User, exam_schedule_id: int) -> list[MarksRo
     }
     return [
         MarksRosterRow(
-            student_id=s.id,
-            full_name=s.user.full_name,
-            roll_no=s.roll_no,
-            marks_obtained=existing.get(s.id),
+            student_id=e.student_id,
+            full_name=e.student.user.full_name,
+            roll_no=e.roll_no,
+            marks_obtained=existing.get(e.student_id),
         )
-        for s in roster(db, sched.class_section_id)
+        for e in roster(db, sched.class_section_id)
     ]
 
 
 def enter_marks(db: Session, user: User, body: MarksRequest) -> list[MarksRosterRow]:
     sched = _owned_schedule(db, user, body.exam_schedule_id)
     teacher = scoping.teacher_for(db, user)
-    students = {s.id: s for s in roster(db, sched.class_section_id)}
+    students = {e.student_id: e.student for e in roster(db, sched.class_section_id)}
     existing = {
         m.student_id: m
         for m in db.scalars(select(Mark).where(Mark.exam_schedule_id == sched.id))
@@ -110,11 +117,12 @@ def report_card(db: Session, student_id: int, exam_id: int) -> ReportCard:
     exam = db.get(Exam, exam_id)
     if student is None or exam is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Exam or student not found")
+    enrolment = require_current_enrolment(db, student.id)
     schedules = list(
         db.scalars(
             select(ExamSchedule).where(
                 ExamSchedule.exam_id == exam_id,
-                ExamSchedule.class_section_id == student.class_section_id,
+                ExamSchedule.class_section_id == enrolment.class_section_id,
             )
         )
     )
@@ -153,7 +161,7 @@ def report_card(db: Session, student_id: int, exam_id: int) -> ReportCard:
         exam_name=exam.name,
         student_id=student.id,
         student_name=student.user.full_name,
-        class_label=student.class_section.label,
+        class_label=enrolment.class_section.label,
         rows=rows,
         total_obtained=total_obtained,
         total_max=total_max,

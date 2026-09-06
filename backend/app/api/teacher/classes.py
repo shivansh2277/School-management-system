@@ -4,7 +4,15 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.deps import require_role
-from app.models import ClassSection, ClassSubjectTeacher, Student, TimetableSlot, User, UserRole
+from app.models import (
+    ClassSection,
+    ClassSubjectTeacher,
+    Enrolment,
+    Student,
+    TimetableSlot,
+    User,
+    UserRole,
+)
 from app.schemas.common import SlotOut
 from app.services import scoping
 from app.services.common import roster, section_labels, subject_names
@@ -33,7 +41,7 @@ def my_classes(user: User = Depends(teacher_only), db: Session = Depends(get_db)
                 "is_class_teacher": section.class_teacher_id == me.id,
                 "subjects": sorted(owned.get(section_id, [])),
                 "student_count": db.query(Student)
-                .filter(Student.class_section_id == section_id)
+                .filter(Enrolment.class_section_id == section_id)
                 .count(),
             }
         )
@@ -51,7 +59,7 @@ def class_roster(
         {
             "id": s.id,
             "full_name": s.user.full_name,
-            "roll_no": s.roll_no,
+            "roll_no": e.roll_no,
             "admission_no": s.admission_no,
         }
         for s in roster(db, class_section_id)

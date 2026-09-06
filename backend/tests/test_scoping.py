@@ -70,9 +70,14 @@ def test_parent_cannot_submit_homework(client, parent):
 def test_teacher_cannot_mark_attendance_for_a_section_they_do_not_teach(
     client, other_teacher, ids, db
 ):
-    from app.models import Student
+    from app.models import Enrolment, Student
 
-    roster = db.query(Student).filter(Student.class_section_id == ids["section_10a"]).all()
+    roster = (
+        db.query(Student)
+        .join(Enrolment, Enrolment.student_id == Student.id)
+        .filter(Enrolment.class_section_id == ids["section_10a"])
+        .all()
+    )
     body = {
         "class_section_id": ids["section_10a"],
         "date": date.today().isoformat(),

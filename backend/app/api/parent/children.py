@@ -21,6 +21,7 @@ from app.models import (
 )
 from app.schemas.common import AttendanceMonth, ReportCard, StudentHomeworkOut
 from app.services import assessment, attendance, fees, homework, notices, scoping
+from app.services.common import current_enrolment, enrolment_map
 
 router = APIRouter(prefix="/parent", tags=["parent"])
 parent_only = require_role(UserRole.parent)
@@ -29,13 +30,16 @@ parent_only = require_role(UserRole.parent)
 @router.get("/children")
 def children(user: User = Depends(parent_only), db: Session = Depends(get_db)) -> list[dict]:
     ids = scoping.child_ids_for(db, user)
+    enrolments = enrolment_map(db, ids)
     return [
         {
             "id": s.id,
             "name": s.user.full_name,
-            "class_label": s.class_section.label,
+            "class_label": (
+                enrolments[s.id].class_section.label if s.id in enrolments else ""
+            ),
             "admission_no": s.admission_no,
-            "roll_no": s.roll_no,
+            "roll_no": enrolments[s.id].roll_no if s.id in enrolments else None,
         }
         for s in db.scalars(select(Student).where(Student.id.in_(ids)))
     ]
@@ -46,14 +50,17 @@ def summary(
     student_id: int, user: User = Depends(parent_only), db: Session = Depends(get_db)
 ) -> dict:
     s = scoping.assert_can_read_student(db, user, student_id)
-    exam = assessment.latest_exam_with_marks(db, s.school_id, s.class_section_id)
+    enrolment = current_enrolment(db, s.id)
+    exam = assessment.latest_exam_with_marks(
+        db, s.school_id, enrolment.class_section_id if enrolment else None
+    )
     hw = homework.for_student(db, s.id)
     invoices = list(db.scalars(select(FeeInvoice).where(FeeInvoice.student_id == s.id)))
     fees.refresh_overdue(db, invoices)
     return {
         "student_id": s.id,
         "name": s.user.full_name,
-        "class_label": s.class_section.label,
+        "class_label": (e.class_section.label if (e := current_enrolment(db, s.id)) else ""),
         "attendance_percent": attendance.student_percent(db, s.id),
         "homework_submitted": sum(1 for h in hw if h.submitted),
         "homework_pending": sum(1 for h in hw if not h.submitted),
@@ -126,13 +133,19 @@ def child_profile(
     student_id: int, user: User = Depends(parent_only), db: Session = Depends(get_db)
 ) -> dict:
     s = scoping.assert_can_read_student(db, user, student_id)
-    teacher = db.get(Teacher, s.class_section.class_teacher_id) if s.class_section.class_teacher_id else None
+    enrolment = current_enrolment(db, s.id)
+    section = enrolment.class_section if enrolment else None
+    teacher = (
+        db.get(Teacher, section.class_teacher_id)
+        if section and section.class_teacher_id
+        else None
+    )
     return {
         "id": s.id,
         "full_name": s.user.full_name,
         "admission_no": s.admission_no,
-        "class_label": s.class_section.label,
-        "roll_no": s.roll_no,
+        "class_label": section.label if section else "",
+        "roll_no": enrolment.roll_no if enrolment else None,
         "dob": s.dob,
         "gender": s.gender,
         "address": s.address,

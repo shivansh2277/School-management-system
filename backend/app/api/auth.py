@@ -23,6 +23,7 @@ from app.schemas.auth import (
     UserOut,
 )
 from app.services import scoping
+from app.services.common import class_label_map, current_enrolment
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -79,8 +80,10 @@ def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)) ->
     if user.role == UserRole.student:
         s = scoping.student_for(db, user)
         out.admission_no = s.admission_no
-        out.class_label = s.class_section.label
-        out.roll_no = s.roll_no
+        enrolment = current_enrolment(db, s.id)
+        if enrolment is not None:
+            out.class_label = enrolment.class_section.label
+            out.roll_no = enrolment.roll_no
     elif user.role == UserRole.teacher:
         t = scoping.teacher_for(db, user)
         out.employee_id = t.employee_id
@@ -90,11 +93,12 @@ def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)) ->
         ]
     elif user.role == UserRole.parent:
         ids = scoping.child_ids_for(db, user)
+        labels = class_label_map(db, ids)
         out.children = [
             ChildRef(
                 id=s.id,
                 name=s.user.full_name,
-                class_label=s.class_section.label,
+                class_label=labels.get(s.id, ""),
                 admission_no=s.admission_no,
             )
             for s in db.scalars(select(Student).where(Student.id.in_(ids)))

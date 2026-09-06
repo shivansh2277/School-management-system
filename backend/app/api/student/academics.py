@@ -15,6 +15,7 @@ from app.schemas.common import (
     SubmitRequest,
 )
 from app.services import assessment, attendance, homework, scoping
+from app.services.common import require_current_enrolment
 
 router = APIRouter(prefix="/student", tags=["student"])
 student_only = require_role(UserRole.student)
@@ -54,11 +55,12 @@ def upcoming_exams(
     user: User = Depends(student_only), db: Session = Depends(get_db)
 ) -> list[ExamScheduleOut]:
     s = scoping.student_for(db, user)
+    enrolment = require_current_enrolment(db, s.id)
     rows = list(
         db.scalars(
             select(ExamSchedule)
             .where(
-                ExamSchedule.class_section_id == s.class_section_id,
+                ExamSchedule.class_section_id == enrolment.class_section_id,
                 ExamSchedule.exam_date >= Date.today(),
             )
             .order_by(ExamSchedule.exam_date)

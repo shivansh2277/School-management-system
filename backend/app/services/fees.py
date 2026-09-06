@@ -15,6 +15,7 @@ from app.models import (
     InvoiceStatus,
     Student,
 )
+from app.services.common import class_label_map, enrolment_sections
 from app.schemas.common import (
     CollectionMonth,
     CollectionSummary,
@@ -52,13 +53,14 @@ def to_out(db: Session, invoices: list[FeeInvoice]) -> list[InvoiceOut]:
         s.id: s
         for s in db.scalars(select(Student).where(Student.id.in_([i.student_id for i in invoices] or [0])))
     }
+    labels = class_label_map(db, list(students))
     return [
         InvoiceOut(
             id=i.id,
             student_id=i.student_id,
             student_name=students[i.student_id].user.full_name,
             admission_no=students[i.student_id].admission_no,
-            class_label=students[i.student_id].class_section.label,
+            class_label=labels.get(i.student_id, ""),
             month=i.month,
             year=i.year,
             amount=i.amount,
@@ -99,13 +101,22 @@ def generate(
     )
     due = Date(year, month, min(10, calendar.monthrange(year, month)[1]))
     created = skipped = 0
+    sections = enrolment_sections(
+        db,
+        [
+            sid
+            for sid in db.scalars(
+                select(Student.id).where(Student.school_id == school_id)
+            )
+        ],
+    )
     for s in db.scalars(select(Student).where(Student.school_id == school_id)):
         if not s.user.is_active:
             continue
         if s.id in existing:  # idempotent: rely on the unique key, skip existing
             skipped += 1
             continue
-        amount = structures.get(labels.get(s.class_section_id, ""))
+        amount = structures.get(labels.get(sections.get(s.id, 0), ""))
         if amount is None:
             skipped += 1
             continue

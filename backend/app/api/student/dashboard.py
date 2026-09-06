@@ -9,7 +9,7 @@ from app.core.deps import require_role
 from app.models import ExamSchedule, Student, TimetableSlot, User, UserRole
 from app.schemas.common import SlotOut
 from app.services import assessment, attendance, homework, notices, scoping
-from app.services.common import section_labels, subject_names
+from app.services.common import require_current_enrolment, section_labels, subject_names
 from app.services.stats import DAY_KEYS
 
 router = APIRouter(prefix="/student", tags=["student"])
@@ -17,7 +17,10 @@ student_only = require_role(UserRole.student)
 
 
 def _slots(db: Session, student: Student, day_key: str | None) -> list[SlotOut]:
-    q = select(TimetableSlot).where(TimetableSlot.class_section_id == student.class_section_id)
+    enrolment = require_current_enrolment(db, student.id)
+    q = select(TimetableSlot).where(
+        TimetableSlot.class_section_id == enrolment.class_section_id
+    )
     if day_key is not None:
         q = q.where(TimetableSlot.day_of_week == day_key)
     labels = section_labels(db)
@@ -44,11 +47,15 @@ def _slots(db: Session, student: Student, day_key: str | None) -> list[SlotOut]:
 @router.get("/dashboard")
 def dashboard(user: User = Depends(student_only), db: Session = Depends(get_db)) -> dict:
     s = scoping.student_for(db, user)
-    exam = assessment.latest_exam_with_marks(db, s.school_id, s.class_section_id)
+    exam = assessment.latest_exam_with_marks(
+        db, s.school_id, require_current_enrolment(db, s.id).class_section_id
+    )
     next_paper = db.scalars(
         select(ExamSchedule)
         .where(
-            ExamSchedule.class_section_id == s.class_section_id,
+            ExamSchedule.class_section_id == require_current_enrolment(
+                db, s.id
+            ).class_section_id,
             ExamSchedule.exam_date >= Date.today(),
         )
         .order_by(ExamSchedule.exam_date)
@@ -93,8 +100,8 @@ def profile(user: User = Depends(student_only), db: Session = Depends(get_db)) -
         "id": s.id,
         "full_name": s.user.full_name,
         "admission_no": s.admission_no,
-        "class_label": s.class_section.label,
-        "roll_no": s.roll_no,
+        "class_label": enrolment.class_section.label if enrolment else "",
+        "roll_no": enrolment.roll_no if enrolment else None,
         "dob": s.dob,
         "gender": s.gender,
         "address": s.address,

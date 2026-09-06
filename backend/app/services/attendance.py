@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Attendance, AttendanceStatus, Student, User
+from app.models import Attendance, AttendanceStatus, Enrolment, Student, User
 from app.schemas.common import (
     AttendanceDay,
     AttendanceMarkRequest,
@@ -38,19 +38,22 @@ def roll_sheet(db: Session, class_section_id: int, day: Date) -> list[RollRow]:
         a.student_id: a
         for a in db.scalars(
             select(Attendance)
-            .join(Student, Student.id == Attendance.student_id)
-            .where(Student.class_section_id == class_section_id, Attendance.date == day)
+            .join(Enrolment, Enrolment.student_id == Attendance.student_id)
+            .where(
+                Enrolment.class_section_id == class_section_id,
+                Attendance.date == day,
+            )
         )
     }
     return [
         RollRow(
-            student_id=s.id,
-            full_name=s.user.full_name,
-            roll_no=s.roll_no,
-            status=marked[s.id].status if s.id in marked else None,
-            remarks=marked[s.id].remarks if s.id in marked else None,
+            student_id=e.student_id,
+            full_name=e.student.user.full_name,
+            roll_no=e.roll_no,
+            status=marked[e.student_id].status if e.student_id in marked else None,
+            remarks=marked[e.student_id].remarks if e.student_id in marked else None,
         )
-        for s in roster(db, class_section_id)
+        for e in roster(db, class_section_id)
     ]
 
 
@@ -60,7 +63,7 @@ def mark(db: Session, user: User, body: AttendanceMarkRequest) -> list[RollRow]:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Cannot mark attendance for a future date")
 
     teacher = scoping.teacher_for(db, user)
-    section_students = {s.id for s in roster(db, body.class_section_id)}
+    section_students = {e.student_id for e in roster(db, body.class_section_id)}
     existing = {
         a.student_id: a
         for a in db.scalars(
@@ -126,7 +129,9 @@ def section_summary(
     if class_section_id is not None:
         where.append(
             Attendance.student_id.in_(
-                select(Student.id).where(Student.class_section_id == class_section_id)
+                select(Enrolment.student_id).where(
+                    Enrolment.class_section_id == class_section_id
+                )
             )
         )
     if date_from:

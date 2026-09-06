@@ -4,7 +4,16 @@ from fastapi import HTTPException, status
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from app.models import ClassSection, Notice, NoticeAudience, Student, User, UserRole
+from app.services.common import require_current_enrolment
+from app.models import (
+    ClassSection,
+    Enrolment,
+    Notice,
+    NoticeAudience,
+    Student,
+    User,
+    UserRole,
+)
 from app.schemas.common import NoticeCreate, NoticeOut
 from app.services import scoping
 
@@ -78,14 +87,15 @@ def visible_to(db: Session, user: User) -> list[NoticeOut]:
         ]
     elif user.role == UserRole.student:
         student = scoping.student_for(db, user)
+        enrolment = require_current_enrolment(db, student.id)
         clauses = [
             Notice.audience.in_([NoticeAudience.all, NoticeAudience.students]),
-            Notice.class_section_id == student.class_section_id,
+            Notice.class_section_id == enrolment.class_section_id,
         ]
     else:
         child_sections = list(
             db.scalars(
-                select(Student.class_section_id).where(
+                select(Enrolment.class_section_id).where(
                     Student.id.in_(scoping.child_ids_for(db, user))
                 )
             )

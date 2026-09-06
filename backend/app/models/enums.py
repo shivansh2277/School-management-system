@@ -19,6 +19,29 @@ class AcademicYearStatus(StrEnum):
     archived = "archived"
 
 
+class StudentStatus(StrEnum):
+    """Lifetime state. Distinct from EnrolmentStatus, which is per year."""
+
+    enrolled = "enrolled"
+    active = "active"
+    suspended = "suspended"
+    transferred_out = "transferred_out"
+    struck_off = "struck_off"
+    passed_out = "passed_out"
+    alumni = "alumni"
+
+
+class EnrolmentStatus(StrEnum):
+    """How one academic year ended for one student."""
+
+    active = "active"
+    promoted = "promoted"
+    detained = "detained"
+    transferred_out = "transferred_out"
+    struck_off = "struck_off"
+    passed_out = "passed_out"
+
+
 class UserRole(StrEnum):
     admin = "admin"
     teacher = "teacher"

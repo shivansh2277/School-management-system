@@ -55,10 +55,10 @@ def _row(db: Session, c: ClassSection) -> dict:
         "class_name": c.class_name,
         "section": c.section,
         "class_label": c.label,
-        "academic_year": c.academic_year,
+        "academic_year": year.code if (year := db.get(AcademicYear, c.academic_year_id)) else "",
         "class_teacher_id": c.class_teacher_id,
         "class_teacher": teacher.user.full_name if teacher else None,
-        "student_count": db.query(Student).filter(Student.class_section_id == c.id).count(),
+        "student_count": len(roster(db, c.id)),
         "subjects": sorted(subjects[o.subject_id] for o in owned),
     }
 
@@ -129,12 +129,12 @@ def class_roster(
 ) -> list[dict]:
     return [
         {
-            "id": s.id,
-            "full_name": s.user.full_name,
-            "roll_no": s.roll_no,
-            "admission_no": s.admission_no,
+            "id": e.student_id,
+            "full_name": e.student.user.full_name,
+            "roll_no": e.roll_no,
+            "admission_no": e.student.admission_no,
         }
-        for s in roster(db, class_id)
+        for e in roster(db, class_id)
     ]
 
 
@@ -202,12 +202,19 @@ def assignment_submissions(
     }
     return [
         {
-            "student_id": s.id,
-            "full_name": s.user.full_name,
-            "roll_no": s.roll_no,
-            "submitted": s.id in submitted,
-            "submitted_at": submitted[s.id].submitted_at if s.id in submitted else None,
-            "late": s.id in submitted and submitted[s.id].submitted_at.date() > hw.due_date,
+            "student_id": e.student_id,
+            "full_name": e.student.user.full_name,
+            "roll_no": e.roll_no,
+            "submitted": e.student_id in submitted,
+            "submitted_at": (
+                submitted[e.student_id].submitted_at
+                if e.student_id in submitted
+                else None
+            ),
+            "late": (
+                e.student_id in submitted
+                and submitted[e.student_id].submitted_at.date() > hw.due_date
+            ),
         }
-        for s in roster(db, hw.class_section_id)
+        for e in roster(db, hw.class_section_id)
     ]

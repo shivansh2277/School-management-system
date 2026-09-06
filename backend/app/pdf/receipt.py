@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import FeeInvoice, FeePayment, School, Student
+from app.services.common import current_enrolment
 
 MONTHS = [
     "January", "February", "March", "April", "May", "June",
@@ -63,6 +64,8 @@ def build_receipt(db: Session, invoice_id: int) -> bytes:
     student = db.get(Student, invoice.student_id)
     # The receipt belongs to the invoice's school, not to a global row.
     school = db.get(School, invoice.school_id)
+    enrolment = current_enrolment(db, student.id)
+    class_label = enrolment.class_section.label if enrolment else ""
 
     buf = BytesIO()
     doc = SimpleDocTemplate(
@@ -78,7 +81,7 @@ def build_receipt(db: Session, invoice_id: int) -> bytes:
         ["Date", f"{payment.paid_at:%d %b %Y}"],
         ["Student", student.user.full_name],
         ["Admission No.", student.admission_no],
-        ["Class", student.class_section.label],
+        ["Class", class_label],
         ["Billing Month", f"{MONTHS[invoice.month - 1]} {invoice.year}"],
         ["Amount", f"Rs. {invoice.amount:,.2f}"],
         ["Amount in words", amount_in_words(invoice.amount)],

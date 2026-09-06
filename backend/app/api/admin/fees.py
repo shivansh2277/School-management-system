@@ -6,7 +6,15 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.deps import require_role
-from app.models import FeeInvoice, FeeStructure, InvoiceStatus, Student, User, UserRole
+from app.models import (
+    Enrolment,
+    FeeInvoice,
+    FeeStructure,
+    InvoiceStatus,
+    Student,
+    User,
+    UserRole,
+)
 from app.schemas.common import (
     CollectionSummary,
     GenerateInvoicesRequest,
@@ -44,7 +52,9 @@ def invoices(
     if class_section_id is not None:
         q = q.where(
             FeeInvoice.student_id.in_(
-                select(Student.id).where(Student.class_section_id == class_section_id)
+                select(Enrolment.student_id).where(
+                    Enrolment.class_section_id == class_section_id
+                )
             )
         )
     rows = list(db.scalars(q.order_by(FeeInvoice.year.desc(), FeeInvoice.month.desc())))

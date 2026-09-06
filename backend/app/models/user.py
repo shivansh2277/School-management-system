@@ -4,7 +4,7 @@ from sqlalchemy import BigInteger, Boolean, Date, ForeignKey, Index, String, Tex
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TenantBase, enum_col
-from app.models.enums import Gender, UserRole
+from app.models.enums import Gender, StudentStatus, UserRole
 
 
 class User(TenantBase):
@@ -27,27 +27,27 @@ class User(TenantBase):
 
 
 class Student(TenantBase):
+    """What is true about a student for life. Which class they sit in is a fact
+    about a *year* and lives on `enrolments` (ERP_BLUEPRINT §3.2)."""
+
     __tablename__ = "students"
     __table_args__ = (
         UniqueConstraint("school_id", "admission_no", name="uq_student_admission_no"),
-        UniqueConstraint("class_section_id", "roll_no", name="uq_student_roll"),
     )
 
     user_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("users.id"), unique=True, nullable=False
     )
     admission_no: Mapped[str] = mapped_column(String(32), nullable=False)
-    class_section_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("class_sections.id"), nullable=False
+    status: Mapped[StudentStatus] = enum_col(
+        StudentStatus, nullable=False, default=StudentStatus.active
     )
-    roll_no: Mapped[int] = mapped_column(nullable=False)
     dob: Mapped[date | None] = mapped_column(Date)
     gender: Mapped[Gender | None] = enum_col(Gender)
     address: Mapped[str | None] = mapped_column(Text)
     admission_date: Mapped[date | None] = mapped_column(Date)
 
     user: Mapped[User] = relationship(lazy="joined")
-    class_section = relationship("ClassSection", lazy="joined")
 
 
 class Teacher(TenantBase):

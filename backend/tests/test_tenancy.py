@@ -16,6 +16,7 @@ from app.models import (
     AcademicYear,
     AcademicYearStatus,
     ClassSection,
+    Enrolment,
     School,
     SchoolStatus,
     Student,
@@ -76,11 +77,18 @@ def test_two_schools_may_issue_the_same_admission_number(db):
     )
     db.add(user)
     db.flush()
+    student = Student(
+        school_id=school.id,
+        user_id=user.id,
+        admission_no="SPS2024001",  # already used by the seeded school
+    )
+    db.add(student)
+    db.flush()
     db.add(
-        Student(
+        Enrolment(
             school_id=school.id,
-            user_id=user.id,
-            admission_no="SPS2024001",  # already used by the seeded school
+            student_id=student.id,
+            academic_year_id=year.id,
             class_section_id=section.id,
             roll_no=1,
         )
@@ -136,11 +144,16 @@ def test_dashboard_totals_ignore_another_schools_students(client, admin, db):
         )
         db.add(u)
         db.flush()
+        st = Student(
+            school_id=school.id, user_id=u.id, admission_no=f"OTHER{i}"
+        )
+        db.add(st)
+        db.flush()
         db.add(
-            Student(
+            Enrolment(
                 school_id=school.id,
-                user_id=u.id,
-                admission_no=f"OTHER{i}",
+                student_id=st.id,
+                academic_year_id=year.id,
                 class_section_id=section.id,
                 roll_no=i + 1,
             )

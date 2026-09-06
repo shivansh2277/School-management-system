@@ -4,13 +4,14 @@ from app.services.attendance import summarise
 
 
 def roster_ids(db, class_section_id):
-    from app.models import Student
+    from app.models import Enrolment, Student
 
     return [
         s.id
         for s in db.query(Student)
-        .filter(Student.class_section_id == class_section_id)
-        .order_by(Student.roll_no)
+        .join(Enrolment, Enrolment.student_id == Student.id)
+        .filter(Enrolment.class_section_id == class_section_id)
+        .order_by(Enrolment.roll_no)
     ]
 
 

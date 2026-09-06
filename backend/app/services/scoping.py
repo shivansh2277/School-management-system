@@ -18,6 +18,7 @@ from app.models import (
     User,
     UserRole,
 )
+from app.services.common import current_enrolment
 
 
 def forbidden(msg: str = "Out of scope") -> HTTPException:
@@ -101,7 +102,11 @@ def assert_can_read_student(db: Session, user: User, student_id: int) -> Student
             raise forbidden("Not your child")
         return student
     if user.role == UserRole.teacher:
-        if student.class_section_id not in class_section_ids_for(db, user):
+        enrolment = current_enrolment(db, student.id)
+        if (
+            enrolment is None
+            or enrolment.class_section_id not in class_section_ids_for(db, user)
+        ):
             raise forbidden("Student is outside your sections")
         return student
     raise forbidden()

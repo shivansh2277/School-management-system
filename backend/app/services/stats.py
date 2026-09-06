@@ -24,7 +24,7 @@ from app.models import (
     User,
 )
 from app.services import assessment, attendance
-from app.services.common import section_labels, subject_names
+from app.services.common import class_label_map, section_labels, subject_names
 
 DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", None]
 
@@ -138,11 +138,12 @@ def top_performers(db: Session, school_id: int, limit: int = 3) -> list[dict]:
             )
         )
     }
+    sections = class_label_map(db, list(percentages))
     scored = [
         {
             "student_id": sid,
             "name": students[sid].user.full_name,
-            "class_label": labels.get(students[sid].class_section_id, ""),
+            "class_label": sections.get(sid, ""),
             "average_percent": pct,
         }
         for sid, pct in percentages.items()

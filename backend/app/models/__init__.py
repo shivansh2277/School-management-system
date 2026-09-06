@@ -3,14 +3,17 @@ from app.models.assessment import Exam, ExamSchedule, GradeBand, Mark
 from app.models.enums import (
     AcademicYearStatus,
     AttendanceStatus,
+    EnrolmentStatus,
     DayOfWeek,
     Gender,
     InvoiceStatus,
     NoticeAudience,
     SchoolStatus,
+    StudentStatus,
     UserRole,
 )
 from app.models.fees import FeeInvoice, FeePayment, FeeStructure
 from app.models.ops import Attendance, Homework, HomeworkSubmission, Notice
 from app.models.user import Parent, ParentStudent, Student, Teacher, User
+from app.models.enrolment import Enrolment
 from app.models.tenancy import AcademicYear, School

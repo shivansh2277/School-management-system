@@ -18,6 +18,7 @@ from app.models import (
     AcademicYear,
     AcademicYearStatus,
     Attendance,
+    Enrolment,
     AttendanceStatus,
     ClassSection,
     ClassSubjectTeacher,
@@ -56,7 +57,7 @@ TODAY = date(2026, 9, 1)  # deterministic "today" so the seeded window never dri
 WIPE_ORDER = [
     FeePayment, FeeInvoice, FeeStructure, Mark, ExamSchedule, Exam, GradeBand,
     HomeworkSubmission, Homework, Attendance, Notice, TimetableSlot,
-    ClassSubjectTeacher, ParentStudent, Student, ClassSection,
+    ClassSubjectTeacher, ParentStudent, Enrolment, Student, ClassSection,
     Parent, Teacher, Subject, User, AcademicYear, School,
 ]
 
@@ -306,14 +307,24 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
             s = Student(
                 user_id=u.id,
                 admission_no=adm,
-                class_section_id=sec.id,
-                roll_no=r,
                 dob=date(2010 - si, 1 + (n % 12), 1 + (n % 27)),
                 gender=Gender.female if n % 2 == 0 else Gender.male,
                 address=f"House {100 + n}, Vikas Nagar, Lucknow",
                 admission_date=date(2024, 4, 1),
             )
             db.add(s)
+            db.flush()
+            # Class and roll number are facts about a year, not about the
+            # student (ERP_BLUEPRINT §3.2).
+            db.add(
+                Enrolment(
+                    student_id=s.id,
+                    academic_year_id=year.id,
+                    class_section_id=sec.id,
+                    roll_no=r,
+                    joined_on=date(2024, 4, 1),
+                )
+            )
             students.append(s)
     db.flush()
 
@@ -368,12 +379,16 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
                 )
     db.flush()
 
+    # Class and roll number now live on the enrolment, so look them up once
+    # rather than per student per loop.
+    enrolment_of = {e.student_id: e for e in db.query(Enrolment).all()}
+
     # --- attendance: 60 school days, ~92/5/3 with per-student variation ----
     class_teacher_of = {s.id: s.class_teacher_id for s in sections}
     days = school_days(TODAY, 60)
     for s in students:
-        marker = class_teacher_of[s.class_section_id]
-        absent_rate = 0.02 + (s.roll_no % 4) * 0.02  # varies so percentages differ
+        marker = class_teacher_of[enrolment_of[s.id].class_section_id]
+        absent_rate = 0.02 + (enrolment_of[s.id].roll_no % 4) * 0.02  # varies so percentages differ
         for d in days:
             roll = rng.random()
             if roll < absent_rate:
@@ -410,9 +425,9 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
                 )
                 db.add(sched)
                 db.flush()
-                for s in (x for x in students if x.class_section_id == sec.id):
+                for s in (x for x in students if enrolment_of[x.id].class_section_id == sec.id):
                     # ability band per student keeps all four donut buckets populated
-                    base = 30 + (s.roll_no * 8) % 60
+                    base = 30 + (enrolment_of[s.id].roll_no * 8) % 60
                     score = max(0, min(100, base + rng.randint(-6, 12)))
                     db.add(
                         Mark(
@@ -441,9 +456,9 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
         )
         db.add(hw)
         db.flush()
-        roster = [x for x in students if x.class_section_id == sec.id]
+        roster = [x for x in students if enrolment_of[x.id].class_section_id == sec.id]
         for s in roster[: 5 + (i % 3)]:  # some submit, some do not
-            late = (i + s.roll_no) % 5 == 0
+            late = (i + enrolment_of[s.id].roll_no) % 5 == 0
             offset = 4 if late else 1  # late ones land after due_date
             db.add(
                 HomeworkSubmission(
@@ -466,9 +481,9 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
     for back in (3, 2, 1):
         month, year = month_back(TODAY, back)
         for s in students:
-            amount = fees[class_name_of[s.class_section_id]]
+            amount = fees[class_name_of[enrolment_of[s.id].class_section_id]]
             due = date(year, month, 10)
-            paid = (s.roll_no + month) % 3 != 0
+            paid = (enrolment_of[s.id].roll_no + month) % 3 != 0
             inv = FeeInvoice(
                 student_id=s.id,
                 month=month,
