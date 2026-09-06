@@ -1,0 +1,76 @@
+# CLAUDE.md — Sunrise School ERP
+
+## Read these first, in this order
+
+1. **`HANDOFF.md`** (this directory) — current state, the commits and why each
+   exists, and what is explicitly *not* verified.
+2. **`docs/ERP_BLUEPRINT.md` §0** — the 21 locked product decisions. **§0 wins
+   over anything else in that document**; the rest was written before those
+   answers and is corrected only where it would mislead.
+3. **`docs/ERP_BLUEPRINT.md` §12** — the four-part delivery plan.
+
+`docs/BLUEPRINT.md` is the original v0 build contract. Still useful for the
+reasoning behind the original design, but superseded wherever the ERP blueprint
+disagrees.
+
+## What this is
+
+A multi-tenant school ERP being sold to **separate, independent schools** — not
+branches of one school. A tenant is a customer. Work is on branch
+`part-1-foundation`; **nothing has been pushed**.
+
+## Commands
+
+```bash
+cd backend
+../.venv/Scripts/python.exe -m pytest -q          # 132 tests, ~18s
+../.venv/Scripts/python.exe -m pytest tests/test_rbac.py -q       # one file
+../.venv/Scripts/python.exe -m alembic upgrade head
+../.venv/Scripts/python.exe seed.py               # idempotent
+../.venv/Scripts/python.exe worker.py --once      # drain the job queue
+../.venv/Scripts/python.exe -m uvicorn app.main:app --reload --port 8000
+
+cd web && npx tsc --noEmit && npm run dev
+```
+
+Postgres runs natively on this machine, not in Docker. `make testdb` uses
+`docker compose exec` and fails here — create `sunrise_test` by hand.
+
+## Architecture rules that matter
+
+- **Three layers.** `api/` is thin, `services/` holds the rules, `models/` holds
+  the schema. Business logic does not live in a route.
+- **Permission at the route, scope in the service.** `require_permission()`
+  decides *may you at all*; `services/scoping.py` decides *over which rows*.
+  Keep them separate.
+- **Every table carries `school_id`.** It is declared on `TenantBase` so a new
+  table cannot quietly be created without one. A missing tenant key is a data
+  leak between customers, not a style problem.
+- **Year-scoped facts join through `enrolment_id`; lifetime facts through
+  `student_id`.** Getting this backwards reintroduces the bug the enrolment
+  split exists to fix.
+- **Reads never write.** Nothing in a GET may commit.
+- **Business rules belong in database constraints** where they can be — unique
+  constraints, partial indexes, foreign keys — not only in Python.
+- **Money is `Numeric`, never float. Timestamps are `timestamptz`.**
+- **Destructive actions are audited with a reason.** See `services/audit.py`;
+  `void`, `status_change` and `delete` refuse to commit without one.
+
+## Traps that have already cost time
+
+- **The test suite builds its schema from the models (`create_all`), not from
+  the migrations.** A dropped `server_default` once slipped through this gap.
+  `tests/test_migrations.py` covers it — do not delete that test to speed the
+  suite up.
+- **`BCRYPT_ROUNDS` is 4 in tests, 12 everywhere else.** Never lower it outside
+  tests.
+- **SQLite returns naive datetimes** even for `timestamptz`; comparing against
+  an aware `now` raises.
+- **Demo logins changed.** Admission numbers are `2024000001`, not `SPS2024001`.
+
+## Working style for this project
+
+- Verify before claiming. Run the thing; do not report from reading the code.
+- Commit messages carry the reasoning — why, not just what.
+- Show the exact file list before any push.
+- Ask before adding a dependency over 100 MB.
