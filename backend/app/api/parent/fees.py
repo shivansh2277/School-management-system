@@ -48,7 +48,7 @@ def pay(
     invoice_id: int, user: User = Depends(parent_only), db: Session = Depends(get_db)
 ) -> PaymentResult:
     invoice = _own_invoice(db, user, invoice_id)
-    return svc.pay(db, invoice.id)
+    return svc.pay(db, invoice.id, actor=user)
 
 
 @router.get("/fees/{invoice_id}/receipt.pdf")

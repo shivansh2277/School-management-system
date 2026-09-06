@@ -42,6 +42,19 @@ class EnrolmentStatus(StrEnum):
     passed_out = "passed_out"
 
 
+class AuditAction(StrEnum):
+    create = "create"
+    update = "update"
+    delete = "delete"
+    status_change = "status_change"
+    login = "login"
+    login_failed = "login_failed"
+    export = "export"
+    print = "print"
+    void = "void"
+    publish = "publish"
+
+
 class ScopeType(StrEnum):
     """How far a role assignment reaches."""
 

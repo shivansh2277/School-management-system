@@ -3,6 +3,7 @@ from app.models.assessment import Exam, ExamSchedule, GradeBand, Mark
 from app.models.enums import (
     AcademicYearStatus,
     AttendanceStatus,
+    AuditAction,
     EnrolmentStatus,
     DayOfWeek,
     Gender,
@@ -17,5 +18,6 @@ from app.models.fees import FeeInvoice, FeePayment, FeeStructure
 from app.models.ops import Attendance, Homework, HomeworkSubmission, Notice
 from app.models.user import Parent, ParentStudent, Student, Teacher, User
 from app.models.enrolment import Enrolment
+from app.models.audit import AuditLog, NumberSequence
 from app.models.rbac import Permission, Role, RolePermission, UserRoleAssignment
 from app.models.tenancy import AcademicYear, School

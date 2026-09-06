@@ -12,9 +12,11 @@ from app.models import (
     FeeInvoice,
     FeePayment,
     FeeStructure,
+    AuditAction,
     InvoiceStatus,
     Student,
 )
+from app.services import audit
 from app.services.common import class_label_map, enrolment_sections
 from app.schemas.common import (
     CollectionMonth,
@@ -137,18 +139,18 @@ def generate(
 
 
 def _next_receipt_no(db: Session, year: int, school_id: int) -> str:
-    prefix = f"SPS/RCP/{year}/"
-    used = db.scalars(
-        select(FeePayment.receipt_no).where(
-            FeePayment.school_id == school_id,
-            FeePayment.receipt_no.like(f"{prefix}%"),
-        )
-    ).all()
-    seq = max((int(r.rsplit("/", 1)[1]) for r in used), default=0) + 1
-    return f"{prefix}{seq:06d}"
+    """Gapless per school, per financial year.
+
+    v0 computed max(seq) + 1 in Python with no lock: two concurrent payments
+    raced, and the unique constraint turned the loser into a 500 rather than a
+    retry. Receipt numbers are also what an auditor checks for gaps.
+    """
+    return audit.next_number(
+        db, school_id, kind="receipt", year=year, prefix=f"SPS/RCP/{year}/", width=6
+    )
 
 
-def pay(db: Session, invoice_id: int) -> PaymentResult:
+def pay(db: Session, invoice_id: int, actor=None) -> PaymentResult:
     invoice = db.get(FeeInvoice, invoice_id)
     if invoice is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Invoice not found")
@@ -166,6 +168,19 @@ def pay(db: Session, invoice_id: int) -> PaymentResult:
     )
     db.add(payment)
     invoice.status = InvoiceStatus.paid
+    audit.record(
+        db,
+        actor=actor,
+        school_id=invoice.school_id,
+        entity_type="fee_payment",
+        entity_id=invoice.id,
+        action=AuditAction.create,
+        after={
+            "receipt_no": payment.receipt_no,
+            "amount": str(payment.amount),
+            "method": payment.method,
+        },
+    )
     db.commit()
     return PaymentResult(
         invoice_id=invoice.id,

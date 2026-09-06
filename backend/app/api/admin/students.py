@@ -1,6 +1,6 @@
 from datetime import date as Date
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -9,6 +9,7 @@ from app.core.db import get_db
 from app.services.rbac import require_permission
 from app.core.security import hash_password
 from app.models import (
+    AuditAction,
     Gender,
     Parent,
     ParentStudent,
@@ -17,7 +18,7 @@ from app.models import (
     UserRole,
 )
 from app.schemas.common import Page
-from app.services import assessment, attendance, homework
+from app.services import assessment, attendance, audit, homework
 from app.services.common import current_enrolment
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -244,11 +245,30 @@ def update_student(
 
 @router.delete("/students/{student_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_permission("students.profile.write"))])
 def deactivate_student(
-    student_id: int, user: User = Depends(admin_only), db: Session = Depends(get_db)
+    student_id: int,
+    reason: str = Query(
+        ...,
+        min_length=3,
+        description="Why this student is being deactivated. Recorded in the audit log.",
+    ),
+    user: User = Depends(admin_only),
+    db: Session = Depends(get_db),
 ) -> Response:
     s = db.get(Student, student_id)
-    if s is None:
+    if s is None or s.school_id != user.school_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Student not found")
-    s.user.is_active = False  # soft delete
+    before = audit.snapshot(s.user, ["is_active"])
+    s.user.is_active = False  # portal access revoked; the record is retained
+    audit.record(
+        db,
+        actor=user,
+        school_id=user.school_id,
+        entity_type="student",
+        entity_id=s.id,
+        action=AuditAction.status_change,
+        before=before,
+        after=audit.snapshot(s.user, ["is_active"]),
+        reason=reason,
+    )
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

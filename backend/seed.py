@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.core.db import Base, SessionLocal, engine
 from app.core.security import hash_password
 from app.core.permissions import LEGACY_ROLE_MAP
+from app.services import audit as audit_svc
 from app.services import rbac
 from app.models import (
     AcademicYear,
@@ -488,7 +489,6 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
     db.add_all(FeeStructure(class_name=c, monthly_amount=a) for c, a in fees.items())
 
     class_name_of = {s.id: s.class_name for s in sections}
-    receipt_seq = 0
     for back in (3, 2, 1):
         month, year = month_back(TODAY, back)
         for s in students:
@@ -507,7 +507,9 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
             db.add(inv)
             db.flush()
             if paid:
-                receipt_seq += 1
+                # Draw from the same sequence the application uses, so the
+                # counter reflects what has actually been issued and a payment
+                # taken right after seeding does not collide.
                 db.add(
                     FeePayment(
                         invoice_id=inv.id,
@@ -515,7 +517,14 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
                         paid_at=datetime.combine(due, time(11, 0), tzinfo=UTC),
                         method="simulated",
                         txn_ref=f"SIM-{rng.getrandbits(48):012X}",
-                        receipt_no=f"SPS/RCP/{year}/{receipt_seq:06d}",
+                        receipt_no=audit_svc.next_number(
+                            db,
+                            school.id,
+                            kind="receipt",
+                            year=year,
+                            prefix=f"SPS/RCP/{year}/",
+                            width=6,
+                        ),
                     )
                 )
     db.flush()
