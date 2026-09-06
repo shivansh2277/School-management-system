@@ -45,7 +45,16 @@ def engine():
         def _explicit_begin(conn):
             conn.exec_driver_sql("BEGIN")
 
-    Base.metadata.drop_all(eng)
+    if url.startswith("postgresql"):
+        # drop_all orders by *model* metadata, so anything left behind by an
+        # older schema (a v0 table, a stale FK) makes it fail on dependencies.
+        # Dropping the schema is unconditional and needs no such knowledge.
+        from sqlalchemy import text
+
+        with eng.begin() as conn:
+            conn.execute(text("DROP SCHEMA public CASCADE; CREATE SCHEMA public"))
+    else:
+        Base.metadata.drop_all(eng)
     Base.metadata.create_all(eng)
     yield eng
     eng.dispose()
