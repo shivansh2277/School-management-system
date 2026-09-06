@@ -48,6 +48,8 @@ PERMISSIONS: list[tuple[str, str]] = [
     ("admission.application.read", "View applications"),
     ("admission.application.write", "Create and edit applications, and move them along"),
     ("admission.document.verify", "Verify or reject an applicant's documents"),
+    ("admission.assessment.enter", "Schedule applicant tests and enter their marks"),
+    ("admission.interview.enter", "Enter interview feedback as a panel member"),
     (
         "admission.medical.read",
         "View and edit an applicant's medical and special-needs section",
@@ -93,6 +95,8 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "admission.cycle.write",
             "admission.application.write",
             "admission.document.verify",
+            "admission.assessment.enter",
+            "admission.interview.enter",
             "admission.medical.read",
             "admin.settings.write",
             "admin.year.write",
@@ -188,6 +192,8 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "admission.application.read",
             "admission.application.write",
             "admission.document.verify",
+            "admission.assessment.enter",
+            "admission.interview.enter",
             # Not admission.medical.read: §15 keeps a child's medical section
             # behind its own permission, held by the school nurse and the
             # principal rather than by everyone who works the pipeline.
@@ -209,6 +215,10 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "homework.item.write",
             "comms.notice.read",
             "comms.notice.publish",
+            # §5.1.8: a teacher marks the papers for a slot they were given and
+            # sits on interview panels. They do not otherwise work admissions.
+            "admission.assessment.enter",
+            "admission.interview.enter",
         ],
     ),
     (

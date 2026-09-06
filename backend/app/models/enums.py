@@ -257,3 +257,27 @@ class CasteCategory(StrEnum):
     sc = "sc"
     st = "st"
     ews = "ews"
+
+
+class AssessmentType(StrEnum):
+    """§5.1.2(4): assessment differs sharply by age. Nursery is an observation,
+    class 6 is a written paper, class 11 is a previous-board result — one rigid
+    "test marks" field fits none of them well."""
+
+    written_test = "written_test"
+    readiness_observation = "readiness_observation"
+    previous_result_review = "previous_result_review"
+
+
+class AssessmentStatus(StrEnum):
+    scheduled = "scheduled"
+    completed = "completed"
+    absent = "absent"
+    cancelled = "cancelled"
+
+
+class InterviewRecommendation(StrEnum):
+    strong_admit = "strong_admit"
+    admit = "admit"
+    waitlist = "waitlist"
+    reject = "reject"

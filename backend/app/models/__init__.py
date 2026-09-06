@@ -1,3 +1,8 @@
+from app.models.assessment_admission import (
+    Assessment,
+    AssessmentSubject,
+    Interview,
+)
 from app.models.application import (
     Application,
     ApplicationGuardian,
@@ -14,6 +19,9 @@ from app.models.academic import ClassSection, ClassSubjectTeacher, Subject, Time
 from app.models.assessment import Exam, ExamSchedule, GradeBand, Mark
 from app.models.enums import (
     AdmissionCategory,
+    AssessmentStatus,
+    AssessmentType,
+    InterviewRecommendation,
     AdmissionCycleStatus,
     ApplicationStatus,
     CasteCategory,
