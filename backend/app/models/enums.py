@@ -303,3 +303,18 @@ class WaitlistStatus(StrEnum):
     converted = "converted"
     lapsed = "lapsed"
     withdrawn = "withdrawn"
+
+
+class ApplicationFeePurpose(StrEnum):
+    """§5.1.9(15): the application fee is non-refundable, the admission fee is
+    refundable per the policy recorded on the cycle. Keeping them apart is what
+    makes that enforceable rather than a matter of memory."""
+
+    application_fee = "application_fee"
+    admission_fee = "admission_fee"
+
+
+class PaymentStatus(StrEnum):
+    paid = "paid"
+    voided = "voided"
+    refunded = "refunded"

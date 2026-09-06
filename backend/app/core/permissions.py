@@ -51,6 +51,10 @@ PERMISSIONS: list[tuple[str, str]] = [
     ("admission.assessment.enter", "Schedule applicant tests and enter their marks"),
     ("admission.decision.make", "Admit, waitlist or reject an applicant"),
     (
+        "admission.application.convert",
+        "Turn an admitted applicant into an enrolled student",
+    ),
+    (
         "admission.decision.override",
         "Approve admitting past the seats configured for a class",
     ),
@@ -104,6 +108,7 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "admission.interview.enter",
             "admission.decision.make",
             "admission.decision.override",
+            "admission.application.convert",
             "admission.medical.read",
             "admin.settings.write",
             "admin.year.write",
@@ -202,6 +207,7 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "admission.assessment.enter",
             "admission.interview.enter",
             "admission.decision.make",
+            "admission.application.convert",
             # Not admission.decision.override: admitting past capacity is the
             # principal's call, not the pipeline's (§5.1.9(11)).
             # Not admission.medical.read: §15 keeps a child's medical section

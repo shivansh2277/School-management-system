@@ -1,3 +1,4 @@
+from app.models.application_payment import ApplicationPayment
 from app.models.selection import (
     AdmissionDecision,
     AdmissionOffer,
@@ -24,6 +25,8 @@ from app.models.academic import ClassSection, ClassSubjectTeacher, Subject, Time
 from app.models.assessment import Exam, ExamSchedule, GradeBand, Mark
 from app.models.enums import (
     AdmissionCategory,
+    ApplicationFeePurpose,
+    PaymentStatus,
     DecisionOutcome,
     OfferStatus,
     WaitlistStatus,
