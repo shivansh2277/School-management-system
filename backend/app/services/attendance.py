@@ -62,7 +62,7 @@ def mark(db: Session, user: User, body: AttendanceMarkRequest) -> list[RollRow]:
     if body.date > Date.today():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Cannot mark attendance for a future date")
 
-    teacher = scoping.teacher_for(db, user)
+    teacher = scoping.employee_for(db, user)
     section_students = {e.student_id for e in roster(db, body.class_section_id)}
     existing = {
         a.student_id: a

@@ -30,6 +30,7 @@ from app.models import (
     DocumentType,
     CustomField,
     CustomFieldType,
+    GuardianRelation,
     OwnerType,
     DayOfWeek,
     Exam,
@@ -45,12 +46,12 @@ from app.models import (
     Mark,
     Notice,
     NoticeAudience,
-    Parent,
-    ParentStudent,
+    Guardian,
+    StudentGuardian,
     School,
     Student,
     Subject,
-    Teacher,
+    Employee,
     TimetableSlot,
     Role,
     RolePermission,
@@ -64,14 +65,14 @@ ACADEMIC_YEAR = "2025-26"
 SCHOOL_CODE = "SPS"
 TODAY = date(2026, 9, 1)  # deterministic "today" so the seeded window never drifts
 
-# Delete children before parents. ClassSection must go before Teacher because
+# Delete children before parents. ClassSection must go before Employee because
 # class_sections.class_teacher_id references it — SQLite does not enforce
 # foreign keys by default, so only Postgres catches a wrong order here.
 WIPE_ORDER = [
     FeePayment, FeeInvoice, FeeStructure, Mark, ExamSchedule, Exam, GradeBand,
     HomeworkSubmission, Homework, Attendance, Notice, TimetableSlot,
-    ClassSubjectTeacher, ParentStudent, Enrolment, Student, ClassSection,
-    Parent, Teacher, Subject, UserRoleAssignment, RolePermission, Role,
+    ClassSubjectTeacher, StudentGuardian, Enrolment, Student, ClassSection,
+    Guardian, Employee, Subject, UserRoleAssignment, RolePermission, Role,
     User, AcademicYear, School,
 ]
 
@@ -129,7 +130,7 @@ PARENT_FIRST = [
     "Rekha", "Alok", "Sarita", "Mahesh", "Nirmala", "Sanjay", "Usha", "Ajay",
     "Geeta", "Naresh", "Kamla", "Rakesh", "Sudha", "Prakash", "Bindu",
 ]
-OCCUPATIONS = ["Shopkeeper", "Bank Officer", "Teacher", "Farmer", "Engineer", "Homemaker"]
+OCCUPATIONS = ["Shopkeeper", "Bank Officer", "Employee", "Farmer", "Engineer", "Homemaker"]
 
 ROOMS = ["R-101", "R-102", "R-201", "R-202", "Lab-1", "Lab-2"]
 
@@ -150,7 +151,7 @@ HOMEWORK_TITLES = [
 NOTICES = [
     ("Annual Sports Day on 12 October",
      "All students must report by 7:30 AM in sports uniform.", NoticeAudience.all),
-    ("Parent-Teacher Meeting this Saturday",
+    ("Guardian-Employee Meeting this Saturday",
      "PTM will be held from 10:00 AM to 1:00 PM.", NoticeAudience.parents),
     ("Library books due",
      "Return all borrowed books before the half-yearly exams.", NoticeAudience.students),
@@ -323,7 +324,7 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
     )
     db.add(admin)
 
-    teachers: list[Teacher] = []
+    teachers: list[Employee] = []
     for i, (name, qual) in enumerate(TEACHER_NAMES, start=1):
         emp = f"TCH{i:03d}"
         u = User(
@@ -336,9 +337,9 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
         )
         db.add(u)
         db.flush()
-        t = Teacher(
+        t = Employee(
             user_id=u.id,
-            employee_id=emp,
+            employee_code=emp,
             qualification=qual,
             joining_date=date(2019 + (i % 5), 6, 1),
         )
@@ -435,7 +436,7 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
     # switcher has something to switch between.
     sibling_pairs = [(students[0], students[1]), (students[2], students[3])]
     singles = students[4:]
-    parents: list[Parent] = []
+    parents: list[Guardian] = []
     for i in range(1, len(singles) + 3):
         mobile = f"98765{i:05d}"
         u = User(
@@ -450,16 +451,30 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
         )
         db.add(u)
         db.flush()
-        p = Parent(user_id=u.id, occupation=OCCUPATIONS[i % len(OCCUPATIONS)])
+        p = Guardian(user_id=u.id, occupation=OCCUPATIONS[i % len(OCCUPATIONS)])
         db.add(p)
         parents.append(p)
     db.flush()
 
     for p, pair in zip(parents[:2], sibling_pairs, strict=True):
         for child in pair:
-            db.add(ParentStudent(parent_id=p.id, student_id=child.id, relation="father"))
+            db.add(
+                StudentGuardian(
+                    guardian_id=p.id,
+                    student_id=child.id,
+                    relation=GuardianRelation.father,
+                    is_primary=True,
+                )
+            )
     for p, child in zip(parents[2:], singles, strict=True):
-        db.add(ParentStudent(parent_id=p.id, student_id=child.id, relation="father"))
+        db.add(
+            StudentGuardian(
+                guardian_id=p.id,
+                student_id=child.id,
+                relation=GuardianRelation.father,
+                is_primary=True,
+            )
+        )
     db.flush()
 
     # --- timetable --------------------------------------------------------
@@ -650,7 +665,7 @@ def _assign_roles(db: Session, roles: dict, sections: list) -> None:
     """Give every seeded account the system role matching its primary role.
 
     Class teachers additionally get a `class_section`-scoped grant, which is
-    what "Class Teacher" actually is: the teacher role plus authority over one
+    what "Class Employee" actually is: the teacher role plus authority over one
     section (ERP_BLUEPRINT §3.5).
     """
     for user in db.scalars(select(User)):
@@ -669,7 +684,7 @@ def _assign_roles(db: Session, roles: dict, sections: list) -> None:
     for sec in sections:
         if sec.class_teacher_id is None:
             continue
-        teacher = db.get(Teacher, sec.class_teacher_id)
+        teacher = db.get(Employee, sec.class_teacher_id)
         rbac.assign(
             db,
             teacher.user,

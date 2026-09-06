@@ -26,7 +26,7 @@ def list_homework(
     user: User = Depends(teacher_only),
     db: Session = Depends(get_db),
 ) -> list[HomeworkOut]:
-    me = scoping.teacher_for(db, user)
+    me = scoping.employee_for(db, user)
     q = select(Homework).where(Homework.teacher_id == me.id)
     if class_section_id is not None:
         q = q.where(Homework.class_section_id == class_section_id)

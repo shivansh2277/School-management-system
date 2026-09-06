@@ -5,7 +5,7 @@ import { Card, DataTable } from "../components/ui";
 
 type Row = {
   id: number;
-  employee_id: string;
+  employee_code: string;
   full_name: string;
   qualification: string | null;
   subjects: string[];
@@ -26,7 +26,7 @@ export function Teachers() {
           loading={isLoading}
         empty="No teachers on record."
         columns={[
-          { key: "emp", header: "Employee ID", render: (r) => r.employee_id },
+          { key: "emp", header: "Employee ID", render: (r) => r.employee_code },
           { key: "name", header: "Name", render: (r) => r.full_name },
           { key: "qual", header: "Qualification", render: (r) => r.qualification ?? "-" },
           { key: "subj", header: "Subjects", render: (r) => r.subjects.join(", ") || "-" },

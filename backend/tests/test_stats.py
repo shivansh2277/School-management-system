@@ -7,11 +7,11 @@ from decimal import Decimal
 
 
 def test_totals_match_direct_counts(client, admin, db):
-    from app.models import ClassSection, Student, Teacher
+    from app.models import ClassSection, Student, Employee
 
     stats = client.get("/admin/dashboard/stats", headers=admin).json()
     assert stats["totals"]["students"] == db.query(Student).count()
-    assert stats["totals"]["teachers"] == db.query(Teacher).count()
+    assert stats["totals"]["teachers"] == db.query(Employee).count()
     assert stats["totals"]["classes"] == db.query(ClassSection).count()
 
 

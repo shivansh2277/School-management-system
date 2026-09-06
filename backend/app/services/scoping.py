@@ -11,10 +11,10 @@ from sqlalchemy.orm import Session
 from app.models import (
     ClassSection,
     ClassSubjectTeacher,
-    Parent,
-    ParentStudent,
+    Guardian,
+    StudentGuardian,
     Student,
-    Teacher,
+    Employee,
     User,
     UserRole,
 )
@@ -25,15 +25,15 @@ def forbidden(msg: str = "Out of scope") -> HTTPException:
     return HTTPException(status.HTTP_403_FORBIDDEN, msg)
 
 
-def teacher_for(db: Session, user: User) -> Teacher:
-    t = db.scalar(select(Teacher).where(Teacher.user_id == user.id))
+def employee_for(db: Session, user: User) -> Employee:
+    t = db.scalar(select(Employee).where(Employee.user_id == user.id))
     if t is None:
         raise forbidden("Not a teacher")
     return t
 
 
-def parent_for(db: Session, user: User) -> Parent:
-    p = db.scalar(select(Parent).where(Parent.user_id == user.id))
+def guardian_for(db: Session, user: User) -> Guardian:
+    p = db.scalar(select(Guardian).where(Guardian.user_id == user.id))
     if p is None:
         raise forbidden("Not a parent")
     return p
@@ -51,15 +51,15 @@ def student_id_for(db: Session, user: User) -> int:
 
 
 def child_ids_for(db: Session, user: User) -> list[int]:
-    parent = parent_for(db, user)
+    parent = guardian_for(db, user)
     return list(
-        db.scalars(select(ParentStudent.student_id).where(ParentStudent.parent_id == parent.id))
+        db.scalars(select(StudentGuardian.student_id).where(StudentGuardian.guardian_id == parent.id))
     )
 
 
 def class_section_ids_for(db: Session, user: User) -> list[int]:
     """Sections a teacher class-teaches OR teaches a subject in."""
-    teacher = teacher_for(db, user)
+    teacher = employee_for(db, user)
     own = select(ClassSection.id).where(ClassSection.class_teacher_id == teacher.id)
     taught = select(ClassSubjectTeacher.class_section_id).where(
         ClassSubjectTeacher.teacher_id == teacher.id
@@ -75,7 +75,7 @@ def assert_teaches_section(db: Session, user: User, class_section_id: int) -> No
 def assert_teaches_subject_in_section(
     db: Session, user: User, class_section_id: int, subject_id: int
 ) -> None:
-    teacher = teacher_for(db, user)
+    teacher = employee_for(db, user)
     owned = db.scalar(
         select(ClassSubjectTeacher.id).where(
             ClassSubjectTeacher.class_section_id == class_section_id,

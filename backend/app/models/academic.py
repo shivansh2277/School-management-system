@@ -17,7 +17,7 @@ class ClassSection(TenantBase):
 
     class_name: Mapped[str] = mapped_column(String(8), nullable=False)
     section: Mapped[str] = mapped_column(String(4), nullable=False)
-    class_teacher_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("teachers.id"))
+    class_teacher_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("employees.id"))
     academic_year_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("academic_years.id"), nullable=False, index=True
     )
@@ -46,7 +46,7 @@ class ClassSubjectTeacher(TenantBase):
         BigInteger, ForeignKey("class_sections.id"), nullable=False
     )
     subject_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("subjects.id"), nullable=False)
-    teacher_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("teachers.id"), nullable=False)
+    teacher_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("employees.id"), nullable=False)
 
 
 class TimetableSlot(TenantBase):
@@ -63,5 +63,5 @@ class TimetableSlot(TenantBase):
     start_time: Mapped[time] = mapped_column(Time, nullable=False)
     end_time: Mapped[time] = mapped_column(Time, nullable=False)
     subject_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("subjects.id"), nullable=False)
-    teacher_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("teachers.id"), nullable=False)
+    teacher_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("employees.id"), nullable=False)
     room: Mapped[str | None] = mapped_column(String(20))

@@ -12,10 +12,10 @@ from app.models import (
     FeeInvoice,
     InvoiceStatus,
     Mark,
-    Parent,
-    ParentStudent,
+    Guardian,
+    StudentGuardian,
     Student,
-    Teacher,
+    Employee,
     User,
     UserRole,
 )
@@ -135,7 +135,7 @@ def child_profile(
     enrolment = current_enrolment(db, s.id)
     section = enrolment.class_section if enrolment else None
     teacher = (
-        db.get(Teacher, section.class_teacher_id)
+        db.get(Employee, section.class_teacher_id)
         if section and section.class_teacher_id
         else None
     )
@@ -159,8 +159,8 @@ def child_profile(
 
 @router.get("/profile")
 def my_profile(user: User = Depends(parent_only), db: Session = Depends(get_db)) -> dict:
-    p = db.scalar(select(Parent).where(Parent.user_id == user.id))
-    links = db.scalars(select(ParentStudent).where(ParentStudent.parent_id == p.id)).all()
+    p = db.scalar(select(Guardian).where(Guardian.user_id == user.id))
+    links = db.scalars(select(StudentGuardian).where(StudentGuardian.guardian_id == p.id)).all()
     return {
         "id": p.id,
         "full_name": user.full_name,

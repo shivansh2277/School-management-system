@@ -13,7 +13,7 @@ from app.models import (
     HomeworkSubmission,
     Student,
     Subject,
-    Teacher,
+    Employee,
     TimetableSlot,
     User,
     UserRole,
@@ -48,7 +48,7 @@ def _row(db: Session, c: ClassSection) -> dict:
     owned = db.scalars(
         select(ClassSubjectTeacher).where(ClassSubjectTeacher.class_section_id == c.id)
     ).all()
-    teacher = db.get(Teacher, c.class_teacher_id) if c.class_teacher_id else None
+    teacher = db.get(Employee, c.class_teacher_id) if c.class_teacher_id else None
     return {
         "id": c.id,
         "class_name": c.class_name,
@@ -151,7 +151,7 @@ def timetable(
 ) -> list[SlotOut]:
     labels = section_labels(db)
     subjects = subject_names(db)
-    teachers = {t.id: t.user.full_name for t in db.scalars(select(Teacher))}
+    teachers = {t.id: t.user.full_name for t in db.scalars(select(Employee))}
     slots = db.scalars(
         select(TimetableSlot)
         .where(TimetableSlot.class_section_id == class_section_id)

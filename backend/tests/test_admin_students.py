@@ -12,7 +12,7 @@ def _create(client, admin, ids, **over):
         "full_name": "Test Child",
         "class_section_id": ids["section_9a"],
         "roll_no": 91,
-        "parent": {"full_name": "Test Parent", "phone": "9000000091"},
+        "guardian": {"full_name": "Test Guardian", "phone": "9000000091"},
     }
     body.update(over)
     return client.post("/admin/students", json=body, headers=admin)
@@ -54,3 +54,35 @@ def test_a_student_cannot_be_created_into_a_section_that_does_not_exist(
     client, admin, ids
 ):
     assert _create(client, admin, ids, class_section_id=999999).status_code == 404
+
+
+def test_the_first_guardian_recorded_is_the_one_the_school_rings(client, admin, ids, db):
+    from sqlalchemy import select
+    from sqlalchemy.exc import IntegrityError
+
+    from app.models import StudentGuardian
+
+    student_id = _create(client, admin, ids).json()["id"]
+    links = list(
+        db.scalars(
+            select(StudentGuardian).where(StudentGuardian.student_id == student_id)
+        )
+    )
+    assert [link.is_primary for link in links] == [True]
+
+    # A second primary contact for the same child is refused by the database,
+    # not by a convention someone has to remember (ERP_BLUEPRINT §3.4).
+    db.add(
+        StudentGuardian(
+            school_id=links[0].school_id,
+            guardian_id=links[0].guardian_id,
+            student_id=student_id,
+            relation="mother",
+            is_primary=True,
+        )
+    )
+    try:
+        db.flush()
+        raise AssertionError("a second primary guardian was accepted")
+    except IntegrityError:
+        db.rollback()

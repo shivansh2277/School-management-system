@@ -101,7 +101,7 @@ def test_a_guardian_cannot_read_the_admin_roster(client, parent):
 
 
 def test_class_teacher_is_a_scoped_grant_not_a_role(db, ids):
-    """"Class Teacher" is the teacher role plus authority over one section."""
+    """"Class Employee" is the teacher role plus authority over one section."""
     teacher_user = db.scalar(select(User).where(User.login_id == "TCH001"))
     grants = db.scalars(
         select(UserRoleAssignment).where(UserRoleAssignment.user_id == teacher_user.id)

@@ -53,7 +53,7 @@ class Mark(TenantBase):
     )
     student_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("students.id"), nullable=False)
     marks_obtained: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
-    entered_by: Mapped[int] = mapped_column(BigInteger, ForeignKey("teachers.id"), nullable=False)
+    entered_by: Mapped[int] = mapped_column(BigInteger, ForeignKey("employees.id"), nullable=False)
 
 
 class GradeBand(TenantBase):

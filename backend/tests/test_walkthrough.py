@@ -21,7 +21,7 @@ def test_cross_role_walkthrough(client, admin, teacher, student, parent, db, ids
     )
     absent_two = {roster[0].id, roster[1].id}
 
-    # 1. Teacher marks two students absent for 10-A today.
+    # 1. Employee marks two students absent for 10-A today.
     entries = [
         {"student_id": s.id, "status": "absent" if s.id in absent_two else "present"}
         for s in roster
@@ -49,7 +49,7 @@ def test_cross_role_walkthrough(client, admin, teacher, student, parent, db, ids
     ).json()
     assert {"date": today, "status": "absent"} in theirs["days"]
 
-    # 5. Teacher creates homework for 10-A / Mathematics, due tomorrow.
+    # 5. Employee creates homework for 10-A / Mathematics, due tomorrow.
     hw = client.post(
         "/teacher/homework",
         json={
@@ -74,12 +74,12 @@ def test_cross_role_walkthrough(client, admin, teacher, student, parent, db, ids
     )
     assert submitted.status_code == 200 and submitted.json()["submitted"] is True
 
-    # 7. Teacher's submission list shows that student as Submitted.
+    # 7. Employee's submission list shows that student as Submitted.
     rows = client.get(f"/teacher/homework/{hw_id}/submissions", headers=teacher).json()
     theirs_row = next(r for r in rows if r["student_id"] == ids["student_1"])
     assert theirs_row["submitted"] is True and theirs_row["late"] is False
 
-    # 8. Parent's submitted count includes it.
+    # 8. Guardian's submitted count includes it.
     child_hw = client.get(
         f"/parent/children/{ids['student_1']}/homework", headers=parent
     ).json()
@@ -109,7 +109,7 @@ def test_cross_role_walkthrough(client, admin, teacher, student, parent, db, ids
     assert paper.status_code == 201
     paper_id = paper.json()["id"]
 
-    # 10. Teacher enters marks; above max is rejected.
+    # 10. Employee enters marks; above max is rejected.
     too_high = client.post(
         "/teacher/marks",
         json={
@@ -135,7 +135,7 @@ def test_cross_role_walkthrough(client, admin, teacher, student, parent, db, ids
     assert float(row["marks_obtained"]) == 44.0
     assert row["percent"] == 88.0 and row["grade"] == "A2"
 
-    # 12. Parent sees the same report card.
+    # 12. Guardian sees the same report card.
     assert (
         client.get(
             f"/parent/children/{ids['student_1']}/results/{exam['id']}", headers=parent
@@ -149,7 +149,7 @@ def test_cross_role_walkthrough(client, admin, teacher, student, parent, db, ids
     ).json()
     assert generated["created"] == db.query(Student).count()
 
-    # 14. Parent pays one and downloads the PDF receipt.
+    # 14. Guardian pays one and downloads the PDF receipt.
     before = client.get("/admin/fees/collection?year=2026", headers=admin).json()
     invoice = next(
         i

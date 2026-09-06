@@ -18,7 +18,7 @@ def my_papers(
     user: User = Depends(teacher_only), db: Session = Depends(get_db)
 ) -> list[ExamScheduleOut]:
     """Papers for the (section, subject) pairs this teacher owns."""
-    me = scoping.teacher_for(db, user)
+    me = scoping.employee_for(db, user)
     from app.models import ClassSubjectTeacher
 
     owned = {

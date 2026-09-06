@@ -13,8 +13,9 @@ from app.models import (
     ClassSection,
     Enrolment,
     Gender,
-    Parent,
-    ParentStudent,
+    Guardian,
+    StudentGuardian,
+    GuardianRelation,
     OwnerType,
     Student,
     User,
@@ -29,15 +30,20 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 admin_only = require_permission("students.profile.read", school_wide=True)
 
 
-class ParentInput(BaseModel):
+class GuardianInput(BaseModel):
     full_name: str
     phone: str
-    relation: str = "father"
+    relation: GuardianRelation = GuardianRelation.father
     occupation: str | None = None
     password: str = "Parent@123"
 
 
 class StudentCreate(BaseModel):
+    # extra="forbid" because the guardian key was renamed under these tests
+    # and they kept passing: a body with a key nobody reads looked identical
+    # to a body that worked.
+    model_config = {"extra": "forbid"}
+
     full_name: str
     # Omit it and the school's gapless sequence allocates one (§0.21).
     admission_no: str | None = None
@@ -50,13 +56,15 @@ class StudentCreate(BaseModel):
     phone: str | None = None
     email: str | None = None
     password: str = "Student@123"
-    parent: ParentInput | None = None
-    parent_id: int | None = None
+    guardian: GuardianInput | None = None
+    guardian_id: int | None = None
     # School-defined attributes (§3.15 level 2), keyed by custom field key.
     custom: dict | None = None
 
 
 class StudentUpdate(BaseModel):
+    model_config = {"extra": "forbid"}
+
     full_name: str | None = None
     class_section_id: int | None = None
     roll_no: int | None = None
@@ -71,9 +79,9 @@ class StudentUpdate(BaseModel):
 def _row(db: Session, s: Student) -> dict:
     enrolment = current_enrolment(db, s.id)
     guardians = db.scalars(
-        select(Parent)
-        .join(ParentStudent, ParentStudent.parent_id == Parent.id)
-        .where(ParentStudent.student_id == s.id)
+        select(Guardian)
+        .join(StudentGuardian, StudentGuardian.guardian_id == Guardian.id)
+        .where(StudentGuardian.student_id == s.id)
     ).all()
     return {
         "id": s.id,
@@ -84,8 +92,8 @@ def _row(db: Session, s: Student) -> dict:
         "roll_no": enrolment.roll_no if enrolment else None,
         "photo_url": s.user.photo_url,
         "is_active": s.user.is_active,
-        "parent_name": guardians[0].user.full_name if guardians else None,
-        "parent_phone": guardians[0].user.phone if guardians else None,
+        "guardian_name": guardians[0].user.full_name if guardians else None,
+        "guardian_phone": guardians[0].user.phone if guardians else None,
         "custom": s.custom or {},
     }
 
@@ -131,7 +139,7 @@ def create_student(
     )
     if db.scalar(select(User).where(User.login_id == admission_no)):
         raise HTTPException(status.HTTP_409_CONFLICT, "Admission number already exists")
-    # Student login + student row + (new or linked) parent, in one transaction.
+    # Student login + student row + (new or linked) guardian, in one transaction.
     su = User(
         school_id=user.school_id,
         role=UserRole.student,
@@ -169,40 +177,46 @@ def create_student(
     )
     db.flush()
 
-    parent = None
-    if body.parent_id is not None:
-        parent = db.get(Parent, body.parent_id)
-        if parent is None:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "Parent not found")
-        relation = "guardian"
-    elif body.parent is not None:
-        if db.scalar(select(User).where(User.login_id == body.parent.phone)):
-            raise HTTPException(status.HTTP_409_CONFLICT, "Parent mobile already registered")
+    guardian_row = None
+    if body.guardian_id is not None:
+        guardian_row = db.get(Guardian, body.guardian_id)
+        if guardian_row is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Guardian not found")
+        relation = GuardianRelation.legal_guardian
+    elif body.guardian is not None:
+        if db.scalar(select(User).where(User.login_id == body.guardian.phone)):
+            raise HTTPException(status.HTTP_409_CONFLICT, "Guardian mobile already registered")
         pu = User(
             school_id=user.school_id,
             role=UserRole.parent,
-            login_id=body.parent.phone,
-            password_hash=hash_password(body.parent.password),
-            full_name=body.parent.full_name,
-            phone=body.parent.phone,
+            login_id=body.guardian.phone,
+            password_hash=hash_password(body.guardian.password),
+            full_name=body.guardian.full_name,
+            phone=body.guardian.phone,
         )
         db.add(pu)
         db.flush()
-        parent = Parent(
+        guardian_row = Guardian(
             school_id=user.school_id,
             user_id=pu.id,
-            occupation=body.parent.occupation,
+            occupation=body.guardian.occupation,
         )
-        db.add(parent)
+        db.add(guardian_row)
         db.flush()
-        relation = body.parent.relation
-    if parent is not None:
+        relation = body.guardian.relation
+    if guardian_row is not None:
         db.add(
-            ParentStudent(
+            StudentGuardian(
                 school_id=user.school_id,
-                parent_id=parent.id,
+                guardian_id=guardian_row.id,
                 student_id=student.id,
                 relation=relation,
+                is_primary=not db.scalar(
+                    select(StudentGuardian.id).where(
+                        StudentGuardian.student_id == student.id,
+                        StudentGuardian.is_primary.is_(True),
+                    )
+                ),
             )
         )
     db.commit()

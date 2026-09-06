@@ -54,6 +54,24 @@ class OwnerType(StrEnum):
     school = "school"
 
 
+class EmployeeType(StrEnum):
+    teaching = "teaching"
+    administrative = "administrative"
+    support = "support"
+
+
+class GuardianRelation(StrEnum):
+    """Who this adult is to the child. A closed list because it drives who may
+    collect them from the gate, not just how a letter is addressed."""
+
+    father = "father"
+    mother = "mother"
+    grandparent = "grandparent"
+    sibling = "sibling"
+    legal_guardian = "legal_guardian"
+    other = "other"
+
+
 class CustomFieldType(StrEnum):
     """What a school-defined attribute holds. Deliberately few: every type
     here has an obvious form control and an obvious validation rule."""

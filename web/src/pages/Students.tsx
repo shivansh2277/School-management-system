@@ -11,8 +11,8 @@ type Row = {
   admission_no: string;
   class_label: string;
   roll_no: number;
-  parent_name: string | null;
-  parent_phone: string | null;
+  guardian_name: string | null;
+  guardian_phone: string | null;
 };
 
 type Detail = Row & {
@@ -98,8 +98,8 @@ export function Students() {
             { key: "adm", header: "Admission No.", render: (r) => r.admission_no },
             { key: "class", header: "Class", render: (r) => r.class_label },
             { key: "roll", header: "Roll", render: (r) => r.roll_no, align: "right" },
-            { key: "parent", header: "Parent", render: (r) => r.parent_name ?? "-" },
-            { key: "phone", header: "Phone", render: (r) => r.parent_phone ?? "-" },
+            { key: "guardian", header: "Guardian", render: (r) => r.guardian_name ?? "-" },
+            { key: "phone", header: "Phone", render: (r) => r.guardian_phone ?? "-" },
           ]}
         />
       </Card>
@@ -116,7 +116,7 @@ export function Students() {
                 ["Date of birth", detail.data.dob ?? "-"],
                 ["Gender", detail.data.gender ?? "-"],
                 ["Address", detail.data.address ?? "-"],
-                ["Parent", detail.data.parent_name ?? "-"],
+                ["Guardian", detail.data.guardian_name ?? "-"],
                 [
                   "Attendance",
                   detail.data.attendance_percent === null
@@ -163,22 +163,22 @@ function AddStudent({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
     admission_no: "",
     class_section_id: "",
     roll_no: "",
-    parent_name: "",
-    parent_phone: "",
+    guardian_name: "",
+    guardian_phone: "",
   });
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm({ ...form, [k]: e.target.value });
 
   const save = useMutation({
     mutationFn: () =>
-      // One transaction creates the student login and the parent login together.
+      // One transaction creates the student login and the guardian login together.
       api.post("/admin/students", {
         full_name: form.full_name,
         admission_no: form.admission_no,
         class_section_id: Number(form.class_section_id),
         roll_no: Number(form.roll_no),
-        parent: form.parent_phone
-          ? { full_name: form.parent_name, phone: form.parent_phone, relation: "father" }
+        guardian: form.guardian_phone
+          ? { full_name: form.guardian_name, phone: form.guardian_phone, relation: "father" }
           : null,
       }),
     onSuccess: onSaved,
@@ -213,11 +213,11 @@ function AddStudent({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
           </FormField>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <FormField label="Parent name">
-            <input className={inputClass} value={form.parent_name} onChange={set("parent_name")} />
+          <FormField label="Guardian name">
+            <input className={inputClass} value={form.guardian_name} onChange={set("guardian_name")} />
           </FormField>
-          <FormField label="Parent mobile (their login)">
-            <input className={inputClass} value={form.parent_phone} onChange={set("parent_phone")} />
+          <FormField label="Guardian mobile (their login)">
+            <input className={inputClass} value={form.guardian_phone} onChange={set("guardian_phone")} />
           </FormField>
         </div>
 
@@ -225,7 +225,7 @@ function AddStudent({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
           <p className="text-sm text-danger">{(save.error as Error).message}</p>
         )}
         <p className="text-xs text-ink-faint">
-          The student signs in with their admission number, the parent with their mobile number.
+          The student signs in with their admission number, the guardian with their mobile number.
           Default passwords are Student@123 and Parent@123.
         </p>
 

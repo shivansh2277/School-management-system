@@ -27,7 +27,7 @@ class Attendance(TenantBase):
     student_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("students.id"), nullable=False)
     date: Mapped[date] = mapped_column(Date, nullable=False)
     status: Mapped[AttendanceStatus] = enum_col(AttendanceStatus, nullable=False)
-    marked_by: Mapped[int] = mapped_column(BigInteger, ForeignKey("teachers.id"), nullable=False)
+    marked_by: Mapped[int] = mapped_column(BigInteger, ForeignKey("employees.id"), nullable=False)
     remarks: Mapped[str | None] = mapped_column(String(200))
 
 
@@ -38,7 +38,7 @@ class Homework(TenantBase):
         BigInteger, ForeignKey("class_sections.id"), nullable=False
     )
     subject_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("subjects.id"), nullable=False)
-    teacher_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("teachers.id"), nullable=False)
+    teacher_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("employees.id"), nullable=False)
     title: Mapped[str] = mapped_column(String(160), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     assigned_date: Mapped[date] = mapped_column(Date, nullable=False)

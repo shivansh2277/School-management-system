@@ -8,16 +8,24 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.services.rbac import require_permission
 from app.core.security import hash_password
-from app.models import ClassSection, ClassSubjectTeacher, Teacher, User, UserRole
+from app.models import (
+    ClassSection,
+    ClassSubjectTeacher,
+    Employee,
+    EmployeeType,
+    User,
+    UserRole,
+)
 from app.services.common import section_labels, subject_names
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 admin_only = require_permission("hr.employee.read", school_wide=True)
 
 
-class TeacherCreate(BaseModel):
+class EmployeeCreate(BaseModel):
     full_name: str
-    employee_id: str
+    employee_code: str
+    employee_type: EmployeeType = EmployeeType.teaching
     qualification: str | None = None
     joining_date: Date | None = None
     email: str | None = None
@@ -25,14 +33,14 @@ class TeacherCreate(BaseModel):
     password: str = "Teacher@123"
 
 
-class TeacherUpdate(BaseModel):
+class EmployeeUpdate(BaseModel):
     full_name: str | None = None
     qualification: str | None = None
     email: str | None = None
     phone: str | None = None
 
 
-def _row(db: Session, t: Teacher) -> dict:
+def _row(db: Session, t: Employee) -> dict:
     labels = section_labels(db)
     subjects = subject_names(db)
     owned = db.scalars(
@@ -43,7 +51,8 @@ def _row(db: Session, t: Teacher) -> dict:
     ).all()
     return {
         "id": t.id,
-        "employee_id": t.employee_id,
+        "employee_code": t.employee_code,
+        "employee_type": t.employee_type,
         "full_name": t.user.full_name,
         "qualification": t.qualification,
         "joining_date": t.joining_date,
@@ -59,20 +68,20 @@ def _row(db: Session, t: Teacher) -> dict:
 @router.get("/teachers")
 def list_teachers(user: User = Depends(admin_only), db: Session = Depends(get_db)) -> list[dict]:
     return [
-        _row(db, t) for t in db.scalars(select(Teacher).order_by(Teacher.employee_id))
+        _row(db, t) for t in db.scalars(select(Employee).order_by(Employee.employee_code))
     ]
 
 
 @router.post("/teachers", status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_permission("hr.employee.write"))])
 def create_teacher(
-    body: TeacherCreate, user: User = Depends(admin_only), db: Session = Depends(get_db)
+    body: EmployeeCreate, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> dict:
-    if db.scalar(select(User).where(User.login_id == body.employee_id)):
-        raise HTTPException(status.HTTP_409_CONFLICT, "Employee id already exists")
+    if db.scalar(select(User).where(User.login_id == body.employee_code)):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Employee code already exists")
     u = User(
         role=UserRole.teacher,
         school_id=user.school_id,
-        login_id=body.employee_id,
+        login_id=body.employee_code,
         password_hash=hash_password(body.password),
         full_name=body.full_name,
         email=body.email,
@@ -80,10 +89,11 @@ def create_teacher(
     )
     db.add(u)
     db.flush()
-    t = Teacher(
+    t = Employee(
         school_id=user.school_id,
         user_id=u.id,
-        employee_id=body.employee_id,
+        employee_code=body.employee_code,
+        employee_type=body.employee_type,
         qualification=body.qualification,
         joining_date=body.joining_date or Date.today(),
     )
@@ -95,13 +105,13 @@ def create_teacher(
 @router.patch("/teachers/{teacher_id}", dependencies=[Depends(require_permission("hr.employee.write"))])
 def update_teacher(
     teacher_id: int,
-    body: TeacherUpdate,
+    body: EmployeeUpdate,
     user: User = Depends(admin_only),
     db: Session = Depends(get_db),
 ) -> dict:
-    t = db.get(Teacher, teacher_id)
+    t = db.get(Employee, teacher_id)
     if t is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Teacher not found")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Employee not found")
     if body.qualification is not None:
         t.qualification = body.qualification
     for field in ("full_name", "email", "phone"):
@@ -116,9 +126,9 @@ def update_teacher(
 def deactivate_teacher(
     teacher_id: int, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> Response:
-    t = db.get(Teacher, teacher_id)
+    t = db.get(Employee, teacher_id)
     if t is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Teacher not found")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Employee not found")
     t.user.is_active = False
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

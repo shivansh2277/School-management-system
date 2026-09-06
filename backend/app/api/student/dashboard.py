@@ -25,9 +25,9 @@ def _slots(db: Session, student: Student, day_key: str | None) -> list[SlotOut]:
         q = q.where(TimetableSlot.day_of_week == day_key)
     labels = section_labels(db)
     subjects = subject_names(db)
-    from app.models import Teacher
+    from app.models import Employee
 
-    teachers = {t.id: t.user.full_name for t in db.scalars(select(Teacher))}
+    teachers = {t.id: t.user.full_name for t in db.scalars(select(Employee))}
     return [
         SlotOut(
             period=s.period_no,
@@ -88,12 +88,12 @@ def timetable(user: User = Depends(student_only), db: Session = Depends(get_db))
 
 @router.get("/profile")
 def profile(user: User = Depends(student_only), db: Session = Depends(get_db)) -> dict:
-    from app.models import Parent, ParentStudent
+    from app.models import Guardian, StudentGuardian
 
     s = scoping.student_for(db, user)
     guardians = db.scalars(
-        select(Parent).join(ParentStudent, ParentStudent.parent_id == Parent.id).where(
-            ParentStudent.student_id == s.id
+        select(Guardian).join(StudentGuardian, StudentGuardian.guardian_id == Guardian.id).where(
+            StudentGuardian.student_id == s.id
         )
     ).all()
     return {

@@ -72,7 +72,7 @@ def _new_student(client, admin, ids, **over):
         "full_name": "Custom Field Child",
         "class_section_id": ids["section_9a"],
         "roll_no": 95,
-        "parent": {"full_name": "CF Parent", "phone": "9000000095"},
+        "guardian": {"full_name": "CF Guardian", "phone": "9000000095"},
     }
     body.update(over)
     return client.post("/admin/students", json=body, headers=admin)

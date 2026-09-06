@@ -23,7 +23,7 @@ teacher_only = require_permission("academics.class.read")
 
 @router.get("/classes")
 def my_classes(user: User = Depends(teacher_only), db: Session = Depends(get_db)) -> list[dict]:
-    me = scoping.teacher_for(db, user)
+    me = scoping.employee_for(db, user)
     labels = section_labels(db)
     subjects = subject_names(db)
     owned: dict[int, list[str]] = {}
@@ -70,7 +70,7 @@ def class_roster(
 def my_timetable(
     user: User = Depends(teacher_only), db: Session = Depends(get_db)
 ) -> list[SlotOut]:
-    me = scoping.teacher_for(db, user)
+    me = scoping.employee_for(db, user)
     labels = section_labels(db)
     subjects = subject_names(db)
     slots = db.scalars(
@@ -96,7 +96,7 @@ def my_timetable(
 
 @router.get("/profile")
 def my_profile(user: User = Depends(teacher_only), db: Session = Depends(get_db)) -> dict:
-    me = scoping.teacher_for(db, user)
+    me = scoping.employee_for(db, user)
     subjects = subject_names(db)
     labels = section_labels(db)
     owned = db.scalars(
@@ -124,7 +124,7 @@ def my_subjects(
     db: Session = Depends(get_db),
 ) -> list[dict]:
     """Subjects this teacher owns, optionally within one section."""
-    me = scoping.teacher_for(db, user)
+    me = scoping.employee_for(db, user)
     subjects = subject_names(db)
     q = select(ClassSubjectTeacher).where(ClassSubjectTeacher.teacher_id == me.id)
     if class_section_id is not None:

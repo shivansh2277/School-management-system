@@ -19,7 +19,7 @@ from app.models import (
     FeePayment,
     Mark,
     Student,
-    Teacher,
+    Employee,
     TimetableSlot,
     User,
 )
@@ -46,9 +46,9 @@ def totals(db: Session, year: AcademicYear) -> dict:
     )
     teachers = db.scalar(
         select(func.count())
-        .select_from(Teacher)
-        .join(User, User.id == Teacher.user_id)
-        .where(Teacher.school_id == school_id, User.is_active)
+        .select_from(Employee)
+        .join(User, User.id == Employee.user_id)
+        .where(Employee.school_id == school_id, User.is_active)
     )
     classes = db.scalar(
         select(func.count())
@@ -176,7 +176,7 @@ def today_schedule(
     subjects = subject_names(db)
     teachers = {
         t.id: t.user.full_name
-        for t in db.scalars(select(Teacher).where(Teacher.school_id == school_id))
+        for t in db.scalars(select(Employee).where(Employee.school_id == school_id))
     }
     return [
         {

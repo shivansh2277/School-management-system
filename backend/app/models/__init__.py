@@ -5,6 +5,8 @@ from app.models.enums import (
     AttendanceStatus,
     AuditAction,
     CustomFieldType,
+    EmployeeType,
+    GuardianRelation,
     DocumentStatus,
     JobStatus,
     OwnerType,
@@ -20,7 +22,7 @@ from app.models.enums import (
 )
 from app.models.fees import FeeInvoice, FeePayment, FeeStructure
 from app.models.ops import Attendance, Homework, HomeworkSubmission, Notice
-from app.models.user import Parent, ParentStudent, Student, Teacher, User
+from app.models.user import Employee, Guardian, Student, StudentGuardian, User
 from app.models.enrolment import Enrolment
 from app.models.audit import AuditLog, NumberSequence
 from app.models.documents import Document, DocumentType

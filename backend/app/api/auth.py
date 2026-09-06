@@ -116,8 +116,8 @@ def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)) ->
             out.class_label = enrolment.class_section.label
             out.roll_no = enrolment.roll_no
     elif user.role == UserRole.teacher:
-        t = scoping.teacher_for(db, user)
-        out.employee_id = t.employee_id
+        t = scoping.employee_for(db, user)
+        out.employee_id = t.employee_code
         ids = scoping.class_section_ids_for(db, user)
         out.sections = [
             cs.label for cs in db.scalars(select(ClassSection).where(ClassSection.id.in_(ids)))

@@ -79,7 +79,7 @@ def marks_roster(db: Session, user: User, exam_schedule_id: int) -> list[MarksRo
 
 def enter_marks(db: Session, user: User, body: MarksRequest) -> list[MarksRosterRow]:
     sched = _owned_schedule(db, user, body.exam_schedule_id)
-    teacher = scoping.teacher_for(db, user)
+    teacher = scoping.employee_for(db, user)
     students = {e.student_id: e.student for e in roster(db, sched.class_section_id)}
     existing = {
         m.student_id: m

@@ -11,7 +11,7 @@ from app.models import (
     HomeworkSubmission,
     Student,
     Subject,
-    Teacher,
+    Employee,
     User,
 )
 from app.schemas.common import (
@@ -51,7 +51,7 @@ def to_out(db: Session, items: list[Homework]) -> list[HomeworkOut]:
     sizes = _roster_sizes(db)
     labels = {c.id: c.label for c in db.scalars(select(ClassSection))}
     subjects = {s.id: s.name for s in db.scalars(select(Subject))}
-    teachers = {t.id: t.user.full_name for t in db.scalars(select(Teacher))}
+    teachers = {t.id: t.user.full_name for t in db.scalars(select(Employee))}
     return [
         HomeworkOut(
             id=h.id,
@@ -82,7 +82,7 @@ def create(db: Session, user: User, body: HomeworkCreate) -> HomeworkOut:
         class_section_id=body.class_section_id,
         school_id=user.school_id,
         subject_id=body.subject_id,
-        teacher_id=scoping.teacher_for(db, user).id,
+        teacher_id=scoping.employee_for(db, user).id,
         title=body.title,
         description=body.description,
         assigned_date=assigned,

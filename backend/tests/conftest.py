@@ -17,7 +17,7 @@ from sqlalchemy.orm import sessionmaker  # noqa: E402
 from app.core.config import settings  # noqa: E402
 from app.core.db import Base, get_db, make_engine  # noqa: E402
 from app.main import app  # noqa: E402
-from app.models import ClassSection, Student, Subject, Teacher, User  # noqa: E402
+from app.models import ClassSection, Student, Subject, Employee, User  # noqa: E402
 from seed import seed  # noqa: E402
 
 TEST_URL = os.environ.get("TEST_DATABASE_URL") or settings.TEST_DATABASE_URL
@@ -184,7 +184,7 @@ def ids(db):
 
     s1 = student_in("10")
     s17 = student_in("8")
-    tch1 = db.scalar(select(Teacher).join(User).where(User.login_id == "TCH001"))
+    tch1 = db.scalar(select(Employee).join(User).where(User.login_id == "TCH001"))
     return {
         "section_10a": section_10a.id,
         "section_9a": section_9a.id,
