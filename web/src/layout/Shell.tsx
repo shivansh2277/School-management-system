@@ -10,7 +10,6 @@ const NAV = [
   ["/classes", "Classes"],
   ["/attendance", "Attendance"],
   ["/exams", "Exams"],
-  ["/assignments", "Assignments"],
   ["/fees", "Fees"],
   ["/notices", "Notices"],
   ["/settings", "Settings"],

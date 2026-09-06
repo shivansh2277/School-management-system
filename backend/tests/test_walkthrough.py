@@ -147,7 +147,7 @@ def test_cross_role_walkthrough(client, admin, teacher, student, parent, db, ids
     generated = client.post(
         "/admin/fees/invoices/generate", json={"month": 12, "year": 2026}, headers=admin
     ).json()
-    assert generated["created"] == 24
+    assert generated["created"] == db.query(Student).count()
 
     # 14. Parent pays one and downloads the PDF receipt.
     before = client.get("/admin/fees/collection?year=2026", headers=admin).json()

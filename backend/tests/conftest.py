@@ -111,19 +111,35 @@ def teacher(client):
 
 @pytest.fixture()
 def other_teacher(client):
-    """TCH004 — deliberately does not teach 10-A Mathematics."""
+    """TCH004 — deliberately teaches neither 10-A nor its Mathematics."""
     return auth(_token(client, "teacher", "TCH004", "Teacher@123"))
 
 
-@pytest.fixture()
-def student(client):
-    return auth(_token(client, "student", "SPS2024001", "Student@123"))
+def _login_id_in(db, class_name: str, roll_no: int = 1) -> str:
+    """Resolve a student login by where they sit rather than by a literal
+    admission number: those are now allocated from a sequence, so hard-coding
+    one would tie the tests to seed ordering."""
+    from app.models import ClassSection, Enrolment, Student, User
+
+    return db.scalar(
+        select(User.login_id)
+        .join(Student, Student.user_id == User.id)
+        .join(Enrolment, Enrolment.student_id == Student.id)
+        .join(ClassSection, ClassSection.id == Enrolment.class_section_id)
+        .where(ClassSection.class_name == class_name, Enrolment.roll_no == roll_no)
+    )
 
 
 @pytest.fixture()
-def other_student(client):
-    """SPS2024017 — in 8-A, a different section."""
-    return auth(_token(client, "student", "SPS2024017", "Student@123"))
+def student(client, db):
+    """Roll 1 of 10-A."""
+    return auth(_token(client, "student", _login_id_in(db, "10"), "Student@123"))
+
+
+@pytest.fixture()
+def other_student(client, db):
+    """Roll 1 of 8-A — a different section, so scoping is a real boundary."""
+    return auth(_token(client, "student", _login_id_in(db, "8"), "Student@123"))
 
 
 @pytest.fixture()
@@ -144,8 +160,18 @@ def ids(db):
     section_8a = db.scalar(select(ClassSection).where(ClassSection.class_name == "8"))
     maths = db.scalar(select(Subject).where(Subject.code == "MAT"))
     hindi = db.scalar(select(Subject).where(Subject.code == "HIN"))
-    s1 = db.scalar(select(Student).where(Student.admission_no == "SPS2024001"))
-    s17 = db.scalar(select(Student).where(Student.admission_no == "SPS2024017"))
+    from app.models import Enrolment
+
+    def student_in(class_name, roll_no=1):
+        return db.scalar(
+            select(Student)
+            .join(Enrolment, Enrolment.student_id == Student.id)
+            .join(ClassSection, ClassSection.id == Enrolment.class_section_id)
+            .where(ClassSection.class_name == class_name, Enrolment.roll_no == roll_no)
+        )
+
+    s1 = student_in("10")
+    s17 = student_in("8")
     tch1 = db.scalar(select(Teacher).join(User).where(User.login_id == "TCH001"))
     return {
         "section_10a": section_10a.id,

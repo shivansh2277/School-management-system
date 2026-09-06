@@ -18,8 +18,7 @@ from app.models import (
     User,
     UserRole,
 )
-from app.schemas.common import HomeworkOut, SlotOut
-from app.services import homework as homework_svc
+from app.schemas.common import SlotOut
 from app.services import tenancy
 from app.services.common import roster, section_labels, subject_names
 
@@ -171,50 +170,4 @@ def timetable(
             room=s.room,
         )
         for s in slots
-    ]
-
-
-@router.get("/assignments", response_model=list[HomeworkOut])
-def assignments(
-    class_section_id: int | None = None,
-    user: User = Depends(admin_only),
-    db: Session = Depends(get_db),
-) -> list[HomeworkOut]:
-    """All homework across sections, read only (BLUEPRINT section 9 matrix)."""
-    q = select(Homework)
-    if class_section_id is not None:
-        q = q.where(Homework.class_section_id == class_section_id)
-    return homework_svc.to_out(db, list(db.scalars(q.order_by(Homework.due_date.desc()))))
-
-
-@router.get("/assignments/{homework_id}/submissions")
-def assignment_submissions(
-    homework_id: int, user: User = Depends(admin_only), db: Session = Depends(get_db)
-) -> list[dict]:
-    hw = db.get(Homework, homework_id)
-    if hw is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Homework not found")
-    submitted = {
-        s.student_id: s
-        for s in db.scalars(
-            select(HomeworkSubmission).where(HomeworkSubmission.homework_id == hw.id)
-        )
-    }
-    return [
-        {
-            "student_id": e.student_id,
-            "full_name": e.student.user.full_name,
-            "roll_no": e.roll_no,
-            "submitted": e.student_id in submitted,
-            "submitted_at": (
-                submitted[e.student_id].submitted_at
-                if e.student_id in submitted
-                else None
-            ),
-            "late": (
-                e.student_id in submitted
-                and submitted[e.student_id].submitted_at.date() > hw.due_date
-            ),
-        }
-        for e in roster(db, hw.class_section_id)
     ]

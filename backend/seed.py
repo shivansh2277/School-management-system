@@ -79,6 +79,9 @@ SUBJECTS = [
     ("Computer", "CMP"),
 ]
 
+# One class teacher per section, plus subject teachers. TCH001 is first
+# because the walkthrough in BLUEPRINT section 13 depends on them
+# class-teaching 10-A and teaching it Mathematics.
 TEACHER_NAMES = [
     ("Anita Sharma", "M.Sc. Mathematics, B.Ed."),
     ("Rajesh Verma", "M.A. English, B.Ed."),
@@ -86,13 +89,33 @@ TEACHER_NAMES = [
     ("Praveen Mishra", "M.Sc. Physics, B.Ed."),
     ("Kavita Singh", "M.A. History, B.Ed."),
     ("Deepak Gupta", "MCA"),
+    ("Neha Tiwari", "M.Sc. Chemistry, B.Ed."),
+    ("Amit Pandey", "M.A. Political Science, B.Ed."),
+    ("Ritu Srivastava", "M.Sc. Biology, B.Ed."),
+    ("Vikas Dubey", "M.A. Sanskrit, B.Ed."),
+    ("Pooja Awasthi", "B.Ed., Primary"),
+    ("Sandeep Rastogi", "M.Com., B.Ed."),
 ]
+
+# Classes 10 down to 1, one section each. 10-A first so it keeps the lowest
+# admission numbers, which the demo walkthrough uses.
+CLASS_NAMES = ["10", "9", "8", "7", "6", "5", "4", "3", "2", "1"]
+STUDENTS_PER_SECTION = 10
 
 FIRST_NAMES = [
     "Aarav", "Ishita", "Rohan", "Ananya", "Kabir", "Meera", "Arjun", "Sanya",
     "Vivaan", "Diya", "Aditya", "Riya", "Kartik", "Nisha", "Yash", "Priya",
     "Harsh", "Tanvi", "Nikhil", "Aisha", "Manav", "Pooja", "Rahul", "Sneha",
+    "Devansh", "Kritika", "Shaurya", "Anvi", "Reyansh", "Myra", "Atharv",
+    "Saanvi", "Ayaan", "Navya", "Krish", "Ira", "Dhruv", "Aadhya", "Om",
+    "Kiara",
 ]
+
+
+def student_name(n: int) -> str:
+    """Deterministic and non-repeating across 100 students: 40 first names
+    against 8 surnames gives 320 distinct combinations."""
+    return f"{FIRST_NAMES[n % len(FIRST_NAMES)]} {SURNAMES[(n // len(FIRST_NAMES)) % len(SURNAMES)]}"
 SURNAMES = [
     "Sharma", "Verma", "Yadav", "Mishra", "Singh", "Gupta", "Tiwari", "Pandey",
 ]
@@ -254,7 +277,7 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
             password_hash=hash_password(DEMO_PASSWORDS[UserRole.teacher]),
             full_name=name,
             email=f"{emp.lower()}@sunrisepublic.edu",
-            phone=f"98765{10000 + i:05d}",
+            phone=f"98765{20000 + i:05d}",
         )
         db.add(u)
         db.flush()
@@ -274,12 +297,15 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
 
     # Order matters: sections[0] is 10-A, which the §13 walkthrough uses.
     sections = [
-        ClassSection(class_name="10", section="A", academic_year_id=year.id,
-                     class_teacher_id=teachers[0].id),
-        ClassSection(class_name="9", section="A", academic_year_id=year.id,
-                     class_teacher_id=teachers[1].id),
-        ClassSection(class_name="8", section="A", academic_year_id=year.id,
-                     class_teacher_id=teachers[2].id),
+        ClassSection(
+            class_name=name,
+            section="A",
+            academic_year_id=year.id,
+            class_teacher_id=teachers[i].id,
+            capacity=STUDENTS_PER_SECTION + 10,
+            room=ROOMS[i % len(ROOMS)],
+        )
+        for i, name in enumerate(CLASS_NAMES)
     ]
     db.add_all(sections)
     db.flush()
@@ -289,9 +315,16 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
     # a rotation over all six would leave every teacher inside every section.
     # The 10-A group is ordered so TCH001 teaches Mathematics there, which the
     # walkthrough in BLUEPRINT section 13 depends on.
-    section_teacher_groups = [[1, 0, 2], [2, 3, 4], [4, 5, 0]]
+    # Each section is covered by three teachers, two subjects each, drawn on a
+    # stride that keeps most teachers out of most sections. A flat rotation over
+    # every teacher would put everyone inside every section and make the
+    # scoping tests vacuous.
     for si, sec in enumerate(sections):
-        group = section_teacher_groups[si]
+        if si == 0:
+            # 10-A is fixed so TCH001 teaches it Mathematics (subject index 2).
+            group = [1, 0, 2]
+        else:
+            group = [(si * 3 + k) % len(teachers) for k in range(3)]
         for qi, sub in enumerate(subjects):
             db.add(
                 ClassSubjectTeacher(
@@ -304,10 +337,12 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
 
     students: list[Student] = []
     for si, sec in enumerate(sections):
-        for r in range(1, 9):
-            n = si * 8 + r  # admission numbers run 10-A first
-            full_name = f"{FIRST_NAMES[n - 1]} {SURNAMES[(n - 1) % len(SURNAMES)]}"
-            adm = f"SPS2024{n:03d}"
+        for r in range(1, STUDENTS_PER_SECTION + 1):
+            n = si * STUDENTS_PER_SECTION + r  # 10-A takes the first numbers
+            full_name = student_name(n - 1)
+            # YYYY + 6-digit sequence, from the same counter the application
+            # uses (ERP_BLUEPRINT section 0.21).
+            adm = audit_svc.admission_number(db, school.id, 2024)
             u = User(
                 role=UserRole.student,
                 login_id=adm,
@@ -340,17 +375,22 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
             students.append(s)
     db.flush()
 
-    # 2 parents with two children each (siblings in 10-A), then 20 with one each.
+    # 2 parents with two children each (siblings in 10-A), then one per
+    # remaining student. The sibling pair exists so the parent app's child
+    # switcher has something to switch between.
     sibling_pairs = [(students[0], students[1]), (students[2], students[3])]
     singles = students[4:]
     parents: list[Parent] = []
-    for i in range(1, 23):
+    for i in range(1, len(singles) + 3):
         mobile = f"98765{i:05d}"
         u = User(
             role=UserRole.parent,
             login_id=mobile,
             password_hash=hash_password(DEMO_PASSWORDS[UserRole.parent]),
-            full_name=f"{PARENT_FIRST[i - 1]} {SURNAMES[(i - 1) % len(SURNAMES)]}",
+            full_name=(
+                f"{PARENT_FIRST[(i - 1) % len(PARENT_FIRST)]} "
+                f"{SURNAMES[(i - 1) % len(SURNAMES)]}"
+            ),
             phone=mobile,
         )
         db.add(u)
@@ -485,7 +525,10 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
     db.flush()
 
     # --- fees: the three months before the current one --------------------
-    fees = {"8": Decimal("2200.00"), "9": Decimal("2500.00"), "10": Decimal("2800.00")}
+    # Rises with the class, the way a real fee card does.
+    fees = {
+        name: Decimal(f"{1200 + int(name) * 160}.00") for name in CLASS_NAMES
+    }
     db.add_all(FeeStructure(class_name=c, monthly_amount=a) for c, a in fees.items())
 
     class_name_of = {s.id: s.class_name for s in sections}

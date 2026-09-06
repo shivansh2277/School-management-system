@@ -13,12 +13,16 @@ def test_amount_in_words_indian_numbering():
     )
 
 
-def test_invoice_generation_is_idempotent(client, admin):
+def test_invoice_generation_is_idempotent(client, admin, db):
     body = {"month": 12, "year": 2026}
     first = client.post("/admin/fees/invoices/generate", json=body, headers=admin).json()
     second = client.post("/admin/fees/invoices/generate", json=body, headers=admin).json()
-    assert first["created"] == 24 and first["skipped"] == 0
-    assert second["created"] == 0 and second["skipped"] == 24
+    # Every active student in the school, whatever the demo size is.
+    from app.models import Student
+
+    expected = db.query(Student).count()
+    assert first["created"] == expected and first["skipped"] == 0
+    assert second["created"] == 0 and second["skipped"] == expected
 
 
 def pending_invoice(client, parent):

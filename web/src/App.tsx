@@ -3,7 +3,6 @@ import { Route, Routes } from "react-router-dom";
 import { LoginPage } from "./auth/LoginPage";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { Shell } from "./layout/Shell";
-import { Assignments } from "./pages/Assignments";
 import { Attendance } from "./pages/Attendance";
 import { Classes } from "./pages/Classes";
 import { Dashboard } from "./pages/Dashboard";
@@ -31,7 +30,6 @@ export function App() {
         <Route path="/classes" element={<Classes />} />
         <Route path="/attendance" element={<Attendance />} />
         <Route path="/exams" element={<Exams />} />
-        <Route path="/assignments" element={<Assignments />} />
         <Route path="/fees" element={<Fees />} />
         <Route path="/notices" element={<Notices />} />
         <Route path="/settings" element={<Settings />} />
