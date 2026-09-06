@@ -1,7 +1,7 @@
 # Sunrise ERP — Session Handoff
 
-**Written:** 6 September 2026
-**Branch:** `part-1-foundation` — **8 commits ahead of `main`, nothing pushed**
+**Written:** 6 September 2026 (revised later the same day)
+**Branch:** `part-1-foundation` — **14 commits ahead of `main`, nothing pushed** (12 code, 2 documentation)
 **Repo:** `C:\Users\SHIVANSH\OneDrive\Documents\AGENTS\school-management-system\`
 **Remote:** https://github.com/shivansh2277/School-management-system
 
@@ -40,17 +40,17 @@ sessions — Parts 3 and 4 will each span several.
 
 | Measure | Value |
 |---|---|
-| Backend tests | **132 passing**, ~18 s |
-| Database tables | 33 |
-| Alembic migrations | 7 (chain applies cleanly from empty) |
-| API surface | 62 paths, 77 operations |
+| Backend tests | **146 passing**, ~22 s |
+| Database tables | 35 |
+| Alembic migrations | 8 (chain applies cleanly from empty) |
+| API surface | 65 paths, 82 operations |
 | Permissions / system roles | 33 / 10 |
 | Job handlers | `fees.overdue_sweep`, `fees.generate_invoices`, `system.heartbeat` |
 | Demo school | 100 students, 10 sections, 12 teachers, 98 guardians |
 
 ```bash
 cd backend
-../.venv/Scripts/python.exe -m pytest -q                    # 132 passed
+../.venv/Scripts/python.exe -m pytest -q                    # 146 passed
 ../.venv/Scripts/python.exe -m alembic upgrade head
 ../.venv/Scripts/python.exe seed.py
 ../.venv/Scripts/python.exe worker.py --once                # runs due jobs
@@ -81,6 +81,24 @@ cd backend
    GitHub Actions, Dockerfile, compose stack, `DEPLOY.md`.
 8. **`02c5f56` Documents** — polymorphic documents + object storage. This is
    what Part 2 was blocked on.
+
+Four more since (6 September, later the same day):
+
+9. **`71be808` Test-schema reset** — the suite would not start: `sunrise_test`
+    still held the v0 schema and `drop_all` orders drops from the model
+    metadata, so a leftover `students.class_section_id` FK blocked it. Postgres
+    now drops and recreates the schema.
+10. **`0a4a846` Notice scope leak** — the parent branch of `notices.visible_to`
+    selected enrolment sections without joining `Student`, a cartesian product
+    that showed every parent every class's notices. SQLAlchemy had warned about
+    it on every run.
+11. **`45dcb69` Admin student CRUD** — the enrolment split had broken both
+    halves and nothing tested them: create raised `NameError` (missing imports),
+    and moving a child to another section wrote `class_section_id` onto
+    `Student`, where the column no longer exists, and returned 200.
+12. **`cdf89e4` Settings, module flags, custom fields** — §3.15 levels 1-3 plus
+    the module-registry seam. Endpoints under `/admin/configuration`;
+    `/admin/settings` was already the school profile.
 
 ---
 
@@ -136,13 +154,9 @@ where they sit, so seed ordering can change without breaking the suite.
 
 ## 6. Open work in Part 1
 
-Two items, neither blocking Part 2:
+One item, not blocking Part 2:
 
-1. **Settings, custom fields and feature flags** — §3.15 levels 1–3. This is the
-   customization story for a product sold to many schools, and the reason the
-   plugin *runtime* was deferred: config plus custom fields plus flags covers
-   about nine requests in ten.
-2. **`employees` replacing `teachers`, `guardians` replacing `parents`** —
+1. **`employees` replacing `teachers`, `guardians` replacing `parents`** —
    mechanical but wide. Blueprint §3.4 says do it before HR is built on top,
    which means before Part 4.
 
