@@ -6,6 +6,9 @@ from pathlib import Path
 import pytest
 
 os.environ.setdefault("DATABASE_URL", "sqlite:///./test.db")
+# The seed hashes 210 accounts; at production cost that alone is two minutes
+# of every run. Password *behaviour* is unchanged — only the work factor.
+os.environ.setdefault("BCRYPT_ROUNDS", "4")
 
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy import select  # noqa: E402

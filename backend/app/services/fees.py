@@ -36,20 +36,20 @@ def _payments(db: Session, invoice_ids: list[int]) -> dict[int, FeePayment]:
     }
 
 
-def refresh_overdue(db: Session, invoices: list[FeeInvoice]) -> None:
-    """Persist pending -> overdue once the due date has passed (BLUEPRINT §8 Fees)."""
-    today = Date.today()
-    changed = False
-    for inv in invoices:
-        if inv.status == InvoiceStatus.pending and inv.due_date < today:
-            inv.status = InvoiceStatus.overdue
-            changed = True
-    if changed:
-        db.commit()
+def presented_status(invoice: FeeInvoice, today: Date | None = None) -> InvoiceStatus:
+    """How an invoice reads right now, without writing anything.
+
+    v0 persisted pending -> overdue from inside `to_out()`, so a GET wrote and
+    committed. Reads do not have side effects here; the stored status is moved
+    by the scheduled `fees.overdue_sweep` job instead (ERP_BLUEPRINT §2.5(7)).
+    """
+    today = today or Date.today()
+    if invoice.status == InvoiceStatus.pending and invoice.due_date < today:
+        return InvoiceStatus.overdue
+    return invoice.status
 
 
 def to_out(db: Session, invoices: list[FeeInvoice]) -> list[InvoiceOut]:
-    refresh_overdue(db, invoices)
     pays = _payments(db, [i.id for i in invoices])
     students = {
         s.id: s
@@ -67,7 +67,7 @@ def to_out(db: Session, invoices: list[FeeInvoice]) -> list[InvoiceOut]:
             year=i.year,
             amount=i.amount,
             due_date=i.due_date,
-            status=i.status,
+            status=presented_status(i),
             receipt_no=pays[i.id].receipt_no if i.id in pays else None,
             paid_at=pays[i.id].paid_at if i.id in pays else None,
         )

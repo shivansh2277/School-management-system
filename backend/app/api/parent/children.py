@@ -56,7 +56,6 @@ def summary(
     )
     hw = homework.for_student(db, s.id)
     invoices = list(db.scalars(select(FeeInvoice).where(FeeInvoice.student_id == s.id)))
-    fees.refresh_overdue(db, invoices)
     return {
         "student_id": s.id,
         "name": s.user.full_name,
@@ -67,7 +66,7 @@ def summary(
         "latest_result_percent": (
             assessment.student_average_percent(db, s.id, exam.id) if exam else None
         ),
-        "fee_dues": sum(1 for i in invoices if i.status != InvoiceStatus.paid),
+        "fee_dues": sum(1 for i in invoices if fees.presented_status(i) != InvoiceStatus.paid),
         "recent_notices": notices.visible_to(db, user)[:5],
     }
 

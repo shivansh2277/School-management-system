@@ -42,6 +42,14 @@ class EnrolmentStatus(StrEnum):
     passed_out = "passed_out"
 
 
+class JobStatus(StrEnum):
+    pending = "pending"
+    running = "running"
+    done = "done"
+    failed = "failed"
+    cancelled = "cancelled"
+
+
 class AuditAction(StrEnum):
     create = "create"
     update = "update"

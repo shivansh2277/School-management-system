@@ -258,7 +258,12 @@ def upgrade() -> None:
                 "updated_at",
                 existing_type=sa.DateTime(timezone=True),
                 nullable=False,
-                existing_server_default=sa.func.now(),
+                # server_default, not existing_server_default: SQLite's batch
+                # mode rebuilds the table, and passing only `existing_` drops
+                # the default, leaving a NOT NULL column nothing can insert
+                # into. Caught by seeding a migrated database, which the test
+                # suite does not do — it builds the schema from the models.
+                server_default=sa.func.now(),
             )
 
     # ------------------------------------------- class_sections -> academic_year_id

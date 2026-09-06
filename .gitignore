@@ -2,6 +2,10 @@ __pycache__/
 *.py[cod]
 .venv/
 *.db
+# Compose reads the root .env, which holds JWT_SECRET and the database
+# password. .env.example is the committed template.
+.env
+!.env.example
 backend/.env
 web/.env
 mobile/.env

@@ -5,7 +5,14 @@ from passlib.context import CryptContext
 
 from app.core.config import settings
 
-_pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# BCRYPT_ROUNDS exists so the test suite can drop to the minimum: the seed
+# hashes 210 accounts, which at production cost is two minutes of every run.
+# Never lower it outside tests — the default is the point of bcrypt.
+_pwd = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto",
+    bcrypt__rounds=settings.BCRYPT_ROUNDS,
+)
 
 
 def hash_password(raw: str) -> str:

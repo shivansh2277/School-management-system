@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+psycopg://sunrise:sunrise@localhost:5432/sunrise"
     TEST_DATABASE_URL: str = "postgresql+psycopg://sunrise:sunrise@localhost:5432/sunrise_test"
     JWT_SECRET: str = "change-me-in-production"
+    # 12 is passlib's default. Tests override this to 4 via the environment.
+    BCRYPT_ROUNDS: int = 12
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
