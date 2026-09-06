@@ -69,6 +69,7 @@ function ClassDetail({ row, onClose }: { row: ClassRow; onClose: () => void }) {
       <h3 className="text-sm font-medium mb-2">Roster</h3>
       <DataTable
         rows={roster.data ?? []}
+          loading={roster.isLoading}
         empty="No students in this section."
         columns={[
           { key: "roll", header: "Roll", render: (r) => r.roll_no },
@@ -80,6 +81,7 @@ function ClassDetail({ row, onClose }: { row: ClassRow; onClose: () => void }) {
       <h3 className="text-sm font-medium mt-6 mb-2">Timetable (read only)</h3>
       <DataTable
         rows={timetable.data ?? []}
+          loading={timetable.isLoading}
         empty="No timetable seeded for this section."
         columns={[
           { key: "day", header: "Day", render: (s) => s.day_of_week.toUpperCase() },

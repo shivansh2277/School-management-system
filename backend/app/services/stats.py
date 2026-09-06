@@ -13,8 +13,10 @@ from sqlalchemy.orm import Session
 
 from app.models import (
     ClassSection,
+    ExamSchedule,
     FeeInvoice,
     FeePayment,
+    Mark,
     Student,
     Teacher,
     TimetableSlot,
@@ -64,18 +66,42 @@ def _academic_years(academic_year: str) -> list[int]:
     return [start, start + 1]
 
 
+def exam_percentages(
+    db: Session, exam_id: int, class_section_id: int | None = None
+) -> dict[int, float]:
+    """Every student's overall percentage in one exam, as a single aggregate query.
+
+    Building this per student through `report_card()` meant one round trip per
+    student per subject, which was imperceptible against a local database and
+    took 8.5 s against a hosted one. The arithmetic is identical: a subject with
+    no `marks` row contributes to neither the numerator nor the denominator, so
+    an absent subject stays excluded from the total rather than counting as zero.
+    """
+    q = (
+        select(
+            Mark.student_id,
+            func.sum(Mark.marks_obtained),
+            func.sum(ExamSchedule.max_marks),
+        )
+        .join(ExamSchedule, ExamSchedule.id == Mark.exam_schedule_id)
+        .where(ExamSchedule.exam_id == exam_id)
+        .group_by(Mark.student_id)
+    )
+    if class_section_id is not None:
+        q = q.where(ExamSchedule.class_section_id == class_section_id)
+    return {
+        student_id: round(float(obtained) / float(out_of) * 100, 1)
+        for student_id, obtained, out_of in db.execute(q).all()
+        if out_of
+    }
+
+
 def performance(db: Session, class_section_id: int | None = None) -> dict:
     exam = assessment.latest_exam_with_marks(db, class_section_id)
     counts = {name: 0 for name, _ in BUCKETS}
     if exam is None:
         return counts
-    q = select(Student)
-    if class_section_id is not None:
-        q = q.where(Student.class_section_id == class_section_id)
-    for s in db.scalars(q):
-        pct = assessment.student_average_percent(db, s.id, exam.id)
-        if pct is None:
-            continue
+    for pct in exam_percentages(db, exam.id, class_section_id).values():
         for name, floor in BUCKETS:
             if pct >= floor:
                 counts[name] += 1
@@ -87,19 +113,24 @@ def top_performers(db: Session, limit: int = 3) -> list[dict]:
     exam = assessment.latest_exam_with_marks(db)
     if exam is None:
         return []
+    percentages = exam_percentages(db, exam.id)
+    if not percentages:
+        return []
     labels = section_labels(db)
-    scored = []
-    for s in db.scalars(select(Student)):
-        pct = assessment.student_average_percent(db, s.id, exam.id)
-        if pct is not None:
-            scored.append(
-                {
-                    "student_id": s.id,
-                    "name": s.user.full_name,
-                    "class_label": labels.get(s.class_section_id, ""),
-                    "average_percent": pct,
-                }
-            )
+    students = {
+        s.id: s
+        for s in db.scalars(select(Student).where(Student.id.in_(percentages)))
+    }
+    scored = [
+        {
+            "student_id": sid,
+            "name": students[sid].user.full_name,
+            "class_label": labels.get(students[sid].class_section_id, ""),
+            "average_percent": pct,
+        }
+        for sid, pct in percentages.items()
+        if sid in students
+    ]
     scored.sort(key=lambda r: r["average_percent"], reverse=True)
     return scored[:limit]
 

@@ -25,7 +25,7 @@ type SubmissionRow = {
 
 export function Assignments() {
   // Homework is created by teachers; the admin view is a read-only roll-up.
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["all-homework"],
     queryFn: () => api.get<Row[]>("/admin/assignments"),
   });
@@ -36,6 +36,7 @@ export function Assignments() {
       <Card title="Assignments">
         <DataTable<Row>
           rows={data ?? []}
+          loading={isLoading}
           onRowClick={setOpen}
           empty="No homework has been assigned yet."
           columns={[

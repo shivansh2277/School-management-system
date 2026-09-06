@@ -67,7 +67,9 @@ export function Attendance() {
           Read only. Attendance is marked by the class teacher in the mobile app.
         </p>
 
-        {marked.length === 0 ? (
+        {roll.isLoading ? (
+          <Empty>Loading...</Empty>
+        ) : marked.length === 0 ? (
           <Empty>No attendance marked for this date yet.</Empty>
         ) : (
           <DataTable<Roll>

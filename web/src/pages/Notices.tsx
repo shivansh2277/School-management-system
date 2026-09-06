@@ -101,6 +101,7 @@ export function Notices() {
       <Card title="Published notices">
         <DataTable<Notice>
           rows={list.data ?? []}
+          loading={list.isLoading}
           empty="Nothing published yet."
           columns={[
             { key: "title", header: "Title", render: (n) => n.title },

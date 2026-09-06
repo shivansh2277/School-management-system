@@ -14,7 +14,7 @@ type Row = {
 };
 
 export function Teachers() {
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["teachers"],
     queryFn: () => api.get<Row[]>("/admin/teachers"),
   });
@@ -23,6 +23,7 @@ export function Teachers() {
     <Card title="Teachers">
       <DataTable<Row>
         rows={data ?? []}
+          loading={isLoading}
         empty="No teachers on record."
         columns={[
           { key: "emp", header: "Employee ID", render: (r) => r.employee_id },

@@ -47,12 +47,16 @@ export function DataTable<T>({
   rows,
   onRowClick,
   empty,
+  loading = false,
 }: {
   columns: { key: string; header: string; render: (row: T) => ReactNode; align?: "right" }[];
   rows: T[];
   onRowClick?: (row: T) => void;
   empty: string;
+  /** While fetching, an empty table means "not known yet", not "none exist". */
+  loading?: boolean;
 }) {
+  if (loading && rows.length === 0) return <Empty>Loading...</Empty>;
   if (rows.length === 0) return <Empty>{empty}</Empty>;
   return (
     <div className="overflow-x-auto">

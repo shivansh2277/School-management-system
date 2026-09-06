@@ -37,6 +37,7 @@ export function Exams() {
       >
         <DataTable<Exam>
           rows={exams.data ?? []}
+          loading={exams.isLoading}
           onRowClick={setOpenExam}
           empty="No exams created yet."
           columns={[
@@ -137,6 +138,7 @@ function ExamDetail({ exam, onClose }: { exam: Exam; onClose: () => void }) {
     <Modal title={exam.name} onClose={onClose}>
       <DataTable<Paper>
         rows={papers.data ?? []}
+          loading={papers.isLoading}
         empty="No papers scheduled for this exam yet."
         columns={[
           { key: "class", header: "Class", render: (p) => p.class_label },

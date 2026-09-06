@@ -138,7 +138,7 @@ scanning a QR code with Expo Go, with no Android Studio setup.
                                 |
                       packages/api-types/schema.d.ts
                           ^                ^
-                         web            mobile
+                         web            mobile      <-- INTENDED, NOT BUILT (§19 #20)
 ```
 
 One FastAPI service is the single source of truth. Both clients are stateless readers of it
@@ -147,22 +147,30 @@ and talk to nothing else.
 ### Type sharing between web and mobile
 
 FastAPI publishes an OpenAPI schema derived from the Pydantic response models. One npm
-script regenerates a shared TypeScript declaration file from it, and both clients import
-that file:
+script regenerates a shared TypeScript declaration file from it:
 
 ```
 npx openapi-typescript http://localhost:8000/openapi.json -o packages/api-types/schema.d.ts
 ```
 
-Rename a field in a Pydantic model, run `make gen-api`, and both clients fail to compile at
-exactly the line that broke. This is the entire integration strategy — no GraphQL, no second
-backend, no hand-written duplicate interfaces.
-
 `packages/api-types/schema.d.ts` is **generated but committed**, so a fresh clone
-type-checks without the backend running.
+type-checks without the backend running. `packages/api-types/openapi.json` is committed
+alongside it so the types can be regenerated without starting the server.
 
-Each client has one thin `apiClient` wrapper (fetch + bearer token + base URL from env)
-that consumes those types. No other HTTP code exists in either client.
+Each client has one thin `apiClient` wrapper (fetch + bearer token + base URL from env).
+No other HTTP code exists in either client.
+
+> **Not implemented in v0 — do not describe this as working.** The intended strategy was
+> that both clients import `schema.d.ts`, so renaming a Pydantic field would break both
+> clients at compile time. **Neither client imports it.** `web/tsconfig.json` only lists the
+> folder under `include`; `mobile/tsconfig.json` does not reference it at all. Both clients
+> hand-write their response types — see the `Stats` type at the top of
+> `web/src/pages/Dashboard.tsx`. A backend rename therefore breaks the clients **silently at
+> runtime**, not at compile time.
+>
+> Wiring it up means typing the responses in `web/src/api/client.ts` and
+> `mobile/src/api/client.ts` from `schema.d.ts` (and adding the path to
+> `mobile/tsconfig.json`). Until that is done, the file is generated but unused. See §19 #20.
 
 ---
 
@@ -983,6 +991,9 @@ Record anything decided during implementation that this document did not specify
 | 17 | The teacher dashboard listed every period in the teacher's sections, including periods taught by colleagues, showing two 08:00 classes at once. | `stats.today_schedule` takes an optional `teacher_id`; the teacher dashboard passes it. A teacher is scoped to a whole *section* but only takes some of its periods, so filtering by section alone attributes a colleague's class to them. The Timetable tab was already correct, which is what made the inconsistency visible on the device. | 2026-09-02 |
 | 18 | Seeded homework titles were paired to subjects by index rotation, filing "Write a Python program to reverse a string" under Social Science. | `HOMEWORK_TITLES` is now `(title, subject_code)` pairs. Not an evidence-integrity breach — the row was real — but the first thing a reviewer notices on the homework screen, and it undermines trust in figures that *are* right. | 2026-09-02 |
 | 19 | Tab bars rendered a missing-glyph box on every tab. | No `tabBarIcon` was set, so react-navigation drew a placeholder. Added Ionicons via `@expo/vector-icons`, which already ships with Expo — no new dependency. Icons also stop the 8-tab labels truncating to "Atten…". | 2026-09-02 |
+| 20 | §4 claimed both clients import the generated `schema.d.ts`, so a Pydantic rename would break them at compile time. Reading the code on 2026-09-02 showed **neither client imports it** — `web/tsconfig.json` only `include`s the folder, `mobile/tsconfig.json` never mentions it, and both clients hand-write their response types. | §4 corrected to state plainly that this is **not implemented in v0**, with the wiring-up steps recorded there. The claim was left standing through the whole build because the file was generated, committed and type-checked — none of which means it is used. A capability claim in this document is only true if a test or an import proves it; §4 had neither. The types themselves were not wired up in this pass because doing so touches both clients' request paths, which are already demoed and documented. | 2026-09-02 |
+| 21 | The deployed admin dashboard took **8.58 s** to load against Vercel's 10 s function timeout. Locally it was instant. | `stats.performance()` and `top_performers()` called `report_card()` once per student and re-queried `grade_bands` each time — an N+1 that localhost hid, because a sub-millisecond round trip to a local Postgres made 100+ queries invisible. Replaced with a single SQL aggregate, `stats.exam_percentages`, and one grade-band load. **8.58 s → 0.93 s.** All 24 students' percentages were compared old-vs-new before shipping: zero mismatches, and the performance buckets and top-3 are byte-identical. The lesson recorded: "works locally" is not "works deployed" — network latency is what turns an N+1 from a style complaint into an outage. | 2026-09-03 |
+| 22 | Every table rendered "No students match this filter" **while the request was still in flight**, asserting "none exist" when the truth was "not known yet". | `DataTable` now takes a `loading` prop and shows a loading state instead of the empty state until the first response arrives; applied across all 9 admin screens. This is an evidence-integrity defect, not a cosmetic one: the screen stated a fact it had no basis for. An empty state must mean the query returned nothing, never that the query has not returned. | 2026-09-03 |
 
 ---
 

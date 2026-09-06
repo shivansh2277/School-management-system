@@ -36,7 +36,7 @@ export function Students() {
   if (q) params.set("q", q);
   if (classId) params.set("class_section_id", classId);
 
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["students", q, classId],
     queryFn: () => api.get<{ items: Row[]; total: number }>(`/admin/students?${params}`),
   });
@@ -79,6 +79,7 @@ export function Students() {
 
         <DataTable<Row>
           rows={data?.items ?? []}
+          loading={isLoading}
           onRowClick={(r) => setOpenId(r.id)}
           empty="No students match this filter."
           columns={[

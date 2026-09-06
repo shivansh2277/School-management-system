@@ -87,6 +87,7 @@ export function Settings() {
         </p>
         <DataTable
           rows={bands.data ?? []}
+          loading={bands.isLoading}
           empty="No grade bands configured."
           columns={[
             { key: "grade", header: "Grade", render: (r) => r.grade },
@@ -103,6 +104,7 @@ export function Settings() {
       <Card title="Fee structure">
         <DataTable
           rows={structures.data ?? []}
+          loading={structures.isLoading}
           empty="No fee structure configured."
           columns={[
             { key: "class", header: "Class", render: (r) => r.class_name },
