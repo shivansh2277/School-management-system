@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.core.deps import require_role
 from app.models import (
+    AcademicYear,
     ClassSection,
     ClassSubjectTeacher,
     Homework,
@@ -19,6 +20,7 @@ from app.models import (
 )
 from app.schemas.common import HomeworkOut, SlotOut
 from app.services import homework as homework_svc
+from app.services import tenancy
 from app.services.common import roster, section_labels, subject_names
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -28,8 +30,14 @@ admin_only = require_role(UserRole.admin)
 class ClassCreate(BaseModel):
     class_name: str
     section: str
-    academic_year: str
     class_teacher_id: int | None = None
+    capacity: int | None = None
+    stream: str | None = None
+    room: str | None = None
+    # The session is no longer a free string on the request: a section is
+    # created inside an academic year, defaulting to the school's current
+    # one (ERP_BLUEPRINT §3.1).
+    academic_year_id: int | None = None
 
 
 class ClassUpdate(BaseModel):
@@ -59,7 +67,11 @@ def _row(db: Session, c: ClassSection) -> dict:
 def list_classes(user: User = Depends(admin_only), db: Session = Depends(get_db)) -> list[dict]:
     return [
         _row(db, c)
-        for c in db.scalars(select(ClassSection).order_by(ClassSection.class_name, ClassSection.section))
+        for c in db.scalars(
+            select(ClassSection)
+            .where(ClassSection.school_id == user.school_id)
+            .order_by(ClassSection.class_name, ClassSection.section)
+        )
     ]
 
 
@@ -67,16 +79,29 @@ def list_classes(user: User = Depends(admin_only), db: Session = Depends(get_db)
 def create_class(
     body: ClassCreate, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> dict:
+    year = (
+        db.get(AcademicYear, body.academic_year_id)
+        if body.academic_year_id is not None
+        else tenancy.current_year(db, user.school_id)
+    )
+    if year is None or year.school_id != user.school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Academic year not found")
+    tenancy.assert_writable(year)
     exists = db.scalar(
         select(ClassSection).where(
+            ClassSection.school_id == user.school_id,
             ClassSection.class_name == body.class_name,
             ClassSection.section == body.section,
-            ClassSection.academic_year == body.academic_year,
+            ClassSection.academic_year_id == year.id,
         )
     )
     if exists:
         raise HTTPException(status.HTTP_409_CONFLICT, "This class section already exists")
-    c = ClassSection(**body.model_dump())
+    c = ClassSection(
+        school_id=user.school_id,
+        academic_year_id=year.id,
+        **body.model_dump(exclude={"academic_year_id"}),
+    )
     db.add(c)
     db.commit()
     return _row(db, c)

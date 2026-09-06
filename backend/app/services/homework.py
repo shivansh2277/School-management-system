@@ -69,6 +69,7 @@ def create(db: Session, user: User, body: HomeworkCreate) -> HomeworkOut:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "due_date must not precede assigned_date")
     hw = Homework(
         class_section_id=body.class_section_id,
+        school_id=user.school_id,
         subject_id=body.subject_id,
         teacher_id=scoping.teacher_for(db, user).id,
         title=body.title,
@@ -192,6 +193,7 @@ def submit(db: Session, user: User, homework_id: int, answer_text: str) -> Stude
     if existing is None:
         db.add(
             HomeworkSubmission(
+                school_id=student.school_id,
                 homework_id=hw.id,
                 student_id=student.id,
                 answer_text=answer,

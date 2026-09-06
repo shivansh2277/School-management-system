@@ -7,6 +7,11 @@ class LoginRequest(BaseModel):
     role: UserRole
     login_id: str
     password: str
+    # Logins are unique per school, not globally: two schools both have an
+    # "admin" and both may issue admission no 2026000001. The web app supplies
+    # this from its subdomain or configured school; it stays optional so a
+    # single-school deployment need not ask for it.
+    school_code: str | None = None
 
 
 class UserOut(BaseModel):

@@ -91,6 +91,7 @@ def enter_marks(db: Session, user: User, body: MarksRequest) -> list[MarksRoster
         if row is None:
             db.add(
                 Mark(
+                    school_id=teacher.school_id,
                     exam_schedule_id=sched.id,
                     student_id=entry.student_id,
                     marks_obtained=entry.marks_obtained,
@@ -161,11 +162,14 @@ def report_card(db: Session, student_id: int, exam_id: int) -> ReportCard:
     )
 
 
-def latest_exam_with_marks(db: Session, class_section_id: int | None = None) -> Exam | None:
+def latest_exam_with_marks(
+    db: Session, school_id: int, class_section_id: int | None = None
+) -> Exam | None:
     q = (
         select(Exam)
         .join(ExamSchedule, ExamSchedule.exam_id == Exam.id)
         .join(Mark, Mark.exam_schedule_id == ExamSchedule.id)
+        .where(Exam.school_id == school_id)
     )
     if class_section_id is not None:
         q = q.where(ExamSchedule.class_section_id == class_section_id)

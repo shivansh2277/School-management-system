@@ -11,7 +11,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import FeeInvoice, FeePayment, SchoolSettings, Student
+from app.models import FeeInvoice, FeePayment, School, Student
 
 MONTHS = [
     "January", "February", "March", "April", "May", "June",
@@ -61,7 +61,8 @@ def build_receipt(db: Session, invoice_id: int) -> bytes:
     invoice = db.get(FeeInvoice, invoice_id)
     payment = db.scalar(select(FeePayment).where(FeePayment.invoice_id == invoice_id))
     student = db.get(Student, invoice.student_id)
-    school = db.get(SchoolSettings, 1)
+    # The receipt belongs to the invoice's school, not to a global row.
+    school = db.get(School, invoice.school_id)
 
     buf = BytesIO()
     doc = SimpleDocTemplate(

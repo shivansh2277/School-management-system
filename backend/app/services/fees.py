@@ -71,21 +71,35 @@ def to_out(db: Session, invoices: list[FeeInvoice]) -> list[InvoiceOut]:
     ]
 
 
-def generate(db: Session, month: int, year: int) -> GenerateInvoicesResult:
+def generate(
+    db: Session, month: int, year: int, school_id: int
+) -> GenerateInvoicesResult:
     if not 1 <= month <= 12:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "month must be 1-12")
-    structures = {f.class_name: f.monthly_amount for f in db.scalars(select(FeeStructure))}
-    labels = {c.id: c.class_name for c in db.scalars(select(ClassSection))}
+    structures = {
+        f.class_name: f.monthly_amount
+        for f in db.scalars(
+            select(FeeStructure).where(FeeStructure.school_id == school_id)
+        )
+    }
+    labels = {
+        c.id: c.class_name
+        for c in db.scalars(
+            select(ClassSection).where(ClassSection.school_id == school_id)
+        )
+    }
     existing = set(
         db.scalars(
             select(FeeInvoice.student_id).where(
-                FeeInvoice.month == month, FeeInvoice.year == year
+                FeeInvoice.school_id == school_id,
+                FeeInvoice.month == month,
+                FeeInvoice.year == year,
             )
         )
     )
     due = Date(year, month, min(10, calendar.monthrange(year, month)[1]))
     created = skipped = 0
-    for s in db.scalars(select(Student)):
+    for s in db.scalars(select(Student).where(Student.school_id == school_id)):
         if not s.user.is_active:
             continue
         if s.id in existing:  # idempotent: rely on the unique key, skip existing
@@ -97,6 +111,7 @@ def generate(db: Session, month: int, year: int) -> GenerateInvoicesResult:
             continue
         db.add(
             FeeInvoice(
+                school_id=school_id,
                 student_id=s.id,
                 month=month,
                 year=year,
@@ -110,10 +125,13 @@ def generate(db: Session, month: int, year: int) -> GenerateInvoicesResult:
     return GenerateInvoicesResult(created=created, skipped=skipped)
 
 
-def _next_receipt_no(db: Session, year: int) -> str:
+def _next_receipt_no(db: Session, year: int, school_id: int) -> str:
     prefix = f"SPS/RCP/{year}/"
     used = db.scalars(
-        select(FeePayment.receipt_no).where(FeePayment.receipt_no.like(f"{prefix}%"))
+        select(FeePayment.receipt_no).where(
+            FeePayment.school_id == school_id,
+            FeePayment.receipt_no.like(f"{prefix}%"),
+        )
     ).all()
     seq = max((int(r.rsplit("/", 1)[1]) for r in used), default=0) + 1
     return f"{prefix}{seq:06d}"
@@ -127,12 +145,13 @@ def pay(db: Session, invoice_id: int) -> PaymentResult:
         raise HTTPException(status.HTTP_409_CONFLICT, "This invoice is already paid")
     now = datetime.now(UTC)
     payment = FeePayment(
+        school_id=invoice.school_id,
         invoice_id=invoice.id,
         amount=invoice.amount,
         paid_at=now,
         method="simulated",
         txn_ref=f"SIM-{uuid.uuid4().hex[:12].upper()}",
-        receipt_no=_next_receipt_no(db, now.year),
+        receipt_no=_next_receipt_no(db, now.year, invoice.school_id),
     )
     db.add(payment)
     invoice.status = InvoiceStatus.paid

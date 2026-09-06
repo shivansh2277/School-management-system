@@ -15,6 +15,8 @@ from sqlalchemy.orm import Session
 from app.core.db import Base, SessionLocal, engine
 from app.core.security import hash_password
 from app.models import (
+    AcademicYear,
+    AcademicYearStatus,
     Attendance,
     AttendanceStatus,
     ClassSection,
@@ -35,7 +37,7 @@ from app.models import (
     NoticeAudience,
     Parent,
     ParentStudent,
-    SchoolSettings,
+    School,
     Student,
     Subject,
     Teacher,
@@ -45,6 +47,7 @@ from app.models import (
 )
 
 ACADEMIC_YEAR = "2025-26"
+SCHOOL_CODE = "SPS"
 TODAY = date(2026, 9, 1)  # deterministic "today" so the seeded window never drifts
 
 # Delete children before parents. ClassSection must go before Teacher because
@@ -54,7 +57,7 @@ WIPE_ORDER = [
     FeePayment, FeeInvoice, FeeStructure, Mark, ExamSchedule, Exam, GradeBand,
     HomeworkSubmission, Homework, Attendance, Notice, TimetableSlot,
     ClassSubjectTeacher, ParentStudent, Student, ClassSection,
-    Parent, Teacher, Subject, SchoolSettings, User,
+    Parent, Teacher, Subject, User, AcademicYear, School,
 ]
 
 SUBJECTS = [
@@ -159,6 +162,25 @@ def month_back(anchor: date, months: int) -> tuple[int, int]:
     return index % 12 + 1, index // 12
 
 
+def _stamp_tenant(db: Session, school_id: int) -> None:
+    """Fill in `school_id` on anything added without one.
+
+    Every seeded row belongs to the one demo school, so stamping them in a
+    single flush hook is both shorter and safer than threading the id through
+    forty constructors, where one omission would fail at COMMIT with an opaque
+    NOT NULL error. Seed-only: application code sets the tenant explicitly.
+    """
+    from sqlalchemy import event
+
+    from app.models.base import TenantBase
+
+    @event.listens_for(db, "before_flush")
+    def _fill(session, _ctx, _instances):  # pragma: no cover - test-time hook
+        for obj in session.new:
+            if isinstance(obj, TenantBase) and obj.school_id is None:
+                obj.school_id = school_id
+
+
 def wipe(db: Session) -> None:
     for model in WIPE_ORDER:
         db.query(model).delete()
@@ -169,19 +191,34 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
     rng = random.Random(20260901)
     wipe(db)
 
-    db.add(
-        SchoolSettings(
-            id=1,
-            name="Sunrise Public School",
-            address="Sector 5, Vikas Nagar",
-            city="Lucknow",
-            phone="+91 522 400 1234",
-            email="office@sunrisepublic.edu",
-            logo_url=None,
-            primary_color="#5B4BE0",
-            academic_year=ACADEMIC_YEAR,
-        )
+    school = School(
+        code=SCHOOL_CODE,
+        name="Sunrise Public School",
+        address="Sector 5, Vikas Nagar",
+        city="Lucknow",
+        state="Uttar Pradesh",
+        phone="+91 522 400 1234",
+        email="office@sunrisepublic.edu",
+        primary_color="#5B4BE0",
+        board="CBSE",
     )
+    db.add(school)
+    db.flush()
+
+    start_year = int(ACADEMIC_YEAR.split("-")[0])
+    year = AcademicYear(
+        school_id=school.id,
+        code=ACADEMIC_YEAR,
+        start_date=date(start_year, 4, 1),
+        end_date=date(start_year + 1, 3, 31),
+        status=AcademicYearStatus.active,
+        is_current=True,
+    )
+    db.add(year)
+    db.flush()
+
+    # From here on every row is stamped with this school automatically.
+    _stamp_tenant(db, school.id)
     db.add_all(GradeBand(min_percent=Decimal(p), grade=g) for p, g in GRADE_BANDS)
 
     # --- people -----------------------------------------------------------
@@ -224,11 +261,11 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
 
     # Order matters: sections[0] is 10-A, which the §13 walkthrough uses.
     sections = [
-        ClassSection(class_name="10", section="A", academic_year=ACADEMIC_YEAR,
+        ClassSection(class_name="10", section="A", academic_year_id=year.id,
                      class_teacher_id=teachers[0].id),
-        ClassSection(class_name="9", section="A", academic_year=ACADEMIC_YEAR,
+        ClassSection(class_name="9", section="A", academic_year_id=year.id,
                      class_teacher_id=teachers[1].id),
-        ClassSection(class_name="8", section="A", academic_year=ACADEMIC_YEAR,
+        ClassSection(class_name="8", section="A", academic_year_id=year.id,
                      class_teacher_id=teachers[2].id),
     ]
     db.add_all(sections)

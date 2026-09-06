@@ -12,6 +12,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import (
+    AcademicYear,
     ClassSection,
     ExamSchedule,
     FeeInvoice,
@@ -35,22 +36,32 @@ BUCKETS = [
 ]
 
 
-def totals(db: Session, academic_year: str) -> dict:
+def totals(db: Session, year: AcademicYear) -> dict:
+    school_id = year.school_id
     students = db.scalar(
-        select(func.count()).select_from(Student).join(User, User.id == Student.user_id).where(User.is_active)
+        select(func.count())
+        .select_from(Student)
+        .join(User, User.id == Student.user_id)
+        .where(Student.school_id == school_id, User.is_active)
     )
     teachers = db.scalar(
-        select(func.count()).select_from(Teacher).join(User, User.id == Teacher.user_id).where(User.is_active)
+        select(func.count())
+        .select_from(Teacher)
+        .join(User, User.id == Teacher.user_id)
+        .where(Teacher.school_id == school_id, User.is_active)
     )
     classes = db.scalar(
-        select(func.count()).select_from(ClassSection).where(
-            ClassSection.academic_year == academic_year
-        )
+        select(func.count())
+        .select_from(ClassSection)
+        .where(ClassSection.academic_year_id == year.id)
     )
     fees = db.scalar(
         select(func.coalesce(func.sum(FeePayment.amount), 0))
         .join(FeeInvoice, FeeInvoice.id == FeePayment.invoice_id)
-        .where(FeeInvoice.year.in_(_academic_years(academic_year)))
+        .where(
+            FeeInvoice.school_id == school_id,
+            FeeInvoice.year.in_(_academic_years(year.code)),
+        )
     )
     return {
         "students": students,
@@ -96,8 +107,10 @@ def exam_percentages(
     }
 
 
-def performance(db: Session, class_section_id: int | None = None) -> dict:
-    exam = assessment.latest_exam_with_marks(db, class_section_id)
+def performance(
+    db: Session, school_id: int, class_section_id: int | None = None
+) -> dict:
+    exam = assessment.latest_exam_with_marks(db, school_id, class_section_id)
     counts = {name: 0 for name, _ in BUCKETS}
     if exam is None:
         return counts
@@ -109,8 +122,8 @@ def performance(db: Session, class_section_id: int | None = None) -> dict:
     return counts
 
 
-def top_performers(db: Session, limit: int = 3) -> list[dict]:
-    exam = assessment.latest_exam_with_marks(db)
+def top_performers(db: Session, school_id: int, limit: int = 3) -> list[dict]:
+    exam = assessment.latest_exam_with_marks(db, school_id)
     if exam is None:
         return []
     percentages = exam_percentages(db, exam.id)
@@ -119,7 +132,11 @@ def top_performers(db: Session, limit: int = 3) -> list[dict]:
     labels = section_labels(db)
     students = {
         s.id: s
-        for s in db.scalars(select(Student).where(Student.id.in_(percentages)))
+        for s in db.scalars(
+            select(Student).where(
+                Student.school_id == school_id, Student.id.in_(percentages)
+            )
+        )
     }
     scored = [
         {
@@ -137,13 +154,16 @@ def top_performers(db: Session, limit: int = 3) -> list[dict]:
 
 def today_schedule(
     db: Session,
+    school_id: int,
     class_section_ids: list[int] | None = None,
     teacher_id: int | None = None,
 ) -> list[dict]:
     key = DAY_KEYS[Date.today().weekday()]
     if key is None:  # Sunday
         return []
-    q = select(TimetableSlot).where(TimetableSlot.day_of_week == key)
+    q = select(TimetableSlot).where(
+        TimetableSlot.school_id == school_id, TimetableSlot.day_of_week == key
+    )
     if class_section_ids is not None:
         q = q.where(TimetableSlot.class_section_id.in_(class_section_ids))
     if teacher_id is not None:
@@ -153,7 +173,10 @@ def today_schedule(
         q = q.where(TimetableSlot.teacher_id == teacher_id)
     labels = section_labels(db)
     subjects = subject_names(db)
-    teachers = {t.id: t.user.full_name for t in db.scalars(select(Teacher))}
+    teachers = {
+        t.id: t.user.full_name
+        for t in db.scalars(select(Teacher).where(Teacher.school_id == school_id))
+    }
     return [
         {
             "period": slot.period_no,
@@ -167,7 +190,7 @@ def today_schedule(
     ]
 
 
-def fee_trend(db: Session) -> list[dict]:
+def fee_trend(db: Session, school_id: int) -> list[dict]:
     rows = db.execute(
         select(
             FeeInvoice.year,
@@ -175,6 +198,7 @@ def fee_trend(db: Session) -> list[dict]:
             func.sum(FeePayment.amount),
         )
         .join(FeePayment, FeePayment.invoice_id == FeeInvoice.id)
+        .where(FeeInvoice.school_id == school_id)
         .group_by(FeeInvoice.year, FeeInvoice.month)
         .order_by(FeeInvoice.year, FeeInvoice.month)
     ).all()
@@ -182,8 +206,10 @@ def fee_trend(db: Session) -> list[dict]:
     return [{"month": f"{y}-{m:02d}", "collected": Decimal(v)} for y, m, v in rows]
 
 
-def month_attendance(db: Session, class_section_id: int | None = None) -> dict:
+def month_attendance(
+    db: Session, school_id: int, class_section_id: int | None = None
+) -> dict:
     today = Date.today()
     first = today.replace(day=1)
-    summary = attendance.section_summary(db, class_section_id, first, today)
+    summary = attendance.section_summary(db, school_id, class_section_id, first, today)
     return summary.model_dump()

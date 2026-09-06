@@ -108,6 +108,7 @@ def create_student(
         raise HTTPException(status.HTTP_409_CONFLICT, "Admission number already exists")
     # Student login + student row + (new or linked) parent, in one transaction.
     su = User(
+        school_id=user.school_id,
         role=UserRole.student,
         login_id=body.admission_no,
         password_hash=hash_password(body.password),
@@ -118,6 +119,7 @@ def create_student(
     db.add(su)
     db.flush()
     student = Student(
+        school_id=user.school_id,
         user_id=su.id,
         admission_no=body.admission_no,
         class_section_id=body.class_section_id,
@@ -140,6 +142,7 @@ def create_student(
         if db.scalar(select(User).where(User.login_id == body.parent.phone)):
             raise HTTPException(status.HTTP_409_CONFLICT, "Parent mobile already registered")
         pu = User(
+            school_id=user.school_id,
             role=UserRole.parent,
             login_id=body.parent.phone,
             password_hash=hash_password(body.parent.password),
@@ -148,13 +151,22 @@ def create_student(
         )
         db.add(pu)
         db.flush()
-        parent = Parent(user_id=pu.id, occupation=body.parent.occupation)
+        parent = Parent(
+            school_id=user.school_id,
+            user_id=pu.id,
+            occupation=body.parent.occupation,
+        )
         db.add(parent)
         db.flush()
         relation = body.parent.relation
     if parent is not None:
         db.add(
-            ParentStudent(parent_id=parent.id, student_id=student.id, relation=relation)
+            ParentStudent(
+                school_id=user.school_id,
+                parent_id=parent.id,
+                student_id=student.id,
+                relation=relation,
+            )
         )
     db.commit()
     return _row(db, student)
@@ -167,7 +179,7 @@ def student_detail(
     s = db.get(Student, student_id)
     if s is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Student not found")
-    exam = assessment.latest_exam_with_marks(db, s.class_section_id)
+    exam = assessment.latest_exam_with_marks(db, s.school_id, s.class_section_id)
     hw = homework.for_student(db, s.id)
     return {
         **_row(db, s),

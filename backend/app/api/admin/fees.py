@@ -59,7 +59,7 @@ def generate(
     user: User = Depends(admin_only),
     db: Session = Depends(get_db),
 ) -> GenerateInvoicesResult:
-    return svc.generate(db, body.month, body.year)
+    return svc.generate(db, body.month, body.year, user.school_id)
 
 
 @router.get("/fees/collection", response_model=CollectionSummary)

@@ -71,6 +71,7 @@ def create_teacher(
         raise HTTPException(status.HTTP_409_CONFLICT, "Employee id already exists")
     u = User(
         role=UserRole.teacher,
+        school_id=user.school_id,
         login_id=body.employee_id,
         password_hash=hash_password(body.password),
         full_name=body.full_name,
@@ -80,6 +81,7 @@ def create_teacher(
     db.add(u)
     db.flush()
     t = Teacher(
+        school_id=user.school_id,
         user_id=u.id,
         employee_id=body.employee_id,
         qualification=body.qualification,

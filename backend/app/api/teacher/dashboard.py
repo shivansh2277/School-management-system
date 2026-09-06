@@ -35,7 +35,7 @@ def dashboard(user: User = Depends(teacher_only), db: Session = Depends(get_db))
         1 for h in hw_svc.to_out(db, mine) if h.submitted_count < h.total_students
     )
     return {
-        "today_schedule": stats.today_schedule(db, section_ids, teacher_id=me.id),
+        "today_schedule": stats.today_schedule(db, user.school_id, section_ids, teacher_id=me.id),
         "sections": [labels[i] for i in section_ids],
         "pending_marks_entry": len(pending_marks),
         "homework_awaiting_submissions": reviews,

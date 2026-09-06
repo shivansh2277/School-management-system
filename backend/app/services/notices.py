@@ -54,6 +54,7 @@ def publish(db: Session, user: User, body: NoticeCreate) -> NoticeOut:
             status.HTTP_400_BAD_REQUEST, "class_section_id is required for a class notice"
         )
     notice = Notice(
+        school_id=user.school_id,
         title=body.title,
         body=body.body,
         audience=body.audience,

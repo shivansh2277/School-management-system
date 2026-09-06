@@ -76,6 +76,7 @@ def mark(db: Session, user: User, body: AttendanceMarkRequest) -> list[RollRow]:
         if row is None:  # upsert on (student_id, date) — D2
             db.add(
                 Attendance(
+                    school_id=teacher.school_id,
                     student_id=entry.student_id,
                     date=body.date,
                     status=entry.status,
@@ -116,11 +117,12 @@ def student_percent(db: Session, student_id: int) -> float | None:
 
 def section_summary(
     db: Session,
+    school_id: int,
     class_section_id: int | None = None,
     date_from: Date | None = None,
     date_to: Date | None = None,
 ) -> AttendanceSummary:
-    where = []
+    where = [Attendance.school_id == school_id]
     if class_section_id is not None:
         where.append(
             Attendance.student_id.in_(

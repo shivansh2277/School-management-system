@@ -46,7 +46,7 @@ def summary(
     student_id: int, user: User = Depends(parent_only), db: Session = Depends(get_db)
 ) -> dict:
     s = scoping.assert_can_read_student(db, user, student_id)
-    exam = assessment.latest_exam_with_marks(db, s.class_section_id)
+    exam = assessment.latest_exam_with_marks(db, s.school_id, s.class_section_id)
     hw = homework.for_student(db, s.id)
     invoices = list(db.scalars(select(FeeInvoice).where(FeeInvoice.student_id == s.id)))
     fees.refresh_overdue(db, invoices)

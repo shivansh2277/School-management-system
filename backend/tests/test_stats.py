@@ -16,10 +16,11 @@ def test_totals_match_direct_counts(client, admin, db):
 
 
 def test_fees_collected_matches_the_sum_of_payments(client, admin, db):
-    from app.models import FeeInvoice, FeePayment, SchoolSettings
+    from app.models import AcademicYear, FeeInvoice, FeePayment
 
     stats = client.get("/admin/dashboard/stats", headers=admin).json()
-    year = int(db.get(SchoolSettings, 1).academic_year.split("-")[0])
+    current = db.query(AcademicYear).filter_by(is_current=True).one()
+    year = current.start_date.year
     expected = sum(
         (
             p.amount

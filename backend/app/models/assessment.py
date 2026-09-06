@@ -13,10 +13,10 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import TimestampedBase
+from app.models.base import TenantBase
 
 
-class Exam(TimestampedBase):
+class Exam(TenantBase):
     __tablename__ = "exams"
 
     name: Mapped[str] = mapped_column(String(120), nullable=False)
@@ -25,7 +25,7 @@ class Exam(TimestampedBase):
     end_date: Mapped[date] = mapped_column(Date, nullable=False)
 
 
-class ExamSchedule(TimestampedBase):
+class ExamSchedule(TenantBase):
     __tablename__ = "exam_schedule"
     __table_args__ = (
         UniqueConstraint("exam_id", "class_section_id", "subject_id", name="uq_exam_schedule"),
@@ -41,7 +41,7 @@ class ExamSchedule(TimestampedBase):
     max_marks: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
 
 
-class Mark(TimestampedBase):
+class Mark(TenantBase):
     __tablename__ = "marks"
     __table_args__ = (
         UniqueConstraint("exam_schedule_id", "student_id", name="uq_mark"),
@@ -56,7 +56,7 @@ class Mark(TimestampedBase):
     entered_by: Mapped[int] = mapped_column(BigInteger, ForeignKey("teachers.id"), nullable=False)
 
 
-class GradeBand(TimestampedBase):
+class GradeBand(TenantBase):
     __tablename__ = "grade_bands"
 
     min_percent: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)

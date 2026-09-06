@@ -11,7 +11,7 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
-from app.models import ClassSection, Student, User, UserRole
+from app.models import ClassSection, School, SchoolStatus, Student, User, UserRole
 from app.schemas.auth import (
     AccessToken,
     ChangePasswordRequest,
@@ -31,11 +31,28 @@ _BAD_CREDS = HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid credentials fo
 
 @router.post("/login", response_model=TokenPair)
 def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenPair:
-    user = db.scalar(select(User).where(User.login_id == body.login_id))
+    q = select(User).where(User.login_id == body.login_id)
+    if body.school_code is not None:
+        q = q.join(School, School.id == User.school_id).where(
+            School.code == body.school_code
+        )
+    matches = list(db.scalars(q))
+    if len(matches) > 1:
+        # Never guess which tenant the caller meant.
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "This login exists at more than one school; supply school_code",
+        )
+    user = matches[0] if matches else None
     # The role tab must match users.role: correct credentials through the wrong
     # tab are rejected (BLUEPRINT §9).
     if user is None or user.role != body.role or not user.is_active:
         raise _BAD_CREDS
+    school = db.get(School, user.school_id)
+    if school is None or school.status is not SchoolStatus.active:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "This school is not active"
+        )
     if not verify_password(body.password, user.password_hash):
         raise _BAD_CREDS
     return TokenPair(

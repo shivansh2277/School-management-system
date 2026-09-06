@@ -33,7 +33,7 @@ def create_exam(
 ) -> Exam:
     if body.end_date < body.start_date:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "end_date must not precede start_date")
-    exam = Exam(**body.model_dump())
+    exam = Exam(school_id=user.school_id, **body.model_dump())
     db.add(exam)
     db.commit()
     return exam
@@ -63,7 +63,9 @@ def add_paper(
         raise HTTPException(status.HTTP_409_CONFLICT, "This paper is already scheduled")
     if body.max_marks <= 0:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "max_marks must be positive")
-    sched = ExamSchedule(exam_id=exam_id, **body.model_dump())
+    sched = ExamSchedule(
+        school_id=user.school_id, exam_id=exam_id, **body.model_dump()
+    )
     db.add(sched)
     db.commit()
     return assessment.schedule_out(db, [sched])[0]
@@ -102,4 +104,6 @@ def attendance_summary(
     user: User = Depends(admin_only),
     db: Session = Depends(get_db),
 ) -> AttendanceSummary:
-    return attendance_svc.section_summary(db, class_section_id, date_from, date_to)
+    return attendance_svc.section_summary(
+        db, user.school_id, class_section_id, date_from, date_to
+    )

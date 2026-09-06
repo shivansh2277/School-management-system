@@ -1,6 +1,24 @@
 from enum import StrEnum
 
 
+class SchoolStatus(StrEnum):
+    onboarding = "onboarding"
+    active = "active"
+    suspended = "suspended"  # e.g. non-payment; data retained, logins refused
+    closed = "closed"
+
+
+class AcademicYearStatus(StrEnum):
+    """Several of these may be live at once for one school (§3.1)."""
+
+    planning = "planning"
+    admissions_open = "admissions_open"
+    active = "active"
+    closing = "closing"
+    closed = "closed"
+    archived = "archived"
+
+
 class UserRole(StrEnum):
     admin = "admin"
     teacher = "teacher"

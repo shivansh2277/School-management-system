@@ -44,7 +44,7 @@ def _slots(db: Session, student: Student, day_key: str | None) -> list[SlotOut]:
 @router.get("/dashboard")
 def dashboard(user: User = Depends(student_only), db: Session = Depends(get_db)) -> dict:
     s = scoping.student_for(db, user)
-    exam = assessment.latest_exam_with_marks(db, s.class_section_id)
+    exam = assessment.latest_exam_with_marks(db, s.school_id, s.class_section_id)
     next_paper = db.scalars(
         select(ExamSchedule)
         .where(

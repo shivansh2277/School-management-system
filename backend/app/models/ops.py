@@ -12,11 +12,11 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import TimestampedBase, enum_col
+from app.models.base import TenantBase, enum_col
 from app.models.enums import AttendanceStatus, NoticeAudience
 
 
-class Attendance(TimestampedBase):
+class Attendance(TenantBase):
     __tablename__ = "attendance"
     __table_args__ = (
         UniqueConstraint("student_id", "date", name="uq_attendance_student_date"),
@@ -31,7 +31,7 @@ class Attendance(TimestampedBase):
     remarks: Mapped[str | None] = mapped_column(String(200))
 
 
-class Homework(TimestampedBase):
+class Homework(TenantBase):
     __tablename__ = "homework"
 
     class_section_id: Mapped[int] = mapped_column(
@@ -45,7 +45,7 @@ class Homework(TimestampedBase):
     due_date: Mapped[date] = mapped_column(Date, nullable=False)
 
 
-class HomeworkSubmission(TimestampedBase):
+class HomeworkSubmission(TenantBase):
     __tablename__ = "homework_submissions"
     __table_args__ = (UniqueConstraint("homework_id", "student_id", name="uq_submission"),)
 
@@ -55,7 +55,7 @@ class HomeworkSubmission(TimestampedBase):
     submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
-class Notice(TimestampedBase):
+class Notice(TenantBase):
     __tablename__ = "notices"
 
     title: Mapped[str] = mapped_column(String(160), nullable=False)
