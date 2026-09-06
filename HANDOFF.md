@@ -1,7 +1,7 @@
 # Sunrise ERP — Session Handoff
 
 **Written:** 6 September 2026 (revised later the same day)
-**Branch:** `part-1-foundation` — **14 commits ahead of `main`, nothing pushed** (12 code, 2 documentation)
+**Branch:** `part-1-foundation` — **17 commits ahead of `main`, nothing pushed** (13 code, 4 documentation)
 **Repo:** `C:\Users\SHIVANSH\OneDrive\Documents\AGENTS\school-management-system\`
 **Remote:** https://github.com/shivansh2277/School-management-system
 
@@ -29,7 +29,7 @@ sessions — Parts 3 and 4 will each span several.
 
 | Part | Scope | State |
 |---|---|---|
-| 1 | Foundation: tenancy, enrolments, RBAC, audit, jobs, documents | ~80% done |
+| 1 | Foundation: tenancy, enrolments, RBAC, audit, jobs, documents | **backend complete** |
 | 2 | Admission, including the public online portal | not started |
 | 3 | Fees rebuild + attendance + timetable | not started |
 | 4 | Examinations, HR/payroll, transport, communication, reports | not started |
@@ -40,9 +40,9 @@ sessions — Parts 3 and 4 will each span several.
 
 | Measure | Value |
 |---|---|
-| Backend tests | **146 passing**, ~22 s |
+| Backend tests | **147 passing**, ~24 s |
 | Database tables | 35 |
-| Alembic migrations | 8 (chain applies cleanly from empty) |
+| Alembic migrations | 9 (chain applies cleanly from empty) |
 | API surface | 65 paths, 82 operations |
 | Permissions / system roles | 33 / 10 |
 | Job handlers | `fees.overdue_sweep`, `fees.generate_invoices`, `system.heartbeat` |
@@ -50,7 +50,7 @@ sessions — Parts 3 and 4 will each span several.
 
 ```bash
 cd backend
-../.venv/Scripts/python.exe -m pytest -q                    # 146 passed
+../.venv/Scripts/python.exe -m pytest -q                    # 147 passed
 ../.venv/Scripts/python.exe -m alembic upgrade head
 ../.venv/Scripts/python.exe seed.py
 ../.venv/Scripts/python.exe worker.py --once                # runs due jobs
@@ -99,6 +99,13 @@ Four more since (6 September, later the same day):
 12. **`cdf89e4` Settings, module flags, custom fields** — §3.15 levels 1-3 plus
     the module-registry seam. Endpoints under `/admin/configuration`;
     `/admin/settings` was already the school profile.
+13. **`2c7107e` Employees and guardians** — `teachers` -> `employees`
+    (`employee_id` -> `employee_code`, plus `employee_type`), `parents` ->
+    `guardians` with the §0.7 cross-link, `parent_student` ->
+    `student_guardian` with a closed `relation` list and one primary contact
+    per child under a partial unique index. `class_teacher_id`,
+    `class_subject_teacher.teacher_id` and the /teacher and /parent URL
+    prefixes deliberately kept.
 
 ---
 
@@ -154,11 +161,14 @@ where they sit, so seed ordering can change without breaking the suite.
 
 ## 6. Open work in Part 1
 
-One item, not blocking Part 2:
+**The backend list from §12 is now done.** What Part 1 still owes is
+infrastructure and proof rather than code: a real `docker compose up` on the
+Oracle box, a backup whose restore has actually been performed, and CI that has
+run at least once. Checkpoint 1 does not pass until the restore happens — see
+§7.
 
-1. **`employees` replacing `teachers`, `guardians` replacing `parents`** —
-   mechanical but wide. Blueprint §3.4 says do it before HR is built on top,
-   which means before Part 4.
+The web dashboard and the mobile app are also not caught up; the API shapes they
+read have moved (§7).
 
 ---
 
@@ -171,10 +181,15 @@ One item, not blocking Part 2:
   wants the exact file list shown before any push.
 - **CI has never run.** The workflow is written but no push has triggered it.
 - **The web dashboard has not been opened** against the new backend. It
-  typechecks and builds, but several API shapes changed (settings, class
-  creation, student rows). Expect breakage; it is not yet fixed.
+  typechecks (`npx tsc --noEmit` is clean) and builds, but several API shapes
+  changed — settings, class creation, student rows, and now `employee_code`
+  and `guardian_name`/`guardian_phone`, which the two pages that read them were
+  updated for. Typechecking is not the same as running it; expect breakage.
 - **The mobile app has not been touched or tested** since the enrolment change.
   Its API calls almost certainly need updating.
+- **`/admin/configuration` has no UI at all.** Settings, module switches and
+  custom fields are API-only; §0.18 says the configuration screens must be
+  usable by a records clerk, and that screen does not exist yet.
 - **Zero frontend tests** still. Unchanged from v0 and still a real gap.
 - **The old Vercel/Neon deployment is now stale** — the schema there predates
   all seven migrations. Hosting moves to Oracle Cloud (`DEPLOY.md`).

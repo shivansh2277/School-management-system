@@ -52,6 +52,14 @@ Postgres runs natively on this machine, not in Docker. `make testdb` uses
 - **Reads never write.** Nothing in a GET may commit.
 - **Business rules belong in database constraints** where they can be — unique
   constraints, partial indexes, foreign keys — not only in Python.
+- **Staff are `employees`, not `teachers`; `guardians`, not `parents`.** The
+  columns that name a teaching role in context — `class_teacher_id`,
+  `class_subject_teacher.teacher_id` — keep their names on purpose, as do the
+  `/teacher` and `/parent` URL prefixes the mobile app calls.
+- **Per-school configuration goes through the registries**, not through new
+  columns: `core/settings_registry.py` for settings and feature flags,
+  `custom_fields` for school-invented attributes. A feature flag is a boolean
+  setting named `feature.<module>`, and it is enforced at the route.
 - **Money is `Numeric`, never float. Timestamps are `timestamptz`.**
 - **Destructive actions are audited with a reason.** See `services/audit.py`;
   `void`, `status_change` and `delete` refuse to commit without one.
@@ -67,6 +75,10 @@ Postgres runs natively on this machine, not in Docker. `make testdb` uses
 - **SQLite returns naive datetimes** even for `timestamptz`; comparing against
   an aware `now` raises.
 - **Demo logins changed.** Admission numbers are `2024000001`, not `SPS2024001`.
+- **`/admin/settings` is the school's profile and branding.** The setting store
+  and module switches are `/admin/configuration`.
+- **The Postgres test database is dropped by schema, not by `drop_all`** — a
+  leftover v0 table once made the whole suite unable to start.
 
 ## Working style for this project
 
