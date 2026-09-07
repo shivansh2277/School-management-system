@@ -16,12 +16,16 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from decimal import Decimal
+
 from app.models import (
     AuditAction,
     ClassSection,
     ClassSubjectTeacher,
     DayOfWeek,
     Employee,
+    EmployeeStatus,
+    EmployeeType,
     Holiday,
     SchoolPeriod,
     Subject,
@@ -274,23 +278,66 @@ def completeness(db: Session, school_id: int, academic_year_id: int) -> list[dic
     return out
 
 
-def workload(db: Session, school_id: int) -> list[dict]:
+def workload(db: Session, school_id: int) -> dict:
+    """The load chart: every teacher's weekly periods, and how evenly spread.
+
+    Two things this deliberately does that the first version did not.
+
+    **It lists teachers with no periods.** Skipping them made the chart useless
+    for the question it is actually asked — *is this fair?* — because the person
+    carrying nothing is exactly the person a coordinator is looking for.
+
+    **It reports the spread, not just the numbers.** A column of figures makes
+    somebody do the arithmetic in their head; §5.3.10 and §5.7.10 both want
+    load per teacher as a management number, and "the busiest teacher has 12
+    more periods than the quietest" is that number.
+
+    `share` is periods against the fair share (total ÷ teaching staff), so 1.0
+    is exactly even, 1.2 is twenty per cent over, and the eye finds the
+    outliers without doing the division.
+    """
     ceiling = max_load(db, school_id)
-    rows = []
-    for employee in db.scalars(select(Employee).where(Employee.school_id == school_id)):
-        periods = teacher_load(db, employee.id)
-        if periods == 0:
-            continue
-        rows.append(
-            {
-                "teacher_id": employee.id,
-                "name": employee.user.full_name,
-                "periods": periods,
-                "limit": ceiling,
-                "over": periods > ceiling,
-            }
+    staff = list(
+        db.scalars(
+            select(Employee).where(
+                Employee.school_id == school_id,
+                Employee.status != EmployeeStatus.exited,
+                Employee.employee_type == EmployeeType.teaching,
+            )
         )
-    return sorted(rows, key=lambda r: r["periods"], reverse=True)
+    )
+    loads = {e.id: teacher_load(db, e.id) for e in staff}
+    total = sum(loads.values())
+    fair = Decimal(total) / Decimal(len(staff)) if staff else Decimal(0)
+
+    rows = [
+        {
+            "teacher_id": e.id,
+            "employee_code": e.employee_code,
+            "name": e.user.full_name,
+            "department": e.department.name if e.department else None,
+            "periods": loads[e.id],
+            "limit": ceiling,
+            "over": loads[e.id] > ceiling,
+            "share": float(round(Decimal(loads[e.id]) / fair, 2)) if fair else None,
+        }
+        for e in staff
+    ]
+    rows.sort(key=lambda r: (-r["periods"], r["employee_code"]))
+    values = [r["periods"] for r in rows]
+    return {
+        "teachers": len(rows),
+        "total_periods": total,
+        "limit": ceiling,
+        "fair_share": float(round(fair, 1)),
+        "lightest": min(values) if values else 0,
+        "heaviest": max(values) if values else 0,
+        # The one number that answers "is this balanced": 0 is perfectly even.
+        "spread": (max(values) - min(values)) if values else 0,
+        "over_limit": [r["name"] for r in rows if r["over"]],
+        "unassigned": [r["name"] for r in rows if r["periods"] == 0],
+        "rows": rows,
+    }
 
 
 # --- substitutions ----------------------------------------------------------

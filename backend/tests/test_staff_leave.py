@@ -472,3 +472,35 @@ def test_a_leave_request_of_another_school_is_not_found(client, admin):
     assert client.post(
         "/admin/staff-leave/999999/approve", headers=admin, json={}
     ).status_code == 404
+
+
+def test_unused_leave_does_not_carry_forward(db, admin_user, teacher_1, casual, ids):
+    """Owner's decision, 7 September 2026. A balance is keyed to the academic
+    year and opens at that year's quota, so a new year starts fresh however
+    much went untaken — there is deliberately no path that adds a remainder.
+
+    This test exists to fail if a later session adds one, because carry-forward
+    looks like a helpful omission and is a reversed decision.
+    """
+    from app.models import AcademicYear, AcademicYearStatus
+
+    this_year = svc.balance(db, teacher_1, casual, ids["year"])
+    this_year.used = Decimal(2)
+    db.flush()
+    assert this_year.remaining == 10, "ten days untaken"
+
+    next_year = AcademicYear(
+        school_id=ids["school"],
+        code="2027-28",
+        start_date="2027-04-01",
+        end_date="2028-03-31",
+        status=AcademicYearStatus.planning,
+        is_current=False,
+    )
+    db.add(next_year)
+    db.flush()
+
+    opened = svc.balance(db, teacher_1, casual, next_year.id)
+    assert opened.entitled == casual.annual_quota == 12
+    assert opened.used == 0
+    assert opened.remaining == 12, "the quota, not the quota plus last year's 10"

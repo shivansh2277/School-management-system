@@ -98,6 +98,13 @@ def balance(
     Opening it lazily rather than pre-creating one per employee per type per
     year means a new leave type does not need a backfill, and an employee who
     never takes casual leave carries no row.
+
+    **Unused leave does not carry forward** (owner, 7 September 2026). The
+    balance is keyed to the academic year and opens at the year's quota, so a
+    new year starts fresh however much went untaken — there is deliberately no
+    path that adds last year's remainder. A later session that "helpfully"
+    carries a balance over is changing a decision, not fixing an omission;
+    `test_unused_leave_does_not_carry_forward` fails if it does.
     """
     row = db.scalar(
         select(LeaveBalance).where(

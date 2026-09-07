@@ -204,7 +204,8 @@ def test_going_over_the_weekly_limit_needs_a_reason(client, admin, db):
 
 
 def test_the_workload_report_counts_teaching_periods_only(client, admin, db):
-    rows = client.get("/admin/timetable/workload", headers=admin).json()
+    chart = client.get("/admin/timetable/workload", headers=admin).json()
+    rows = chart["rows"]
     assert rows
     teaching = db.scalar(
         select(func.count())
@@ -212,7 +213,7 @@ def test_the_workload_report_counts_teaching_periods_only(client, admin, db):
         .join(SchoolPeriod, SchoolPeriod.id == TimetableSlot.period_id)
         .where(SchoolPeriod.is_break.is_(False))
     )
-    assert sum(r["periods"] for r in rows) == teaching
+    assert sum(r["periods"] for r in rows) == teaching == chart["total_periods"]
     assert [r["periods"] for r in rows] == sorted(
         [r["periods"] for r in rows], reverse=True
     )
@@ -340,3 +341,75 @@ def test_a_teacher_sees_their_own_timetable_with_bell_timings(client, teacher, d
         select(Employee).join(ClassSubjectTeacher, ClassSubjectTeacher.teacher_id == Employee.id)
     )
     assert me is not None
+
+
+# --- the load chart (§5.7.10, §5.3.10) --------------------------------------
+
+
+def test_the_load_chart_lists_every_teacher_including_any_with_nothing(
+    client, admin, db, ids
+):
+    """The first version skipped teachers on zero periods, which made the chart
+    useless for the question it is actually asked — is this fair? The person
+    carrying nothing is exactly who a coordinator is looking for."""
+    from app.models import Employee, User
+
+    user = User(
+        school_id=ids["school"], role="teacher", login_id="TCH950",
+        password_hash="x", full_name="Newly Joined",
+    )
+    db.add(user)
+    db.flush()
+    db.add(Employee(school_id=ids["school"], user_id=user.id, employee_code="TCH950"))
+    db.flush()
+
+    chart = client.get("/admin/timetable/workload", headers=admin).json()
+    names = [r["name"] for r in chart["rows"]]
+    assert "Newly Joined" in names
+    assert "Newly Joined" in chart["unassigned"]
+
+
+def test_the_seeded_timetable_is_evenly_loaded(client, admin):
+    """A spread of 0: every teacher carries the same number of periods.
+
+    The previous allocation gave each section three teachers taking two
+    subjects apiece, which cannot balance — thirty teacher-section assignments
+    over twelve teachers is 2.5 each — and produced 30 periods against 18.
+    """
+    chart = client.get("/admin/timetable/workload", headers=admin).json()
+    assert chart["total_periods"] == 300
+    assert chart["spread"] == 0, chart["rows"]
+    assert chart["lightest"] == chart["heaviest"] == 25
+    assert chart["fair_share"] == 25.0
+    assert chart["over_limit"] == []
+    assert all(r["share"] == 1.0 for r in chart["rows"] if r["periods"])
+
+
+def test_every_section_gets_every_subject_the_same_number_of_times(db, ids):
+    """What makes the balance hold: thirty teaching slots over six subjects is
+    five each, and a greedy "first free subject" drifts away from that."""
+    from collections import Counter
+
+    from app.models import TimetableSlot
+
+    counts = Counter(
+        (s.class_section_id, s.subject_id)
+        for s in db.scalars(select(TimetableSlot))
+    )
+    assert set(counts.values()) == {5}
+
+
+def test_the_chart_reports_who_is_over_the_ceiling(client, admin, db, ids):
+    from app.services import school_settings
+
+    from app.models import User
+
+    school_settings.set_many(
+        db,
+        db.scalar(select(User).where(User.login_id == "admin@sunrisepublic.edu")),
+        {"timetable.max_periods_per_week": 20},
+    )
+    db.flush()
+    chart = client.get("/admin/timetable/workload", headers=admin).json()
+    assert chart["limit"] == 20
+    assert len(chart["over_limit"]) == 12, "everyone is over a ceiling of 20"

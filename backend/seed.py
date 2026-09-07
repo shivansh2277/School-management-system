@@ -507,27 +507,43 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
     db.add_all(sections)
     db.flush()
 
-    # Who teaches what, where. Each section is covered by three of the six
-    # teachers (two subjects each) so that teacher scoping is a real boundary --
-    # a rotation over all six would leave every teacher inside every section.
-    # The 10-A group is ordered so TCH001 teaches Mathematics there, which the
-    # walkthrough in BLUEPRINT section 13 depends on.
-    # Each section is covered by three teachers, two subjects each, drawn on a
-    # stride that keeps most teachers out of most sections. A flat rotation over
-    # every teacher would put everyone inside every section and make the
-    # scoping tests vacuous.
+    # Who teaches what, where — assigned by subject, which is both how a real
+    # school staffs itself and what makes the load come out even.
+    #
+    # Two teachers cover each subject and split the ten sections between them,
+    # so every teacher carries exactly five (section, subject) pairs. With six
+    # subjects over thirty teaching periods a week that is 25 periods each, and
+    # the load chart's spread is 0.
+    #
+    # The previous scheme gave each section three teachers taking two subjects
+    # apiece. That cannot balance: thirty teacher-section assignments over
+    # twelve teachers is 2.5 each, so six people ended up on three sections and
+    # six on two — 30 periods against 18, which is what the chart showed.
+    #
+    # Scoping stays a real boundary: each teacher is in five of the ten
+    # sections, not all of them. The alternating split is what keeps TCH004 out
+    # of 10-A, which `other_teacher` depends on.
+    SUBJECT_TEACHERS = {
+        "ENG": (1, 10),   # M.A. English, and the primary teacher
+        "HIN": (2, 9),    # M.A. Hindi, and the Sanskrit teacher
+        "MAT": (0, 11),   # M.Sc. Mathematics, and the M.Com.
+        "SCI": (3, 6),    # Physics takes the even sections, Chemistry the odd
+                          # (this way round keeps TCH004 out of 10-A, which the
+                          # `other_teacher` fixture depends on)
+        "SST": (4, 7),    # History and Political Science
+        "CMP": (5, 8),    # MCA, and the Biology teacher — a small school does
+    }                     # exactly this
     for si, sec in enumerate(sections):
-        if si == 0:
-            # 10-A is fixed so TCH001 teaches it Mathematics (subject index 2).
-            group = [1, 0, 2]
-        else:
-            group = [(si * 3 + k) % len(teachers) for k in range(3)]
         for qi, sub in enumerate(subjects):
+            first, second = SUBJECT_TEACHERS[sub.code]
+            # Alternating by (section + subject) gives each of the pair five
+            # sections whichever way the parity falls.
+            chosen = first if (si + qi) % 2 == 0 else second
             db.add(
                 ClassSubjectTeacher(
                     class_section_id=sec.id,
                     subject_id=sub.id,
-                    teacher_id=teachers[group[qi // 2]].id,
+                    teacher_id=teachers[chosen].id,
                 )
             )
     db.flush()
@@ -649,19 +665,44 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
     busy_teacher: set[tuple] = set()   # (day, period, teacher)
     busy_room: set[tuple] = set()      # (day, period, room)
     placed = skipped = 0
+
+    # Each section gets each subject the same number of times a week — thirty
+    # teaching slots over six subjects is five each. Tracking what each section
+    # still owes, and always placing whichever subject is furthest behind,
+    # keeps the periods even without a scheduling algorithm: a greedy "first
+    # subject whose teacher is free" drifts, and that drift is what put two
+    # teachers on 30 periods while ten sat on 24.
+    per_subject = (len(periods) - sum(1 for p in periods if p.is_break)) * len(
+        DayOfWeek
+    ) // len(subjects)
+    owed = {
+        (sec.id, sub.id): per_subject for sec in sections for sub in subjects
+    }
+
     for period in periods:
         if period.is_break:
             continue
         for day in DayOfWeek:
             for si, sec in enumerate(sections):
-                for offset in range(len(subjects)):
-                    sub = subjects[(si + period.period_no + offset) % len(subjects)]
+                # Furthest behind first; the offset breaks ties differently in
+                # each section so they do not all chase the same subject at the
+                # same hour and collide on its teacher.
+                candidates = sorted(
+                    subjects,
+                    key=lambda sub, sec=sec, si=si, p=period: (
+                        -owed[(sec.id, sub.id)],
+                        (subjects.index(sub) + si + p.period_no) % len(subjects),
+                    ),
+                )
+                for sub in candidates:
+                    if owed[(sec.id, sub.id)] <= 0:
+                        continue
                     teacher_id = cst.get((sec.id, sub.id))
                     if teacher_id is None:
                         continue
-                    room = ROOMS[(si + period.period_no) % len(ROOMS)]
                     if (day, period.id, teacher_id) in busy_teacher:
                         continue
+                    room = ROOMS[(si + period.period_no) % len(ROOMS)]
                     if (day, period.id, room) in busy_room:
                         room = None  # taught in their own classroom instead
                     db.add(
@@ -677,6 +718,7 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
                     busy_teacher.add((day, period.id, teacher_id))
                     if room:
                         busy_room.add((day, period.id, room))
+                    owed[(sec.id, sub.id)] -= 1
                     placed += 1
                     break
                 else:

@@ -164,7 +164,7 @@ def delete_slot(
 
 
 @router.get("/workload")
-def workload(user: User = Depends(reader), db: Session = Depends(get_db)) -> list[dict]:
+def workload(user: User = Depends(reader), db: Session = Depends(get_db)) -> dict:
     return svc.workload(db, user.school_id)
 
 

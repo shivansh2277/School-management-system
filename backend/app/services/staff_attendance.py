@@ -40,19 +40,6 @@ from app.models import (
 from app.services import attendance as att
 from app.services import audit
 
-# What each mark is worth when counting a working month. Identical to the
-# student register's weighting, and for the same reason: `late` is still
-# somebody who came in.
-CREDIT = {
-    AttendanceStatus.present: Decimal(1),
-    AttendanceStatus.late: Decimal(1),
-    AttendanceStatus.half_day: Decimal("0.5"),
-    AttendanceStatus.leave: Decimal(1),
-    AttendanceStatus.excused: Decimal(1),
-    AttendanceStatus.absent: Decimal(0),
-}
-
-
 def _bad(message: str) -> HTTPException:
     return HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, message)
 
@@ -248,6 +235,11 @@ def lop_days(
     a day marked `absent` in the register, and a day of approved leave against
     a type that does not pay. A day is counted once even if it is both.
 
+    **A half day is not a deduction** (owner, 7 September 2026): somebody who
+    came in for half a day is paid for the whole one. The mark is still kept —
+    it is a real fact about attendance and it appears on the register and in
+    the counts — it just does not reach this number.
+
     This is the only place the question is answered. §3.16 computes loss of pay
     as gross ÷ working days × absent days, and two definitions of "absent days"
     would put two different numbers on two different screens.
@@ -289,8 +281,10 @@ def lop_days(
             continue
         if row.status is AttendanceStatus.absent:
             total += 1
-        elif row.status is AttendanceStatus.half_day:
-            total += Decimal("0.5")
+        # A half day costs nothing. Decided by the owner on 7 September 2026:
+        # somebody who came in for half a day is paid for the day. The status
+        # is still recorded — it is a real fact about attendance and it shows
+        # on the register and in the counts — it simply does not dock pay.
     return total
 
 

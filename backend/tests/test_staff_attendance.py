@@ -258,9 +258,30 @@ def test_a_day_marked_absent_is_a_day_not_paid(db, admin_user, teacher_1, monday
     assert svc.lop_days(db, teacher_1, monday, monday) == 1
 
 
-def test_a_half_day_costs_half(db, admin_user, teacher_1, monday):
+def test_a_half_day_costs_nothing(db, admin_user, teacher_1, monday):
+    """Owner's decision, 7 September 2026: somebody who came in for half a day
+    is paid for the whole one. The mark is still kept — it is a real fact about
+    attendance and it shows in the counts — it just does not dock pay."""
     mark(db, admin_user, monday, teacher_1, AttendanceStatus.half_day)
-    assert svc.lop_days(db, teacher_1, monday, monday) == Decimal("0.5")
+    assert svc.lop_days(db, teacher_1, monday, monday) == 0
+
+    summary = svc.summary(db, teacher_1, monday, monday)
+    assert summary["counts"]["half_day"] == 1, "recorded, just not deducted"
+    assert summary["lop_days"] == 0
+
+
+def test_only_a_full_absence_costs_a_day(db, admin_user, teacher_1, monday):
+    """The whole deduction rule in one place: absent costs a day, and nothing
+    else marked on the register costs anything."""
+    costs = {}
+    for offset, state in enumerate(AttendanceStatus):
+        day = monday + timedelta(days=offset)
+        if day.weekday() == 6:
+            continue
+        mark(db, admin_user, day, teacher_1, state)
+        costs[state.value] = svc.lop_days(db, teacher_1, day, day)
+    assert costs["absent"] == 1
+    assert all(v == 0 for k, v in costs.items() if k != "absent"), costs
 
 
 def test_present_late_and_paid_leave_cost_nothing(
