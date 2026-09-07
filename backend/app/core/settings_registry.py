@@ -56,6 +56,16 @@ SETTINGS: list[SettingDef] = [
         50,
         "Late fee ceiling, as a percentage of the invoice",
     ),
+    # §0.6b withholds the report card and the transfer certificate until dues
+    # clear. §5.4.9 is explicit that this is a *policy*, not a constant — a
+    # school that issues the card regardless turns it off here rather than
+    # asking for a code change.
+    SettingDef(
+        "exams.withhold_results_for_dues",
+        bool,
+        True,
+        "Withhold a report card while the family has unpaid fees",
+    ),
     # §5.7.9: exceeding this needs an override with a reason, not a silent
     # accept. The number differs by school, so it is not a constant.
     SettingDef(

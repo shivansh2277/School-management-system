@@ -171,6 +171,13 @@ def other_parent(client):
 
 
 @pytest.fixture()
+def admin_user(db):
+    """The admin as a `User` row, for tests that call a service directly rather
+    than through the API."""
+    return db.scalar(select(User).where(User.login_id == "admin@sunrisepublic.edu"))
+
+
+@pytest.fixture()
 def ids(db):
     """Handy primary keys used across the suite."""
     section_10a = db.scalar(select(ClassSection).where(ClassSection.class_name == "10"))

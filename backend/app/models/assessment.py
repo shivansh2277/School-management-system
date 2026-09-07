@@ -2,6 +2,7 @@ from datetime import date, datetime, time
 from decimal import Decimal
 
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Boolean,
     CheckConstraint,
@@ -234,3 +235,49 @@ class GradingScale(TenantBase):
     # Set when the first report card cites this version. From then on the bands
     # are history, not configuration.
     frozen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class ReportCardPublication(TenantBase):
+    """A published report card: frozen, numbered, and citing its own rules.
+
+    §0.8 makes a published card a *document*, not a view. Reopening it months
+    later must show exactly what was issued, even if a grade band has been
+    edited since — so the whole card is stored as it was rendered, and the
+    grading scale and assessment scheme it was computed against are cited by id
+    rather than re-resolved on read.
+
+    This supersedes BLUEPRINT §7.5 for published documents only: live screens
+    keep computing from `grade_bands`, which is why the two paths exist side by
+    side rather than one replacing the other.
+    """
+
+    __tablename__ = "report_card_publications"
+    __table_args__ = (
+        # One published card per child per term. A correction is a new version
+        # of the document, not an edit to this row.
+        UniqueConstraint("enrolment_id", "term", name="uq_report_card_term"),
+    )
+
+    enrolment_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("enrolments.id"), nullable=False, index=True
+    )
+    term: Mapped[str] = mapped_column(String(20), nullable=False)
+    scheme_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("assessment_schemes.id"), nullable=False
+    )
+    grading_scale_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("grading_scales.id"), nullable=False
+    )
+    # The document number, from the same gapless sequence machinery receipts
+    # and admission numbers use.
+    document_no: Mapped[str] = mapped_column(String(32), nullable=False)
+    published_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    published_by: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id"))
+
+    result_status: Mapped[str] = mapped_column(String(20), nullable=False)
+    # The card exactly as issued. Storing the rendered document rather than
+    # recomputing it is the whole freeze: nothing downstream of publication can
+    # move a number on a card a parent has already been shown.
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False)

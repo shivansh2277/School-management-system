@@ -36,6 +36,7 @@ from app.models.assessment import (
     GradeBand,
     GradingScale,
     Mark,
+    ReportCardPublication,
     SchemeComponent,
 )
 from app.models.enums import (
