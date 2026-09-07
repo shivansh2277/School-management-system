@@ -148,6 +148,7 @@ class ExamScheduleCreate(BaseModel):
 
 class ExamScheduleOut(BaseModel):
     id: int
+    marks_locked: bool = False
     exam_id: int
     exam_name: str
     class_section_id: int
@@ -162,12 +163,20 @@ class ExamScheduleOut(BaseModel):
 
 class MarkEntry(BaseModel):
     student_id: int
-    marks_obtained: Decimal
+    # None with neither flag set means "not entered"; the row is left alone
+    # rather than written as a zero.
+    marks_obtained: Decimal | None = None
+    is_absent: bool = False
+    is_exempted: bool = False
+    remarks: str | None = None
 
 
 class MarksRequest(BaseModel):
     exam_schedule_id: int
     entries: list[MarkEntry]
+    # Required only to change a mark on a locked paper (§5.4.9). Every such
+    # change is audited, without exception.
+    reason: str | None = None
 
 
 class MarksRosterRow(BaseModel):
@@ -175,14 +184,19 @@ class MarksRosterRow(BaseModel):
     full_name: str
     roll_no: int
     marks_obtained: Decimal | None
+    is_absent: bool = False
+    is_exempted: bool = False
+    remarks: str | None = None
 
 
 class ReportCardRow(BaseModel):
     subject: str
-    marks_obtained: Decimal | None  # None = absent; excluded from the totals
+    marks_obtained: Decimal | None  # None = not sat; excluded from the totals
     max_marks: Decimal
     percent: float | None
     grade: str | None
+    is_absent: bool = False
+    is_exempted: bool = False
 
 
 class ReportCard(BaseModel):

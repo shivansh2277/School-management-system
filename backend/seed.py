@@ -562,6 +562,9 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
         (row.class_section_id, row.subject_id): row.teacher_id
         for row in db.query(ClassSubjectTeacher).all()
     }
+    # Marks record the user who entered them, not the employment record: an
+    # exam controller entering a correction may hold no teaching post.
+    teacher_user_id = {e.id: e.user_id for e in db.query(Employee).all()}
     busy_teacher: set[tuple] = set()   # (day, period, teacher)
     busy_room: set[tuple] = set()      # (day, period, room)
     placed = skipped = 0
@@ -699,7 +702,7 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
                             exam_schedule_id=sched.id,
                             student_id=s.id,
                             marks_obtained=score,
-                            entered_by=cst[(sec.id, sub.id)],
+                            entered_by=teacher_user_id[cst[(sec.id, sub.id)]],
                         )
                     )
     db.flush()

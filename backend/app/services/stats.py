@@ -92,6 +92,14 @@ def exam_percentages(
     took 8.5 s against a hosted one. The arithmetic is identical: a subject with
     no `marks` row contributes to neither the numerator nor the denominator, so
     an absent subject stays excluded from the total rather than counting as zero.
+
+    Keeping it identical is the point — §5.10.9 requires the dashboard total and
+    the report card total to agree, which means one definition and not two
+    queries that drift. A mark row now exists for an absent or exempted child
+    with a null score, so those rows are excluded here explicitly: without the
+    filter `sum(marks_obtained)` would skip the null while
+    `sum(max_marks)` still counted the paper, and the dashboard would quietly
+    read lower than the card.
     """
     q = (
         select(
@@ -100,7 +108,7 @@ def exam_percentages(
             func.sum(ExamSchedule.max_marks),
         )
         .join(ExamSchedule, ExamSchedule.id == Mark.exam_schedule_id)
-        .where(ExamSchedule.exam_id == exam_id)
+        .where(ExamSchedule.exam_id == exam_id, Mark.marks_obtained.is_not(None))
         .group_by(Mark.student_id)
     )
     if class_section_id is not None:

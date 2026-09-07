@@ -4,11 +4,15 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from pydantic import BaseModel, Field
+
 from app.core.db import get_db
 from app.services.rbac import require_permission
 from app.models import Exam, ExamSchedule, User, UserRole
 from app.schemas.common import (
     AttendanceSummary,
+    MarksRequest,
+    MarksRosterRow,
     ExamCreate,
     ExamScheduleCreate,
     ExamScheduleOut,
@@ -119,3 +123,70 @@ def attendance_summary(
     return attendance_svc.section_summary(
         db, user.school_id, class_section_id, date_from, date_to
     )
+
+
+class UnlockRequest(BaseModel):
+    reason: str = Field(min_length=3, max_length=500)
+
+
+@router.post(
+    "/exams/papers/{exam_schedule_id}/lock",
+    response_model=ExamScheduleOut,
+    dependencies=[Depends(require_permission("exam.marks.lock"))],
+)
+def lock_paper(
+    exam_schedule_id: int,
+    user: User = Depends(admin_only),
+    db: Session = Depends(get_db),
+) -> ExamScheduleOut:
+    """Close marks entry. After this a change needs an override and a reason."""
+    sched = assessment.lock_marks(db, user, exam_schedule_id)
+    return assessment.schedule_out(db, [sched])[0]
+
+
+@router.post(
+    "/exams/papers/{exam_schedule_id}/unlock",
+    response_model=ExamScheduleOut,
+    dependencies=[Depends(require_permission("exam.marks.lock"))],
+)
+def unlock_paper(
+    exam_schedule_id: int,
+    body: UnlockRequest,
+    user: User = Depends(admin_only),
+    db: Session = Depends(get_db),
+) -> ExamScheduleOut:
+    sched = assessment.unlock_marks(db, user, exam_schedule_id, body.reason)
+    return assessment.schedule_out(db, [sched])[0]
+
+
+@router.get("/exams/papers/{exam_schedule_id}/marks", response_model=list[MarksRosterRow])
+def paper_marks(
+    exam_schedule_id: int,
+    user: User = Depends(require_permission("exam.marks.manage_any", school_wide=True)),
+    db: Session = Depends(get_db),
+) -> list[MarksRosterRow]:
+    return assessment.marks_roster(db, user, exam_schedule_id, school_wide=True)
+
+
+@router.post("/exams/papers/{exam_schedule_id}/marks", response_model=list[MarksRosterRow])
+def enter_paper_marks(
+    exam_schedule_id: int,
+    body: MarksRequest,
+    user: User = Depends(require_permission("exam.marks.manage_any", school_wide=True)),
+    db: Session = Depends(get_db),
+) -> list[MarksRosterRow]:
+    """The exam controller's way in.
+
+    `/teacher/marks` reaches only the papers a teacher owns, which is right for
+    a subject teacher and wrong for the person §5.4.8 puts in charge of
+    moderation: an override on a locked paper is exactly the case where the
+    actor does not teach the subject. The lock and the audit rules are the same
+    either way — they live in the service, not in the route.
+
+    Gated on its own permission rather than on `exam.marks.enter`, because a
+    teacher holds that one *unscoped* — the "own subjects only" restriction is
+    enforced in the service, not by the grant. Reusing it here would have let
+    any teacher mark any section in the school.
+    """
+    body.exam_schedule_id = exam_schedule_id
+    return assessment.enter_marks(db, user, body, school_wide=True)

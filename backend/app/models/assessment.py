@@ -102,6 +102,13 @@ class Exam(TenantBase):
 
 
 class ExamSchedule(TenantBase):
+    """One paper: this exam, this section, this subject.
+
+    The marks lock lives here rather than on each mark, because §5.4.7 locks
+    *marks entry per subject* — the paper is what an exam controller closes,
+    and a per-mark lock would let a paper be half shut.
+    """
+
     __tablename__ = "exam_schedule"
     __table_args__ = (
         UniqueConstraint("exam_id", "class_section_id", "subject_id", name="uq_exam_schedule"),
@@ -115,21 +122,60 @@ class ExamSchedule(TenantBase):
     exam_date: Mapped[date] = mapped_column(Date, nullable=False)
     start_time: Mapped[time | None] = mapped_column(Time)
     max_marks: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+    room: Mapped[str | None] = mapped_column(String(20))
+
+    # Set when the exam controller closes entry. After this a mark can still be
+    # changed, but only with the override permission and a reason, and the
+    # change is audited without exception (§5.4.9).
+    marks_locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    marks_locked_by: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id")
+    )
+
+    @property
+    def is_locked(self) -> bool:
+        return self.marks_locked_at is not None
 
 
 class Mark(TenantBase):
+    """One child's result on one paper.
+
+    **Absent, exempted and zero are three different things** (§5.4.9), and a
+    single nullable number cannot say which. A zero is a mark: the child sat
+    the paper and scored nothing. An absence is not a mark, and neither is an
+    exemption — a child excused from a paper should not be averaged against it.
+    So `marks_obtained` is nullable and the two flags say which of the three a
+    null means.
+    """
+
     __tablename__ = "marks"
     __table_args__ = (
         UniqueConstraint("exam_schedule_id", "student_id", name="uq_mark"),
         CheckConstraint("marks_obtained >= 0", name="ck_marks_non_negative"),
+        # A child is absent or exempted, not both, and neither carries a score.
+        CheckConstraint(
+            "NOT (is_absent AND is_exempted)", name="ck_mark_absent_xor_exempted"
+        ),
+        CheckConstraint(
+            "(is_absent OR is_exempted) = (marks_obtained IS NULL)",
+            name="ck_mark_score_matches_state",
+        ),
     )
 
     exam_schedule_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("exam_schedule.id"), nullable=False
     )
     student_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("students.id"), nullable=False)
-    marks_obtained: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
-    entered_by: Mapped[int] = mapped_column(BigInteger, ForeignKey("employees.id"), nullable=False)
+    marks_obtained: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+    is_absent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_exempted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    remarks: Mapped[str | None] = mapped_column(String(200))
+    # The actor is a user, not an employee. An exam controller entering a
+    # correction may hold no teaching post, and every other actor in this
+    # codebase — the audit log included — is identified by user.
+    entered_by: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id"), nullable=False
+    )
 
 
 class GradeBand(TenantBase):

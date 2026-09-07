@@ -73,11 +73,19 @@ def record(
 
 
 def snapshot(obj, fields: list[str]) -> dict:
-    """A plain-JSON view of the fields worth auditing on a model instance."""
+    """A plain-JSON view of the fields worth auditing on a model instance.
+
+    Anything that is not already a JSON primitive is stringified. The previous
+    version tested for `isoformat` or `value`, which covered dates and enums and
+    silently let a `Decimal` through — and `before`/`after` are a JSON column,
+    so the first audited money or marks field would raise at commit rather than
+    at the edit. Allow-listing what JSON accepts is the way round that cannot be
+    outgrown by the next type somebody audits.
+    """
     out = {}
     for f in fields:
         v = getattr(obj, f, None)
-        out[f] = str(v) if hasattr(v, "isoformat") or hasattr(v, "value") else v
+        out[f] = v if v is None or isinstance(v, bool | int | float | str) else str(v)
     return out
 
 
