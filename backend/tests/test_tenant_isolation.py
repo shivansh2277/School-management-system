@@ -15,10 +15,10 @@ from app.models import (
     AcademicYear,
     AcademicYearStatus,
     Exam,
-    GradeBand,
     School,
     Subject,
 )
+from app.services import grading
 from app.services.common import grade_for
 
 
@@ -48,10 +48,16 @@ def rival(db):
                 start_date="2026-09-01",
                 end_date="2026-09-10",
             ),
-            # A scale so lax that 1% is an A1 — if it leaks, the demo school's
-            # grades change.
-            GradeBand(school_id=school.id, min_percent=Decimal("1"), grade="A1"),
         ]
+    )
+    # A scale so lax that 1% is an A1 — if it leaks, the demo school's grades
+    # change.
+    grading.create(
+        db,
+        school.id,
+        name="Lax",
+        bands=[(Decimal("1"), "A1", None), (Decimal(0), "E", None)],
+        activate=True,
     )
     db.flush()
     return school

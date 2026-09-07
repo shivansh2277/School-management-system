@@ -22,6 +22,7 @@ from app.services import audit as audit_svc
 from app.services import fee_setup
 from app.services import fees as fees_svc
 from app.services import admission as admission_svc
+from app.services import grading
 from app.services import rbac
 from app.models import (
     AcademicYear,
@@ -51,7 +52,6 @@ from app.models import (
     FeePlan,
     FeePlanItem,
     Gender,
-    GradeBand,
     Holiday,
     Homework,
     HomeworkSubmission,
@@ -186,9 +186,14 @@ NOTICES = [
      "Extra class every Tuesday from 2:00 PM to 3:00 PM.", NoticeAudience.class_),
 ]
 
+# The CBSE scale, with the word the report card actually prints alongside the
+# code. A school edits these on the grading-scale screen; they are a starting
+# point, not a constant.
 GRADE_BANDS = [
-    (91, "A1"), (81, "A2"), (71, "B1"), (61, "B2"),
-    (51, "C1"), (41, "C2"), (33, "D"), (0, "E"),
+    (91, "A1", "Outstanding"), (81, "A2", "Excellent"),
+    (71, "B1", "Very good"), (61, "B2", "Good"),
+    (51, "C1", "Fair"), (41, "C2", "Average"),
+    (33, "D", "Below average"), (0, "E", "Needs improvement"),
 ]
 
 PERIOD_TIMES = [
@@ -344,7 +349,16 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
         )
         db.flush()
 
-    db.add_all(GradeBand(min_percent=Decimal(p), grade=g) for p, g in GRADE_BANDS)
+    # Built through the real service so the band rules the API enforces are the
+    # rules the demo data obeys.
+    if grading.active_scale(db, school.id) is None:
+        grading.create(
+            db,
+            school.id,
+            name="CBSE",
+            bands=[(Decimal(p), g, d) for p, g, d in GRADE_BANDS],
+            activate=True,
+        )
 
     # --- people -----------------------------------------------------------
     admin = User(

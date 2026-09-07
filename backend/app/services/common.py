@@ -10,7 +10,6 @@ from app.models import (
     ClassSection,
     Enrolment,
     EnrolmentStatus,
-    GradeBand,
     Student,
     Subject,
     User,
@@ -132,19 +131,16 @@ def enrolment_sections(db: Session, student_ids: list[int]) -> dict[int, int]:
 
 
 def grade_for(db: Session, school_id: int, percent: float | Decimal | None) -> str | None:
-    """Computed at read time from grade_bands; never stored (BLUEPRINT §7.5).
+    """The grade a percentage earns on the school's scale *currently in force*.
 
-    `school_id` is required rather than optional: without it this read every
-    customer's bands and graded one school's child against another's scale.
+    Computed at read time, never stored (BLUEPRINT §7.5) — but only for live
+    screens. A published report card cites its scale version and is read back
+    through `grading.grade_in()`, so editing a band never rewrites a document
+    the school has already issued (§0.8).
     """
-    if percent is None:
+    from app.services import grading
+
+    scale = grading.active_scale(db, school_id)
+    if scale is None:
         return None
-    bands = db.scalars(
-        select(GradeBand)
-        .where(GradeBand.school_id == school_id)
-        .order_by(GradeBand.min_percent.desc())
-    ).all()
-    for band in bands:
-        if Decimal(str(percent)) >= band.min_percent:
-            return band.grade
-    return None
+    return grading.grade_in(db, scale.id, percent)
