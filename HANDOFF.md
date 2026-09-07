@@ -1,7 +1,9 @@
 # Sunrise ERP — Session Handoff
 
 **Written:** 6 September 2026 · **revised 7 September 2026** (Parts 2 and 3)
-**Branch:** `part-1-foundation` — **36 commits ahead of `main`, nothing pushed**
+**Branch:** `part-1-foundation` — **nothing pushed, ever.** Count the commits
+with `git log --oneline main..HEAD | wc -l`; a number written here goes stale on
+the next commit, including the one that updates this file.
 **Repo:** `C:\Users\SHIVANSH\OneDrive\Documents\AGENTS\school-management-system\`
 **Remote:** https://github.com/shivansh2277/School-management-system
 
@@ -383,8 +385,8 @@ read have moved (§7).
 - **Docker is not installed on this machine.** `docker-compose.yml` and
   `backend/Dockerfile` are syntax-checked only. They need a real
   `docker compose up` on the Oracle box before anyone trusts them.
-- **Nothing is pushed.** All 36 commits exist only on this laptop. The owner
-  wants the exact file list shown before any push.
+- **Nothing is pushed.** Every commit on this branch exists only on this
+  laptop. The owner wants the exact file list shown before any push.
 - **CI has never run.** The workflow is written but no push has triggered it.
 - **The web dashboard has not been opened** against the new backend, and after
   Part 3 it is now **known broken**, not merely suspect. `npx tsc --noEmit` was
@@ -511,7 +513,7 @@ demo school; and a non-technical reader can change a fee rule using only
 
 ### Before starting
 
-1. `git log --oneline main..HEAD` — 36 commits, and the messages carry the
+1. `git log --oneline main..HEAD` — read them; the messages carry the
    reasoning deliberately.
 2. Run the suite (§2) and the by-hand Postgres check (§4). Believe neither
    number until you have seen it. SQLite hid three Postgres defects already.
