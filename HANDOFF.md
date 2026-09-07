@@ -1,7 +1,7 @@
 # Sunrise ERP — Session Handoff
 
 **Written:** 6 September 2026 · **revised 7 September 2026** (Parts 2 and 3)
-**Branch:** `part-1-foundation` — **35 commits ahead of `main`, nothing pushed**
+**Branch:** `part-1-foundation` — **36 commits ahead of `main`, nothing pushed**
 **Repo:** `C:\Users\SHIVANSH\OneDrive\Documents\AGENTS\school-management-system\`
 **Remote:** https://github.com/shivansh2277/School-management-system
 
@@ -383,7 +383,7 @@ read have moved (§7).
 - **Docker is not installed on this machine.** `docker-compose.yml` and
   `backend/Dockerfile` are syntax-checked only. They need a real
   `docker compose up` on the Oracle box before anyone trusts them.
-- **Nothing is pushed.** All 35 commits exist only on this laptop. The owner
+- **Nothing is pushed.** All 36 commits exist only on this laptop. The owner
   wants the exact file list shown before any push.
 - **CI has never run.** The workflow is written but no push has triggered it.
 - **The web dashboard has not been opened** against the new backend, and after
@@ -449,6 +449,37 @@ a single salary component: a component model validated against a real Lucknow
 school's structure is the whole point of §3.16, and building one against a
 guess means rebuilding it. Item D blocks the report card layout the same way.
 
+### Suggested order, and where to stop
+
+Part 3 took one long session for six commits. Part 4 is five modules and will
+not fit in one. A sensible split, each ending at a commit that leaves the suite
+green:
+
+1. **Examinations** (§5.4) — assessment schemes, datesheet, marks entry with a
+   lock, moderation. Largest single piece, and the one Checkpoint 4 turns on.
+   Builds on `exams`/`marks`, which already exist from v0.
+2. **Report cards** (§0.8, §0.15) — CBSE-shaped, template-configurable, frozen
+   at publication. **Blocked on §8 item D**; ask first.
+3. **Result withholding for dues** (§0.6b) — small, and the seam already exists:
+   `fees.ledger()` answers what an enrolment owes. Do it right after report
+   cards while that code is fresh.
+4. **HR** (§5.3) — departments, staff leave, staff attendance. Staff leave is
+   what lets `timetable.arrange()` finally check "is this substitute on leave",
+   which Part 3 could not.
+5. **Payroll** (§3.16) — **blocked on §8 items A and B.**
+6. **Transport** (§5.6) — the fee side is nearly free: `fee_heads` already has
+   an `optional` type, so transport bills through a plan item with no new
+   billing path.
+7. **Communication** (§5.9) — the outbox and one email provider. Every module
+   above has notifications it wants and cannot send; they are deliberately not
+   stubbed, so expect to go back and wire them.
+8. **Reports** (§5.10) and the two guides (`CONFIGURATION-GUIDE.md`,
+   `EXTENSION-GUIDE.md`) — last, because they describe what the others built.
+
+Steps 2 and 5 are blocked on the owner. If those answers are not available when
+you reach them, **build around them rather than guessing** — do 3, 4, 6 first
+and come back.
+
 ### What Part 3 built that Part 4 should reuse rather than reinvent
 
 | Reach for | Rather than |
@@ -480,7 +511,7 @@ demo school; and a non-technical reader can change a fee rule using only
 
 ### Before starting
 
-1. `git log --oneline main..HEAD` — 35 commits, and the messages carry the
+1. `git log --oneline main..HEAD` — 36 commits, and the messages carry the
    reasoning deliberately.
 2. Run the suite (§2) and the by-hand Postgres check (§4). Believe neither
    number until you have seen it. SQLite hid three Postgres defects already.
