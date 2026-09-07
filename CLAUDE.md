@@ -23,7 +23,7 @@ branches of one school. A tenant is a customer. Work is on branch
 
 ```bash
 cd backend
-../.venv/Scripts/python.exe -m pytest -q          # 222 tests, ~33s
+../.venv/Scripts/python.exe -m pytest -q          # 292 tests, ~78s
 ../.venv/Scripts/python.exe -m pytest tests/test_rbac.py -q       # one file
 ../.venv/Scripts/python.exe -m alembic upgrade head
 ../.venv/Scripts/python.exe seed.py               # idempotent
@@ -64,7 +64,14 @@ Postgres runs natively on this machine, not in Docker. `make testdb` uses
   columns: `core/settings_registry.py` for settings and feature flags,
   `custom_fields` for school-invented attributes. A feature flag is a boolean
   setting named `feature.<module>`, and it is enforced at the route.
-- **Money is `Numeric`, never float. Timestamps are `timestamptz`.**
+- **Money is `Numeric`, never float. Timestamps are `timestamptz`.** Round with
+  `services/fee_setup.py::money()` — half-up, the way a counter clerk rounds;
+  Python's default is banker's rounding and puts a 10% concession a paisa away
+  from the printed fee card.
+- **Payments allocate to invoice lines, never to invoices.** A balance is a SUM
+  over `payment_allocations`, never a stored column. Nothing financial is
+  edited: an invoice is voided and reissued, a payment reversed by a contra
+  entry.
 - **Destructive actions are audited with a reason.** See `services/audit.py`;
   `void`, `status_change` and `delete` refuse to commit without one.
 
@@ -89,6 +96,15 @@ Postgres runs natively on this machine, not in Docker. `make testdb` uses
   helpful.
 - **Local date against UTC midnight is a bug**, and it has already bitten once:
   the office is five and a half hours ahead of the column.
+- **`seed.py` runs the real fee and timetable services**, so a defect in either
+  breaks seeding rather than only a test. That is on purpose: a seed that
+  fabricates rows cannot catch a bug in the code that will produce them.
+- **Seeded invoices already carry late fees**, because collection assesses the
+  fine before allocating. Do not assume a seeded invoice has a round amount.
+- **Money rules are settings, not constants.** The late fee, the sibling
+  concession, the due day and the teacher load ceiling all live in
+  `core/settings_registry.py`; changing behaviour by editing a number in code
+  is the wrong place.
 
 ## Working style for this project
 

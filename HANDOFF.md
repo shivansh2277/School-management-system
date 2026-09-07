@@ -1,11 +1,11 @@
 # Sunrise ERP — Session Handoff
 
-**Written:** 6 September 2026 · **revised 7 September 2026** (Part 2)
-**Branch:** `part-1-foundation` — **27 commits ahead of `main`, nothing pushed** (22 code, 5 documentation)
+**Written:** 6 September 2026 · **revised 7 September 2026** (Parts 2 and 3)
+**Branch:** `part-1-foundation` — **35 commits ahead of `main`, nothing pushed**
 **Repo:** `C:\Users\SHIVANSH\OneDrive\Documents\AGENTS\school-management-system\`
 **Remote:** https://github.com/shivansh2277/School-management-system
 
-Every number below was measured on 6 September 2026, not recalled. Anything
+Every number below was measured on 7 September 2026, not recalled. Anything
 unverified says so.
 
 > This supersedes `Sunrise-HANDOFF.md` (in the parent AGENTS folder) for
@@ -31,26 +31,31 @@ sessions — Parts 3 and 4 will each span several.
 |---|---|---|
 | 1 | Foundation: tenancy, enrolments, RBAC, audit, jobs, documents | **backend complete** |
 | 2 | Admission, including the public online portal | **backend complete; Checkpoint 2 passes in tests** |
-| 3 | Fees rebuild + attendance + timetable | not started |
+| 3 | Fees rebuild + attendance + timetable | **backend complete; Checkpoint 3 passes in tests** |
 | 4 | Examinations, HR/payroll, transport, communication, reports | not started |
 
 ---
 
 ## 2. Verified current state
 
+Measured on 7 September 2026 by running the commands below, not recalled.
+
 | Measure | Value |
 |---|---|
-| Backend tests | **222 passing**, ~33 s |
-| Database tables | 50 |
-| Alembic migrations | 14 (verified from empty **on Postgres**, then seed, then worker) |
-| API surface | 109 paths, 135 operations |
-| Permissions / system roles | 46 / 13 |
+| Backend tests | **292 passing**, ~78 s |
+| Database tables | 60, plus `alembic_version` |
+| Alembic migrations | 19 (verified from empty **on Postgres**, then seed, then worker) |
+| API surface | 139 paths, 174 operations |
+| Permissions / system roles | 51 / 13 |
 | Job handlers | `fees.overdue_sweep`, `fees.generate_invoices`, `admission.offer_sweep`, `system.heartbeat` |
 | Demo school | 100 students, 10 sections, 12 teachers, 98 guardians |
+| Demo fee ledger | 300 invoices, 810 lines, 170 payments, 410 allocations, 2 sibling concessions |
+| Demo attendance | 5,800 rows over 58 working days, plus 2 holidays inside the window |
+| Demo timetable | 6 periods, 300 slots, **0 teacher clashes, 0 room clashes**, heaviest load 30/week |
 
 ```bash
 cd backend
-../.venv/Scripts/python.exe -m pytest -q                    # 222 passed
+../.venv/Scripts/python.exe -m pytest -q                    # 292 passed
 ../.venv/Scripts/python.exe -m alembic upgrade head
 ../.venv/Scripts/python.exe seed.py
 ../.venv/Scripts/python.exe worker.py --once                # runs due jobs
@@ -151,6 +156,76 @@ Design decisions in Part 2 that a later session should not undo:
 
 ---
 
+### Part 3, 7 September
+
+| Commit | What |
+|---|---|
+| `5159205` | Fee catalogue: heads, plans, per-student assignment, concessions |
+| `972d096` | The ledger rebuild — invoices with lines, allocation-based payments |
+| `caa8861` | The late fee, and the §8C answer that the clock runs until payment |
+| `da674ad` | Period close, the day book — **Checkpoint 3** |
+| `efbbd1a` | Attendance re-keyed to the enrolment; corrections, holidays, leave |
+| `e58ce1e` | Timetable made editable with conflict detection, plus substitutions |
+
+**Checkpoint 3 is a test, not a claim:**
+`tests/test_fee_period.py::test_checkpoint_3_bill_part_pay_fine_chase_collect_close`
+bills a month, part-pays ₹1,000, lets the fine reach ₹1,000 at twelve days
+overdue, finds the family on the defaulter list with that fine, collects the
+balance, sees the invoice settle, reads the day book, closes the month, and
+watches the next payment come back 409. No manual database work anywhere in it.
+`tests/test_attendance_rules.py` covers the second half of the checkpoint — a
+week marked and corrected with an audit trail.
+
+**The one product answer this part depended on.** §8 item C, answered by the
+owner on 7 September 2026: **the late-fee clock runs until the invoice is
+paid**, and generating the next month's invoice does not stop it. The
+consequence is that the fine is a pure function of the due date, the invoice
+amount and one other date — today while unpaid, `settled_on` once cleared — so
+it can be recomputed in front of a parent at the counter. Reversing that answer
+now fails `test_the_clock_keeps_running_after_the_next_invoice_is_generated`
+rather than quietly changing every parent's bill.
+
+Design decisions in Part 3 that a later session should not undo:
+
+- **Payments allocate to invoice lines, never to invoices.** This is what makes
+  part payment, advance payment, over-payment and head-wise reporting one
+  mechanism instead of four. An invoice balance is a SUM over
+  `payment_allocations`, never a stored column.
+- **A reversal is a contra payment with negative allocations.** Both rows and
+  both receipt numbers survive, and every balance still comes out of a plain
+  SUM. A gap in the receipt sequence is what an auditor asks about.
+- **The late fee is an ordinary line against an ordinary head** (`LATE`,
+  created on demand per school). It is therefore allocated against, receipted,
+  reported head-wise and part-payable with no special case anywhere.
+- **It only ever moves upward.** Lowering `fees.late_fee.initial` does not
+  refund a fine already charged — that is a waiver, which is a concession,
+  which needs an approver.
+- **A closed period refuses billing into the month, money dated inside it, and
+  voiding one of its invoices — but not collecting an old due today.** A
+  receipt belongs to the day it was issued, so that money lands in the current
+  period, which is §5.5.9's "late entry into the current open period". Refusing
+  it would make closing June mean a June defaulter can never pay.
+- **`overdue` outranks `partially_paid`** when an invoice is both. The
+  defaulter list is what the office acts on; the balance carries the other half
+  of the truth, and a test pins each.
+- **The attendance percentage denominator is working days since the child
+  joined**, not days someone happened to mark. §5.8.9 calls getting this wrong
+  the most common attendance-reporting bug, and v0 had it wrong.
+- **Correcting an earlier day needs a reason and is audited; fixing today's
+  roll does not.** A teacher fixing a tap while the register is open is not
+  amending a record.
+- **Approving leave writes the register**, and leaves an already-marked day
+  alone. Otherwise "approved leave" and what the register says disagree, and
+  only whoever remembers reconciles them.
+- **The seed builds the timetable through the same validator the API enforces.**
+  v0 seeded it blindly and shipped 144 teacher double-bookings, which would
+  make every conflict report look like noise.
+- **Substitutions are a row per date, not an edit to the slot**, and an
+  unfilled one is recorded rather than dropped — §5.7.10 calls that the
+  operational number that matters most.
+
+---
+
 ## 4. Things that would be expensive to rediscover
 
 **The migration test runs on SQLite, and SQLite hides Postgres bugs.** It does
@@ -194,6 +269,20 @@ hold `students.profile.read`. The guardian holds it at `self` scope; admin
 routes pass `school_wide=True`. Getting this wrong once already exposed the
 whole student roster to a parent in development.
 
+**The seed now runs the real biller and the real conflict checker.** It calls
+`fees.generate()` and `fees.collect()` rather than inserting invoice rows, and
+builds the timetable through the same rules the API enforces. That is
+deliberate — a seed that fabricates its data cannot catch a defect in the code
+that will produce it in production — but it has a consequence: **a bug in the
+fee or timetable service breaks `seed.py`, not just a test.** If seeding starts
+failing, look there first.
+
+**Seeded invoices carry late fees.** `collect()` assesses the fine before
+allocating, so paying an overdue seeded invoice charges one. A test that picks
+an arbitrary seeded invoice and expects a clean amount will be wrong; clear the
+ledger and generate a fresh month first, the way
+`tests/test_late_fee.py::a_clean_invoice` does.
+
 **SQLite returns naive datetimes** even for `timestamptz` columns, and comparing
 one against an aware `now` raises rather than returning False. `services/jobs.py`
 normalises with `_utc()`.
@@ -208,6 +297,7 @@ Admission numbers now come from a sequence in the format decided in §0.21:
 | Role | Login | Password |
 |---|---|---|
 | Admin | `admin@sunrisepublic.edu` | `Admin@123` |
+| Fee counter clerk | `counter@sunrisepublic.edu` | `Admin@123` |
 | Teacher | `TCH001` | `Teacher@123` |
 | Student | `2024000001` | `Student@123` |
 | Parent | `9876500001` | `Parent@123` |
@@ -216,6 +306,10 @@ Admission numbers now come from a sequence in the format decided in §0.21:
 depends on it, and the seed pins that deliberately. `2024000001` is roll 1 of
 10-A. The demo parent still has exactly two children so the child switcher has
 something to switch between.
+
+The counter clerk is new in Part 3 and holds the `fee_collector` role: it may
+take money and may not void or approve a concession. It exists so §5.5.9's
+segregation of duties is demonstrable rather than asserted.
 
 Tests no longer hard-code these: `conftest._login_id_in()` resolves a student by
 where they sit, so seed ordering can change without breaking the suite.
@@ -239,6 +333,38 @@ where they sit, so seed ordering can change without breaking the suite.
 - **Reapplication linking exists as a column** (`previous_application_id`) but
   no endpoint sets it.
 
+### Part 3 — what is not built
+
+- **No fee, attendance or timetable UI beyond what v0 had.** The whole of Part
+  3 is API-only. The web dashboard's Fees page still calls
+  `/admin/fees/structures`, which no longer exists, and reads an `amount` field
+  invoices no longer carry (§7).
+- **No reminder or receipt communication.** §5.5.9 wants the defaulter chase to
+  send something; email is Part 4, so the defaulter list is a screen the office
+  works from by hand.
+- **No bank or gateway reconciliation.** §5.5.9 asks for it as a first-class
+  screen. There is no gateway (§0.10) and no bank feed, so the day book is
+  where cash reconciliation stops for now.
+- **No refunds.** §0.6 says none, so nothing is built. `is_refundable` on a fee
+  head is recorded and unused.
+- **No instalment plans.** §5.5.3 lists them; §0.6 locks monthly billing, so
+  they were not built.
+- **Nothing sets `written_off`.** The status exists; see §8 item G.
+- **No timetable versioning.** §5.7.9 wants a published version superseded
+  rather than replaced, so historical attendance resolves against the version
+  in force on that date. §0.4 locks attendance to **daily**, not period-wise,
+  so nothing historical resolves against a slot and the requirement has no
+  teeth today. **If period-wise attendance is ever adopted, this becomes
+  expensive** — that is the moment to add versioning, not later.
+- **No subject-period allocation table.** `/completeness` reports gaps against
+  "every teaching period on every day", not against "six Maths periods a week".
+  §5.7.9 wants the latter; it needs an allocation table that does not exist.
+- **No staff attendance and no teacher-availability table.** Substitution
+  therefore checks "already teaching" and "already covering", but cannot check
+  "on leave" — staff leave is HR, in Part 4.
+- **No month lock for attendance.** §5.8.9 mentions locking; corrections are
+  audited instead, which is what Checkpoint 3 asks for.
+
 ### Part 1 — infrastructure still owed
 
 **The backend list from §12 is now done.** What Part 1 still owes is
@@ -257,82 +383,113 @@ read have moved (§7).
 - **Docker is not installed on this machine.** `docker-compose.yml` and
   `backend/Dockerfile` are syntax-checked only. They need a real
   `docker compose up` on the Oracle box before anyone trusts them.
-- **Nothing is pushed.** All 28 commits exist only on this laptop. The owner
+- **Nothing is pushed.** All 35 commits exist only on this laptop. The owner
   wants the exact file list shown before any push.
 - **CI has never run.** The workflow is written but no push has triggered it.
-- **The web dashboard has not been opened** against the new backend. It
-  typechecks (`npx tsc --noEmit` is clean) and builds, but several API shapes
-  changed — settings, class creation, student rows, and now `employee_code`
-  and `guardian_name`/`guardian_phone`, which the two pages that read them were
-  updated for. Typechecking is not the same as running it; expect breakage.
-- **The mobile app has not been touched or tested** since the enrolment change.
-  Its API calls almost certainly need updating.
+- **The web dashboard has not been opened** against the new backend, and after
+  Part 3 it is now **known broken**, not merely suspect. `npx tsc --noEmit` was
+  clean on 7 September 2026 — but the web app declares its own `Invoice` type
+  by hand rather than generating it from the API, so TypeScript cannot see the
+  problem. Specifically:
+  - `src/pages/Fees.tsx` calls `/admin/fees/structures`, **which no longer
+    exists** (410 Gone in practice: the route was removed with
+    `fee_structures`), and renders `invoice.amount`, `status` and `receipt_no`
+    — invoices now carry `payable`, `balance`, `paid` and `lines`.
+  - `src/pages/Attendance.tsx` and `Dashboard.tsx` read the roll and summary
+    shapes, which gained `corrected` and changed how the percentage is
+    computed; they will render, but the percentage a page shows and the one the
+    API now computes are different numbers.
+  A green typecheck here means nothing. Treat the dashboard as Part 4 work.
+- **The mobile app has not been touched or tested** since the enrolment change,
+  and Part 3 moved more ground under it: `/parent/fees/{id}/pay` is gone
+  (payment is now against a student, with an amount and an idempotency key) and
+  the receipt URL is `/parent/fees/receipts/{payment_id}.pdf`. Its attendance
+  calls should still work — the API deliberately still speaks in `student_id`
+  even though the table is keyed by enrolment.
 - **`/admin/configuration` has no UI at all.** Settings, module switches and
   custom fields are API-only; §0.18 says the configuration screens must be
   usable by a records clerk, and that screen does not exist yet.
 - **Zero frontend tests** still. Unchanged from v0 and still a real gap.
 - **The old Vercel/Neon deployment is now stale** — the schema there predates
-  all seven migrations. Hosting moves to Oracle Cloud (`DEPLOY.md`).
+  all nineteen migrations. Hosting moves to Oracle Cloud (`DEPLOY.md`).
 
 ---
 
 ## 8. Still open for product discussion
 
-From ERP_BLUEPRINT §16, none blocking Part 1:
+From ERP_BLUEPRINT §16:
 
 | # | Question | Needed by |
 |---|---|---|
 | A | A real Lucknow school's payroll structure to validate the component model | Part 4 |
 | B | Confirm Uttar Pradesh levies no professional tax (assumed, shipped disabled) | Part 4 |
-| C | Does the late-fee clock stop when the next invoice generates, or keep accruing? | Part 3 |
+| ~~C~~ | ~~Does the late-fee clock stop when the next invoice generates?~~ | **Answered 7 Sep 2026: it keeps accruing until the invoice is paid.** Built and tested. |
 | D | The exact CBSE report card layout the target school expects | Part 4 |
+
+New questions this part surfaced, none blocking:
+
+| # | Question | Needed by |
+|---|---|---|
+| E | Is a six-day week right for this school, and are Saturdays half days? The attendance denominator assumes Mon-Sat working with Sunday off. | Before a real school's first month |
+| F | Who may reopen a closed fee period? Currently anyone holding `fees.payment.void`, which is Principal and Accountant. | Before go-live |
+| G | Should an unpaid invoice ever be written off? `written_off` exists in the status enum and nothing sets it — §0.6 says no refunds and no carry-forward, which leaves old dues visible forever. | Part 4, with §0.6b |
 
 ---
 
-## 9. Where to start next session — Part 3
+## 9. Where to start next session — Part 4
 
-Part 3 is **fees rebuild + attendance + timetable** (§12). Read `docs/ERP_BLUEPRINT.md`
-**§0.6** (the fee policy, locked), **§5.5** (fees), **§5.8** (attendance) and
-**§5.7** (timetable) before touching code.
+Part 4 is **examinations, HR/payroll, transport, communication, reports**
+(§12), and it is the largest part. Read `docs/ERP_BLUEPRINT.md` **§0** first
+(§0.5, §0.8, §0.9, §0.11, §0.15 and §0.6b all bind here), then **§5.4**
+(examinations), **§5.3** (HR), **§3.16** (payroll configurability), **§5.6**
+(transport), **§5.9** (communication) and **§5.10** (reports).
 
-**One product question blocks a Part 3 rule** — §8 item C: does the late-fee
-clock stop when the next invoice generates, or keep accruing? Ask before
-building the late-fee job; either answer is cheap to implement and expensive to
-retrofit once invoices exist with the wrong ones.
+**Two product questions block payroll** — §8 items A and B. Ask before writing
+a single salary component: a component model validated against a real Lucknow
+school's structure is the whole point of §3.16, and building one against a
+guess means rebuilding it. Item D blocks the report card layout the same way.
 
-### What exists today, and what Part 3 replaces
+### What Part 3 built that Part 4 should reuse rather than reinvent
 
-| Today | Where | Part 3 |
-|---|---|---|
-| `fee_structures` — one flat monthly amount per class | `models/fees.py` | Replaced by `fee_heads` + `fee_plans` + `fee_plan_items` |
-| `fee_invoices` — one amount, no lines | `models/fees.py` | Replaced by invoices **with lines** |
-| `fee_payments` — a payment against one invoice | `models/fees.py` | Replaced by **allocation-based** payments so a part payment can span invoices |
-| no concessions, no late fee, no adjustments | — | §0.6: 10% sibling concession · ₹300 at day 5, +₹100/day, capped at 50% |
-| `services/fees.py`, 221 lines | `services/fees.py` | Rewritten; keep `presented_status()`'s rule that reads never write |
-| `attendance` — daily, marked by a teacher | `models/ops.py`, `services/attendance.py` | Add corrections **with reason**, absentee list, leave requests |
-| `timetable_slots` — seeded, read-only | `models/academic.py` | Make editable with live conflict detection, plus substitutions |
-| `application_payments` — admission money | `models/application_payment.py` | **Leave alone.** Applicants have no ledger; this is deliberately separate |
+| Reach for | Rather than |
+|---|---|
+| `audit.next_number()` | any `max(seq) + 1` for a payslip or certificate number |
+| `services/fees.py` allocation model | a second, simpler ledger for payroll — **payroll stays separate**, but the void/reverse discipline should be copied |
+| `fee_periods` and `assert_period_open()` | a new "is this month closed" mechanism for payroll |
+| `holidays` | a second calendar table for exams or transport |
+| `services/timetable.py::conflicts()` | a fresh clash checker for the exam datesheet — §5.7.9 says exams must not clash with the calendar |
+| `core/settings_registry.py` | new columns for grading scales or payroll rates (§3.15) |
+| `services/school_settings.py::module_enabled` | a UI-only feature switch |
+| `fees.primary_contact()` | a third way to find who to ring |
 
-Three things Part 1 and 2 already built that Part 3 should reuse rather than
-reinvent: `audit.next_number()` for gapless receipt numbers, the job queue for
-anything that bills a whole school, and `services/school_settings.py` for the
-fee rule values — §3.15 says fee amounts and the late-fee rule are settings, and
-`core/settings_registry.py` is deliberately still nearly empty because the
-keys arrive with the code that reads them.
+### Two Part 4 items that touch Part 3 directly
 
-**Checkpoint 3 passes when** a month is billed, partially paid, late-feed,
-chased, fully collected and closed — and the closed period refuses further
-writes; and a week of attendance is marked and corrected with an audit trail.
+- **Result withholding for unpaid dues (§0.6b, §12).** The ledger already
+  answers "what does this enrolment owe" — `fees.ledger(db, enrolment_id)`
+  returns `outstanding`. Examinations should ask that question rather than
+  keeping its own idea of who has paid.
+- **Transport fee head (§5.6).** `fee_heads` already has an `optional` type for
+  exactly this: transport bills only the children who opted in, through a plan
+  item, with no new billing path.
+
+### Checkpoint 4 passes when
+
+A CBSE report card publishes and stays frozen; a payroll run completes for the
+demo school; and a non-technical reader can change a fee rule using only
+`CONFIGURATION-GUIDE.md`, which does not exist yet.
 
 ### Before starting
 
-1. `git log --oneline main..HEAD` — 28 commits, and the messages carry the
+1. `git log --oneline main..HEAD` — 35 commits, and the messages carry the
    reasoning deliberately.
-2. Run the suite (§2) and the Postgres check (§4). Believe neither number until
-   you have seen it.
+2. Run the suite (§2) and the by-hand Postgres check (§4). Believe neither
+   number until you have seen it. SQLite hid three Postgres defects already.
 3. Decide with the owner whether to push first. Nothing has ever been pushed and
    CI has never run, so the first push is also the first CI run — expect it to
    find something.
+4. Consider whether the web dashboard should be caught up before Part 4 rather
+   than after. It is now known broken against the fee API (§7), and every part
+   that ships API-only widens the gap.
 
 The memory file `sunrise-erp-build.md` carries the same state in short form for
 a session that starts cold.
