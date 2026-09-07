@@ -24,6 +24,7 @@ from app.services import fees as fees_svc
 from app.services import admission as admission_svc
 from app.services import grading
 from app.services import hr as hr_svc
+from app.services import payroll as payroll_svc
 from app.services import staff_leave as staff_leave_svc
 from app.services import schemes as schemes_svc
 from app.services import rbac
@@ -477,6 +478,12 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
                 hr_svc.set_head(db, dept, first)
     db.flush()
 
+    # §3.16's component set, then a salary per designation. Built through the
+    # real service so a defect in the payroll rules breaks seeding rather than
+    # only a test — the same bargain the fee and timetable seeding makes.
+    payroll_svc.install_defaults(db, school.id)
+    db.flush()
+
     for code, name, quota, paid in LEAVE_TYPES:
         if not db.scalar(
             select(LeaveTypeDef).where(
@@ -485,6 +492,26 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
         ):
             staff_leave_svc.create_type(
                 db, school.id, code=code, name=name, annual_quota=quota, is_paid=paid
+            )
+    db.flush()
+
+    # A Lucknow private school's monthly gross by grade. Whole rupees, and
+    # deliberately spread across the ESI threshold of 21,000 so the demo shows
+    # a component that applies to some staff and not others.
+    GROSS_BY_DESIGNATION = {
+        "PGT": Decimal(42000),
+        "TGT": Decimal(32000),
+        "PRT": Decimal(19500),
+    }
+    for teacher, (_, _, _, designation) in zip(teachers, TEACHER_NAMES, strict=True):
+        if payroll_svc.active_structure(db, teacher.id) is None:
+            payroll_svc.set_structure(
+                db,
+                admin,
+                teacher,
+                effective_from=date(2026, 4, 1),
+                monthly_gross=GROSS_BY_DESIGNATION[designation],
+                note=f"{designation} scale",
             )
     db.flush()
 

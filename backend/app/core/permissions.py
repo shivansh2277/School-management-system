@@ -98,6 +98,16 @@ PERMISSIONS: list[tuple[str, str]] = [
     ("hr.leave.configure", "Define leave types and their entitlements"),
     ("hr.attendance.read", "View the staff register"),
     ("hr.attendance.mark", "Mark and correct the staff register"),
+    # --- payroll. Separate from `hr.*` because §5.3.8 gives the Accountant
+    # payroll and nothing else of HR, and the HR Manager staff records and not
+    # the money.
+    (
+        "payroll.run.read",
+        "View salary components, structures, runs and payslips",
+    ),
+    ("payroll.setup.manage", "Define salary components and set salary structures"),
+    ("payroll.run.manage", "Open, calculate and discard a payroll run"),
+    ("payroll.run.approve", "Approve a payroll run and mark it paid"),
     # --- administration
     ("admin.settings.read", "View school settings"),
     ("admin.settings.write", "Change school settings"),
@@ -116,6 +126,9 @@ NOT_BLANKET_READ = {
     # line the Admin Officer — a records clerk — would read every colleague's
     # bank account by virtue of being able to read everything else.
     "hr.salary.read",
+    # And payroll for the same reason: a run lists what every colleague is
+    # paid. The Accountant, Principal and Auditor hold it explicitly.
+    "payroll.run.read",
 }
 
 READ_ONLY = [
@@ -158,6 +171,11 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "hr.leave.approve",
             "hr.leave.configure",
             "hr.attendance.mark",
+            # Granted explicitly, because `payroll.run.read` is excluded from
+            # the blanket read set. Whoever signs a run off must be able to see
+            # what they are signing.
+            "payroll.run.read",
+            "payroll.run.approve",
             "admission.enquiry.write",
             "admission.cycle.write",
             "admission.application.write",
@@ -199,6 +217,14 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
         "accountant",
         "Accountant",
         [
+            # §5.3.8: payroll, and nothing else of HR. Notably not
+            # `payroll.run.approve` — whoever prepares the payroll does not
+            # sign it off, the same segregation the fee counter already has.
+            "payroll.run.read",
+            "payroll.setup.manage",
+            "payroll.run.manage",
+            "hr.employee.read",
+            "hr.salary.read",
             "students.profile.read",
             "academics.class.read",
             "fees.setup.manage",
@@ -338,7 +364,7 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
         # readable, nothing writable. Salary is granted explicitly rather than
         # by falling out of READ_ONLY — an auditor reading bank details is a
         # decision, not a side effect.
-        [*READ_ONLY, "admin.audit.read", "hr.salary.read"],
+        [*READ_ONLY, "admin.audit.read", "hr.salary.read", "payroll.run.read"],
     ),
 ]
 

@@ -60,7 +60,10 @@ from app.models.enums import (
     AuditAction,
     LeaveStatus,
     LeaveType,
+    CalculationMethod,
+    ComponentType,
     CustomFieldType,
+    PayrollRunStatus,
     EmployeeStatus,
     EmployeeType,
     GuardianRelation,
@@ -117,6 +120,14 @@ from app.models.hr import (
     LeaveTypeDef,
     StaffAttendance,
     StaffLeaveRequest,
+)
+from app.models.payroll import (
+    PayrollRun,
+    Payslip,
+    PayslipLine,
+    SalaryComponent,
+    SalaryStructure,
+    SalaryStructureItem,
 )
 from app.models.enrolment import Enrolment
 from app.models.audit import AuditLog, NumberSequence

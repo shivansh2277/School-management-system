@@ -182,6 +182,50 @@ class LeaveStatus(StrEnum):
     cancelled = "cancelled"
 
 
+class ComponentType(StrEnum):
+    """§3.16. The three behave differently and must not be one flag: an earning
+    adds to gross, a deduction comes out of net, and an employer contribution
+    is a cost to the school that never touches the employee's pay at all.
+    """
+
+    earning = "earning"
+    deduction = "deduction"
+    employer_contribution = "employer_contribution"
+
+
+class CalculationMethod(StrEnum):
+    """How a component's amount is arrived at (§3.16).
+
+    `slab` and `formula` from the blueprint are deliberately absent. A formula
+    evaluator is an injection surface for a configuration screen a records
+    clerk uses, and slab-based TDS needs an annual projection this system does
+    not have — both would be guesses. TDS ships as `fixed`, entered per
+    employee by whoever computes it, and says so.
+    """
+
+    fixed = "fixed"
+    percent_of_basic = "percent_of_basic"
+    percent_of_gross = "percent_of_gross"
+    # The balancing figure: whatever is left of gross after the other earnings.
+    # There can be only one, or "whatever is left" has no meaning.
+    balance = "balance"
+    # gross / working days x days not worked (§3.16).
+    loss_of_pay = "loss_of_pay"
+
+
+class PayrollRunStatus(StrEnum):
+    """§5.3.7 lists draft -> calculated -> approved -> paid -> locked. Four are
+    implemented: `approved` already makes the run immutable, so `locked` would
+    be a second door with the same key — the same reason `FeePeriodStatus`
+    stops at two.
+    """
+
+    draft = "draft"
+    calculated = "calculated"
+    approved = "approved"
+    paid = "paid"
+
+
 class NoticeAudience(StrEnum):
     all = "all"
     students = "students"
