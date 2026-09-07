@@ -15,7 +15,7 @@ from app.schemas.common import (
     ExamOut,
     RollRow,
 )
-from app.services import assessment
+from app.services import assessment, schemes
 from app.services import attendance as attendance_svc
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -39,8 +39,14 @@ def create_exam(
 ) -> Exam:
     if body.end_date < body.start_date:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "end_date must not precede start_date")
-    exam = Exam(school_id=user.school_id, **body.model_dump())
+    fields = body.model_dump()
+    component_id = fields.pop("scheme_component_id")
+    exam = Exam(school_id=user.school_id, **fields)
     db.add(exam)
+    db.flush()
+    # Takes the term from the component when there is one: two places naming
+    # the term is two places to disagree, and the report card groups by it.
+    schemes.attach_component(db, exam, component_id)
     db.commit()
     return exam
 

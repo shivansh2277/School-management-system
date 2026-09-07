@@ -29,7 +29,15 @@ from app.models.academic import (
     Substitution,
     TimetableSlot,
 )
-from app.models.assessment import Exam, ExamSchedule, GradeBand, GradingScale, Mark
+from app.models.assessment import (
+    AssessmentScheme,
+    Exam,
+    ExamSchedule,
+    GradeBand,
+    GradingScale,
+    Mark,
+    SchemeComponent,
+)
 from app.models.enums import (
     AdmissionCategory,
     ApplicationFeePurpose,

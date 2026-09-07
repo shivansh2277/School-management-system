@@ -15,6 +15,13 @@ def test_grade_band_boundaries(db, ids, percent, grade):
 
 
 def paper(db, ids, subject="maths"):
+    """One paper of 10-A.
+
+    Deliberately the paper worth the most marks: papers are now marked out of
+    whatever their scheme component is worth — a notebook is out of 5 — so a
+    test that wants room to enter a mark must ask the paper what it is out of
+    rather than assume 100.
+    """
     from app.models import ExamSchedule
 
     return (
@@ -23,6 +30,7 @@ def paper(db, ids, subject="maths"):
             ExamSchedule.class_section_id == ids["section_10a"],
             ExamSchedule.subject_id == ids[subject],
         )
+        .order_by(ExamSchedule.max_marks.desc())
         .first()
     )
 
@@ -33,7 +41,9 @@ def test_marks_above_max_are_rejected_and_name_the_student(client, teacher, db, 
         "/teacher/marks",
         json={
             "exam_schedule_id": p.id,
-            "entries": [{"student_id": ids["student_1"], "marks_obtained": "150"}],
+            "entries": [
+                {"student_id": ids["student_1"], "marks_obtained": str(p.max_marks + 1)}
+            ],
         },
         headers=teacher,
     )
@@ -43,7 +53,8 @@ def test_marks_above_max_are_rejected_and_name_the_student(client, teacher, db, 
 
 def test_marks_entry_is_an_upsert(client, teacher, db, ids):
     p = paper(db, ids)
-    for value in ("55", "66"):
+    first, second = p.max_marks / 2, p.max_marks - 1
+    for value in (str(first), str(second)):
         r = client.post(
             "/teacher/marks",
             json={
@@ -54,7 +65,7 @@ def test_marks_entry_is_an_upsert(client, teacher, db, ids):
         )
         assert r.status_code == 200
     row = next(x for x in r.json() if x["student_id"] == ids["student_1"])
-    assert float(row["marks_obtained"]) == 66.0
+    assert float(row["marks_obtained"]) == float(second)
 
     from app.models import Mark
 
@@ -79,8 +90,13 @@ def test_report_card_excludes_an_absent_subject_from_the_totals(client, student,
     card = client.get(f"/student/results/{p.exam_id}", headers=student).json()
     absent = [r for r in card["rows"] if r["marks_obtained"] is None]
     assert len(absent) == 1 and absent[0]["subject"] == "Mathematics"
-    # five subjects remain, so the denominator is 500 not 600
-    assert float(card["total_max"]) == 500.0
+    # Five subjects remain, so the denominator is five papers' worth rather
+    # than six. Derived from the papers instead of hard-coded, because what a
+    # paper is out of is now the scheme's business, not the test's.
+    scored = [r for r in card["rows"] if r["marks_obtained"] is not None]
+    assert len(scored) == 5
+    assert float(card["total_max"]) == sum(float(r["max_marks"]) for r in scored)
+    assert float(card["total_max"]) == float(p.max_marks) * 5
     assert exams  # the exam still appears in the list
 
 

@@ -124,6 +124,9 @@ class ExamCreate(BaseModel):
     term: str
     start_date: date
     end_date: date
+    # Which report-card column this exam fills. None is an ordinary class test:
+    # marked and readable, and not printed.
+    scheme_component_id: int | None = None
 
 
 class ExamOut(BaseModel):
@@ -132,6 +135,7 @@ class ExamOut(BaseModel):
     term: str
     start_date: date
     end_date: date
+    scheme_component_id: int | None = None
 
 
 class ExamScheduleCreate(BaseModel):

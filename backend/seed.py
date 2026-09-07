@@ -23,6 +23,7 @@ from app.services import fee_setup
 from app.services import fees as fees_svc
 from app.services import admission as admission_svc
 from app.services import grading
+from app.services import schemes as schemes_svc
 from app.services import rbac
 from app.models import (
     AcademicYear,
@@ -641,17 +642,39 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
             )
     db.flush()
 
-    # --- exams and marks --------------------------------------------------
-    exams = [
-        Exam(name="Term 1 - Unit Test 1", term="Term 1",
-             start_date=TODAY - timedelta(days=70), end_date=TODAY - timedelta(days=64)),
-        Exam(name="Term 1 - Half Yearly", term="Term 1",
-             start_date=TODAY - timedelta(days=30), end_date=TODAY - timedelta(days=24)),
-    ]
-    db.add_all(exams)
+    # --- assessment scheme, exams and marks -------------------------------
+    # The scheme comes first: an exam cites the report-card column it fills,
+    # and the column says what the paper is out of. Built through the service,
+    # so a defect in the scheme rules breaks the seed rather than only a test
+    # (the same bargain the fee and timetable seeding already makes).
+    scheme = schemes_svc.active_scheme(db, academic_year_id)
+    if scheme is None:
+        scheme = schemes_svc.create(
+            db,
+            school.id,
+            academic_year_id,
+            name="CBSE 2026-27",
+            rows=schemes_svc.CBSE_DEFAULT,
+            activate=True,
+        )
+
+    # Term 1 is examined; Term 2 has its columns defined and nothing entered,
+    # which is what a school actually looks like in the middle of a year.
+    term1 = schemes_svc.components(db, scheme.id, term="Term 1")
+    exams = []
+    for offset, component in enumerate(term1):
+        exam = Exam(
+            name=f"Term 1 - {component.name}",
+            term=component.term,
+            start_date=TODAY - timedelta(days=70 - offset * 14),
+            end_date=TODAY - timedelta(days=64 - offset * 14),
+            scheme_component_id=component.id,
+        )
+        db.add(exam)
+        exams.append((exam, component))
     db.flush()
 
-    for exam in exams:
+    for exam, component in exams:
         for sec in sections:
             for qi, sub in enumerate(subjects):
                 sched = ExamSchedule(
@@ -660,19 +683,22 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
                     subject_id=sub.id,
                     exam_date=exam.start_date + timedelta(days=qi),
                     start_time=time(9, 0),
-                    max_marks=Decimal("100.00"),
+                    max_marks=component.max_marks,
                 )
                 db.add(sched)
                 db.flush()
                 for s in (x for x in students if enrolment_of[x.id].class_section_id == sec.id):
                     # ability band per student keeps all four donut buckets populated
                     base = 30 + (enrolment_of[s.id].roll_no * 8) % 60
-                    score = max(0, min(100, base + rng.randint(-6, 12)))
+                    percent = max(0, min(100, base + rng.randint(-6, 12)))
+                    score = fee_setup.money(
+                        component.max_marks * Decimal(percent) / Decimal(100)
+                    )
                     db.add(
                         Mark(
                             exam_schedule_id=sched.id,
                             student_id=s.id,
-                            marks_obtained=Decimal(score),
+                            marks_obtained=score,
                             entered_by=cst[(sec.id, sub.id)],
                         )
                     )
