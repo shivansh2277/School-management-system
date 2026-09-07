@@ -200,4 +200,6 @@ def ids(db):
         "student_1": s1.id,
         "student_17": s17.id,
         "teacher_1": tch1.id,
+        "school": section_10a.school_id,
+        "year": section_10a.academic_year_id,
     }

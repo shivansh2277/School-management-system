@@ -50,7 +50,7 @@ def dashboard(user: User = Depends(student_only), db: Session = Depends(get_db))
         "next_exam": (
             {
                 "exam_schedule_id": next_paper.id,
-                "subject": subject_names(db).get(next_paper.subject_id, ""),
+                "subject": subject_names(db, user.school_id).get(next_paper.subject_id, ""),
                 "exam_date": next_paper.exam_date,
             }
             if next_paper

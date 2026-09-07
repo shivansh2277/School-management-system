@@ -17,12 +17,18 @@ from app.models import (
 )
 
 
-def section_labels(db: Session) -> dict[int, str]:
-    return {s.id: s.label for s in db.scalars(select(ClassSection))}
+def section_labels(db: Session, school_id: int) -> dict[int, str]:
+    return {
+        s.id: s.label
+        for s in db.scalars(select(ClassSection).where(ClassSection.school_id == school_id))
+    }
 
 
-def subject_names(db: Session) -> dict[int, str]:
-    return {s.id: s.name for s in db.scalars(select(Subject))}
+def subject_names(db: Session, school_id: int) -> dict[int, str]:
+    return {
+        s.id: s.name
+        for s in db.scalars(select(Subject).where(Subject.school_id == school_id))
+    }
 
 
 def roster(db: Session, class_section_id: int) -> list[Enrolment]:
@@ -125,11 +131,19 @@ def enrolment_sections(db: Session, student_ids: list[int]) -> dict[int, int]:
     return {sid: csid for sid, csid in rows}
 
 
-def grade_for(db: Session, percent: float | Decimal | None) -> str | None:
-    """Computed at read time from grade_bands; never stored (BLUEPRINT §7.5)."""
+def grade_for(db: Session, school_id: int, percent: float | Decimal | None) -> str | None:
+    """Computed at read time from grade_bands; never stored (BLUEPRINT §7.5).
+
+    `school_id` is required rather than optional: without it this read every
+    customer's bands and graded one school's child against another's scale.
+    """
     if percent is None:
         return None
-    bands = db.scalars(select(GradeBand).order_by(GradeBand.min_percent.desc())).all()
+    bands = db.scalars(
+        select(GradeBand)
+        .where(GradeBand.school_id == school_id)
+        .order_by(GradeBand.min_percent.desc())
+    ).all()
     for band in bands:
         if Decimal(str(percent)) >= band.min_percent:
             return band.grade

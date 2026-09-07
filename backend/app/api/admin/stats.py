@@ -94,5 +94,9 @@ def grade_bands(user: User = Depends(admin_only), db: Session = Depends(get_db))
 
     return [
         {"id": g.id, "min_percent": g.min_percent, "grade": g.grade}
-        for g in db.scalars(select(GradeBand).order_by(GradeBand.min_percent.desc()))
+        for g in db.scalars(
+            select(GradeBand)
+            .where(GradeBand.school_id == user.school_id)
+            .order_by(GradeBand.min_percent.desc())
+        )
     ]

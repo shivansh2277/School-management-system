@@ -17,7 +17,7 @@ teacher_only = require_permission("academics.class.read")
 def dashboard(user: User = Depends(teacher_only), db: Session = Depends(get_db)) -> dict:
     me = scoping.employee_for(db, user)
     section_ids = scoping.class_section_ids_for(db, user)
-    labels = section_labels(db)
+    labels = section_labels(db, user.school_id)
     owned = {
         (r.class_section_id, r.subject_id)
         for r in db.scalars(

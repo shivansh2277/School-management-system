@@ -45,7 +45,7 @@ class ClassUpdate(BaseModel):
 
 
 def _row(db: Session, c: ClassSection) -> dict:
-    subjects = subject_names(db)
+    subjects = subject_names(db, c.school_id)
     owned = db.scalars(
         select(ClassSubjectTeacher).where(ClassSubjectTeacher.class_section_id == c.id)
     ).all()
@@ -142,7 +142,9 @@ def class_roster(
 def list_subjects(user: User = Depends(admin_only), db: Session = Depends(get_db)) -> list[dict]:
     return [
         {"id": s.id, "name": s.name, "code": s.code}
-        for s in db.scalars(select(Subject).order_by(Subject.name))
+        for s in db.scalars(
+            select(Subject).where(Subject.school_id == user.school_id).order_by(Subject.name)
+        )
     ]
 
 

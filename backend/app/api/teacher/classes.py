@@ -25,8 +25,8 @@ teacher_only = require_permission("academics.class.read")
 @router.get("/classes")
 def my_classes(user: User = Depends(teacher_only), db: Session = Depends(get_db)) -> list[dict]:
     me = scoping.employee_for(db, user)
-    labels = section_labels(db)
-    subjects = subject_names(db)
+    labels = section_labels(db, user.school_id)
+    subjects = subject_names(db, user.school_id)
     owned: dict[int, list[str]] = {}
     for row in db.scalars(
         select(ClassSubjectTeacher).where(ClassSubjectTeacher.teacher_id == me.id)
@@ -79,8 +79,8 @@ def my_timetable(
 @router.get("/profile")
 def my_profile(user: User = Depends(teacher_only), db: Session = Depends(get_db)) -> dict:
     me = scoping.employee_for(db, user)
-    subjects = subject_names(db)
-    labels = section_labels(db)
+    subjects = subject_names(db, user.school_id)
+    labels = section_labels(db, user.school_id)
     owned = db.scalars(
         select(ClassSubjectTeacher).where(ClassSubjectTeacher.teacher_id == me.id)
     ).all()
@@ -107,7 +107,7 @@ def my_subjects(
 ) -> list[dict]:
     """Subjects this teacher owns, optionally within one section."""
     me = scoping.employee_for(db, user)
-    subjects = subject_names(db)
+    subjects = subject_names(db, user.school_id)
     q = select(ClassSubjectTeacher).where(ClassSubjectTeacher.teacher_id == me.id)
     if class_section_id is not None:
         scoping.assert_teaches_section(db, user, class_section_id)

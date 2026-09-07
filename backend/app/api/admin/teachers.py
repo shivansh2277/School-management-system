@@ -41,8 +41,8 @@ class EmployeeUpdate(BaseModel):
 
 
 def _row(db: Session, t: Employee) -> dict:
-    labels = section_labels(db)
-    subjects = subject_names(db)
+    labels = section_labels(db, t.school_id)
+    subjects = subject_names(db, t.school_id)
     owned = db.scalars(
         select(ClassSubjectTeacher).where(ClassSubjectTeacher.teacher_id == t.id)
     ).all()

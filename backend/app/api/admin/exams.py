@@ -24,7 +24,13 @@ admin_only = require_permission("exam.definition.read", school_wide=True)
 
 @router.get("/exams", response_model=list[ExamOut])
 def list_exams(user: User = Depends(admin_only), db: Session = Depends(get_db)) -> list[Exam]:
-    return list(db.scalars(select(Exam).order_by(Exam.start_date.desc())))
+    return list(
+        db.scalars(
+            select(Exam)
+            .where(Exam.school_id == user.school_id)
+            .order_by(Exam.start_date.desc())
+        )
+    )
 
 
 @router.post("/exams", response_model=ExamOut, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_permission("exam.definition.write"))])

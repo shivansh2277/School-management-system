@@ -134,7 +134,7 @@ def top_performers(db: Session, school_id: int, limit: int = 3) -> list[dict]:
     percentages = exam_percentages(db, exam.id)
     if not percentages:
         return []
-    labels = section_labels(db)
+    labels = section_labels(db, school_id)
     students = {
         s.id: s
         for s in db.scalars(
@@ -177,8 +177,8 @@ def today_schedule(
         # periods. Filtering by section alone would show a colleague's class as
         # if it were theirs.
         q = q.where(TimetableSlot.teacher_id == teacher_id)
-    labels = section_labels(db)
-    subjects = subject_names(db)
+    labels = section_labels(db, school_id)
+    subjects = subject_names(db, school_id)
     teachers = {
         t.id: t.user.full_name
         for t in db.scalars(select(Employee).where(Employee.school_id == school_id))

@@ -24,9 +24,15 @@ from app.services.common import (
 
 
 def schedule_out(db: Session, rows: list[ExamSchedule]) -> list[ExamScheduleOut]:
-    labels = section_labels(db)
-    subjects = subject_names(db)
-    exams = {e.id: e.name for e in db.scalars(select(Exam))}
+    if not rows:
+        return []
+    school_id = rows[0].school_id
+    labels = section_labels(db, school_id)
+    subjects = subject_names(db, school_id)
+    exams = {
+        e.id: e.name
+        for e in db.scalars(select(Exam).where(Exam.school_id == school_id))
+    }
     with_marks = set(
         db.scalars(
             select(Mark.exam_schedule_id).where(
@@ -115,7 +121,7 @@ def enter_marks(db: Session, user: User, body: MarksRequest) -> list[MarksRoster
 def report_card(db: Session, student_id: int, exam_id: int) -> ReportCard:
     student = db.get(Student, student_id)
     exam = db.get(Exam, exam_id)
-    if student is None or exam is None:
+    if student is None or exam is None or exam.school_id != student.school_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Exam or student not found")
     enrolment = require_current_enrolment(db, student.id)
     schedules = list(
@@ -135,7 +141,7 @@ def report_card(db: Session, student_id: int, exam_id: int) -> ReportCard:
             )
         )
     }
-    subjects = subject_names(db)
+    subjects = subject_names(db, student.school_id)
     rows, total_obtained, total_max = [], Decimal(0), Decimal(0)
     for sched in sorted(schedules, key=lambda s: s.exam_date):
         obtained = marks.get(sched.id)
@@ -152,7 +158,7 @@ def report_card(db: Session, student_id: int, exam_id: int) -> ReportCard:
                 marks_obtained=obtained,
                 max_marks=sched.max_marks,
                 percent=percent,
-                grade=grade_for(db, percent),
+                grade=grade_for(db, student.school_id, percent),
             )
         )
     overall = round(float(total_obtained) / float(total_max) * 100, 1) if total_max else None
@@ -166,7 +172,7 @@ def report_card(db: Session, student_id: int, exam_id: int) -> ReportCard:
         total_obtained=total_obtained,
         total_max=total_max,
         overall_percent=overall,
-        overall_grade=grade_for(db, overall),
+        overall_grade=grade_for(db, student.school_id, overall),
     )
 
 

@@ -10,8 +10,8 @@ from app.services.common import grade_for
         (71, "B1"), (61, "B2"), (51, "C1"), (41, "C2"), (33, "D"), (32.9, "E"), (0, "E"),
     ],
 )
-def test_grade_band_boundaries(db, percent, grade):
-    assert grade_for(db, percent) == grade
+def test_grade_band_boundaries(db, ids, percent, grade):
+    assert grade_for(db, ids["school"], percent) == grade
 
 
 def paper(db, ids, subject="maths"):
