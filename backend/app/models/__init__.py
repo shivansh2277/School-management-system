@@ -112,7 +112,12 @@ from app.models.user import (
     StudentGuardian,
     User,
 )
-from app.models.hr import LeaveBalance, LeaveTypeDef, StaffLeaveRequest
+from app.models.hr import (
+    LeaveBalance,
+    LeaveTypeDef,
+    StaffAttendance,
+    StaffLeaveRequest,
+)
 from app.models.enrolment import Enrolment
 from app.models.audit import AuditLog, NumberSequence
 from app.models.documents import Document, DocumentType

@@ -6,7 +6,7 @@ a school's staff leave is casual/sick/earned with a quota each, and §3.15 puts
 per-school configuration in tables rather than in code.
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, time
 from decimal import Decimal
 
 from sqlalchemy import (
@@ -20,12 +20,13 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    Time,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TenantBase, enum_col
-from app.models.enums import LeaveStatus
+from app.models.enums import AttendanceStatus, LeaveStatus
 
 
 class LeaveTypeDef(TenantBase):
@@ -132,3 +133,37 @@ class StaffLeaveRequest(TenantBase):
 
     employee = relationship("Employee", lazy="joined")
     leave_type = relationship("LeaveTypeDef", lazy="joined")
+
+
+class StaffAttendance(TenantBase):
+    """One day, one member of staff, one mark.
+
+    Keyed to the employee rather than to an enrolment, because unlike a child a
+    member of staff has no per-year membership row — the employment *is* the
+    continuity. `AttendanceStatus` is shared with the student register: the
+    six states a school records about a person being in or not are the same
+    six, and a second nearly-identical enum would be two lists to keep in step.
+    """
+
+    __tablename__ = "staff_attendance"
+    __table_args__ = (
+        UniqueConstraint("employee_id", "date", name="uq_staff_attendance_date"),
+        Index("ix_staff_attendance_date", "date"),
+        Index("ix_staff_attendance_employee_date", "employee_id", "date"),
+    )
+
+    employee_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("employees.id"), nullable=False
+    )
+    date: Mapped[date] = mapped_column(Date, nullable=False)
+    status: Mapped[AttendanceStatus] = enum_col(AttendanceStatus, nullable=False)
+    check_in: Mapped[time | None] = mapped_column(Time)
+    check_out: Mapped[time | None] = mapped_column(Time)
+    # Nullable for the same reason the student register's is: a row written by
+    # an approved leave request was not marked by anybody, and naming somebody
+    # who did not touch it is worse than a null.
+    marked_by: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id"))
+    corrected_by: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id")
+    )
+    remarks: Mapped[str | None] = mapped_column(String(200))

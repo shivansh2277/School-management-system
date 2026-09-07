@@ -312,6 +312,13 @@ def approve(
     request.decided_at = datetime.now(UTC)
     request.decision_note = note
 
+    # Approving leave writes the register, exactly as student leave does. Any
+    # other arrangement leaves "approved leave" in one table and `absent` in
+    # another, reconciled only by whoever remembers.
+    from app.services import staff_attendance
+
+    register = staff_attendance.write_leave(db, request)
+
     created = []
     for day, slot in affected_periods(db, request):
         existing = db.scalar(
@@ -348,11 +355,16 @@ def approve(
             "days": str(request.days),
             "balance_exception": request.balance_exception,
             "substitutions_raised": len(created),
+            "register_days_written": len(register),
         },
         reason=note or "Leave approved",
         academic_year_id=request.academic_year_id,
     )
-    return {"request": request, "substitutions": created}
+    return {
+        "request": request,
+        "substitutions": created,
+        "register_days": register,
+    }
 
 
 def reject(
@@ -402,6 +414,21 @@ def cancel(
         employee = db.get(Employee, request.employee_id)
         bal = balance(db, employee, request.leave_type, request.academic_year_id)
         bal.used = max(Decimal(0), bal.used - request.days)
+        # The register rows this leave wrote go with it; a day somebody was
+        # actually marked present on is left alone, because `write_leave` never
+        # touched it.
+        from app.models import AttendanceStatus, StaffAttendance
+
+        for row in db.scalars(
+            select(StaffAttendance).where(
+                StaffAttendance.employee_id == request.employee_id,
+                StaffAttendance.date >= request.from_date,
+                StaffAttendance.date <= request.to_date,
+                StaffAttendance.status == AttendanceStatus.leave,
+                StaffAttendance.marked_by.is_(None),
+            )
+        ):
+            db.delete(row)
         for cover in db.scalars(
             select(Substitution).where(
                 Substitution.absent_teacher_id == request.employee_id,
