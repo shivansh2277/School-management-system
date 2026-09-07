@@ -89,11 +89,11 @@ def test_a_failing_job_is_retried_then_given_up_on(db):
 def test_the_overdue_sweep_moves_stale_invoices(db):
     """This is the job that replaces v0 writing from inside a GET."""
     invoice = db.scalar(
-        select(FeeInvoice).where(FeeInvoice.status == InvoiceStatus.pending)
+        select(FeeInvoice).where(FeeInvoice.status == InvoiceStatus.issued)
     )
     if invoice is None:
         invoice = db.scalars(select(FeeInvoice)).first()
-        invoice.status = InvoiceStatus.pending
+        invoice.status = InvoiceStatus.issued
     invoice.due_date = datetime.now(UTC).date() - timedelta(days=10)
     db.commit()
 
@@ -108,7 +108,7 @@ def test_reading_invoices_does_not_write(client, parent, db):
     """v0's to_out() persisted pending -> overdue, so a GET committed. A read
     must not have side effects."""
     invoice = db.scalars(select(FeeInvoice)).first()
-    invoice.status = InvoiceStatus.pending
+    invoice.status = InvoiceStatus.issued
     invoice.due_date = datetime.now(UTC).date() - timedelta(days=5)
     db.commit()
 
@@ -120,7 +120,7 @@ def test_reading_invoices_does_not_write(client, parent, db):
         assert row["status"] == "overdue"
     # ...but nothing was written; only the sweep changes stored state.
     db.expire_all()
-    assert db.get(FeeInvoice, invoice.id).status is InvoiceStatus.pending
+    assert db.get(FeeInvoice, invoice.id).status is InvoiceStatus.issued
 
 
 def _heartbeat(db):

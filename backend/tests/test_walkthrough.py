@@ -5,6 +5,7 @@ If this test passes, the demo works; if any link were mocked, it would fail.
 """
 
 from datetime import date, timedelta
+from decimal import Decimal
 
 
 def test_cross_role_walkthrough(client, admin, teacher, student, parent, db, ids):
@@ -149,27 +150,31 @@ def test_cross_role_walkthrough(client, admin, teacher, student, parent, db, ids
     ).json()
     assert generated["created"] == db.query(Student).count()
 
-    # 14. Guardian pays one and downloads the PDF receipt.
+    # 14. Guardian pays their December bill and downloads the PDF receipt.
     before = client.get("/admin/fees/collection?year=2026", headers=admin).json()
     invoice = next(
         i
         for i in client.get("/parent/fees", headers=parent).json()
         if i["status"] != "paid" and i["year"] == 2026 and i["month"] == 12
     )
-    payment = client.post(f"/parent/fees/{invoice['id']}/pay", headers=parent)
-    assert payment.status_code == 200
-    assert (
-        next(
-            i for i in client.get("/parent/fees", headers=parent).json() if i["id"] == invoice["id"]
-        )["status"]
-        == "paid"
+    due_now = Decimal(invoice["balance"])
+    payment = client.post(
+        "/parent/fees/pay",
+        json={
+            "student_id": invoice["student_id"],
+            "amount": str(due_now),
+            "idempotency_key": "walkthrough-fee",
+        },
+        headers=parent,
     )
-    pdf = client.get(f"/parent/fees/{invoice['id']}/receipt.pdf", headers=parent)
+    assert payment.status_code == 201, payment.text
+    pdf = client.get(f"/parent/fees/receipts/{payment.json()['id']}.pdf", headers=parent)
     assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF")
 
-    # 15. The admin collection total rose by exactly that amount.
+    # 15. The admin collection total rose by exactly what was allocated. The
+    # money settles the oldest dues first, so it need not land on December.
     after = client.get("/admin/fees/collection?year=2026", headers=admin).json()
-    assert float(after["collected"]) - float(before["collected"]) == float(invoice["amount"])
+    assert Decimal(after["collected"]) - Decimal(before["collected"]) == due_now
 
     # 16. An admin notice to "parents" reaches the parent and not the student.
     notice = client.post(

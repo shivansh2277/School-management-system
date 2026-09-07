@@ -322,7 +322,9 @@ def test_checkpoint_2_portal_to_enrolled_student(client, admin, db):
     fees.generate(db, month=date.today().month, year=date.today().year, school_id=student.school_id)
     db.commit()
     invoice = db.scalar(
-        select(FeeInvoice).where(FeeInvoice.student_id == student.id)
+        select(FeeInvoice)
+        .join(Enrolment, Enrolment.id == FeeInvoice.enrolment_id)
+        .where(Enrolment.student_id == student.id)
     )
     assert invoice is not None
 

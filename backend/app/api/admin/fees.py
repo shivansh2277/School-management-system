@@ -1,79 +1,188 @@
-from datetime import date as Date
+"""Invoices, the collection counter and the fee dashboard (§5.5.3).
 
-from fastapi import APIRouter, Depends
+Catalogue setup lives in `fee_setup.py`; this is the money itself.
+"""
+
+from datetime import date as Date
+from decimal import Decimal
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.services.rbac import require_permission
 from app.models import (
     Enrolment,
     FeeInvoice,
-    FeeStructure,
+    FeePayment,
     InvoiceStatus,
     Student,
     User,
-    UserRole,
-)
-from app.schemas.common import (
-    CollectionSummary,
-    GenerateInvoicesRequest,
-    GenerateInvoicesResult,
-    InvoiceOut,
 )
 from app.services import fees as svc
+from app.services.rbac import require_permission
+from app.services.school_settings import module_enabled
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(
+    prefix="/admin",
+    tags=["admin"],
+    dependencies=[Depends(module_enabled("fees"))],
+)
+
 admin_only = require_permission("fees.invoice.read", school_wide=True)
+collector = require_permission("fees.payment.collect", school_wide=True)
+voider = require_permission("fees.payment.void", school_wide=True)
 
 
-@router.get("/fees/structures")
-def structures(user: User = Depends(admin_only), db: Session = Depends(get_db)) -> list[dict]:
-    return [
-        {"id": f.id, "class_name": f.class_name, "monthly_amount": f.monthly_amount}
-        for f in db.scalars(select(FeeStructure).order_by(FeeStructure.class_name))
-    ]
+class GenerateIn(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    month: int
+    year: int
 
 
-@router.get("/fees/invoices", response_model=list[InvoiceOut])
+class CollectIn(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    enrolment_id: int
+    amount: Decimal
+    method: str = "cash"
+    instrument_ref: str | None = None
+    # Required, not optional: without it a retried request at the counter takes
+    # the money twice (§3.9 rule 4).
+    idempotency_key: str = Field(min_length=8, max_length=64)
+
+
+class ReasonIn(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    reason: str = Field(min_length=3)
+
+
+def _payment_out(p: FeePayment) -> dict:
+    return {
+        "id": p.id,
+        "receipt_no": p.receipt_no,
+        "enrolment_id": p.enrolment_id,
+        "amount": p.amount,
+        "method": p.method,
+        "instrument_ref": p.instrument_ref,
+        "received_at": p.received_at,
+        "status": p.status,
+        "reverses_payment_id": p.reverses_payment_id,
+        "allocations": [
+            {"invoice_line_id": a.invoice_line_id, "amount": a.amount} for a in p.allocations
+        ],
+    }
+
+
+@router.get("/fees/invoices")
 def invoices(
     month: int | None = None,
     year: int | None = None,
-    status: InvoiceStatus | None = None,
+    status_: InvoiceStatus | None = None,
     class_section_id: int | None = None,
     user: User = Depends(admin_only),
     db: Session = Depends(get_db),
-) -> list[InvoiceOut]:
-    q = select(FeeInvoice)
+) -> list[dict]:
+    q = select(FeeInvoice).where(FeeInvoice.school_id == user.school_id)
     if month is not None:
-        q = q.where(FeeInvoice.month == month)
+        q = q.where(FeeInvoice.period_month == month)
     if year is not None:
-        q = q.where(FeeInvoice.year == year)
+        q = q.where(FeeInvoice.period_year == year)
     if class_section_id is not None:
         q = q.where(
-            FeeInvoice.student_id.in_(
-                select(Enrolment.student_id).where(
-                    Enrolment.class_section_id == class_section_id
-                )
+            FeeInvoice.enrolment_id.in_(
+                select(Enrolment.id).where(Enrolment.class_section_id == class_section_id)
             )
         )
-    rows = list(db.scalars(q.order_by(FeeInvoice.year.desc(), FeeInvoice.month.desc())))
-    out = svc.to_out(db, rows)
-    # status filter is applied after the overdue refresh, so it matches what is shown
-    return [i for i in out if status is None or i.status == status]
+    rows = list(
+        db.scalars(q.order_by(FeeInvoice.period_year.desc(), FeeInvoice.period_month.desc()))
+    )
+    out = svc.list_invoices(db, rows)
+    # Filtered after the presented status is computed, so the filter matches
+    # what the screen shows rather than what the sweep last stored.
+    return [i for i in out if status_ is None or i["status"] == status_]
 
 
-@router.post("/fees/invoices/generate", response_model=GenerateInvoicesResult, dependencies=[Depends(require_permission("fees.invoice.generate"))])
+@router.post(
+    "/fees/invoices/generate",
+    dependencies=[Depends(require_permission("fees.invoice.generate"))],
+)
 def generate(
-    body: GenerateInvoicesRequest,
-    user: User = Depends(admin_only),
+    body: GenerateIn, user: User = Depends(admin_only), db: Session = Depends(get_db)
+) -> dict:
+    return svc.generate(db, body.month, body.year, user.school_id, actor=user)
+
+
+@router.post("/fees/invoices/{invoice_id}/void")
+def void_invoice(
+    invoice_id: int,
+    body: ReasonIn,
+    user: User = Depends(voider),
     db: Session = Depends(get_db),
-) -> GenerateInvoicesResult:
-    return svc.generate(db, body.month, body.year, user.school_id)
+) -> dict:
+    invoice = db.get(FeeInvoice, invoice_id)
+    if invoice is None or invoice.school_id != user.school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Invoice not found")
+    return svc.invoice_out(db, svc.void(db, invoice, body.reason, user))
 
 
-@router.get("/fees/collection", response_model=CollectionSummary)
+@router.get("/fees/ledger/{student_id}")
+def ledger(
+    student_id: int, user: User = Depends(admin_only), db: Session = Depends(get_db)
+) -> dict:
+    student = db.get(Student, student_id)
+    if student is None or student.school_id != user.school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Student not found")
+    enrolment = svc.enrolment_for_student(db, student_id)
+    if enrolment is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "This student has no active enrolment")
+    return {"student_id": student_id, **svc.ledger(db, enrolment.id)}
+
+
+@router.post("/fees/payments", status_code=201)
+def collect(
+    body: CollectIn, user: User = Depends(collector), db: Session = Depends(get_db)
+) -> dict:
+    enrolment = db.get(Enrolment, body.enrolment_id)
+    if enrolment is None or enrolment.school_id != user.school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Enrolment not found")
+    payment = svc.collect(
+        db,
+        enrolment.id,
+        body.amount,
+        idempotency_key=body.idempotency_key,
+        method=body.method,
+        instrument_ref=body.instrument_ref,
+        actor=user,
+    )
+    return _payment_out(payment)
+
+
+@router.post("/fees/payments/{payment_id}/reverse")
+def reverse(
+    payment_id: int,
+    body: ReasonIn,
+    user: User = Depends(voider),
+    db: Session = Depends(get_db),
+) -> dict:
+    payment = db.get(FeePayment, payment_id)
+    if payment is None or payment.school_id != user.school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found")
+    if payment.received_by == user.id:
+        # §5.5.9: taking the money and cancelling the record of it are not the
+        # same pair of hands.
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "A payment must be reversed by someone other than whoever collected it",
+        )
+    return _payment_out(svc.reverse(db, payment, body.reason, user))
+
+
+@router.get("/fees/collection")
 def collection(
     year: int | None = None, user: User = Depends(admin_only), db: Session = Depends(get_db)
-) -> CollectionSummary:
-    return svc.collection(db, year or Date.today().year)
+) -> dict:
+    return svc.collection(db, year or Date.today().year, user.school_id)

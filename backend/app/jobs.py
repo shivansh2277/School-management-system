@@ -34,7 +34,9 @@ def overdue_sweep(db: Session, job: Job) -> dict:
         db.scalars(
             select(FeeInvoice).where(
                 FeeInvoice.school_id == job.school_id,
-                FeeInvoice.status == InvoiceStatus.pending,
+                FeeInvoice.status.in_(
+                    (InvoiceStatus.issued, InvoiceStatus.partially_paid)
+                ),
                 FeeInvoice.due_date < today,
             )
         )
@@ -62,9 +64,9 @@ def generate_invoices(db: Session, job: Job) -> dict:
         school_id=job.school_id,
         entity_type="fee_invoice_run",
         action=AuditAction.create,
-        after={"month": month, "year": year, "created": result.created},
+        after={"month": month, "year": year, "created": result["created"]},
     )
-    return {"created": result.created, "skipped": result.skipped}
+    return result
 
 
 @handler("admission.offer_sweep")

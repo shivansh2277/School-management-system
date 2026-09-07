@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
-from app.models import AttendanceStatus, InvoiceStatus, NoticeAudience
+from app.models import AttendanceStatus, NoticeAudience
 
 
 class Page(BaseModel):
@@ -234,50 +234,3 @@ class SlotOut(BaseModel):
 
 
 # --- fees -------------------------------------------------------------------
-
-
-class InvoiceOut(BaseModel):
-    id: int
-    student_id: int
-    student_name: str
-    admission_no: str
-    class_label: str
-    month: int
-    year: int
-    amount: Decimal
-    due_date: date
-    status: InvoiceStatus
-    receipt_no: str | None
-    paid_at: datetime | None
-
-
-class GenerateInvoicesRequest(BaseModel):
-    month: int
-    year: int
-
-
-class GenerateInvoicesResult(BaseModel):
-    created: int
-    skipped: int
-
-
-class PaymentResult(BaseModel):
-    invoice_id: int
-    receipt_no: str
-    txn_ref: str
-    amount: Decimal
-    paid_at: datetime
-
-
-class CollectionMonth(BaseModel):
-    month: int
-    billed: Decimal
-    collected: Decimal
-
-
-class CollectionSummary(BaseModel):
-    year: int
-    billed: Decimal
-    collected: Decimal
-    outstanding: Decimal
-    months: list[CollectionMonth]

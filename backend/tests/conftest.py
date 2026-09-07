@@ -116,6 +116,12 @@ def admin(client):
 
 
 @pytest.fixture()
+def cashier(client):
+    """The counter clerk: may collect, may not void (§5.5.9)."""
+    return auth(_token(client, "admin", "counter@sunrisepublic.edu", "Admin@123"))
+
+
+@pytest.fixture()
 def teacher(client):
     """TCH001 — class teacher of 10-A and its Mathematics teacher."""
     return auth(_token(client, "teacher", "TCH001", "Teacher@123"))

@@ -15,22 +15,23 @@ def test_totals_match_direct_counts(client, admin, db):
     assert stats["totals"]["classes"] == db.query(ClassSection).count()
 
 
-def test_fees_collected_matches_the_sum_of_payments(client, admin, db):
-    from app.models import AcademicYear, FeeInvoice, FeePayment
+def test_fees_collected_matches_the_allocated_payments(client, admin, db):
+    from sqlalchemy import func, select
+
+    from app.models import AcademicYear, FeeInvoice, FeeInvoiceLine, PaymentAllocation
 
     stats = client.get("/admin/dashboard/stats", headers=admin).json()
     current = db.query(AcademicYear).filter_by(is_current=True).one()
     year = current.start_date.year
-    expected = sum(
-        (
-            p.amount
-            for p in db.query(FeePayment)
-            .join(FeeInvoice, FeeInvoice.id == FeePayment.invoice_id)
-            .filter(FeeInvoice.year.in_([year, year + 1]))
-        ),
-        Decimal(0),
+    # Collection is what was allocated to invoices of those years, not the sum
+    # of payments: an advance is money held, not revenue for a month unbilled.
+    expected = db.scalar(
+        select(func.coalesce(func.sum(PaymentAllocation.amount), 0))
+        .join(FeeInvoiceLine, FeeInvoiceLine.id == PaymentAllocation.invoice_line_id)
+        .join(FeeInvoice, FeeInvoice.id == FeeInvoiceLine.invoice_id)
+        .where(FeeInvoice.period_year.in_([year, year + 1]))
     )
-    assert Decimal(stats["totals"]["fees_collected"]) == expected
+    assert Decimal(stats["totals"]["fees_collected"]) == Decimal(expected)
 
 
 def test_performance_buckets_cover_every_scored_student(client, admin, db):

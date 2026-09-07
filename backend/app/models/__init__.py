@@ -55,6 +55,7 @@ from app.models.enums import (
     ConcessionType,
     FeeFrequency,
     FeeHeadType,
+    FeePaymentStatus,
     InvoiceStatus,
     NoticeAudience,
     ScopeType,
@@ -66,10 +67,11 @@ from app.models.fees import (
     FeeConcession,
     FeeHead,
     FeeInvoice,
+    FeeInvoiceLine,
     FeePayment,
     FeePlan,
     FeePlanItem,
-    FeeStructure,
+    PaymentAllocation,
     StudentFeePlan,
 )
 from app.models.ops import Attendance, Homework, HomeworkSubmission, Notice

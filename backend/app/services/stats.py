@@ -16,7 +16,8 @@ from app.models import (
     ClassSection,
     ExamSchedule,
     FeeInvoice,
-    FeePayment,
+    FeeInvoiceLine,
+    PaymentAllocation,
     Mark,
     Student,
     Employee,
@@ -55,12 +56,16 @@ def totals(db: Session, year: AcademicYear) -> dict:
         .select_from(ClassSection)
         .where(ClassSection.academic_year_id == year.id)
     )
+    # Collection is the sum of what payments were *allocated to*, not of the
+    # payments themselves: an advance is money received, not revenue for a
+    # month that has not been billed yet.
     fees = db.scalar(
-        select(func.coalesce(func.sum(FeePayment.amount), 0))
-        .join(FeeInvoice, FeeInvoice.id == FeePayment.invoice_id)
+        select(func.coalesce(func.sum(PaymentAllocation.amount), 0))
+        .join(FeeInvoiceLine, FeeInvoiceLine.id == PaymentAllocation.invoice_line_id)
+        .join(FeeInvoice, FeeInvoice.id == FeeInvoiceLine.invoice_id)
         .where(
             FeeInvoice.school_id == school_id,
-            FeeInvoice.year.in_(_academic_years(year.code)),
+            FeeInvoice.period_year.in_(_academic_years(year.code)),
         )
     )
     return {
@@ -194,14 +199,15 @@ def today_schedule(
 def fee_trend(db: Session, school_id: int) -> list[dict]:
     rows = db.execute(
         select(
-            FeeInvoice.year,
-            FeeInvoice.month,
-            func.sum(FeePayment.amount),
+            FeeInvoice.period_year,
+            FeeInvoice.period_month,
+            func.sum(PaymentAllocation.amount),
         )
-        .join(FeePayment, FeePayment.invoice_id == FeeInvoice.id)
+        .join(FeeInvoiceLine, FeeInvoiceLine.invoice_id == FeeInvoice.id)
+        .join(PaymentAllocation, PaymentAllocation.invoice_line_id == FeeInvoiceLine.id)
         .where(FeeInvoice.school_id == school_id)
-        .group_by(FeeInvoice.year, FeeInvoice.month)
-        .order_by(FeeInvoice.year, FeeInvoice.month)
+        .group_by(FeeInvoice.period_year, FeeInvoice.period_month)
+        .order_by(FeeInvoice.period_year, FeeInvoice.period_month)
     ).all()
     # only months that have collections; no zero-filled placeholder points
     return [{"month": f"{y}-{m:02d}", "collected": Decimal(v)} for y, m, v in rows]

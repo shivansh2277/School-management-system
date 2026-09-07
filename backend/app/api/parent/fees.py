@@ -1,68 +1,118 @@
+from decimal import Decimal
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.services.rbac import require_permission
-from app.models import FeeInvoice, FeePayment, InvoiceStatus, User, UserRole
+from app.models import Enrolment, FeeInvoice, FeePayment, User
 from app.pdf.receipt import build_receipt
-from app.schemas.common import InvoiceOut, PaymentResult
 from app.services import fees as svc
 from app.services import scoping
+from app.services.rbac import require_permission
+from app.services.school_settings import module_enabled
 
-router = APIRouter(prefix="/parent", tags=["parent"])
+router = APIRouter(
+    prefix="/parent",
+    tags=["parent"],
+    dependencies=[Depends(module_enabled("fees"))],
+)
 parent_only = require_permission("fees.invoice.read")
 
 
-def _own_invoice(db: Session, user: User, invoice_id: int) -> FeeInvoice:
-    invoice = db.get(FeeInvoice, invoice_id)
-    if invoice is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Invoice not found")
-    scoping.assert_can_read_student(db, user, invoice.student_id)
-    return invoice
+class PayIn(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    student_id: int
+    amount: Decimal
+    idempotency_key: str = Field(min_length=8, max_length=64)
 
 
-@router.get("/fees", response_model=list[InvoiceOut])
+def _enrolment_of(db: Session, user: User, student_id: int):
+    scoping.assert_can_read_student(db, user, student_id)
+    enrolment = svc.enrolment_for_student(db, student_id)
+    if enrolment is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No active enrolment")
+    return enrolment
+
+
+@router.get("/fees")
 def invoices(
     student_id: int | None = None,
     user: User = Depends(parent_only),
     db: Session = Depends(get_db),
-) -> list[InvoiceOut]:
+) -> list[dict]:
+    ids = (
+        [student_id]
+        if student_id is not None
+        else scoping.child_ids_for(db, user)
+    )
     if student_id is not None:
         scoping.assert_can_read_student(db, user, student_id)
-        ids = [student_id]
-    else:
-        ids = scoping.child_ids_for(db, user)
+    enrolment_ids = [
+        e.id for e in (svc.enrolment_for_student(db, sid) for sid in ids) if e is not None
+    ]
     rows = list(
         db.scalars(
             select(FeeInvoice)
-            .where(FeeInvoice.student_id.in_(ids))
-            .order_by(FeeInvoice.year.desc(), FeeInvoice.month.desc())
+            .where(FeeInvoice.enrolment_id.in_(enrolment_ids or [0]))
+            .order_by(FeeInvoice.period_year.desc(), FeeInvoice.period_month.desc())
         )
     )
-    return svc.to_out(db, rows)
+    return svc.list_invoices(db, rows)
 
 
-@router.post("/fees/{invoice_id}/pay", response_model=PaymentResult, dependencies=[Depends(require_permission("fees.payment.pay_own"))])
-def pay(
-    invoice_id: int, user: User = Depends(parent_only), db: Session = Depends(get_db)
-) -> PaymentResult:
-    invoice = _own_invoice(db, user, invoice_id)
-    return svc.pay(db, invoice.id, actor=user)
+@router.get("/fees/ledger")
+def ledger(
+    student_id: int, user: User = Depends(parent_only), db: Session = Depends(get_db)
+) -> dict:
+    return svc.ledger(db, _enrolment_of(db, user, student_id).id)
 
 
-@router.get("/fees/{invoice_id}/receipt.pdf")
+@router.post(
+    "/fees/pay",
+    status_code=201,
+    dependencies=[Depends(require_permission("fees.payment.pay_own"))],
+)
+def pay(body: PayIn, user: User = Depends(parent_only), db: Session = Depends(get_db)) -> dict:
+    """Record a payment against the child's account.
+
+    Not "pay invoice 12": §0.10 defers the gateway, and even offline a parent
+    hands over an amount, not a row. It settles the oldest dues first, which is
+    both what a school does and what keeps the late-fee clock shortest.
+    """
+    enrolment = _enrolment_of(db, user, body.student_id)
+    payment = svc.collect(
+        db,
+        enrolment.id,
+        body.amount,
+        idempotency_key=body.idempotency_key,
+        method="online",
+        actor=user,
+    )
+    return {
+        "id": payment.id,
+        "receipt_no": payment.receipt_no,
+        "amount": payment.amount,
+        "received_at": payment.received_at,
+        "credit": svc.credit_balance(db, enrolment.id),
+    }
+
+
+@router.get("/fees/receipts/{payment_id}.pdf")
 def receipt(
-    invoice_id: int, user: User = Depends(parent_only), db: Session = Depends(get_db)
+    payment_id: int, user: User = Depends(parent_only), db: Session = Depends(get_db)
 ) -> Response:
-    invoice = _own_invoice(db, user, invoice_id)
-    if invoice.status != InvoiceStatus.paid:
-        raise HTTPException(status.HTTP_409_CONFLICT, "This invoice has not been paid")
-    if db.scalar(select(FeePayment).where(FeePayment.invoice_id == invoice.id)) is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "No payment recorded for this invoice")
-    filename = f"receipt-{invoice.id}.pdf"
+    payment = db.get(FeePayment, payment_id)
+    if payment is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found")
+    owner = db.get(Enrolment, payment.enrolment_id)
+    scoping.assert_can_read_student(db, user, owner.student_id)
     return Response(
-        content=build_receipt(db, invoice.id),
+        content=build_receipt(db, payment.id),
         media_type="application/pdf",
-        headers={"Content-Disposition": f"inline; filename={filename}"},
+        headers={
+            "Content-Disposition": f"inline; filename=receipt-{payment.receipt_no.replace('/', '-')}.pdf"
+        },
     )

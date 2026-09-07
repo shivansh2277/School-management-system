@@ -10,7 +10,6 @@ from app.models import (
     Exam,
     ExamSchedule,
     FeeInvoice,
-    InvoiceStatus,
     Mark,
     Guardian,
     StudentGuardian,
@@ -55,7 +54,6 @@ def summary(
         db, s.school_id, enrolment.class_section_id if enrolment else None
     )
     hw = homework.for_student(db, s.id)
-    invoices = list(db.scalars(select(FeeInvoice).where(FeeInvoice.student_id == s.id)))
     return {
         "student_id": s.id,
         "name": s.user.full_name,
@@ -66,7 +64,22 @@ def summary(
         "latest_result_percent": (
             assessment.student_average_percent(db, s.id, exam.id) if exam else None
         ),
-        "fee_dues": sum(1 for i in invoices if fees.presented_status(i) != InvoiceStatus.paid),
+        # Unsettled invoices, from the ledger rather than from a status
+        # column, so a part payment does not read as a cleared due.
+        "fee_dues": sum(
+            1
+            for i in fees.list_invoices(
+                db,
+                list(
+                    db.scalars(
+                        select(FeeInvoice).where(
+                            FeeInvoice.enrolment_id == (enrolment.id if enrolment else 0)
+                        )
+                    )
+                ),
+            )
+            if i["balance"] > 0
+        ),
         "recent_notices": notices.visible_to(db, user)[:5],
     }
 

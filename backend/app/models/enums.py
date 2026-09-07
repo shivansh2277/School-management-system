@@ -144,9 +144,25 @@ class NoticeAudience(StrEnum):
 
 
 class InvoiceStatus(StrEnum):
-    pending = "pending"
+    """ERP_BLUEPRINT §5.5.7. `overdue` is stored as well as computed: the
+    scheduled sweep moves it, and `fees.presented_status()` shows how an
+    invoice reads right now without a GET writing anything."""
+
+    draft = "draft"
+    issued = "issued"
+    partially_paid = "partially_paid"
     paid = "paid"
     overdue = "overdue"
+    voided = "voided"
+    written_off = "written_off"
+
+
+class FeePaymentStatus(StrEnum):
+    """A payment is never edited. It succeeded, or a contra entry reversed it
+    and both rows stay (§3.9 rule 3)."""
+
+    success = "success"
+    reversed = "reversed"
 
 
 class Gender(StrEnum):

@@ -69,15 +69,24 @@ def test_a_reason_is_required_for_the_actions_that_need_one(db):
 
 
 def test_paying_an_invoice_is_audited(client, parent, db):
-    invoices = client.get("/parent/fees", headers=parent).json()
-    unpaid = next(i for i in invoices if i["status"] != "paid")
-    r = client.post(f"/parent/fees/{unpaid['id']}/pay", headers=parent)
-    assert r.status_code == 200
+    children = client.get("/parent/children", headers=parent).json()
+    r = client.post(
+        "/parent/fees/pay",
+        json={
+            "student_id": children[0]["id"],
+            "amount": "100.00",
+            "idempotency_key": "audit-payment",
+        },
+        headers=parent,
+    )
+    assert r.status_code == 201
 
     entry = db.scalar(
         select(AuditLog).where(
             AuditLog.entity_type == "fee_payment",
-            AuditLog.entity_id == unpaid["id"],
+            # the payment is the audited entity now, not the invoice: one
+            # payment can settle several months
+            AuditLog.entity_id == r.json()["id"],
         )
     )
     assert entry is not None
@@ -116,12 +125,17 @@ def test_receipt_numbers_continue_from_the_seeded_history(client, parent, db):
     """The seed draws from the same counter, so the first payment afterwards
     does not collide with a receipt already issued."""
     existing = set(db.scalars(select(FeePayment.receipt_no)))
-    invoices = client.get("/parent/fees", headers=parent).json()
-    unpaid = next(i for i in invoices if i["status"] != "paid")
+    children = client.get("/parent/children", headers=parent).json()
 
-    receipt = client.post(f"/parent/fees/{unpaid['id']}/pay", headers=parent).json()[
-        "receipt_no"
-    ]
+    receipt = client.post(
+        "/parent/fees/pay",
+        json={
+            "student_id": children[0]["id"],
+            "amount": "100.00",
+            "idempotency_key": "receipt-continuity",
+        },
+        headers=parent,
+    ).json()["receipt_no"]
     assert receipt not in existing
 
     seq = db.scalar(

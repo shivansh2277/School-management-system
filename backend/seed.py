@@ -20,6 +20,7 @@ from app.core.permissions import LEGACY_ROLE_MAP
 from app.services import jobs as jobs_svc
 from app.services import audit as audit_svc
 from app.services import fee_setup
+from app.services import fees as fees_svc
 from app.services import admission as admission_svc
 from app.services import rbac
 from app.models import (
@@ -44,19 +45,15 @@ from app.models import (
     DayOfWeek,
     Exam,
     ExamSchedule,
-    FeeInvoice,
-    FeePayment,
     FeeFrequency,
     FeeHead,
     FeeHeadType,
     FeePlan,
     FeePlanItem,
-    FeeStructure,
     Gender,
     GradeBand,
     Homework,
     HomeworkSubmission,
-    InvoiceStatus,
     Mark,
     Notice,
     NoticeAudience,
@@ -76,6 +73,7 @@ from app.models import (
 )
 
 ACADEMIC_YEAR = "2025-26"
+CASHIER_LOGIN = "counter@sunrisepublic.edu"
 SCHOOL_CODE = "SPS"
 TODAY = date(2026, 9, 1)  # deterministic "today" so the seeded window never drifts
 
@@ -357,6 +355,18 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
     )
     db.add(admin)
 
+    # A cashier, so the segregation of duties in §5.5.9 is demonstrable rather
+    # than theoretical: this account may take money and may not cancel it.
+    cashier = User(
+        role=UserRole.admin,
+        login_id=CASHIER_LOGIN,
+        password_hash=hash_password(DEMO_PASSWORDS[UserRole.admin]),
+        full_name="Fee Counter Clerk",
+        email=CASHIER_LOGIN,
+        phone="+91 522 400 1235",
+    )
+    db.add(cashier)
+
     teachers: list[Employee] = []
     for i, (name, qual) in enumerate(TEACHER_NAMES, start=1):
         emp = f"TCH{i:03d}"
@@ -632,7 +642,6 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
     fees = {
         name: Decimal(f"{1200 + int(name) * 160}.00") for name in CLASS_NAMES
     }
-    db.add_all(FeeStructure(class_name=c, monthly_amount=a) for c, a in fees.items())
 
     # The catalogue that replaces the flat structure above: heads a school
     # actually itemises on a fee card, and one plan per class carrying them.
@@ -678,44 +687,44 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
     # act on and the concession register is not empty on a fresh install.
     fee_setup.apply_sibling_concessions(db, school.id)
 
-    class_name_of = {s.id: s.class_name for s in sections}
+    # Three months of history, billed through the real invoice generator
+    # rather than by hand: a seed that fabricates rows cannot catch a defect in
+    # the code that will produce them in production.
     for back in (3, 2, 1):
         month, year = month_back(TODAY, back)
-        for s in students:
-            amount = fees[class_name_of[enrolment_of[s.id].class_section_id]]
-            due = date(year, month, 10)
-            paid = (enrolment_of[s.id].roll_no + month) % 3 != 0
-            inv = FeeInvoice(
-                student_id=s.id,
-                month=month,
-                year=year,
-                amount=amount,
-                due_date=due,
-                # every seeded month is already past its due date
-                status=InvoiceStatus.paid if paid else InvoiceStatus.overdue,
+        fees_svc.generate(db, month, year, school.id)
+
+    # Collection: most families pay in full, some part-pay, some have not paid
+    # at all. Deterministic from the roll number, so a demo walkthrough shows
+    # the same student in the same state every time.
+    for s in students:
+        enrolment = enrolment_of[s.id]
+        pattern = enrolment.roll_no % 3
+        if pattern == 0:  # nothing paid — the defaulter list needs entries
+            continue
+        outstanding = fees_svc.outstanding_invoices(db, enrolment.id)
+        for invoice in outstanding[:-1]:
+            fees_svc.collect(
+                db,
+                enrolment.id,
+                fees_svc.totals(db, invoice)["balance"],
+                idempotency_key=f"seed-{invoice.id}",
+                method="cash",
+                received_at=datetime.combine(invoice.due_date, time(11, 0), tzinfo=UTC),
             )
-            db.add(inv)
-            db.flush()
-            if paid:
-                # Draw from the same sequence the application uses, so the
-                # counter reflects what has actually been issued and a payment
-                # taken right after seeding does not collide.
-                db.add(
-                    FeePayment(
-                        invoice_id=inv.id,
-                        amount=amount,
-                        paid_at=datetime.combine(due, time(11, 0), tzinfo=UTC),
-                        method="simulated",
-                        txn_ref=f"SIM-{rng.getrandbits(48):012X}",
-                        receipt_no=audit_svc.next_number(
-                            db,
-                            school.id,
-                            kind="receipt",
-                            year=year,
-                            prefix=f"SPS/RCP/{year}/",
-                            width=6,
-                        ),
-                    )
+        if pattern == 2 and outstanding:
+            # Half of the latest month, so `partially_paid` and a receipt whose
+            # allocation covers only part of an invoice both exist in demo data.
+            latest = outstanding[-1]
+            half = (fees_svc.totals(db, latest)["balance"] / 2).quantize(Decimal("0.01"))
+            if half > 0:
+                fees_svc.collect(
+                    db,
+                    enrolment.id,
+                    half,
+                    idempotency_key=f"seed-part-{latest.id}",
+                    method="upi",
+                    received_at=datetime.combine(latest.due_date, time(12, 0), tzinfo=UTC),
                 )
     db.flush()
 
@@ -796,7 +805,13 @@ def _assign_roles(db: Session, roles: dict, sections: list) -> None:
     section (ERP_BLUEPRINT §3.5).
     """
     for user in db.scalars(select(User)):
-        code = LEGACY_ROLE_MAP[user.role.value]
+        # One deliberate exception to the legacy map: the counter clerk holds
+        # `fee_collector`, which has no void and no concession approval.
+        code = (
+            "fee_collector"
+            if user.login_id == CASHIER_LOGIN
+            else LEGACY_ROLE_MAP[user.role.value]
+        )
         # Students and guardians hold their permissions over their own records
         # only. Granting them school-wide would let a parent read the admin
         # roster, since both hold students.profile.read.

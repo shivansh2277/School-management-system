@@ -1,3 +1,15 @@
+"""Billing and collection.
+
+Everything here obeys three rules from ERP_BLUEPRINT §3.9:
+
+1. Payments allocate to invoice *lines*; an invoice balance is a SUM over
+   allocations, never a stored column that could drift from them.
+2. Nothing financial is edited. An invoice is voided and reissued; a payment is
+   reversed by a contra entry that keeps both rows.
+3. Reads never write. `presented_status()` says how an invoice reads today; the
+   scheduled sweep is what moves the stored value.
+"""
+
 import calendar
 import uuid
 from datetime import UTC, date as Date, datetime
@@ -8,172 +20,398 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import (
-    ClassSection,
-    FeeInvoice,
-    FeePayment,
-    FeeStructure,
     AuditAction,
+    ClassSection,
+    Enrolment,
+    EnrolmentStatus,
+    FeeFrequency,
+    FeeInvoice,
+    FeeInvoiceLine,
+    FeePayment,
+    FeePaymentStatus,
     InvoiceStatus,
+    PaymentAllocation,
+    School,
     Student,
+    User,
 )
-from app.services import audit
-from app.services.common import class_label_map, enrolment_sections
-from app.schemas.common import (
-    CollectionMonth,
-    CollectionSummary,
-    GenerateInvoicesResult,
-    InvoiceOut,
-    PaymentResult,
-)
+from app.services import audit, fee_setup
+from app.services.fee_setup import money
+
+ZERO = Decimal("0.00")
+# Statuses that no longer represent money anyone expects to receive.
+DEAD = (InvoiceStatus.voided, InvoiceStatus.written_off)
 
 
-def _payments(db: Session, invoice_ids: list[int]) -> dict[int, FeePayment]:
-    if not invoice_ids:
+# --- derived amounts --------------------------------------------------------
+
+
+def allocated_by_line(db: Session, line_ids: list[int]) -> dict[int, Decimal]:
+    """How much has been allocated to each line, reversals included.
+
+    A reversal is a negative allocation, so summing is all that is needed —
+    there is no "except the cancelled ones" clause to forget somewhere.
+    """
+    if not line_ids:
         return {}
+    rows = db.execute(
+        select(PaymentAllocation.invoice_line_id, func.sum(PaymentAllocation.amount))
+        .where(PaymentAllocation.invoice_line_id.in_(line_ids))
+        .group_by(PaymentAllocation.invoice_line_id)
+    ).all()
+    return {line_id: Decimal(total) for line_id, total in rows}
+
+
+def totals(db: Session, invoice: FeeInvoice) -> dict:
+    paid_by_line = allocated_by_line(db, [line.id for line in invoice.lines])
+    charged = sum((line.amount for line in invoice.lines), ZERO)
+    discount = sum((line.discount for line in invoice.lines), ZERO)
+    paid = sum((paid_by_line.get(line.id, ZERO) for line in invoice.lines), ZERO)
+    net = charged - discount
     return {
-        p.invoice_id: p
-        for p in db.scalars(select(FeePayment).where(FeePayment.invoice_id.in_(invoice_ids)))
+        "charged": money(charged),
+        "discount": money(discount),
+        "payable": money(net),
+        "paid": money(paid),
+        "balance": money(net - paid),
     }
 
 
-def presented_status(invoice: FeeInvoice, today: Date | None = None) -> InvoiceStatus:
+def presented_status(invoice: FeeInvoice, balance: Decimal, today: Date | None = None) -> InvoiceStatus:
     """How an invoice reads right now, without writing anything.
 
     v0 persisted pending -> overdue from inside `to_out()`, so a GET wrote and
-    committed. Reads do not have side effects here; the stored status is moved
-    by the scheduled `fees.overdue_sweep` job instead (ERP_BLUEPRINT §2.5(7)).
+    committed. The stored status is moved by `fees.overdue_sweep` instead.
     """
+    if invoice.status in DEAD:
+        return invoice.status
     today = today or Date.today()
-    if invoice.status == InvoiceStatus.pending and invoice.due_date < today:
+    if balance <= ZERO:
+        return InvoiceStatus.paid
+    if invoice.due_date < today:
         return InvoiceStatus.overdue
+    if balance < totals_payable(invoice):
+        return InvoiceStatus.partially_paid
     return invoice.status
 
 
-def to_out(db: Session, invoices: list[FeeInvoice]) -> list[InvoiceOut]:
-    pays = _payments(db, [i.id for i in invoices])
-    students = {
-        s.id: s
-        for s in db.scalars(select(Student).where(Student.id.in_([i.student_id for i in invoices] or [0])))
-    }
-    labels = class_label_map(db, list(students))
-    return [
-        InvoiceOut(
-            id=i.id,
-            student_id=i.student_id,
-            student_name=students[i.student_id].user.full_name,
-            admission_no=students[i.student_id].admission_no,
-            class_label=labels.get(i.student_id, ""),
-            month=i.month,
-            year=i.year,
-            amount=i.amount,
-            due_date=i.due_date,
-            status=presented_status(i),
-            receipt_no=pays[i.id].receipt_no if i.id in pays else None,
-            paid_at=pays[i.id].paid_at if i.id in pays else None,
+def totals_payable(invoice: FeeInvoice) -> Decimal:
+    return money(sum((line.net for line in invoice.lines), ZERO))
+
+
+def _restate(db: Session, invoice: FeeInvoice, on: Date) -> None:
+    """Move an invoice's stored status to match its allocations.
+
+    Called only from write paths — collection, reversal, the sweep. Whoever
+    changed the money is the one who owes the status update.
+    """
+    balance = totals(db, invoice)["balance"]
+    if invoice.status in DEAD:
+        return
+    if balance <= ZERO:
+        invoice.status = InvoiceStatus.paid
+        invoice.settled_on = invoice.settled_on or on
+    else:
+        invoice.settled_on = None
+        paid_anything = balance < totals_payable(invoice)
+        if invoice.due_date < on:
+            invoice.status = InvoiceStatus.overdue
+        elif paid_anything:
+            invoice.status = InvoiceStatus.partially_paid
+        else:
+            invoice.status = InvoiceStatus.issued
+
+
+# --- billing ----------------------------------------------------------------
+
+
+def _school_code(db: Session, school_id: int) -> str:
+    school = db.get(School, school_id)
+    return school.code if school else "SCH"
+
+
+def outstanding_invoices(db: Session, enrolment_id: int) -> list[FeeInvoice]:
+    """Unsettled invoices, oldest first — the order money is applied in."""
+    invoices = db.scalars(
+        select(FeeInvoice)
+        .where(
+            FeeInvoice.enrolment_id == enrolment_id,
+            FeeInvoice.status.not_in(DEAD),
         )
-        for i in invoices
-    ]
+        .order_by(FeeInvoice.due_date, FeeInvoice.id)
+    ).all()
+    return [i for i in invoices if totals(db, i)["balance"] > ZERO]
 
 
-def generate(
-    db: Session, month: int, year: int, school_id: int
-) -> GenerateInvoicesResult:
+def generate(db: Session, month: int, year: int, school_id: int, actor: User | None = None) -> dict:
+    """Bill one month for a whole school.
+
+    Idempotent through the partial unique index on (enrolment, period): a
+    second run creates nothing and reports what it skipped, which is what makes
+    it safe to retry a half-finished batch job.
+    """
     if not 1 <= month <= 12:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "month must be 1-12")
-    structures = {
-        f.class_name: f.monthly_amount
-        for f in db.scalars(
-            select(FeeStructure).where(FeeStructure.school_id == school_id)
+
+    due_day = 10
+    due = Date(year, month, min(due_day, calendar.monthrange(year, month)[1]))
+    issued_on = Date(year, month, 1)
+
+    enrolments = db.scalars(
+        select(Enrolment).where(
+            Enrolment.school_id == school_id,
+            Enrolment.status == EnrolmentStatus.active,
         )
-    }
-    labels = {
-        c.id: c.class_name
-        for c in db.scalars(
-            select(ClassSection).where(ClassSection.school_id == school_id)
-        )
-    }
-    existing = set(
+    ).all()
+    already = set(
         db.scalars(
-            select(FeeInvoice.student_id).where(
+            select(FeeInvoice.enrolment_id).where(
                 FeeInvoice.school_id == school_id,
-                FeeInvoice.month == month,
-                FeeInvoice.year == year,
+                FeeInvoice.period_month == month,
+                FeeInvoice.period_year == year,
+                FeeInvoice.status.not_in((InvoiceStatus.voided,)),
             )
         )
     )
-    due = Date(year, month, min(10, calendar.monthrange(year, month)[1]))
+    concessions = fee_setup.concessions_for(db, [e.id for e in enrolments], due)
+
     created = skipped = 0
-    sections = enrolment_sections(
-        db,
-        [
-            sid
-            for sid in db.scalars(
-                select(Student.id).where(Student.school_id == school_id)
-            )
-        ],
-    )
-    for s in db.scalars(select(Student).where(Student.school_id == school_id)):
-        if not s.user.is_active:
-            continue
-        if s.id in existing:  # idempotent: rely on the unique key, skip existing
+    billed = ZERO
+    prefix = f"{_school_code(db, school_id)}/INV/{year}/"
+    for enrolment in enrolments:
+        if enrolment.id in already:
             skipped += 1
             continue
-        amount = structures.get(labels.get(sections.get(s.id, 0), ""))
-        if amount is None:
+        plan = fee_setup.plan_for(db, enrolment)
+        if plan is None:  # no plan is not an error: a class may not be billed
             skipped += 1
             continue
-        db.add(
-            FeeInvoice(
-                school_id=school_id,
-                student_id=s.id,
-                month=month,
-                year=year,
-                amount=amount,
-                due_date=due,
-                status=InvoiceStatus.overdue if due < Date.today() else InvoiceStatus.pending,
-            )
+        items = [i for i in plan.items if i.frequency is FeeFrequency.monthly]
+        if not items:
+            skipped += 1
+            continue
+
+        invoice = FeeInvoice(
+            school_id=school_id,
+            enrolment_id=enrolment.id,
+            academic_year_id=enrolment.academic_year_id,
+            invoice_no=audit.next_number(
+                db, school_id, kind="invoice", year=year, prefix=prefix, width=6
+            ),
+            period_month=month,
+            period_year=year,
+            issued_on=issued_on,
+            due_date=due,
+            status=InvoiceStatus.overdue if due < Date.today() else InvoiceStatus.issued,
+            lines=[
+                FeeInvoiceLine(
+                    school_id=school_id,
+                    fee_head_id=item.fee_head_id,
+                    description=item.head.name,
+                    amount=item.amount,
+                    # Snapshotted, not recomputed: an invoice already shown to a
+                    # parent must not change when a concession is edited later.
+                    discount=fee_setup.discount_on(
+                        item.amount, item.fee_head_id, concessions.get(enrolment.id, [])
+                    ),
+                )
+                for item in items
+            ],
         )
+        db.add(invoice)
         created += 1
+        billed += totals_payable(invoice)
+
+    db.flush()
+    # Anyone who paid in advance has that money applied to what was just
+    # billed, rather than sitting as a credit next to a fresh due invoice.
+    for enrolment in enrolments:
+        settle_from_credit(db, enrolment.id)
+    if actor is not None:
+        audit.record(
+            db,
+            actor=actor,
+            school_id=school_id,
+            entity_type="fee_invoice_run",
+            action=AuditAction.create,
+            after={"month": month, "year": year, "created": created},
+        )
     db.commit()
-    return GenerateInvoicesResult(created=created, skipped=skipped)
+    return {"created": created, "skipped": skipped, "billed": money(billed)}
 
 
-def _next_receipt_no(db: Session, year: int, school_id: int) -> str:
-    """Gapless per school, per financial year.
-
-    v0 computed max(seq) + 1 in Python with no lock: two concurrent payments
-    raced, and the unique constraint turned the loser into a 500 rather than a
-    retry. Receipt numbers are also what an auditor checks for gaps.
-    """
-    return audit.next_number(
-        db, school_id, kind="receipt", year=year, prefix=f"SPS/RCP/{year}/", width=6
-    )
-
-
-def pay(db: Session, invoice_id: int, actor=None) -> PaymentResult:
-    invoice = db.get(FeeInvoice, invoice_id)
-    if invoice is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Invoice not found")
-    if invoice.status == InvoiceStatus.paid:
-        raise HTTPException(status.HTTP_409_CONFLICT, "This invoice is already paid")
-    now = datetime.now(UTC)
-    payment = FeePayment(
-        school_id=invoice.school_id,
-        invoice_id=invoice.id,
-        amount=invoice.amount,
-        paid_at=now,
-        method="simulated",
-        txn_ref=f"SIM-{uuid.uuid4().hex[:12].upper()}",
-        receipt_no=_next_receipt_no(db, now.year, invoice.school_id),
-    )
-    db.add(payment)
-    invoice.status = InvoiceStatus.paid
+def void(db: Session, invoice: FeeInvoice, reason: str, actor: User) -> FeeInvoice:
+    """A wrong invoice is cancelled and reissued, never edited (§3.9 rule 3)."""
+    if invoice.status in DEAD:
+        raise HTTPException(status.HTTP_409_CONFLICT, "This invoice is already closed")
+    if totals(db, invoice)["paid"] > ZERO:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Money has been received against this invoice; reverse the payment first",
+        )
+    before = invoice.status.value
+    invoice.status = InvoiceStatus.voided
+    invoice.void_reason = reason
     audit.record(
         db,
         actor=actor,
         school_id=invoice.school_id,
-        entity_type="fee_payment",
+        entity_type="fee_invoice",
         entity_id=invoice.id,
+        action=AuditAction.void,
+        before={"status": before},
+        after={"status": invoice.status.value},
+        reason=reason,
+    )
+    db.commit()
+    return invoice
+
+
+# --- collection -------------------------------------------------------------
+
+
+def _allocate(db: Session, payment: FeePayment, available: Decimal, on: Date) -> Decimal:
+    """Spend `available` against this enrolment's outstanding lines, oldest
+    invoice first. Returns what is left over — the credit balance."""
+    for invoice in outstanding_invoices(db, payment.enrolment_id):
+        paid_by_line = allocated_by_line(db, [line.id for line in invoice.lines])
+        for line in invoice.lines:
+            if available <= ZERO:
+                break
+            owing = line.net - paid_by_line.get(line.id, ZERO)
+            if owing <= ZERO:
+                continue
+            part = min(available, owing)
+            db.add(
+                PaymentAllocation(
+                    school_id=payment.school_id,
+                    payment_id=payment.id,
+                    invoice_line_id=line.id,
+                    amount=part,
+                )
+            )
+            available -= part
+        db.flush()
+        _restate(db, invoice, on)
+        if available <= ZERO:
+            break
+    return available
+
+
+def credit_balance(db: Session, enrolment_id: int) -> Decimal:
+    """Money received that no line has claimed — an advance, or a parent
+    rounding up. §5.5.9 says over-payment becomes a credit, not an error."""
+    received = db.scalar(
+        select(func.coalesce(func.sum(FeePayment.amount), 0)).where(
+            FeePayment.enrolment_id == enrolment_id
+        )
+    )
+    spent = db.scalar(
+        select(func.coalesce(func.sum(PaymentAllocation.amount), 0))
+        .join(FeePayment, FeePayment.id == PaymentAllocation.payment_id)
+        .where(FeePayment.enrolment_id == enrolment_id)
+    )
+    return money(Decimal(received) - Decimal(spent))
+
+
+def _unspent(db: Session, enrolment_id: int) -> list[tuple[FeePayment, Decimal]]:
+    """Payments with money still unallocated, oldest first.
+
+    Per payment rather than one pooled figure: an allocation names the payment
+    it came from, and a receipt that funded nothing it can point at is not a
+    ledger, it is a plausible total.
+    """
+    payments = db.scalars(
+        select(FeePayment)
+        .where(
+            FeePayment.enrolment_id == enrolment_id,
+            FeePayment.status == FeePaymentStatus.success,
+            FeePayment.amount > 0,
+        )
+        .order_by(FeePayment.received_at, FeePayment.id)
+    ).all()
+    out = []
+    for payment in payments:
+        spent = sum((a.amount for a in payment.allocations), ZERO)
+        if payment.amount - spent > ZERO:
+            out.append((payment, payment.amount - spent))
+    return out
+
+
+def settle_from_credit(db: Session, enrolment_id: int, on: Date | None = None) -> Decimal:
+    """Apply any credit balance to outstanding invoices. Run after billing, so
+    an advance paid in March settles April the moment April is raised."""
+    on = on or Date.today()
+    applied = ZERO
+    for payment, spare in _unspent(db, enrolment_id):
+        left = _allocate(db, payment, spare, on)
+        applied += spare - left
+    db.flush()
+    return money(applied)
+
+
+def collect(
+    db: Session,
+    enrolment_id: int,
+    amount: Decimal,
+    *,
+    idempotency_key: str,
+    method: str = "cash",
+    instrument_ref: str | None = None,
+    actor: User | None = None,
+    received_at: datetime | None = None,
+) -> FeePayment:
+    """Take money at the counter and allocate it, oldest invoice first.
+
+    The idempotency key is required, not optional: a retried request must
+    return the original receipt rather than take the money a second time
+    (§3.9 rule 4). It is the whole reason a duplicate tap at the counter is a
+    non-event.
+    """
+    enrolment = db.get(Enrolment, enrolment_id)
+    if enrolment is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Enrolment not found")
+    if amount <= ZERO:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Amount must be positive")
+
+    existing = db.scalar(
+        select(FeePayment).where(
+            FeePayment.school_id == enrolment.school_id,
+            FeePayment.idempotency_key == idempotency_key,
+        )
+    )
+    if existing is not None:
+        return existing
+
+    now = received_at or datetime.now(UTC)
+    payment = FeePayment(
+        school_id=enrolment.school_id,
+        enrolment_id=enrolment.id,
+        receipt_no=audit.next_number(
+            db,
+            enrolment.school_id,
+            kind="receipt",
+            year=now.year,
+            prefix=f"{_school_code(db, enrolment.school_id)}/RCP/{now.year}/",
+            width=6,
+        ),
+        amount=money(amount),
+        method=method,
+        instrument_ref=instrument_ref,
+        received_at=now,
+        received_by=actor.id if actor else None,
+        idempotency_key=idempotency_key,
+        status=FeePaymentStatus.success,
+    )
+    db.add(payment)
+    db.flush()
+    _allocate(db, payment, payment.amount, now.date())
+    audit.record(
+        db,
+        actor=actor,
+        school_id=payment.school_id,
+        entity_type="fee_payment",
+        entity_id=payment.id,
         action=AuditAction.create,
         after={
             "receipt_no": payment.receipt_no,
@@ -182,40 +420,203 @@ def pay(db: Session, invoice_id: int, actor=None) -> PaymentResult:
         },
     )
     db.commit()
-    return PaymentResult(
-        invoice_id=invoice.id,
-        receipt_no=payment.receipt_no,
-        txn_ref=payment.txn_ref,
-        amount=payment.amount,
-        paid_at=payment.paid_at,
+    return payment
+
+
+def reverse(db: Session, payment: FeePayment, reason: str, actor: User) -> FeePayment:
+    """Cancel a payment with a contra entry (§3.9 rule 3).
+
+    Both rows stay and both keep their receipt numbers, because a gap in the
+    receipt sequence is exactly what an auditor asks about. A cashier may not
+    do this — §5.5.9 keeps taking money and cancelling it in different hands.
+    """
+    if payment.status is FeePaymentStatus.reversed:
+        raise HTTPException(status.HTTP_409_CONFLICT, "This payment is already reversed")
+    if payment.amount < ZERO:
+        raise HTTPException(status.HTTP_409_CONFLICT, "A reversal cannot itself be reversed")
+
+    now = datetime.now(UTC)
+    contra = FeePayment(
+        school_id=payment.school_id,
+        enrolment_id=payment.enrolment_id,
+        receipt_no=audit.next_number(
+            db,
+            payment.school_id,
+            kind="receipt",
+            year=now.year,
+            prefix=f"{_school_code(db, payment.school_id)}/RCP/{now.year}/",
+            width=6,
+        ),
+        amount=-payment.amount,
+        method=payment.method,
+        instrument_ref=payment.instrument_ref,
+        received_at=now,
+        received_by=actor.id,
+        idempotency_key=f"reversal-{payment.id}",
+        status=FeePaymentStatus.success,
+        reverses_payment_id=payment.id,
+        reason=reason,
     )
+    db.add(contra)
+    db.flush()
+    touched = set()
+    for allocation in payment.allocations:
+        db.add(
+            PaymentAllocation(
+                school_id=payment.school_id,
+                payment_id=contra.id,
+                invoice_line_id=allocation.invoice_line_id,
+                amount=-allocation.amount,
+            )
+        )
+        touched.add(db.get(FeeInvoiceLine, allocation.invoice_line_id).invoice_id)
+    payment.status = FeePaymentStatus.reversed
+    db.flush()
+    for invoice_id in touched:
+        _restate(db, db.get(FeeInvoice, invoice_id), now.date())
+    audit.record(
+        db,
+        actor=actor,
+        school_id=payment.school_id,
+        entity_type="fee_payment",
+        entity_id=payment.id,
+        action=AuditAction.void,
+        before={"status": FeePaymentStatus.success.value},
+        after={"status": payment.status.value, "contra_receipt_no": contra.receipt_no},
+        reason=reason,
+    )
+    db.commit()
+    return contra
 
 
-def collection(db: Session, year: int) -> CollectionSummary:
+# --- views ------------------------------------------------------------------
+
+
+def invoice_out(db: Session, invoice: FeeInvoice, today: Date | None = None) -> dict:
+    amounts = totals(db, invoice)
+    student = invoice.enrolment.student
+    return {
+        "id": invoice.id,
+        "invoice_no": invoice.invoice_no,
+        "enrolment_id": invoice.enrolment_id,
+        "student_id": student.id,
+        "student_name": student.user.full_name,
+        "admission_no": student.admission_no,
+        "class_label": invoice.enrolment.class_section.label,
+        "month": invoice.period_month,
+        "year": invoice.period_year,
+        "due_date": invoice.due_date,
+        "status": presented_status(invoice, amounts["balance"], today),
+        "settled_on": invoice.settled_on,
+        "lines": [
+            {
+                "id": line.id,
+                "fee_head_id": line.fee_head_id,
+                "description": line.description,
+                "amount": line.amount,
+                "discount": line.discount,
+                "net": line.net,
+            }
+            for line in invoice.lines
+        ],
+        **amounts,
+    }
+
+
+def list_invoices(db: Session, invoices: list[FeeInvoice]) -> list[dict]:
+    today = Date.today()
+    return [invoice_out(db, i, today) for i in invoices]
+
+
+def ledger(db: Session, enrolment_id: int) -> dict:
+    """One student's fee account: every invoice, every receipt, one balance."""
+    invoices = db.scalars(
+        select(FeeInvoice)
+        .where(FeeInvoice.enrolment_id == enrolment_id)
+        .order_by(FeeInvoice.period_year.desc(), FeeInvoice.period_month.desc())
+    ).all()
+    payments = db.scalars(
+        select(FeePayment)
+        .where(FeePayment.enrolment_id == enrolment_id)
+        .order_by(FeePayment.received_at.desc())
+    ).all()
+    rows = list_invoices(db, invoices)
+    return {
+        "invoices": rows,
+        "payments": [
+            {
+                "id": p.id,
+                "receipt_no": p.receipt_no,
+                "amount": p.amount,
+                "method": p.method,
+                "received_at": p.received_at,
+                "status": p.status,
+                "reverses_payment_id": p.reverses_payment_id,
+            }
+            for p in payments
+        ],
+        "outstanding": money(
+            sum((r["balance"] for r in rows if r["status"] not in DEAD), ZERO)
+        ),
+        "credit": credit_balance(db, enrolment_id),
+    }
+
+
+def collection(db: Session, year: int, school_id: int) -> dict:
+    """Billed against collected, by month. Demand is net of concessions —
+    a school cannot collect a discount it granted."""
     billed_rows = db.execute(
-        select(FeeInvoice.month, func.sum(FeeInvoice.amount))
-        .where(FeeInvoice.year == year)
-        .group_by(FeeInvoice.month)
+        select(
+            FeeInvoice.period_month,
+            func.sum(FeeInvoiceLine.amount - FeeInvoiceLine.discount),
+        )
+        .join(FeeInvoiceLine, FeeInvoiceLine.invoice_id == FeeInvoice.id)
+        .where(
+            FeeInvoice.school_id == school_id,
+            FeeInvoice.period_year == year,
+            FeeInvoice.status.not_in(DEAD),
+        )
+        .group_by(FeeInvoice.period_month)
     ).all()
     paid_rows = db.execute(
-        select(FeeInvoice.month, func.sum(FeePayment.amount))
-        .join(FeePayment, FeePayment.invoice_id == FeeInvoice.id)
-        .where(FeeInvoice.year == year)
-        .group_by(FeeInvoice.month)
+        select(FeeInvoice.period_month, func.sum(PaymentAllocation.amount))
+        .join(FeeInvoiceLine, FeeInvoiceLine.invoice_id == FeeInvoice.id)
+        .join(PaymentAllocation, PaymentAllocation.invoice_line_id == FeeInvoiceLine.id)
+        .where(FeeInvoice.school_id == school_id, FeeInvoice.period_year == year)
+        .group_by(FeeInvoice.period_month)
     ).all()
+
     billed = {m: Decimal(v) for m, v in billed_rows}
     collected = {m: Decimal(v) for m, v in paid_rows}
     months = [
-        CollectionMonth(month=m, billed=billed[m], collected=collected.get(m, Decimal(0)))
-        # only months that actually have invoices — no fabricated zero bars (§8)
+        {
+            "month": m,
+            "billed": money(billed[m]),
+            "collected": money(collected.get(m, ZERO)),
+        }
+        # only months that actually have invoices — no fabricated zero bars
         for m in sorted(billed)
     ]
-    total_billed = sum(billed.values(), Decimal(0))
-    total_collected = sum(collected.values(), Decimal(0))
-    return CollectionSummary(
-        year=year,
-        billed=total_billed,
-        collected=total_collected,
-        outstanding=total_billed - total_collected,
-        months=months,
+    total_billed = money(sum(billed.values(), ZERO))
+    total_collected = money(sum(collected.values(), ZERO))
+    return {
+        "year": year,
+        "billed": total_billed,
+        "collected": total_collected,
+        "outstanding": money(total_billed - total_collected),
+        "months": months,
+    }
+
+
+def enrolment_for_student(db: Session, student_id: int) -> Enrolment | None:
+    return db.scalar(
+        select(Enrolment)
+        .where(Enrolment.student_id == student_id, Enrolment.status == EnrolmentStatus.active)
+        .order_by(Enrolment.academic_year_id.desc())
     )
+
+
+def new_idempotency_key() -> str:
+    """For a caller with no natural key of its own — a counter clerk clicking
+    Collect. The client should send its own where it can."""
+    return uuid.uuid4().hex
