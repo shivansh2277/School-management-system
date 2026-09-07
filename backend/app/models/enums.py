@@ -54,6 +54,18 @@ class OwnerType(StrEnum):
     school = "school"
 
 
+class EmployeeStatus(StrEnum):
+    """ERP_BLUEPRINT §5.3.7, trimmed to the states this system can actually
+    reach. `applicant`, `offered` and `onboarding` belong to recruitment, which
+    is not built — adding them now would be three statuses nothing can set.
+    """
+
+    active = "active"
+    on_leave = "on_leave"
+    notice_period = "notice_period"
+    exited = "exited"
+
+
 class EmployeeType(StrEnum):
     teaching = "teaching"
     administrative = "administrative"

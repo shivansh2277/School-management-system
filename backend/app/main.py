@@ -13,6 +13,7 @@ from app.api.admin import selection as admin_selection
 from app.api.admin import classes as admin_classes
 from app.api.admin import exams as admin_exams
 from app.api.admin import grading as admin_grading
+from app.api.admin import hr as admin_hr
 from app.api.admin import report_cards as admin_report_cards
 from app.api.admin import schemes as admin_schemes
 from app.api.admin import fee_setup as admin_fee_setup
@@ -49,7 +50,7 @@ app.add_middleware(
 for module in (
     auth,
     admin_stats, admin_students, admin_teachers, admin_classes,
-    admin_exams, admin_grading, admin_schemes, admin_report_cards, admin_notices, admin_fees, admin_fee_setup, admin_attendance, admin_timetable, admin_settings, admin_admission, admin_applications, admin_admission_documents, admin_admission_assessment, admin_selection, admin_conversion, admin_admission_reports,
+    admin_exams, admin_grading, admin_schemes, admin_report_cards, admin_hr, admin_notices, admin_fees, admin_fee_setup, admin_attendance, admin_timetable, admin_settings, admin_admission, admin_applications, admin_admission_documents, admin_admission_assessment, admin_selection, admin_conversion, admin_admission_reports,
     teacher_dashboard, teacher_classes, teacher_attendance,
     teacher_homework, teacher_marks, teacher_announcements,
     student_dashboard, student_academics,

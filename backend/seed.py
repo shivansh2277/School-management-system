@@ -10,7 +10,7 @@ import random
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.core.db import Base, SessionLocal, engine
@@ -23,6 +23,7 @@ from app.services import fee_setup
 from app.services import fees as fees_svc
 from app.services import admission as admission_svc
 from app.services import grading
+from app.services import hr as hr_svc
 from app.services import schemes as schemes_svc
 from app.services import rbac
 from app.models import (
@@ -35,6 +36,7 @@ from app.models import (
     ClassSubjectTeacher,
     DocumentType,
     CustomField,
+    Department,
     AdmissionCycle,
     AdmissionCycleStatus,
     CustomFieldType,
@@ -112,19 +114,28 @@ SUBJECTS = [
 # One class teacher per section, plus subject teachers. TCH001 is first
 # because the walkthrough in BLUEPRINT section 13 depends on them
 # class-teaching 10-A and teaching it Mathematics.
+# (name, qualification, department code, designation)
 TEACHER_NAMES = [
-    ("Anita Sharma", "M.Sc. Mathematics, B.Ed."),
-    ("Rajesh Verma", "M.A. English, B.Ed."),
-    ("Sunita Yadav", "M.A. Hindi, B.Ed."),
-    ("Praveen Mishra", "M.Sc. Physics, B.Ed."),
-    ("Kavita Singh", "M.A. History, B.Ed."),
-    ("Deepak Gupta", "MCA"),
-    ("Neha Tiwari", "M.Sc. Chemistry, B.Ed."),
-    ("Amit Pandey", "M.A. Political Science, B.Ed."),
-    ("Ritu Srivastava", "M.Sc. Biology, B.Ed."),
-    ("Vikas Dubey", "M.A. Sanskrit, B.Ed."),
-    ("Pooja Awasthi", "B.Ed., Primary"),
-    ("Sandeep Rastogi", "M.Com., B.Ed."),
+    ("Anita Sharma", "M.Sc. Mathematics, B.Ed.", "SCI", "PGT"),
+    ("Rajesh Verma", "M.A. English, B.Ed.", "LANG", "PGT"),
+    ("Sunita Yadav", "M.A. Hindi, B.Ed.", "LANG", "TGT"),
+    ("Praveen Mishra", "M.Sc. Physics, B.Ed.", "SCI", "PGT"),
+    ("Kavita Singh", "M.A. History, B.Ed.", "HUM", "TGT"),
+    ("Deepak Gupta", "MCA", "SCI", "TGT"),
+    ("Neha Tiwari", "M.Sc. Chemistry, B.Ed.", "SCI", "PGT"),
+    ("Amit Pandey", "M.A. Political Science, B.Ed.", "HUM", "TGT"),
+    ("Ritu Srivastava", "M.Sc. Biology, B.Ed.", "SCI", "TGT"),
+    ("Vikas Dubey", "M.A. Sanskrit, B.Ed.", "LANG", "TGT"),
+    ("Pooja Awasthi", "B.Ed., Primary", "PRI", "PRT"),
+    ("Sandeep Rastogi", "M.Com., B.Ed.", "HUM", "TGT"),
+]
+
+DEPARTMENTS = [
+    ("SCI", "Science and Mathematics"),
+    ("LANG", "Languages"),
+    ("HUM", "Humanities"),
+    ("PRI", "Primary"),
+    ("ADM", "Administration"),
 ]
 
 # Classes 10 down to 1, one section each. 10-A first so it keeps the lowest
@@ -250,15 +261,31 @@ def _stamp_tenant(db: Session, school_id: int) -> None:
 
 
 def wipe(db: Session) -> None:
-    """Empty every table, children first.
+    """Empty every table.
 
     This used to be a hand-ordered list of models, which went stale the moment
     a migration added a table nobody remembered to add to it: seeding a
     migrated Postgres database failed on `document_types` still referencing
-    `schools`. SQLAlchemy already knows the dependency order, so ask it.
+    `schools`. So the order came from `sorted_tables` instead — until
+    `employees` and `departments` began pointing at each other (a department
+    has a head, an employee has a department). A cycle has no topological
+    order, so SQLAlchemy drops those foreign keys from its sort and warns that
+    it may raise instead in a later release. The order it produced was then
+    correct only by luck.
+
+    On Postgres, `TRUNCATE ... CASCADE` is one statement that does not need an
+    order at all, which is the right answer to a cycle rather than a second
+    hand-maintained list of the columns to null first. SQLite has no CASCADE
+    and does not enforce foreign keys anyway, so the delete loop stands there.
     """
-    for table in reversed(Base.metadata.sorted_tables):
-        db.execute(table.delete())
+    if db.bind is not None and db.bind.dialect.name == "postgresql":
+        # No sort at all: asking for one is what emits the cycle warning, and
+        # TRUNCATE CASCADE does not want an order.
+        names = ", ".join(f'"{t}"' for t in Base.metadata.tables)
+        db.execute(text(f"TRUNCATE {names} CASCADE"))
+    else:
+        for table in reversed(Base.metadata.sorted_tables):
+            db.execute(table.delete())
     db.commit()
 
 
@@ -385,7 +412,19 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
     db.add(cashier)
 
     teachers: list[Employee] = []
-    for i, (name, qual) in enumerate(TEACHER_NAMES, start=1):
+    departments = {}
+    for code, dept_name in DEPARTMENTS:
+        existing = db.scalar(
+            select(Department).where(
+                Department.school_id == school.id, Department.code == code
+            )
+        )
+        departments[code] = existing or hr_svc.create_department(
+            db, school.id, code=code, name=dept_name
+        )
+    db.flush()
+
+    for i, (name, qual, dept_code, designation) in enumerate(TEACHER_NAMES, start=1):
         emp = f"TCH{i:03d}"
         u = User(
             role=UserRole.teacher,
@@ -402,9 +441,28 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
             employee_code=emp,
             qualification=qual,
             joining_date=date(2019 + (i % 5), 6, 1),
+            department_id=departments[dept_code].id,
+            designation=designation,
         )
         db.add(t)
         teachers.append(t)
+    db.flush()
+
+    # A head per teaching department, so §5.3.8's department scoping has
+    # something real to point at rather than a nullable column nothing fills.
+    for code in ("SCI", "LANG", "HUM", "PRI"):
+        dept = departments[code]
+        if dept.head_employee_id is None:
+            first = next(
+                (
+                    t
+                    for t, (_, _, dc, _) in zip(teachers, TEACHER_NAMES, strict=True)
+                    if dc == code
+                ),
+                None,
+            )
+            if first is not None:
+                hr_svc.set_head(db, dept, first)
     db.flush()
 
     subjects = [Subject(name=n, code=c) for n, c in SUBJECTS]

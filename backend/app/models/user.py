@@ -16,6 +16,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TenantBase, enum_col
 from app.models.enums import (
+    EmployeeStatus,
     EmployeeType,
     Gender,
     GuardianRelation,
@@ -94,6 +95,8 @@ class Employee(TenantBase):
         BigInteger, ForeignKey("users.id"), unique=True, nullable=False
     )
     # The staff number the school prints and says out loud, e.g. TCH001.
+    # §5.3.9: unique and never reused, even after exit — which the unique
+    # constraint above gives, because nothing deletes the row.
     employee_code: Mapped[str] = mapped_column(String(16), nullable=False)
     employee_type: Mapped[EmployeeType] = enum_col(
         EmployeeType, nullable=False, default=EmployeeType.teaching
@@ -101,7 +104,66 @@ class Employee(TenantBase):
     qualification: Mapped[str | None] = mapped_column(String(120))
     joining_date: Mapped[date | None] = mapped_column(Date)
 
+    department_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("departments.id"), index=True
+    )
+    # A plain string, not a lookup table. A designation has no attributes and
+    # no relationships here — salary structures attach to the employee, not to
+    # the grade (§3.16) — so a table would be a join that buys nothing. It
+    # becomes one the day it carries a pay band.
+    designation: Mapped[str | None] = mapped_column(String(60))
+    reporting_to_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("employees.id")
+    )
+    status: Mapped[EmployeeStatus] = enum_col(
+        EmployeeStatus, nullable=False, default=EmployeeStatus.active
+    )
+    exited_on: Mapped[date | None] = mapped_column(Date)
+
+    emergency_contact_name: Mapped[str | None] = mapped_column(String(120))
+    emergency_contact_phone: Mapped[str | None] = mapped_column(String(20))
+
+    # --- statutory and bank. §5.3.9 keeps salary information behind its own
+    # permission, so nothing that returns an employee profile returns these:
+    # they are served by /admin/employees/{id}/statutory alone.
+    pan: Mapped[str | None] = mapped_column(String(10))
+    uan: Mapped[str | None] = mapped_column(String(12))
+    esi_number: Mapped[str | None] = mapped_column(String(20))
+    bank_account_no: Mapped[str | None] = mapped_column(String(20))
+    bank_ifsc: Mapped[str | None] = mapped_column(String(11))
+    bank_name: Mapped[str | None] = mapped_column(String(80))
+
     user: Mapped[User] = relationship(lazy="joined")
+    # `departments.head_employee_id` points back here, so there are two paths
+    # between the tables and the join has to be named explicitly.
+    department = relationship(
+        "Department", lazy="joined", foreign_keys=[department_id]
+    )
+
+    @property
+    def in_service(self) -> bool:
+        return self.status is not EmployeeStatus.exited
+
+
+class Department(TenantBase):
+    """A teaching or administrative department (§5.3.3).
+
+    Earns its table where a designation does not: §5.3.8 scopes a Department
+    Head to their own department, and §5.3.10 reports headcount and payroll
+    cost by department — both of which need an id to group on.
+    """
+
+    __tablename__ = "departments"
+    __table_args__ = (
+        UniqueConstraint("school_id", "code", name="uq_department_code"),
+    )
+
+    code: Mapped[str] = mapped_column(String(12), nullable=False)
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    # Nullable: a department exists before anyone is put in charge of it.
+    head_employee_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("employees.id")
+    )
 
 
 class Guardian(TenantBase):

@@ -84,6 +84,14 @@ PERMISSIONS: list[tuple[str, str]] = [
     # --- hr
     ("hr.employee.read", "View staff records"),
     ("hr.employee.write", "Create and edit staff records"),
+    ("hr.employee.exit", "Record that a member of staff has left"),
+    ("hr.department.write", "Create and edit departments"),
+    (
+        "hr.salary.read",
+        "View PAN, PF, ESI and bank details — gated apart from the rest of the "
+        "staff profile (§5.3.9)",
+    ),
+    ("hr.salary.write", "Edit PAN, PF, ESI and bank details"),
     # --- administration
     ("admin.settings.read", "View school settings"),
     ("admin.settings.write", "Change school settings"),
@@ -93,7 +101,22 @@ PERMISSIONS: list[tuple[str, str]] = [
     ("admin.audit.read", "Read the audit log"),
 ]
 
-READ_ONLY = [c for c, _ in PERMISSIONS if c.rsplit(".", 1)[1] in ("read",)]
+# Permissions that end in `.read` but must NOT be handed out with the rest of
+# them. `READ_ONLY` is a convenience for building "can see everything" roles,
+# and anything sensitive enough to be gated separately has to be named here or
+# the convenience quietly undoes the gate.
+NOT_BLANKET_READ = {
+    # §5.3.9 keeps salary information behind its own permission. Without this
+    # line the Admin Officer — a records clerk — would read every colleague's
+    # bank account by virtue of being able to read everything else.
+    "hr.salary.read",
+}
+
+READ_ONLY = [
+    c
+    for c, _ in PERMISSIONS
+    if c.rsplit(".", 1)[1] == "read" and c not in NOT_BLANKET_READ
+]
 
 _ALL = [c for c, _ in PERMISSIONS]
 
@@ -121,6 +144,10 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "fees.payment.void",
             "comms.notice.publish",
             "hr.employee.write",
+            "hr.employee.exit",
+            "hr.department.write",
+            "hr.salary.read",
+            "hr.salary.write",
             "admission.enquiry.write",
             "admission.cycle.write",
             "admission.application.write",
@@ -296,8 +323,10 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
         "auditor",
         "Auditor",
         # The test case for whether the permission model is real: everything
-        # readable, nothing writable.
-        [*READ_ONLY, "admin.audit.read"],
+        # readable, nothing writable. Salary is granted explicitly rather than
+        # by falling out of READ_ONLY — an auditor reading bank details is a
+        # decision, not a side effect.
+        [*READ_ONLY, "admin.audit.read", "hr.salary.read"],
     ),
 ]
 

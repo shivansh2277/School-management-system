@@ -61,6 +61,7 @@ from app.models.enums import (
     LeaveStatus,
     LeaveType,
     CustomFieldType,
+    EmployeeStatus,
     EmployeeType,
     GuardianRelation,
     DocumentStatus,
@@ -103,7 +104,14 @@ from app.models.ops import (
     Notice,
     StudentLeaveRequest,
 )
-from app.models.user import Employee, Guardian, Student, StudentGuardian, User
+from app.models.user import (
+    Department,
+    Employee,
+    Guardian,
+    Student,
+    StudentGuardian,
+    User,
+)
 from app.models.enrolment import Enrolment
 from app.models.audit import AuditLog, NumberSequence
 from app.models.documents import Document, DocumentType
