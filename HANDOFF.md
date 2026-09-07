@@ -1,7 +1,7 @@
 # Sunrise ERP — Session Handoff
 
 **Written:** 6 September 2026 · **revised 7 September 2026** (Parts 2, 3, and
-Part 4's examinations, report cards and HR)
+Part 4's examinations, report cards, HR and payroll)
 **Branch:** `part-1-foundation` — **nothing pushed, ever.** Count the commits
 with `git log --oneline main..HEAD | wc -l`; a number written here goes stale on
 the next commit, including the one that updates this file.
@@ -35,7 +35,7 @@ sessions — Parts 3 and 4 will each span several.
 | 1 | Foundation: tenancy, enrolments, RBAC, audit, jobs, documents | **backend complete** |
 | 2 | Admission, including the public online portal | **backend complete; Checkpoint 2 passes in tests** |
 | 3 | Fees rebuild + attendance + timetable | **backend complete; Checkpoint 3 passes in tests** |
-| 4 | Examinations, HR/payroll, transport, communication, reports | **examinations, report cards and HR done; payroll, transport, communication and reports not started** |
+| 4 | Examinations, HR/payroll, transport, communication, reports | **examinations, report cards, HR and payroll done — both halves of Checkpoint 4 pass; transport, communication and reports not started** |
 
 ---
 
@@ -45,19 +45,20 @@ Measured on 7 September 2026 by running the commands below, not recalled.
 
 | Measure | Value |
 |---|---|
-| Backend tests | **415 passing**, ~104 s |
-| Database tables | **70, plus `alembic_version`** |
-| Alembic migrations | **26** (verified from empty **on Postgres**, then seed, then worker) |
-| API surface | **171 paths, 214 operations** |
-| Permissions / system roles | **64** / 13 |
+| Backend tests | **452 passing**, ~104 s |
+| Database tables | **76, plus `alembic_version`** |
+| Alembic migrations | **27** (verified from empty **on Postgres**, then seed, then worker) |
+| API surface | **185 paths, 229 operations** |
+| Permissions / system roles | **68** / 13 |
 | Job handlers | `fees.overdue_sweep`, `fees.generate_invoices`, `admission.offer_sweep`, `system.heartbeat` |
 | Demo school | 100 students, 10 sections, 12 teachers, 98 guardians |
 | Demo fee ledger | 300 invoices, 810 lines, 170 payments, 410 allocations, 2 sibling concessions |
 | Demo attendance | 5,800 rows over 58 working days, plus 2 holidays inside the window |
-| Demo timetable | 6 periods, 300 slots, **0 teacher clashes, 0 room clashes**, heaviest load 30/week |
+| Demo timetable | 6 periods, 300 slots, **0 teacher clashes, 0 room clashes**, and **every teacher on exactly 25 periods — spread 0** |
 | Demo examinations | 1 CBSE scheme, 8 components over 2 terms, 4 Term 1 exams, 240 papers, **2,400 marks, none over its paper's maximum** |
 | Demo grading | 1 active scale (CBSE v1), 8 bands |
 | Demo HR | 5 departments (4 with a head), 12 staff placed, 4 leave types (CL 12 / SL 10 / EL 15 / LWP 0) |
+| Demo payroll | 11 components, 12 salary structures (PGT ₹42,000 / TGT ₹32,000 / PRT ₹19,500). An August run: 12 payslips, 25 working days, ₹4,11,500 earnings, ₹3,86,663.75 net, ₹4,36,190 employer cost |
 
 > The previous revision recorded **60** tables. The real count on 7 September,
 > before any Part 4 work, was **61** plus `alembic_version`. Corrected here
@@ -65,7 +66,7 @@ Measured on 7 September 2026 by running the commands below, not recalled.
 
 ```bash
 cd backend
-../.venv/Scripts/python.exe -m pytest -q                    # 415 passed
+../.venv/Scripts/python.exe -m pytest -q                    # 452 passed
 ../.venv/Scripts/python.exe -m alembic upgrade head
 ../.venv/Scripts/python.exe seed.py
 ../.venv/Scripts/python.exe worker.py --once                # runs due jobs
@@ -248,13 +249,17 @@ Design decisions in Part 3 that a later session should not undo:
 | `c02d2ca` | Departments and the employee profile HR and payroll hang off |
 | `1882f23` | Staff leave, and the cover approving it must raise |
 | `99c0b31` | The staff register, and loss of pay answered in one place |
+| `bf38896` | Three owner decisions, and an evenly loaded timetable |
+| `dfeb08b` | Payroll, from components a school edits rather than rates in code |
 
-**Half of Checkpoint 4 is a test, not a claim:**
+**Both halves of Checkpoint 4 are tests, not claims.**
+`tests/test_payroll.py::test_a_payroll_run_completes_for_the_demo_school` opens
+August, calculates twelve payslips, approves and marks it paid; and:
 `tests/test_report_cards.py::test_a_published_card_does_not_re_grade_when_a_band_is_edited`
 publishes a card, then revises the grading scale so 91 is no longer an A1, and
 finds the issued document unchanged while the live preview has moved.
 `test_a_published_card_does_not_move_when_a_mark_is_corrected` does the same
-with a mark. **The payroll half of Checkpoint 4 is not built.**
+with a mark. **What Checkpoint 4 still lacks is `CONFIGURATION-GUIDE.md`.**
 
 **The two product answers this part depended on.** Both given by the owner on
 7 September 2026, before any code was written against them:
@@ -266,8 +271,19 @@ with a mark. **The payroll half of Checkpoint 4 is not built.**
   `scheme_components`, so 10/5/5/80 is seed data a school edits, not a number
   in code.
 - **§8 items A and B — payroll:** *blueprint §3.16 defaults, professional tax
-  shipped disabled because Uttar Pradesh does not levy it.* **Recorded, not yet
-  built** — payroll is the next session's work and this answer unblocks it.
+  shipped disabled because Uttar Pradesh does not levy it.* Built and tested.
+
+Three more answered later the same day, once the code reached them:
+
+- **§8 item K — unused leave does not carry forward.** Already what the code
+  did, now stated and pinned by a test, because carry-forward is the kind of
+  thing a later session adds as a helpful omission.
+- **§8 item L — a half day costs no pay.** `lop_days()` charged 0.5; it now
+  charges nothing, and the mark is still recorded and still shows in the counts.
+- **The teacher load chart.** Asked for, and the check found both that the
+  existing chart hid teachers with no periods and that the allocation was
+  genuinely uneven — six at the 30-period ceiling, four on 18. Now every
+  teacher carries exactly 25, and the chart reports the spread.
 
 **The §5.3.9 rule HR exists to enforce**, and the reason HR came before
 payroll: approving a teacher's leave now walks their timetable and raises a
@@ -349,6 +365,30 @@ Design decisions in Part 4 that a later session should not undo:
 - **`AttendanceStatus` is shared between the student and staff registers.** The
   six states are the same six; a second enum would be two lists to keep in
   step.
+- **Payroll holds no rate.** The code knows the methods — percent of basic,
+  percent of gross, balancing figure, loss of pay — and the numbers are rows.
+  `DEFAULT_COMPONENTS` is what the setup screen is pre-filled with, nothing
+  more.
+- **Earnings always come to exactly the gross**, via the balancing figure.
+  If that drifts, somebody is paid the wrong amount on a payslip that still
+  looks arithmetically tidy — which is why every payslip in a run is checked.
+- **`payslip_lines` is a table, not a frozen JSON payload.** Unlike a report
+  card, payroll is asked questions *across* documents; the PF register and
+  cost-by-department of §5.3.10 are queries over lines.
+- **Payroll does NOT reuse `fee_periods` as its month lock.** This reverses a
+  suggestion in an earlier revision of this document: §5.3.6 keeps the ledgers
+  separate, and closing June for fees is not the same decision as closing June
+  for payroll. The run's own status is the lock, and `run_no` lets a month have
+  a supplementary run.
+- **An approved run is immutable** and a correction is a supplementary run
+  standing on its own. The first run's payslips are untouched by the second.
+- **Whoever prepares the payroll does not sign it off.** Accountant holds
+  `payroll.run.manage`, Principal `.approve`.
+- **The teacher load is even by construction.** Teachers are assigned *by
+  subject*, two per subject splitting the ten sections, and the placement loop
+  fills whichever subject a section is furthest behind on. Three teachers per
+  section taking two subjects each cannot balance — thirty assignments over
+  twelve people is 2.5 each.
 
 ---
 
@@ -423,6 +463,20 @@ records clerk every colleague's bank account, as a side effect of a role that
 can read everything else. `NOT_BLANKET_READ` now excludes it and the auditor is
 granted it deliberately. **Check that list before naming any new `.read`
 permission over sensitive data.**
+
+**Anything ending in `.read` over sensitive data needs `NOT_BLANKET_READ`.**
+This has now bitten twice — `hr.salary.read` and `payroll.run.read` — and each
+time the effect was the same: the Admin Officer, a records clerk, would have
+read every colleague's bank account and salary as a side effect of a role that
+reads everything else. Add the permission to that set and grant it explicitly to
+whoever genuinely needs it. **Note the Principal must then be granted it back**,
+because an approver has to see what they are approving.
+
+**A service that stands the old row down before inserting the new one leaves a
+gap on the failure path.** `set_structure()` deactivated the current salary
+structure and *then* hit the unique constraint, so the employee was momentarily
+on no terms at all and an ordinary mistake surfaced as a 500. Check first, write
+second.
 
 **`employees` and `departments` point at each other**, which has bitten twice.
 SQLAlchemy cannot infer `Employee.department` without explicit `foreign_keys`,
@@ -595,6 +649,29 @@ Recruitment is not, and it is the larger half of §5.3:
   own department.
 - **No HR UI**, like every part before it.
 
+### Part 4 payroll — what is not built
+
+A run completes, is immutable once approved, and produces registers. What §3.16
+and §5.3 ask for that this does not do:
+
+- **No slab-based TDS.** It needs an annual projection this system does not
+  hold, and inventing one puts a wrong number on a payslip. TDS ships as a
+  `fixed` component, inactive, entered per employee by whoever computed it.
+  See §8 item M.
+- **No `formula` calculation method.** An expression evaluator behind a screen a
+  records clerk uses is an injection surface. The four methods plus the
+  balancing figure cover §3.16's default set exactly.
+- **No arrears or mid-month joiners.** A structure effective mid-month is paid
+  as though it applied all month; nothing prorates.
+- **No payslip PDF and no bank transfer file.** The payslip is JSON, and
+  `bank_account_no` is captured and unused.
+- **No annual statutory returns** — the registers are per run, so PF and ESI
+  come out a month at a time rather than as a quarterly or annual filing.
+- **Nothing tells an employee they have been paid.** Payslips are admin-side
+  only; §5.3.8's employee self-service does not exist, and communication is not
+  built.
+- **No payroll UI.**
+
 ### Part 1 — infrastructure still owed
 
 **The backend list from §12 is now done.** What Part 1 still owes is
@@ -675,108 +752,98 @@ Raised by the Part 4 work, none blocking:
 | H | **What makes a result a `fail` or a `compartment`?** §5.4.7 names both statuses and nothing computes them, because there is no pass mark anywhere in the scheme. Is it a percentage of the term total, a per-subject minimum, or both? A `pass_marks` column on `scheme_components` is the obvious home. | Before a term is published for real |
 | I | **Does an absent paper lower the percentage, or leave it out?** It is currently left out of both halves, which is the v0 rule §5.4.9 says to keep for a subject with no mark — but it means an absent child reads *higher* than one who sat the paper and scored zero. Defensible either way; currently a consequence of an inherited rule rather than a decision. | Before a term is published for real |
 | J | **Who may reopen a locked paper?** Currently anyone holding `exam.marks.lock`, which is the Principal and the Exam Controller. Same shape as item F for fee periods. | Before go-live |
-| K | **Do staff leave balances carry forward, and does earned leave accrue monthly?** Both are currently a flat annual quota opened at the year's entitlement. §5.3.9 says "per policy" and the policy is not known. | Before a real school's first year end |
-| L | **Is a half-day absence half a day's pay?** `lop_days()` charges 0.5 for a `half_day` mark, which is the obvious reading and not a decision anybody made. | Before the first payroll run |
+| ~~K~~ | ~~Do staff leave balances carry forward?~~ | **Answered 7 Sep 2026: no. Unused leave lapses.** Already the behaviour; now stated and pinned by a test. *Whether earned leave should accrue monthly rather than open at the full quota is still open — see N.* |
+| ~~L~~ | ~~Is a half-day absence half a day's pay?~~ | **Answered 7 Sep 2026: no deduction at all — a half day is paid as a full day.** Built and tested. |
+
+Raised by payroll, none blocking:
+
+| # | Question | Needed by |
+|---|---|---|
+| M | **How should TDS be computed?** It ships as a `fixed` per-employee amount, inactive, because slab-based TDS needs an annual projection the system does not hold. Is entering a monthly figure what the school's accountant actually does, or should the system project? | Before the first April payroll |
+| N | **Does earned leave accrue monthly?** A balance currently opens at the full year's quota on day one, so somebody could take fifteen earned days in April. | Before a real school's first year |
+| O | **Should a mid-month joiner or leaver be prorated?** Nothing does; a structure effective the 20th pays the full month. | Before the first real hire mid-month |
 
 ---
 
-## 9. Where to start next session — payroll, then the rest of Part 4
+## 9. Where to start next session — transport, communication, reports
 
-**Examinations, report cards and HR are done.** What remains of Part 4 is
-**payroll, transport, communication and reports**, plus recruitment (§6) and the
-examination gaps (§6). Read `docs/ERP_BLUEPRINT.md` **§0** first (§0.9, §0.11
-and §0.15 bind here), then **§3.16** (payroll), **§5.6** (transport), **§5.9**
-(communication) and **§5.10** (reports).
+**Examinations, report cards, HR and payroll are done, and both halves of
+Checkpoint 4 pass as tests.** What remains of Part 4 is **transport,
+communication and reports**, plus the two guides — and the guides are a
+Checkpoint 4 condition, not optional.
 
-**Nothing is blocked on the owner.** §8 items A, B and D were answered on
-7 September and are recorded above.
+**Nothing is blocked on the owner.** Every §8 item that gated work has been
+answered; the open ones (M, N, O and the earlier E–J) are refinements.
 
-### Start with payroll
+### Suggested order
 
-It is the other half of Checkpoint 4, and HR was built first precisely so it
-would have what it needs:
-
-- an employee to hang a salary structure off, with a department to report cost
-  by and statutory fields already gated behind `hr.salary.read`;
-- **`staff_attendance.lop_days(employee, start, end)`** — the loss-of-pay figure
-  §3.16's `gross ÷ working days × absent days` multiplies against. **Do not
-  compute absent days a second way.** It already merges the register and unpaid
-  leave, counts a day that is both only once, and never charges a Sunday.
-
-The answer from 7 September: **blueprint §3.16's default component set, with
-professional tax shipped disabled** because Uttar Pradesh does not levy it.
-Components are rows — `code`, `type` (earning / deduction / employer
-contribution), `calculation` (fixed / percent-of-basic / percent-of-gross / slab
-/ formula), `value`, `taxable`, `statutory`, `active` — and the system ships no
-hardcoded percentage. Defaults: Basic 50% of gross, HRA 40% of basic,
-Conveyance ₹1,600, Special Allowance as the balancing figure, DA disabled,
-PF 12% employee and 12% employer, ESI 0.75% while gross ≤ ₹21,000, TDS by slab,
-LOP as above.
-
-§5.3.9's payroll rules: **an approved run is immutable — a correction is a
-supplementary run, never an edit**, and payroll stays a **separate ledger** from
-fees (§5.3.6 calls mixing them a serious modelling error). Copy the void/reverse
-discipline from `services/fees.py`, not the tables.
-
-### Then
-
-1. **Transport** (§5.6) — the fee side is nearly free: `fee_heads` already has
-   an `optional` type, so transport bills through a plan item with no new
-   billing path. The capacity check and the expired-document refusal are hard
-   blocks, not warnings — both are child-safety rules, and one is a legal one.
+1. **Transport** (§5.6) — the biggest of the three and the one with real rules.
+   The fee side is nearly free: `fee_heads` already has an `optional` type, so
+   transport bills through a plan item with no new billing path. Two hard
+   blocks, not warnings: **a route may not exceed the vehicle's seating
+   capacity**, and **a vehicle with expired insurance, fitness, permit or PUC
+   cannot be assigned to an active route** — child-safety rules, and the second
+   is a legal one. Drivers are `employees`, so HR already carries them. Document
+   expiry alerts are a job handler over the polymorphic `documents` table
+   rather than a new mechanism.
 2. **Communication** (§5.9) — the outbox and one email provider, dispatched in
    the worker (`services/jobs.py` has the queue) so a gateway timeout never
-   fails the action that triggered the message. Every module before this has
-   notifications it wants and cannot send: admission stage transitions, the
-   defaulter chase, **report card publication**, and now **leave approval**,
-   which raises cover a colleague has to be told about.
-3. **Reports** (§5.10) and the two guides (`CONFIGURATION-GUIDE.md`,
-   `EXTENSION-GUIDE.md`) — last, because they describe what the others built.
-   The guides are a Checkpoint 4 condition, not optional.
+   fails the action that triggered the message. **Every module before this has
+   notifications it wants and cannot send**, and they were deliberately not
+   stubbed, so expect to go back and wire: admission stage transitions, the fee
+   defaulter chase, report card publication, leave approval (a colleague has to
+   be told they are covering), and payroll (nobody is told they have been paid).
+3. **Reports** (§5.10) and the guides. `CONFIGURATION-GUIDE.md` is what
+   Checkpoint 4 is still missing: a non-technical reader changing a fee rule
+   using only that document. Most of what it must describe now exists — fee
+   settings, grading scales, assessment schemes, leave types, salary components
+   — so it is writing rather than building.
 
-Recruitment (§5.3) and the examination gaps are smaller and unblock nothing;
-pick them up in an awkward-sized gap at the end of a session.
+Recruitment (§5.3), the examination gaps and the payroll gaps are all in §6 and
+unblock nothing; pick them up in an awkward-sized gap at the end of a session.
 
 ### What Parts 3 and 4 built that the rest should reuse rather than reinvent
 
 | Reach for | Rather than |
 |---|---|
-| `audit.next_number()` | any `max(seq) + 1` for a payslip or certificate number |
-| `services/fees.py` allocation model | a second ledger for payroll — **payroll stays separate**, but copy the void/reverse discipline |
-| `fee_periods` and `assert_period_open()` | a new "is this month closed" mechanism for payroll |
+| `audit.next_number()` | any `max(seq) + 1` for a certificate or document number |
+| `fee_heads`' `optional` type and a plan item | a separate transport billing path |
 | `holidays` and `attendance.working_days()` | a second calendar, anywhere |
 | `staff_attendance.lop_days()` | a second definition of absent days |
-| `services/timetable.py::conflicts()` | a fresh clash checker for the exam datesheet |
-| `core/settings_registry.py` | new columns for payroll rates or policy switches (§3.15) |
+| `services/payroll.py::compute()` | recomputing a payslip anywhere else — the preview and the run already share it |
+| `core/settings_registry.py` | new columns for policy switches (§3.15) |
 | `services/school_settings.py::module_enabled` | a UI-only feature switch |
 | `fees.primary_contact()` | a third way to find who to ring |
-| `services/grading.py` versioning + freeze | a second "frozen document" mechanism — **a payslip is exactly this shape** |
+| `services/grading.py` versioning + freeze | a second "frozen document" mechanism |
 | `services/report_cards.py::publish` | a fresh publication path; store the rendered payload |
 | `substitutions` | a second "who is covering" table |
+| `documents` (polymorphic, accepts a `vehicle` owner already) | a new table for vehicle papers |
 | `audit_log` | a per-module change log table |
+| `NOT_BLANKET_READ` | naming a sensitive permission `.read` and hoping |
 | `tests/test_tenant_isolation.py` | writing a new cross-tenant check from scratch |
 
 ### Checkpoint 4 passes when
 
-- ~~A CBSE report card publishes and stays frozen~~ — **done, and tested**
+- ~~A CBSE report card publishes and stays frozen~~ — **done and tested**
   (`tests/test_report_cards.py`).
-- A payroll run completes for the demo school — **not built.**
+- ~~A payroll run completes for the demo school~~ — **done and tested**
+  (`tests/test_payroll.py::test_a_payroll_run_completes_for_the_demo_school`).
 - A non-technical reader can change a fee rule using only
-  `CONFIGURATION-GUIDE.md` — **the guide does not exist yet.**
+  `CONFIGURATION-GUIDE.md` — **the guide does not exist yet. This is the only
+  thing standing between here and Checkpoint 4.**
 
 ### Before starting
 
 1. `git log --oneline main..HEAD` — read them; the messages carry the
    reasoning deliberately.
 2. Run the suite (§2) and the by-hand Postgres check (§4). Believe neither
-   number until you have seen it. SQLite hid three Postgres defects already, and
-   several Part 4 migrations needed the Postgres check to be trusted.
+   number until you have seen it. SQLite hid three Postgres defects already.
 3. Decide with the owner whether to push first. Nothing has ever been pushed and
    CI has never run, so the first push is also the first CI run — expect it to
-   find something. **The branch is now 8 commits further from that than it was
-   at the start of Part 4**, which makes the first CI run larger, not smaller.
-4. Consider whether the web dashboard should be caught up. It is known broken
-   against the fee API (§7), and Part 4 has moved examinations under it as well.
+   find something, and it grows with every part that lands.
+4. The web dashboard is further behind than ever: it is known broken against the
+   fee API (§7), and examinations, HR and payroll have all landed since anyone
+   opened it.
 
 The memory file `sunrise-erp-build.md` carries the same state in short form for
 a session that starts cold.
