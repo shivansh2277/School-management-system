@@ -24,6 +24,7 @@ from app.services import fees as fees_svc
 from app.services import admission as admission_svc
 from app.services import grading
 from app.services import hr as hr_svc
+from app.services import staff_leave as staff_leave_svc
 from app.services import schemes as schemes_svc
 from app.services import rbac
 from app.models import (
@@ -37,6 +38,7 @@ from app.models import (
     DocumentType,
     CustomField,
     Department,
+    LeaveTypeDef,
     AdmissionCycle,
     AdmissionCycleStatus,
     CustomFieldType,
@@ -128,6 +130,16 @@ TEACHER_NAMES = [
     ("Vikas Dubey", "M.A. Sanskrit, B.Ed.", "LANG", "TGT"),
     ("Pooja Awasthi", "B.Ed., Primary", "PRI", "PRT"),
     ("Sandeep Rastogi", "M.Com., B.Ed.", "HUM", "TGT"),
+]
+
+# A Lucknow private school's staff entitlement. Rows, not constants: §3.15 puts
+# per-school configuration in tables, and a school that gives 15 casual days
+# changes a number on a screen.
+LEAVE_TYPES = [
+    ("CL", "Casual Leave", Decimal(12), True),
+    ("SL", "Sick Leave", Decimal(10), True),
+    ("EL", "Earned Leave", Decimal(15), True),
+    ("LWP", "Leave Without Pay", Decimal(0), False),
 ]
 
 DEPARTMENTS = [
@@ -463,6 +475,17 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
             )
             if first is not None:
                 hr_svc.set_head(db, dept, first)
+    db.flush()
+
+    for code, name, quota, paid in LEAVE_TYPES:
+        if not db.scalar(
+            select(LeaveTypeDef).where(
+                LeaveTypeDef.school_id == school.id, LeaveTypeDef.code == code
+            )
+        ):
+            staff_leave_svc.create_type(
+                db, school.id, code=code, name=name, annual_quota=quota, is_paid=paid
+            )
     db.flush()
 
     subjects = [Subject(name=n, code=c) for n, c in SUBJECTS]

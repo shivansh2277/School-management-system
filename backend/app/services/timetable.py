@@ -364,6 +364,19 @@ def arrange(
                 status.HTTP_409_CONFLICT,
                 "That teacher is already covering another class in that period",
             )
+        # The third way a teacher can be unavailable, and the one Part 3 could
+        # not ask about because staff leave did not exist. Assigning cover to
+        # somebody who is themselves away is not a clash the timetable can see:
+        # they have no lesson that period precisely because they are not in.
+        from app.services import staff_leave
+
+        away = staff_leave.on_leave(db, substitute_teacher_id, on)
+        if away is not None:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                f"That teacher is on approved {away.leave_type.name} from "
+                f"{away.from_date} to {away.to_date}",
+            )
 
     row = db.scalar(
         select(Substitution).where(
