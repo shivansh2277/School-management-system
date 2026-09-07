@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
+from app.services import timetable as timetable_svc
 from app.services.rbac import require_permission
 from app.models import ExamSchedule, Student, TimetableSlot, User, UserRole
 from app.schemas.common import SlotOut
@@ -18,30 +19,12 @@ student_only = require_permission("attendance.record.read")
 
 def _slots(db: Session, student: Student, day_key: str | None) -> list[SlotOut]:
     enrolment = require_current_enrolment(db, student.id)
-    q = select(TimetableSlot).where(
-        TimetableSlot.class_section_id == enrolment.class_section_id
+    return timetable_svc.grid(
+        db,
+        student.school_id,
+        class_section_id=enrolment.class_section_id,
+        day_of_week=day_key,
     )
-    if day_key is not None:
-        q = q.where(TimetableSlot.day_of_week == day_key)
-    labels = section_labels(db)
-    subjects = subject_names(db)
-    from app.models import Employee
-
-    teachers = {t.id: t.user.full_name for t in db.scalars(select(Employee))}
-    return [
-        SlotOut(
-            period=s.period_no,
-            day_of_week=s.day_of_week,
-            start_time=s.start_time,
-            end_time=s.end_time,
-            class_section_id=s.class_section_id,
-            class_label=labels.get(s.class_section_id, ""),
-            subject=subjects.get(s.subject_id, ""),
-            teacher=teachers.get(s.teacher_id, ""),
-            room=s.room,
-        )
-        for s in db.scalars(q.order_by(TimetableSlot.day_of_week, TimetableSlot.period_no))
-    ]
 
 
 @router.get("/dashboard")

@@ -147,6 +147,16 @@ class AttendanceStatus(StrEnum):
     excused = "excused"
 
 
+class SubstitutionStatus(StrEnum):
+    """§5.7.7. `unfilled` is the one that matters operationally: a class nobody
+    was assigned to is the number a principal wants on a dashboard."""
+
+    pending = "pending"
+    assigned = "assigned"
+    unfilled = "unfilled"
+    completed = "completed"
+
+
 class LeaveType(StrEnum):
     sick = "sick"
     planned = "planned"

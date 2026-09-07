@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
+from app.services import timetable as timetable_svc
 from app.services.rbac import require_permission
 from app.models import (
     AcademicYear,
@@ -149,25 +150,4 @@ def list_subjects(user: User = Depends(admin_only), db: Session = Depends(get_db
 def timetable(
     class_section_id: int, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> list[SlotOut]:
-    labels = section_labels(db)
-    subjects = subject_names(db)
-    teachers = {t.id: t.user.full_name for t in db.scalars(select(Employee))}
-    slots = db.scalars(
-        select(TimetableSlot)
-        .where(TimetableSlot.class_section_id == class_section_id)
-        .order_by(TimetableSlot.day_of_week, TimetableSlot.period_no)
-    )
-    return [
-        SlotOut(
-            period=s.period_no,
-            day_of_week=s.day_of_week,
-            start_time=s.start_time,
-            end_time=s.end_time,
-            class_section_id=s.class_section_id,
-            class_label=labels.get(s.class_section_id, ""),
-            subject=subjects.get(s.subject_id, ""),
-            teacher=teachers.get(s.teacher_id, ""),
-            room=s.room,
-        )
-        for s in slots
-    ]
+    return timetable_svc.grid(db, user.school_id, class_section_id=class_section_id)

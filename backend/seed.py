@@ -62,6 +62,7 @@ from app.models import (
     StudentGuardian,
     School,
     Student,
+    SchoolPeriod,
     Subject,
     Employee,
     TimetableSlot,
@@ -522,27 +523,65 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
     db.flush()
 
     # --- timetable --------------------------------------------------------
+    # Built greedily against the same rules the API enforces: a teacher in one
+    # place at a time, a room hosting one class, a section taught one thing.
+    # v0 seeded this blindly and produced 144 teacher double-bookings and 36
+    # room clashes, which made every conflict report noise. Where no valid
+    # placement exists the slot is left empty on purpose — §5.7.9 wants an
+    # incomplete timetable to be visibly incomplete, and `/admin/timetable/
+    # completeness` reports exactly those gaps.
+    periods = [
+        SchoolPeriod(
+            period_no=i + 1,
+            start_time=start,
+            end_time=end,
+            is_break=(i + 1 == 6),
+            name="Break" if i + 1 == 6 else None,
+        )
+        for i, (start, end) in enumerate(PERIOD_TIMES)
+    ]
+    db.add_all(periods)
+    db.flush()
+
     cst = {
         (row.class_section_id, row.subject_id): row.teacher_id
         for row in db.query(ClassSubjectTeacher).all()
     }
-    for sec in sections:
-        for di, day in enumerate(DayOfWeek):
-            for period in range(1, 7):
-                sub = subjects[(di + period) % len(subjects)]
-                start, end = PERIOD_TIMES[period - 1]
-                db.add(
-                    TimetableSlot(
-                        class_section_id=sec.id,
-                        day_of_week=day,
-                        period_no=period,
-                        start_time=start,
-                        end_time=end,
-                        subject_id=sub.id,
-                        teacher_id=cst[(sec.id, sub.id)],
-                        room=ROOMS[(di + period) % len(ROOMS)],
+    busy_teacher: set[tuple] = set()   # (day, period, teacher)
+    busy_room: set[tuple] = set()      # (day, period, room)
+    placed = skipped = 0
+    for period in periods:
+        if period.is_break:
+            continue
+        for day in DayOfWeek:
+            for si, sec in enumerate(sections):
+                for offset in range(len(subjects)):
+                    sub = subjects[(si + period.period_no + offset) % len(subjects)]
+                    teacher_id = cst.get((sec.id, sub.id))
+                    if teacher_id is None:
+                        continue
+                    room = ROOMS[(si + period.period_no) % len(ROOMS)]
+                    if (day, period.id, teacher_id) in busy_teacher:
+                        continue
+                    if (day, period.id, room) in busy_room:
+                        room = None  # taught in their own classroom instead
+                    db.add(
+                        TimetableSlot(
+                            class_section_id=sec.id,
+                            day_of_week=day,
+                            period_id=period.id,
+                            subject_id=sub.id,
+                            teacher_id=teacher_id,
+                            room=room,
+                        )
                     )
-                )
+                    busy_teacher.add((day, period.id, teacher_id))
+                    if room:
+                        busy_room.add((day, period.id, room))
+                    placed += 1
+                    break
+                else:
+                    skipped += 1
     db.flush()
 
     # Class and roll number now live on the enrolment, so look them up once

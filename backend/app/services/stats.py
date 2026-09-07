@@ -185,14 +185,16 @@ def today_schedule(
     }
     return [
         {
-            "period": slot.period_no,
-            "time": f"{slot.start_time:%H:%M}-{slot.end_time:%H:%M}",
+            "period": slot.period.period_no,
+            "time": f"{slot.period.start_time:%H:%M}-{slot.period.end_time:%H:%M}",
             "class_label": labels.get(slot.class_section_id, ""),
             "subject": subjects.get(slot.subject_id, ""),
             "teacher": teachers.get(slot.teacher_id, ""),
             "room": slot.room,
         }
-        for slot in db.scalars(q.order_by(TimetableSlot.period_no))
+        # Bell timings live on `school_periods` now, so ordering follows the
+        # period number there rather than a column repeated on every slot.
+        for slot in sorted(db.scalars(q), key=lambda s: s.period.period_no)
     ]
 
 

@@ -29,7 +29,7 @@ MODULES: list[Module] = [
     Module("homework", "Homework (mobile app)", built=True, default_enabled=True),
     Module("communication", "Notices and communication", built=True, default_enabled=True),
     Module("admission", "Admission", built=False, default_enabled=True),
-    Module("timetable", "Timetable", built=False, default_enabled=True),
+    Module("timetable", "Timetable", built=True, default_enabled=True),
     Module("hr", "HR and payroll", built=False, default_enabled=False),
     Module("transport", "Transport", built=False, default_enabled=False),
 ]

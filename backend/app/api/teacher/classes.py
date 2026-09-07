@@ -3,6 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
+from app.services import timetable as timetable_svc
 from app.services.rbac import require_permission
 from app.models import (
     ClassSection,
@@ -71,27 +72,8 @@ def my_timetable(
     user: User = Depends(teacher_only), db: Session = Depends(get_db)
 ) -> list[SlotOut]:
     me = scoping.employee_for(db, user)
-    labels = section_labels(db)
-    subjects = subject_names(db)
-    slots = db.scalars(
-        select(TimetableSlot)
-        .where(TimetableSlot.teacher_id == me.id)
-        .order_by(TimetableSlot.day_of_week, TimetableSlot.period_no)
-    )
-    return [
-        SlotOut(
-            period=s.period_no,
-            day_of_week=s.day_of_week,
-            start_time=s.start_time,
-            end_time=s.end_time,
-            class_section_id=s.class_section_id,
-            class_label=labels.get(s.class_section_id, ""),
-            subject=subjects.get(s.subject_id, ""),
-            teacher=user.full_name,
-            room=s.room,
-        )
-        for s in slots
-    ]
+    return timetable_svc.grid(db, user.school_id, teacher_id=me.id)
+
 
 
 @router.get("/profile")

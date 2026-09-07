@@ -56,6 +56,14 @@ SETTINGS: list[SettingDef] = [
         50,
         "Late fee ceiling, as a percentage of the invoice",
     ),
+    # §5.7.9: exceeding this needs an override with a reason, not a silent
+    # accept. The number differs by school, so it is not a constant.
+    SettingDef(
+        "timetable.max_periods_per_week",
+        int,
+        30,
+        "Maximum teaching periods one teacher may be scheduled per week",
+    ),
     *(
         SettingDef(
             f"feature.{m.code}",
