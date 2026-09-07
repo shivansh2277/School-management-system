@@ -44,7 +44,28 @@ def overdue_sweep(db: Session, job: Job) -> dict:
     for invoice in stale:
         invoice.status = InvoiceStatus.overdue
     db.flush()
-    return {"marked_overdue": len(stale)}
+
+    # And charge the day's fine. §0.6, with §8 item C answered on
+    # 7 September 2026: the clock keeps running until the invoice is paid, so
+    # every unsettled invoice is reassessed, not only the ones billed this
+    # month. The amount is a pure function of the dates, so a missed run
+    # catches up rather than losing a day's accrual.
+    unsettled = db.scalars(
+        select(FeeInvoice).where(
+            FeeInvoice.school_id == job.school_id,
+            FeeInvoice.status.not_in(fees.DEAD),
+            FeeInvoice.settled_on.is_(None),
+            FeeInvoice.due_date < today,
+        )
+    ).all()
+    fined = charged = 0
+    for invoice in unsettled:
+        amount = fees.assess_late_fee(db, invoice, today)
+        if amount > 0:
+            fined += 1
+            charged += int(amount)
+    db.flush()
+    return {"marked_overdue": len(stale), "late_fees_charged": fined, "total": charged}
 
 
 @handler("fees.generate_invoices")

@@ -25,6 +25,9 @@ from app.models import (
     Enrolment,
     EnrolmentStatus,
     FeeFrequency,
+    FeeHead,
+    FeeHeadType,
+    Guardian,
     FeeInvoice,
     FeeInvoiceLine,
     FeePayment,
@@ -33,14 +36,18 @@ from app.models import (
     PaymentAllocation,
     School,
     Student,
+    StudentGuardian,
     User,
 )
-from app.services import audit, fee_setup
+from app.services import audit, fee_setup, school_settings
 from app.services.fee_setup import money
 
 ZERO = Decimal("0.00")
 # Statuses that no longer represent money anyone expects to receive.
 DEAD = (InvoiceStatus.voided, InvoiceStatus.written_off)
+# The late fee is an ordinary line against an ordinary head, so head-wise
+# reporting, part payment and receipts all handle it without a special case.
+LATE_FEE_CODE = "LATE"
 
 
 # --- derived amounts --------------------------------------------------------
@@ -122,6 +129,102 @@ def _restate(db: Session, invoice: FeeInvoice, on: Date) -> None:
             invoice.status = InvoiceStatus.issued
 
 
+# --- the late fee (§0.6, and §8 item C answered 7 September 2026) -----------
+
+
+def late_fee_rules(db: Session, school_id: int) -> dict:
+    """The four numbers behind the rule, per school (§3.15)."""
+    return {
+        key: int(school_settings.get(db, school_id, f"fees.late_fee.{key}"))
+        for key in ("grace_days", "initial", "per_day", "cap_percent")
+    }
+
+
+def late_fee_due(payable: Decimal, due_date: Date, on: Date, rules: dict) -> Decimal:
+    """₹300 once 5 days overdue, then +₹100 per further day, capped at 50%.
+
+    A pure function of the due date, the amount and one other date — no reading
+    of when a job last ran. That is what makes the fine defensible at the
+    counter: it can be recomputed in front of the parent.
+
+    The clock runs until the invoice is *paid*, not until the next invoice is
+    generated (the product owner's answer to §8 item C, 7 September 2026). So
+    the caller passes `settled_on` for a settled invoice and today for a live
+    one, and nothing else changes the answer.
+    """
+    days_overdue = (on - due_date).days
+    if days_overdue < rules["grace_days"]:
+        return ZERO
+    fee = Decimal(rules["initial"]) + Decimal(rules["per_day"]) * (
+        days_overdue - rules["grace_days"]
+    )
+    cap = payable * Decimal(rules["cap_percent"]) / 100
+    return money(min(fee, cap))
+
+
+def late_fee_head(db: Session, school_id: int) -> FeeHead:
+    head = db.scalar(
+        select(FeeHead).where(
+            FeeHead.school_id == school_id, FeeHead.code == LATE_FEE_CODE
+        )
+    )
+    if head is None:
+        head = FeeHead(
+            school_id=school_id,
+            name="Late Fee",
+            code=LATE_FEE_CODE,
+            type=FeeHeadType.one_time,
+        )
+        db.add(head)
+        db.flush()
+    return head
+
+
+def assess_late_fee(db: Session, invoice: FeeInvoice, on: Date | None = None) -> Decimal:
+    """Bring an invoice's late-fee line up to date. A write path, never a read.
+
+    Called by the daily sweep and again at the counter before money is taken,
+    so what a parent is asked for is the fine as of today rather than as of
+    whenever the job last ran.
+    """
+    on = on or Date.today()
+    if invoice.status in DEAD:
+        return ZERO
+    head = late_fee_head(db, invoice.school_id)
+    existing = next((line for line in invoice.lines if line.fee_head_id == head.id), None)
+    if invoice.settled_on is not None:
+        # Paid. The clock stopped on the day the balance reached zero.
+        return existing.amount if existing else ZERO
+
+    base = money(
+        sum((line.net for line in invoice.lines if line.fee_head_id != head.id), ZERO)
+    )
+    fee = late_fee_due(base, invoice.due_date, on, late_fee_rules(db, invoice.school_id))
+    if fee <= ZERO:
+        return ZERO
+    if existing is None:
+        db.add(
+            FeeInvoiceLine(
+                school_id=invoice.school_id,
+                invoice_id=invoice.id,
+                fee_head_id=head.id,
+                description=f"Late fee ({(on - invoice.due_date).days} days overdue)",
+                amount=fee,
+            )
+        )
+    elif fee > existing.amount:
+        # Only ever upward. Lowering the rule must not refund a fine already
+        # charged — that is a waiver, which is a concession and needs approval.
+        existing.amount = fee
+        existing.description = f"Late fee ({(on - invoice.due_date).days} days overdue)"
+    else:
+        return existing.amount
+    db.flush()
+    db.refresh(invoice)
+    _restate(db, invoice, on)
+    return fee
+
+
 # --- billing ----------------------------------------------------------------
 
 
@@ -153,7 +256,7 @@ def generate(db: Session, month: int, year: int, school_id: int, actor: User | N
     if not 1 <= month <= 12:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "month must be 1-12")
 
-    due_day = 10
+    due_day = int(school_settings.get(db, school_id, "fees.due_day"))
     due = Date(year, month, min(due_day, calendar.monthrange(year, month)[1]))
     issued_on = Date(year, month, 1)
 
@@ -405,7 +508,12 @@ def collect(
     )
     db.add(payment)
     db.flush()
-    _allocate(db, payment, payment.amount, now.date())
+    # Bring every outstanding fine up to date before the money lands: what is
+    # collected must be what is owed today, not what the last sweep stored.
+    today = Date.today()
+    for invoice in outstanding_invoices(db, enrolment.id):
+        assess_late_fee(db, invoice, today)
+    _allocate(db, payment, payment.amount, today)
     audit.record(
         db,
         actor=actor,
@@ -606,6 +714,36 @@ def collection(db: Session, year: int, school_id: int) -> dict:
         "outstanding": money(total_billed - total_collected),
         "months": months,
     }
+
+
+def late_fee_charged(db: Session, invoice: FeeInvoice) -> Decimal:
+    """What fine currently stands on this invoice. A read: it never assesses."""
+    head = db.scalar(
+        select(FeeHead).where(
+            FeeHead.school_id == invoice.school_id, FeeHead.code == LATE_FEE_CODE
+        )
+    )
+    if head is None:
+        return ZERO
+    return money(
+        sum((line.net for line in invoice.lines if line.fee_head_id == head.id), ZERO)
+    )
+
+
+def primary_contact(db: Session, student_id: int) -> dict | None:
+    """Who the office rings about this child. A defaulter list without a phone
+    number is a report rather than a chase (§5.5.3)."""
+    row = db.scalar(
+        select(Guardian)
+        .join(StudentGuardian, StudentGuardian.guardian_id == Guardian.id)
+        .where(
+            StudentGuardian.student_id == student_id,
+            StudentGuardian.is_primary.is_(True),
+        )
+    )
+    if row is None:
+        return None
+    return {"name": row.user.full_name, "phone": row.user.phone, "email": row.user.email}
 
 
 def enrolment_for_student(db: Session, student_id: int) -> Enrolment | None:

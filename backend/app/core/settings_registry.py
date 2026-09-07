@@ -30,7 +30,7 @@ class SettingDef:
 
 
 SETTINGS: list[SettingDef] = [
-    # --- fees (�0.6, locked). Values, not code: a school changes the sibling
+    # --- fees (§0.6, locked). Values, not code: a school changes the sibling
     # concession without a deployment, and the number that bills is the number
     # on the configuration screen.
     SettingDef(
@@ -38,6 +38,23 @@ SETTINGS: list[SettingDef] = [
         int,
         10,
         "Discount for a sibling of a child already enrolled, as a percentage",
+    ),
+    SettingDef("fees.due_day", int, 10, "Day of the month a monthly invoice falls due"),
+    # The late-fee rule of §0.6, as four numbers rather than one formula buried
+    # in code. The cap exists because 100/day uncapped passes a monthly fee
+    # inside two months; a school wanting a gentler rule changes these values.
+    SettingDef(
+        "fees.late_fee.grace_days", int, 5, "Days past due before any late fee applies"
+    ),
+    SettingDef(
+        "fees.late_fee.initial", int, 300, "Late fee charged once the grace period ends"
+    ),
+    SettingDef("fees.late_fee.per_day", int, 100, "Added per further day overdue"),
+    SettingDef(
+        "fees.late_fee.cap_percent",
+        int,
+        50,
+        "Late fee ceiling, as a percentage of the invoice",
     ),
     *(
         SettingDef(
