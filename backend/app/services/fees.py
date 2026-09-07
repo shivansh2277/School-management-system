@@ -32,6 +32,8 @@ from app.models import (
     FeeInvoiceLine,
     FeePayment,
     FeePaymentStatus,
+    FeePeriod,
+    FeePeriodStatus,
     InvoiceStatus,
     PaymentAllocation,
     School,
@@ -225,6 +227,144 @@ def assess_late_fee(db: Session, invoice: FeeInvoice, on: Date | None = None) ->
     return fee
 
 
+# --- the period books -------------------------------------------------------
+
+
+def period(db: Session, school_id: int, year: int, month: int) -> FeePeriod:
+    """A month's books. Absent means open — a school should not have to open
+    January before it can bill it."""
+    row = db.scalar(
+        select(FeePeriod).where(
+            FeePeriod.school_id == school_id,
+            FeePeriod.period_year == year,
+            FeePeriod.period_month == month,
+        )
+    )
+    if row is None:
+        row = FeePeriod(
+            school_id=school_id,
+            period_year=year,
+            period_month=month,
+            status=FeePeriodStatus.open,
+        )
+        db.add(row)
+        db.flush()
+    return row
+
+
+def assert_period_open(db: Session, school_id: int, year: int, month: int) -> None:
+    row = db.scalar(
+        select(FeePeriod).where(
+            FeePeriod.school_id == school_id,
+            FeePeriod.period_year == year,
+            FeePeriod.period_month == month,
+        )
+    )
+    if row is not None and row.status is FeePeriodStatus.closed:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"{year}-{month:02d} is closed. Post it to the current open period instead.",
+        )
+
+
+def close_period(
+    db: Session, school_id: int, year: int, month: int, actor: User, note: str
+) -> FeePeriod:
+    """Close a month's books.
+
+    What that forbids afterwards: billing into the month, receiving money dated
+    inside it, and voiding one of its invoices. What it does not forbid is
+    collecting an old due today — a receipt belongs to the day it was issued,
+    so that money lands in the current period, which is exactly the "late entry
+    with a reference to the original" §5.5.9 asks for.
+    """
+    row = period(db, school_id, year, month)
+    if row.status is FeePeriodStatus.closed:
+        raise HTTPException(status.HTTP_409_CONFLICT, "This period is already closed")
+    row.status = FeePeriodStatus.closed
+    row.closed_by = actor.id
+    row.closed_at = datetime.now(UTC)
+    row.note = note
+    audit.record(
+        db,
+        actor=actor,
+        school_id=school_id,
+        entity_type="fee_period",
+        entity_id=row.id,
+        action=AuditAction.status_change,
+        after={"period": f"{year}-{month:02d}", "status": row.status.value},
+        reason=note,
+    )
+    db.commit()
+    return row
+
+
+def reopen_period(
+    db: Session, school_id: int, year: int, month: int, actor: User, reason: str
+) -> FeePeriod:
+    """Reopening is allowed and audited. A system that cannot reopen a month
+    gets a correction posted somewhere worse instead."""
+    row = period(db, school_id, year, month)
+    if row.status is FeePeriodStatus.open:
+        raise HTTPException(status.HTTP_409_CONFLICT, "This period is already open")
+    row.status = FeePeriodStatus.open
+    row.closed_by = None
+    row.closed_at = None
+    audit.record(
+        db,
+        actor=actor,
+        school_id=school_id,
+        entity_type="fee_period",
+        entity_id=row.id,
+        action=AuditAction.status_change,
+        after={"period": f"{year}-{month:02d}", "status": row.status.value},
+        reason=reason,
+    )
+    db.commit()
+    return row
+
+
+def daybook(db: Session, school_id: int, on: Date) -> dict:
+    """Everything taken on one day, by mode and by whoever took it.
+
+    The register a school actually reconciles cash against at closing time
+    (§5.5.10). Reversals appear as the negative rows they are.
+    """
+    payments = db.scalars(
+        select(FeePayment)
+        .where(
+            FeePayment.school_id == school_id,
+            func.date(FeePayment.received_at) == on,
+        )
+        .order_by(FeePayment.received_at)
+    ).all()
+    by_mode: dict[str, Decimal] = {}
+    by_cashier: dict[str, Decimal] = {}
+    for p in payments:
+        by_mode[p.method] = by_mode.get(p.method, ZERO) + p.amount
+        who = db.get(User, p.received_by).full_name if p.received_by else "system"
+        by_cashier[who] = by_cashier.get(who, ZERO) + p.amount
+    return {
+        "date": on,
+        "total": money(sum((p.amount for p in payments), ZERO)),
+        "count": len(payments),
+        "by_mode": {k: money(v) for k, v in by_mode.items()},
+        "by_cashier": {k: money(v) for k, v in by_cashier.items()},
+        "entries": [
+            {
+                "receipt_no": p.receipt_no,
+                "enrolment_id": p.enrolment_id,
+                "amount": p.amount,
+                "method": p.method,
+                "received_at": p.received_at,
+                "status": p.status,
+                "is_reversal": p.reverses_payment_id is not None,
+            }
+            for p in payments
+        ],
+    }
+
+
 # --- billing ----------------------------------------------------------------
 
 
@@ -255,6 +395,7 @@ def generate(db: Session, month: int, year: int, school_id: int, actor: User | N
     """
     if not 1 <= month <= 12:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "month must be 1-12")
+    assert_period_open(db, school_id, year, month)
 
     due_day = int(school_settings.get(db, school_id, "fees.due_day"))
     due = Date(year, month, min(due_day, calendar.monthrange(year, month)[1]))
@@ -352,6 +493,8 @@ def void(db: Session, invoice: FeeInvoice, reason: str, actor: User) -> FeeInvoi
             status.HTTP_409_CONFLICT,
             "Money has been received against this invoice; reverse the payment first",
         )
+    # Voiding changes what the month billed, so a closed month refuses it.
+    assert_period_open(db, invoice.school_id, invoice.period_year, invoice.period_month)
     before = invoice.status.value
     invoice.status = InvoiceStatus.voided
     invoice.void_reason = reason
@@ -487,6 +630,7 @@ def collect(
         return existing
 
     now = received_at or datetime.now(UTC)
+    assert_period_open(db, enrolment.school_id, now.year, now.month)
     payment = FeePayment(
         school_id=enrolment.school_id,
         enrolment_id=enrolment.id,
@@ -544,6 +688,7 @@ def reverse(db: Session, payment: FeePayment, reason: str, actor: User) -> FeePa
         raise HTTPException(status.HTTP_409_CONFLICT, "A reversal cannot itself be reversed")
 
     now = datetime.now(UTC)
+    assert_period_open(db, payment.school_id, now.year, now.month)
     contra = FeePayment(
         school_id=payment.school_id,
         enrolment_id=payment.enrolment_id,

@@ -157,6 +157,17 @@ class InvoiceStatus(StrEnum):
     written_off = "written_off"
 
 
+class FeePeriodStatus(StrEnum):
+    """§5.5.7 lists open → closed → locked. Two states are implemented: a
+    closed period refuses writes, and reopening it is an audited act with a
+    reason. `locked` would be a third door with the same key, so it waits for
+    a school that actually needs one.
+    """
+
+    open = "open"
+    closed = "closed"
+
+
 class FeePaymentStatus(StrEnum):
     """A payment is never edited. It succeeded, or a contra entry reversed it
     and both rows stay (§3.9 rule 3)."""

@@ -41,6 +41,7 @@ from app.models.enums import (
     FeeFrequency,
     FeeHeadType,
     FeePaymentStatus,
+    FeePeriodStatus,
     InvoiceStatus,
 )
 
@@ -323,3 +324,28 @@ class PaymentAllocation(TenantBase):
     amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
 
     payment = relationship("FeePayment", back_populates="allocations")
+
+
+class FeePeriod(TenantBase):
+    """One billing month's books, open or closed.
+
+    Closing is what makes a collection figure quotable: once the month is
+    closed nothing can be billed into it, no money can be received dated inside
+    it, and no invoice of that month can be voided. Money taken today against
+    an old invoice still lands in today's period — a receipt is dated when it
+    was issued, not when the bill was raised (§5.5.9).
+    """
+
+    __tablename__ = "fee_periods"
+    __table_args__ = (
+        UniqueConstraint("school_id", "period_year", "period_month", name="uq_fee_period"),
+    )
+
+    period_year: Mapped[int] = mapped_column(nullable=False)
+    period_month: Mapped[int] = mapped_column(nullable=False)
+    status: Mapped[FeePeriodStatus] = enum_col(
+        FeePeriodStatus, nullable=False, default=FeePeriodStatus.open
+    )
+    closed_by: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id"))
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    note: Mapped[str | None] = mapped_column(Text)

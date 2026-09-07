@@ -16,6 +16,7 @@ from app.models import (
     Enrolment,
     FeeInvoice,
     FeePayment,
+    FeePeriod,
     InvoiceStatus,
     Student,
     User,
@@ -235,6 +236,57 @@ def defaulters(
     for row in rows:
         row["days_overdue"] = (today - row["oldest_due_date"]).days
     return sorted(rows, key=lambda r: r["outstanding"], reverse=True)
+
+
+@router.get("/fees/daybook")
+def daybook(
+    on: Date | None = None, user: User = Depends(admin_only), db: Session = Depends(get_db)
+) -> dict:
+    """The day's collection register, by mode and by cashier (§5.5.10)."""
+    return svc.daybook(db, user.school_id, on or Date.today())
+
+
+@router.get("/fees/periods")
+def periods(
+    year: int | None = None, user: User = Depends(admin_only), db: Session = Depends(get_db)
+) -> list[dict]:
+    q = select(FeePeriod).where(FeePeriod.school_id == user.school_id)
+    if year is not None:
+        q = q.where(FeePeriod.period_year == year)
+    return [
+        {
+            "year": p.period_year,
+            "month": p.period_month,
+            "status": p.status,
+            "closed_at": p.closed_at,
+            "note": p.note,
+        }
+        for p in db.scalars(q.order_by(FeePeriod.period_year, FeePeriod.period_month))
+    ]
+
+
+@router.post("/fees/periods/{year}/{month}/close", dependencies=[Depends(voider)])
+def close_period(
+    year: int,
+    month: int,
+    body: ReasonIn,
+    user: User = Depends(admin_only),
+    db: Session = Depends(get_db),
+) -> dict:
+    row = svc.close_period(db, user.school_id, year, month, user, body.reason)
+    return {"year": row.period_year, "month": row.period_month, "status": row.status}
+
+
+@router.post("/fees/periods/{year}/{month}/reopen", dependencies=[Depends(voider)])
+def reopen_period(
+    year: int,
+    month: int,
+    body: ReasonIn,
+    user: User = Depends(admin_only),
+    db: Session = Depends(get_db),
+) -> dict:
+    row = svc.reopen_period(db, user.school_id, year, month, user, body.reason)
+    return {"year": row.period_year, "month": row.period_month, "status": row.status}
 
 
 @router.get("/fees/collection")
