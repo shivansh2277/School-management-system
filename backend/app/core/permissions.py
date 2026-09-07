@@ -30,6 +30,7 @@ PERMISSIONS: list[tuple[str, str]] = [
     ("exam.marks.enter", "Enter marks"),
     ("exam.result.publish", "Publish results and report cards"),
     # --- fees
+    ("fees.setup.manage", "Define fee heads, plans and student assignments"),
     ("fees.invoice.read", "View invoices and dues"),
     ("fees.invoice.generate", "Generate invoices"),
     ("fees.payment.collect", "Collect a payment and issue a receipt"),
@@ -125,6 +126,7 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "academics.class.write",
             "attendance.record.correct",
             "exam.definition.write",
+            "fees.setup.manage",
             "comms.notice.publish",
             "admission.enquiry.write",
             "admission.cycle.write",
@@ -138,6 +140,7 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
         [
             "students.profile.read",
             "academics.class.read",
+            "fees.setup.manage",
             "fees.invoice.read",
             "fees.invoice.generate",
             "fees.payment.collect",

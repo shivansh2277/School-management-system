@@ -318,3 +318,37 @@ class PaymentStatus(StrEnum):
     paid = "paid"
     voided = "voided"
     refunded = "refunded"
+
+
+class FeeHeadType(StrEnum):
+    """What kind of charge this is. `optional` is the one that matters
+    operationally: transport and meals are billed only to who opted in, and a
+    plan that cannot say so ends up charging every child for the bus."""
+
+    recurring = "recurring"
+    one_time = "one_time"
+    optional = "optional"
+
+
+class FeeFrequency(StrEnum):
+    monthly = "monthly"
+    one_time = "one_time"
+
+
+class ConcessionType(StrEnum):
+    sibling = "sibling"
+    staff_ward = "staff_ward"
+    rte = "rte"
+    management = "management"
+    scholarship = "scholarship"
+    other = "other"
+
+
+class ConcessionStatus(StrEnum):
+    """§5.5.9: a concession affects money only once someone approved it, and
+    who approved it is exactly what an audit asks."""
+
+    requested = "requested"
+    approved = "approved"
+    rejected = "rejected"
+    expired = "expired"

@@ -51,6 +51,10 @@ from app.models.enums import (
     EnrolmentStatus,
     DayOfWeek,
     Gender,
+    ConcessionStatus,
+    ConcessionType,
+    FeeFrequency,
+    FeeHeadType,
     InvoiceStatus,
     NoticeAudience,
     ScopeType,
@@ -58,7 +62,16 @@ from app.models.enums import (
     StudentStatus,
     UserRole,
 )
-from app.models.fees import FeeInvoice, FeePayment, FeeStructure
+from app.models.fees import (
+    FeeConcession,
+    FeeHead,
+    FeeInvoice,
+    FeePayment,
+    FeePlan,
+    FeePlanItem,
+    FeeStructure,
+    StudentFeePlan,
+)
 from app.models.ops import Attendance, Homework, HomeworkSubmission, Notice
 from app.models.user import Employee, Guardian, Student, StudentGuardian, User
 from app.models.enrolment import Enrolment

@@ -30,6 +30,15 @@ class SettingDef:
 
 
 SETTINGS: list[SettingDef] = [
+    # --- fees (§0.6, locked). Values, not code: a school changes the sibling
+    # concession without a deployment, and the number that bills is the number
+    # on the configuration screen.
+    SettingDef(
+        "fees.sibling_concession_percent",
+        int,
+        10,
+        "Discount for a sibling of a child already enrolled, as a percentage",
+    ),
     *(
         SettingDef(
             f"feature.{m.code}",

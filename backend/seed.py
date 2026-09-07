@@ -19,6 +19,7 @@ from app.core.document_types import DEFAULT_TYPES
 from app.core.permissions import LEGACY_ROLE_MAP
 from app.services import jobs as jobs_svc
 from app.services import audit as audit_svc
+from app.services import fee_setup
 from app.services import admission as admission_svc
 from app.services import rbac
 from app.models import (
@@ -45,6 +46,11 @@ from app.models import (
     ExamSchedule,
     FeeInvoice,
     FeePayment,
+    FeeFrequency,
+    FeeHead,
+    FeeHeadType,
+    FeePlan,
+    FeePlanItem,
     FeeStructure,
     Gender,
     GradeBand,
@@ -627,6 +633,50 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
         name: Decimal(f"{1200 + int(name) * 160}.00") for name in CLASS_NAMES
     }
     db.add_all(FeeStructure(class_name=c, monthly_amount=a) for c, a in fees.items())
+
+    # The catalogue that replaces the flat structure above: heads a school
+    # actually itemises on a fee card, and one plan per class carrying them.
+    heads = {}
+    for code, name, kind in (
+        ("TUITION", "Tuition Fee", FeeHeadType.recurring),
+        ("DEV", "Development Fee", FeeHeadType.recurring),
+        ("TRANSPORT", "Transport Fee", FeeHeadType.optional),
+        ("ADMISSION", "Admission Fee", FeeHeadType.one_time),
+    ):
+        head = FeeHead(name=name, code=code, type=kind)
+        db.add(head)
+        heads[code] = head
+    db.flush()
+
+    for class_name, monthly in fees.items():
+        # Development fee is a fifth of the card, the way most schools split it,
+        # so the invoice has more than one line to prove the model.
+        development = (monthly / 5).quantize(Decimal("0.01"))
+        plan = FeePlan(
+            academic_year_id=academic_year_id,
+            name=f"Class {class_name} standard",
+            class_name=class_name,
+            items=[
+                FeePlanItem(
+                    school_id=school.id,
+                    fee_head_id=heads["TUITION"].id,
+                    amount=monthly - development,
+                    frequency=FeeFrequency.monthly,
+                ),
+                FeePlanItem(
+                    school_id=school.id,
+                    fee_head_id=heads["DEV"].id,
+                    amount=development,
+                    frequency=FeeFrequency.monthly,
+                ),
+            ],
+        )
+        db.add(plan)
+    db.flush()
+
+    # The demo parent has two children, so the sibling rule has something to
+    # act on and the concession register is not empty on a fresh install.
+    fee_setup.apply_sibling_concessions(db, school.id)
 
     class_name_of = {s.id: s.class_name for s in sections}
     for back in (3, 2, 1):
