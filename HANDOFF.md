@@ -1,6 +1,7 @@
 # Sunrise ERP — Session Handoff
 
-**Written:** 6 September 2026 · **revised 7 September 2026** (Parts 2 and 3)
+**Written:** 6 September 2026 · **revised 7 September 2026** (Parts 2, 3 and
+the first half of Part 4)
 **Branch:** `part-1-foundation` — **nothing pushed, ever.** Count the commits
 with `git log --oneline main..HEAD | wc -l`; a number written here goes stale on
 the next commit, including the one that updates this file.
@@ -34,7 +35,7 @@ sessions — Parts 3 and 4 will each span several.
 | 1 | Foundation: tenancy, enrolments, RBAC, audit, jobs, documents | **backend complete** |
 | 2 | Admission, including the public online portal | **backend complete; Checkpoint 2 passes in tests** |
 | 3 | Fees rebuild + attendance + timetable | **backend complete; Checkpoint 3 passes in tests** |
-| 4 | Examinations, HR/payroll, transport, communication, reports | not started |
+| 4 | Examinations, HR/payroll, transport, communication, reports | **examinations and report cards done; HR, payroll, transport, communication and reports not started** |
 
 ---
 
@@ -44,26 +45,32 @@ Measured on 7 September 2026 by running the commands below, not recalled.
 
 | Measure | Value |
 |---|---|
-| Backend tests | **292 passing**, ~78 s |
-| Database tables | 60, plus `alembic_version` |
-| Alembic migrations | 19 (verified from empty **on Postgres**, then seed, then worker) |
-| API surface | 139 paths, 174 operations |
-| Permissions / system roles | 51 / 13 |
+| Backend tests | **353 passing**, ~81 s |
+| Database tables | **65, plus `alembic_version`** |
+| Alembic migrations | **23** (verified from empty **on Postgres**, then seed, then worker) |
+| API surface | **154 paths, 192 operations** |
+| Permissions / system roles | **54** / 13 |
 | Job handlers | `fees.overdue_sweep`, `fees.generate_invoices`, `admission.offer_sweep`, `system.heartbeat` |
 | Demo school | 100 students, 10 sections, 12 teachers, 98 guardians |
 | Demo fee ledger | 300 invoices, 810 lines, 170 payments, 410 allocations, 2 sibling concessions |
 | Demo attendance | 5,800 rows over 58 working days, plus 2 holidays inside the window |
 | Demo timetable | 6 periods, 300 slots, **0 teacher clashes, 0 room clashes**, heaviest load 30/week |
+| Demo examinations | 1 CBSE scheme, 8 components over 2 terms, 4 Term 1 exams, 240 papers, **2,400 marks, none over its paper's maximum** |
+| Demo grading | 1 active scale (CBSE v1), 8 bands |
+
+> The previous revision recorded **60** tables. The real count on 7 September,
+> before any Part 4 work, was **61** plus `alembic_version`. Corrected here
+> rather than carried forward.
 
 ```bash
 cd backend
-../.venv/Scripts/python.exe -m pytest -q                    # 292 passed
+../.venv/Scripts/python.exe -m pytest -q                    # 353 passed
 ../.venv/Scripts/python.exe -m alembic upgrade head
 ../.venv/Scripts/python.exe seed.py
 ../.venv/Scripts/python.exe worker.py --once                # runs due jobs
 ```
 
----
+Seeding costs ~12 s at `BCRYPT_ROUNDS=4`, measured on Postgres.
 
 ## 3. The commits, and why each exists
 
@@ -228,6 +235,84 @@ Design decisions in Part 3 that a later session should not undo:
 
 ---
 
+### Part 4, 7 September — examinations and report cards
+
+| Commit | What |
+|---|---|
+| `51f0eb2` | Tenant key actually filtered, not merely carried |
+| `24a76b5` | Grading scales versioned, so a published grade can be frozen |
+| `2d90a21` | Assessment schemes: a subject can carry more than one mark a term |
+| `1be8acd` | Marks lock, absent/exempted/zero, and the audited post-lock change |
+| `1f1165b` | CBSE report cards, frozen at publication, withheld for dues |
+
+**Half of Checkpoint 4 is a test, not a claim:**
+`tests/test_report_cards.py::test_a_published_card_does_not_re_grade_when_a_band_is_edited`
+publishes a card, then revises the grading scale so 91 is no longer an A1, and
+finds the issued document unchanged while the live preview has moved.
+`test_a_published_card_does_not_move_when_a_mark_is_corrected` does the same
+with a mark. **The payroll half of Checkpoint 4 is not built.**
+
+**The two product answers this part depended on.** Both given by the owner on
+7 September 2026, before any code was written against them:
+
+- **§8 item D — the report card layout:** *standard CBSE, kept
+  template-configurable.* Two terms; per subject Periodic Test 10, Notebook 5,
+  Subject Enrichment 5, Term Examination 80, totalling 100; grade from a
+  versioned scale; attendance line. Built as `assessment_schemes` +
+  `scheme_components`, so 10/5/5/80 is seed data a school edits, not a number
+  in code.
+- **§8 items A and B — payroll:** *blueprint §3.16 defaults, professional tax
+  shipped disabled because Uttar Pradesh does not levy it.* **Recorded, not yet
+  built** — payroll is the next session's work and this answer unblocks it.
+
+Design decisions in Part 4 that a later session should not undo:
+
+- **A grading scale is a version, not a setting.** Bands hang off
+  `grading_scales`; reusing a name creates the next version rather than a second
+  scale. Publication freezes the scale it cited, so revising it *must* become a
+  new version and the issued card still reads against the old one. This is the
+  whole mechanism §0.8 asks for, and removing the version column removes it.
+- **The lowest grade band must start at 0.** Otherwise a child on 40% earns no
+  grade and the card prints a blank.
+- **An exam cites a scheme component; the component is not on the paper.** An
+  exam already carries a term, so a periodic test is simply an exam that *is* a
+  component — which is why marks and `exam_schedule` needed no change at all.
+  Putting the link on `exam_schedule` instead would have been three times the
+  diff for the same capability.
+- **`scheme_component_id` is nullable, deliberately.** An exam without one is an
+  ordinary class test: marked, readable, and not printed. Requiring it would
+  mean amending the scheme before holding a surprise test.
+- **Components cannot be restated once an exam is marked against them.** The
+  marks are out of the old number; changing it turns an 8/10 into an 8/5 without
+  touching the mark.
+- **A paper is locked, not a mark.** §5.4.7 closes entry per subject, so the
+  lock is on `exam_schedule` and a paper cannot be half shut.
+- **There is no `mark_change_log` table.** `audit_log` is append-only, refuses a
+  `status_change` without a reason, is indexed on (entity_type, entity_id), and
+  its own docstring already names "changing a published mark" as its case. A
+  second log is a second thing to keep honest. §5.4.5 lists the table; this
+  deliberately does not build it.
+- **The exam controller has a route of their own.** `/teacher/marks` reaches
+  only the papers a teacher owns, which made an override impossible for the very
+  person §5.4.8 puts in charge of it. It is gated on `exam.marks.manage_any`,
+  **not** on `exam.marks.enter` — a teacher holds that one unscoped, and reusing
+  it would have let any teacher mark any section.
+- **`marks.entered_by` points at `users`, not `employees`.** The actor is a user
+  everywhere else here, the audit log included, and an exam controller may hold
+  no teaching post.
+- **Preview and issued card are separate endpoints returning different things.**
+  A preview recomputes; an issued card is read straight back. One route with a
+  flag is how a frozen document quietly starts moving again.
+- **Withholding asks the fee ledger.** `fees.ledger()["outstanding"]` — the
+  number the counter clerk collects against — rather than examinations keeping
+  its own idea of who has paid. It is a setting
+  (`exams.withhold_results_for_dues`), because §5.4.9 says the policy is
+  configurable.
+- **Releasing a withholding moves the status and not the marks.** They were
+  frozen at publication and stay frozen.
+
+---
+
 ## 4. Things that would be expensive to rediscover
 
 **The migration test runs on SQLite, and SQLite hides Postgres bugs.** It does
@@ -257,6 +342,41 @@ its schema with `Base.metadata.create_all`, straight from the models. A batch
 leaving a NOT NULL column nothing could insert into — and no test could see it.
 `tests/test_migrations.py` now migrates, seeds and runs a worker for real, and
 CI does the same. **Do not delete that test to make the suite faster.**
+
+**Carrying `school_id` is not the same as filtering on it.** Four read paths
+never did, and two of them genuinely leaked: `/admin/exams` and
+`/admin/subjects` returned every school's rows, and `grade_for()` graded a child
+against every customer's bands at once. Fixed by making `section_labels`,
+`subject_names` and `grade_for` *require* a `school_id` argument, so a caller
+cannot forget it. **When you add a query, check the tenant filter is on it** —
+`tests/test_tenant_isolation.py` plants a rival school and is the place to add
+the next such check.
+
+**A teacher's permissions are unscoped; the restriction is in the service.**
+`exam.marks.enter` is held school-wide by a teacher, and "own subjects only"
+comes from `assert_teaches_subject_in_section`. So a route that passes
+`school_wide=True` to skip service scoping **must be gated on a permission a
+teacher does not hold**, or it is a privilege escalation. This nearly shipped;
+`exam.marks.manage_any` exists for exactly that reason.
+
+**`audit.snapshot()` used to be unable to serialise a Decimal.** It stringified
+anything with `isoformat` or `value`, which covered dates and enums, and let a
+Decimal through into a JSON column — raising at commit rather than at the edit.
+It now allow-lists what JSON accepts. **Payroll would have hit this on its first
+audited amount.**
+
+**Batch `alter_column` is unavoidable on SQLite and it rebuilds the table.**
+That rebuild is what once dropped a `server_default`. Both Part 4 migrations
+that use it were checked on Postgres afterwards rather than assumed, and the
+`grade_bands` backfill was exercised against real data by downgrading and
+re-upgrading a seeded database. **Do the same for the next one.**
+
+**An unnamed foreign key has a different name on each engine.** Postgres
+auto-names it `<table>_<column>_fkey`; SQLite reflects it with no name at all,
+so batch mode needs a `naming_convention` before it can be addressed. The
+`marks.entered_by` migration branches on the dialect for this reason — a
+migration that only spells the SQLite name passes the test suite and fails on
+the engine that matters.
 
 **`BCRYPT_ROUNDS` is configurable and tests use 4.** Seeding 210 accounts at the
 production work factor was ~70 s of every run. This changes the work factor, not
@@ -367,6 +487,38 @@ where they sit, so seed ordering can change without breaking the suite.
 - **No month lock for attendance.** §5.8.9 mentions locking; corrections are
   audited instead, which is what Checkpoint 3 asks for.
 
+### Part 4 — what is not built
+
+Of the five Part 4 modules, **examinations and report cards are done and the
+other four are not started**: HR, payroll, transport, communication, reports.
+Within examinations, what §5.4 asks for and this does not do:
+
+- **No datesheet conflict checking.** §5.4.9 wants the builder to reject two
+  papers for one section at the same time and warn on a teacher invigilating two
+  rooms. `services/timetable.py::conflicts()` is the thing to reach for and it
+  has not been wired in. Papers are also not checked against `holidays`.
+- **No rooms, seating or hall tickets.** `exam_schedule.room` exists as a column
+  and nothing sets it. `exam_rooms` and `seat_allocations` are not built.
+- **No moderation step.** Marks go `entered → locked`; §5.4.7's `verified`
+  state between them has no screen and no column. The lock and the audited
+  override cover the integrity requirement; a second pair of eyes does not.
+- **No re-tests.** §5.4 lists `retests` for absentees. An absence is now
+  recorded distinctly, which is the data a re-test needs, but nothing consumes
+  it.
+- **No co-scholastic areas.** The CBSE card prints them; `co_scholastic_areas`
+  and `co_scholastic_marks` are not built. The scheme model would carry them
+  as components of a different kind, which is the cheap way in.
+- **No class-teacher or principal remark on the card**, and no PDF. The card is
+  JSON; nothing renders it.
+- **No result status beyond pass/withheld.** `fail` and `compartment` are
+  named in §5.4.7 and nothing computes them — there is no pass mark anywhere in
+  the scheme yet. See §8 item H.
+- **No section-wide publication.** Cards publish one child at a time; an exam
+  controller publishing 10-A does it forty times.
+- **No examinations UI**, like every part before it.
+- **Nothing withholds the Transfer Certificate.** §0.6b withholds the TC as well
+  as the report card; only the card is done.
+
 ### Part 1 — infrastructure still owed
 
 **The backend list from §12 is now done.** What Part 1 still owes is
@@ -402,6 +554,10 @@ read have moved (§7).
     computed; they will render, but the percentage a page shows and the one the
     API now computes are different numbers.
   A green typecheck here means nothing. Treat the dashboard as Part 4 work.
+  Part 4 widened the gap again: `/admin/exams` now returns `scheme_component_id`
+  and `marks_locked`, a report card row carries `is_absent`, `is_exempted` and
+  per-component columns, and marks may now be null. Nothing in `web/` knows any
+  of that.
 - **The mobile app has not been touched or tested** since the enrolment change,
   and Part 3 moved more ground under it: `/parent/fees/{id}/pay` is gone
   (payment is now against a student, with an amount and an idempotency key) and
@@ -423,10 +579,10 @@ From ERP_BLUEPRINT §16:
 
 | # | Question | Needed by |
 |---|---|---|
-| A | A real Lucknow school's payroll structure to validate the component model | Part 4 |
-| B | Confirm Uttar Pradesh levies no professional tax (assumed, shipped disabled) | Part 4 |
+| ~~A~~ | ~~A real Lucknow school's payroll structure~~ | **Answered 7 Sep 2026: use the blueprint §3.16 default component set. Recorded, not yet built.** |
+| ~~B~~ | ~~Confirm Uttar Pradesh levies no professional tax~~ | **Answered 7 Sep 2026: UP does not levy it. Ship the component, disabled by default.** |
 | ~~C~~ | ~~Does the late-fee clock stop when the next invoice generates?~~ | **Answered 7 Sep 2026: it keeps accruing until the invoice is paid.** Built and tested. |
-| D | The exact CBSE report card layout the target school expects | Part 4 |
+| ~~D~~ | ~~The exact CBSE report card layout~~ | **Answered 7 Sep 2026: standard CBSE (PT 10 / NB 5 / SE 5 / Term 80 over two terms), kept template-configurable. Built and tested.** |
 
 New questions this part surfaced, none blocking:
 
@@ -436,93 +592,99 @@ New questions this part surfaced, none blocking:
 | F | Who may reopen a closed fee period? Currently anyone holding `fees.payment.void`, which is Principal and Accountant. | Before go-live |
 | G | Should an unpaid invoice ever be written off? `written_off` exists in the status enum and nothing sets it — §0.6 says no refunds and no carry-forward, which leaves old dues visible forever. | Part 4, with §0.6b |
 
+Raised by the Part 4 work, none blocking:
+
+| # | Question | Needed by |
+|---|---|---|
+| H | **What makes a result a `fail` or a `compartment`?** §5.4.7 names both statuses and nothing computes them, because there is no pass mark anywhere in the scheme. Is it a percentage of the term total, a per-subject minimum, or both? A `pass_marks` column on `scheme_components` is the obvious home. | Before a term is published for real |
+| I | **Does an absent paper lower the percentage, or leave it out?** It is currently left out of both halves, which is the v0 rule §5.4.9 says to keep for a subject with no mark — but it means an absent child reads *higher* than one who sat the paper and scored zero. Defensible either way; currently a consequence of an inherited rule rather than a decision. | Before a term is published for real |
+| J | **Who may reopen a locked paper?** Currently anyone holding `exam.marks.lock`, which is the Principal and the Exam Controller. Same shape as item F for fee periods. | Before go-live |
+
 ---
 
-## 9. Where to start next session — Part 4
+## 9. Where to start next session — the rest of Part 4
 
-Part 4 is **examinations, HR/payroll, transport, communication, reports**
-(§12), and it is the largest part. Read `docs/ERP_BLUEPRINT.md` **§0** first
-(§0.5, §0.8, §0.9, §0.11, §0.15 and §0.6b all bind here), then **§5.4**
-(examinations), **§5.3** (HR), **§3.16** (payroll configurability), **§5.6**
-(transport), **§5.9** (communication) and **§5.10** (reports).
+**Examinations and report cards are done.** What remains of Part 4 is **HR,
+payroll, transport, communication and reports**, plus the examination gaps
+listed in §6. Read `docs/ERP_BLUEPRINT.md` **§0** first (§0.9, §0.11 and §0.15
+bind here), then **§5.3** (HR), **§3.16** (payroll), **§5.6** (transport),
+**§5.9** (communication) and **§5.10** (reports).
 
-**Two product questions block payroll** — §8 items A and B. Ask before writing
-a single salary component: a component model validated against a real Lucknow
-school's structure is the whole point of §3.16, and building one against a
-guess means rebuilding it. Item D blocks the report card layout the same way.
+**Nothing is blocked on the owner any more.** §8 items A, B and D were all
+answered on 7 September and are recorded above. Payroll can be written against
+the §3.16 default component set with professional tax shipped disabled.
 
 ### Suggested order, and where to stop
 
-Part 3 took one long session for six commits. Part 4 is five modules and will
-not fit in one. A sensible split, each ending at a commit that leaves the suite
-green:
-
-1. **Examinations** (§5.4) — assessment schemes, datesheet, marks entry with a
-   lock, moderation. Largest single piece, and the one Checkpoint 4 turns on.
-   Builds on `exams`/`marks`, which already exist from v0.
-2. **Report cards** (§0.8, §0.15) — CBSE-shaped, template-configurable, frozen
-   at publication. **Blocked on §8 item D**; ask first.
-3. **Result withholding for dues** (§0.6b) — small, and the seam already exists:
-   `fees.ledger()` answers what an enrolment owes. Do it right after report
-   cards while that code is fresh.
-4. **HR** (§5.3) — departments, staff leave, staff attendance. Staff leave is
-   what lets `timetable.arrange()` finally check "is this substitute on leave",
-   which Part 3 could not.
-5. **Payroll** (§3.16) — **blocked on §8 items A and B.**
-6. **Transport** (§5.6) — the fee side is nearly free: `fee_heads` already has
+1. **HR** (§5.3) — departments, designations, staff leave, staff attendance.
+   Do this before payroll: payroll needs `salary_structures` hanging off an
+   employee, and leave days are what loss-of-pay is computed from. Staff leave
+   is also what lets `timetable.arrange()` finally check "is this substitute on
+   leave", which Part 3 could not.
+2. **Payroll** (§3.16) — components as rows, zero hardcoded rates. Copy the
+   void/reverse discipline from `services/fees.py` but **keep the ledger
+   separate** (§5.3.6 calls mixing them a serious modelling error). An approved
+   run is immutable; a correction is a supplementary run. This is the other half
+   of Checkpoint 4.
+3. **Transport** (§5.6) — the fee side is nearly free: `fee_heads` already has
    an `optional` type, so transport bills through a plan item with no new
-   billing path.
-7. **Communication** (§5.9) — the outbox and one email provider. Every module
-   above has notifications it wants and cannot send; they are deliberately not
-   stubbed, so expect to go back and wire them.
-8. **Reports** (§5.10) and the two guides (`CONFIGURATION-GUIDE.md`,
+   billing path. The capacity check and the expired-document refusal are hard
+   blocks, not warnings — both are child-safety rules.
+4. **Communication** (§5.9) — the outbox and one email provider. Dispatch runs
+   in the worker (`services/jobs.py` already has the queue); a gateway timeout
+   must never fail the action that triggered the message. Every module before
+   this has notifications it wants and cannot send, so expect to go back and
+   wire them: admission stage transitions, the defaulter chase, and **report
+   card publication**, which now exists and has nowhere to announce itself.
+5. **Reports** (§5.10) and the two guides (`CONFIGURATION-GUIDE.md`,
    `EXTENSION-GUIDE.md`) — last, because they describe what the others built.
+   The guides are a Checkpoint 4 condition, not optional.
 
-Steps 2 and 5 are blocked on the owner. If those answers are not available when
-you reach them, **build around them rather than guessing** — do 3, 4, 6 first
-and come back.
+The examination gaps in §6 — the datesheet conflict check especially — are
+smaller than any of the above and can be picked up whenever there is an
+awkward-sized gap at the end of a session.
 
-### What Part 3 built that Part 4 should reuse rather than reinvent
+### What Parts 3 and 4 built that the rest should reuse rather than reinvent
 
 | Reach for | Rather than |
 |---|---|
 | `audit.next_number()` | any `max(seq) + 1` for a payslip or certificate number |
-| `services/fees.py` allocation model | a second, simpler ledger for payroll — **payroll stays separate**, but the void/reverse discipline should be copied |
+| `services/fees.py` allocation model | a second ledger for payroll — **payroll stays separate**, but copy the void/reverse discipline |
 | `fee_periods` and `assert_period_open()` | a new "is this month closed" mechanism for payroll |
 | `holidays` | a second calendar table for exams or transport |
-| `services/timetable.py::conflicts()` | a fresh clash checker for the exam datesheet — §5.7.9 says exams must not clash with the calendar |
-| `core/settings_registry.py` | new columns for grading scales or payroll rates (§3.15) |
+| `services/timetable.py::conflicts()` | a fresh clash checker for the exam datesheet |
+| `core/settings_registry.py` | new columns for payroll rates or policy switches (§3.15) |
 | `services/school_settings.py::module_enabled` | a UI-only feature switch |
 | `fees.primary_contact()` | a third way to find who to ring |
-
-### Two Part 4 items that touch Part 3 directly
-
-- **Result withholding for unpaid dues (§0.6b, §12).** The ledger already
-  answers "what does this enrolment owe" — `fees.ledger(db, enrolment_id)`
-  returns `outstanding`. Examinations should ask that question rather than
-  keeping its own idea of who has paid.
-- **Transport fee head (§5.6).** `fee_heads` already has an `optional` type for
-  exactly this: transport bills only the children who opted in, through a plan
-  item, with no new billing path.
+| `services/grading.py` versioning + freeze | a second "frozen document" mechanism for the TC or a payslip — **a payslip is exactly this shape** |
+| `services/report_cards.py::publish` | a fresh publication path; the store-the-rendered-payload pattern is the one to copy |
+| `audit_log` | a per-module change log table |
+| `tests/test_tenant_isolation.py` | writing a new cross-tenant check from scratch |
 
 ### Checkpoint 4 passes when
 
-A CBSE report card publishes and stays frozen; a payroll run completes for the
-demo school; and a non-technical reader can change a fee rule using only
-`CONFIGURATION-GUIDE.md`, which does not exist yet.
+- ~~A CBSE report card publishes and stays frozen~~ — **done, and tested**
+  (`tests/test_report_cards.py`).
+- A payroll run completes for the demo school — **not built.**
+- A non-technical reader can change a fee rule using only
+  `CONFIGURATION-GUIDE.md` — **the guide does not exist yet.**
 
 ### Before starting
 
 1. `git log --oneline main..HEAD` — read them; the messages carry the
    reasoning deliberately.
 2. Run the suite (§2) and the by-hand Postgres check (§4). Believe neither
-   number until you have seen it. SQLite hid three Postgres defects already.
+   number until you have seen it. SQLite hid three Postgres defects already, and
+   two more Part 4 migrations needed the Postgres check to be trusted.
 3. Decide with the owner whether to push first. Nothing has ever been pushed and
    CI has never run, so the first push is also the first CI run — expect it to
-   find something.
-4. Consider whether the web dashboard should be caught up before Part 4 rather
-   than after. It is now known broken against the fee API (§7), and every part
-   that ships API-only widens the gap.
+   find something. **The branch is now 5 commits further from that than it was**,
+   which makes the first CI run larger, not smaller.
+4. Consider whether the web dashboard should be caught up. It is known broken
+   against the fee API (§7), and examinations has now moved under it too: the
+   student results page reads a report card shape that gained `is_absent`,
+   `is_exempted` and per-component columns, and `/admin/exams` now returns a
+   `scheme_component_id` and a `marks_locked` flag.
 
 The memory file `sunrise-erp-build.md` carries the same state in short form for
 a session that starts cold.
