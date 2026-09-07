@@ -95,7 +95,9 @@ def test_promotion_does_not_touch_historical_attendance(db, ids, next_year):
     make_section(db, next_year, "11")
     student_id = roster(db, ids["section_10a"])[0].student_id
     before = db.scalars(
-        select(Attendance).where(Attendance.student_id == student_id)
+        select(Attendance)
+        .join(Enrolment, Enrolment.id == Attendance.enrolment_id)
+        .where(Enrolment.student_id == student_id)
     ).all()
     assert before, "seed should have attendance"
     snapshot = {(a.id, a.date, a.status) for a in before}
@@ -103,7 +105,9 @@ def test_promotion_does_not_touch_historical_attendance(db, ids, next_year):
     promotion.commit(db, ids["section_10a"], next_year.id)
 
     after = db.scalars(
-        select(Attendance).where(Attendance.student_id == student_id)
+        select(Attendance)
+        .join(Enrolment, Enrolment.id == Attendance.enrolment_id)
+        .where(Enrolment.student_id == student_id)
     ).all()
     assert {(a.id, a.date, a.status) for a in after} == snapshot
 

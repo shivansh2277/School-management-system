@@ -42,6 +42,8 @@ from app.models.enums import (
     AcademicYearStatus,
     AttendanceStatus,
     AuditAction,
+    LeaveStatus,
+    LeaveType,
     CustomFieldType,
     EmployeeType,
     GuardianRelation,
@@ -76,7 +78,14 @@ from app.models.fees import (
     PaymentAllocation,
     StudentFeePlan,
 )
-from app.models.ops import Attendance, Homework, HomeworkSubmission, Notice
+from app.models.ops import (
+    Attendance,
+    Holiday,
+    Homework,
+    HomeworkSubmission,
+    Notice,
+    StudentLeaveRequest,
+)
 from app.models.user import Employee, Guardian, Student, StudentGuardian, User
 from app.models.enrolment import Enrolment
 from app.models.audit import AuditLog, NumberSequence

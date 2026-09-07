@@ -130,9 +130,34 @@ class UserRole(StrEnum):
 
 
 class AttendanceStatus(StrEnum):
+    """§5.8.4. `late` and `half_day` exist because a school records them and
+    then has to answer "was the child here?" — collapsing them into present or
+    absent loses the fact the office was actually asked about.
+
+    For the percentage, present and late count as attendance, half_day as half,
+    and everything else as absence. Approved leave is still reported apart from
+    unexcused absence, because to a parent those are not the same conversation.
+    """
+
     present = "present"
     absent = "absent"
+    late = "late"
+    half_day = "half_day"
     leave = "leave"
+    excused = "excused"
+
+
+class LeaveType(StrEnum):
+    sick = "sick"
+    planned = "planned"
+    emergency = "emergency"
+
+
+class LeaveStatus(StrEnum):
+    applied = "applied"
+    approved = "approved"
+    rejected = "rejected"
+    cancelled = "cancelled"
 
 
 class NoticeAudience(StrEnum):

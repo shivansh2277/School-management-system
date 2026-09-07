@@ -43,11 +43,12 @@ def test_marking_twice_upserts_rather_than_duplicating(client, teacher, db, ids)
     assert second.status_code == 200
     assert all(row["status"] == "absent" for row in second.json())
 
-    from app.models import Attendance
+    from app.models import Attendance, Enrolment
 
     rows = (
         db.query(Attendance)
-        .filter(Attendance.student_id.in_(students), Attendance.date == date.today())
+        .join(Enrolment, Enrolment.id == Attendance.enrolment_id)
+        .filter(Enrolment.student_id.in_(students), Attendance.date == date.today())
         .count()
     )
     assert rows == len(students)  # one row per student per day, not two

@@ -52,6 +52,7 @@ from app.models import (
     FeePlanItem,
     Gender,
     GradeBand,
+    Holiday,
     Homework,
     HomeworkSubmission,
     Mark,
@@ -548,9 +549,23 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
     # rather than per student per loop.
     enrolment_of = {e.student_id: e for e in db.query(Enrolment).all()}
 
+    # --- holidays: the register and the percentage both need them ----------
+    # Two inside the attendance window, so the denominator is provably not
+    # "every Monday to Saturday".
+    holiday_days = {TODAY - timedelta(days=21), TODAY - timedelta(days=40)}
+    for i, day in enumerate(sorted(holiday_days)):
+        db.add(
+            Holiday(
+                academic_year_id=academic_year_id,
+                date=day,
+                name=["Founder's Day", "Local Festival"][i],
+            )
+        )
+    db.flush()
+
     # --- attendance: 60 school days, ~92/5/3 with per-student variation ----
     class_teacher_of = {s.id: s.class_teacher_id for s in sections}
-    days = school_days(TODAY, 60)
+    days = [d for d in school_days(TODAY, 60) if d not in holiday_days]
     for s in students:
         marker = class_teacher_of[enrolment_of[s.id].class_section_id]
         absent_rate = 0.02 + (enrolment_of[s.id].roll_no % 4) * 0.02  # varies so percentages differ
@@ -563,7 +578,13 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
             else:
                 status = AttendanceStatus.present
             db.add(
-                Attendance(student_id=s.id, date=d, status=status, marked_by=marker, remarks=None)
+                Attendance(
+                    enrolment_id=enrolment_of[s.id].id,
+                    date=d,
+                    status=status,
+                    marked_by=marker,
+                    remarks=None,
+                )
             )
     db.flush()
 

@@ -31,6 +31,9 @@ class AttendanceMarkRequest(BaseModel):
     class_section_id: int
     date: date
     entries: list[AttendanceEntry]
+    # Required only when changing an earlier day's mark: that is a correction
+    # to a record, not a fix to an open register (§5.8.9).
+    reason: str | None = None
 
 
 class RollRow(BaseModel):
@@ -38,6 +41,7 @@ class RollRow(BaseModel):
     full_name: str
     roll_no: int
     status: AttendanceStatus | None = None
+    corrected: bool = False
     remarks: str | None = None
 
 

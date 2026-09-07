@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import auth
 from app.api.admin import admission as admin_admission
+from app.api.admin import attendance as admin_attendance
 from app.api.admin import admission_assessment as admin_admission_assessment
 from app.api.admin import admission_documents as admin_admission_documents
 from app.api.admin import admission_reports as admin_admission_reports
@@ -44,7 +45,7 @@ app.add_middleware(
 for module in (
     auth,
     admin_stats, admin_students, admin_teachers, admin_classes,
-    admin_exams, admin_notices, admin_fees, admin_fee_setup, admin_settings, admin_admission, admin_applications, admin_admission_documents, admin_admission_assessment, admin_selection, admin_conversion, admin_admission_reports,
+    admin_exams, admin_notices, admin_fees, admin_fee_setup, admin_attendance, admin_settings, admin_admission, admin_applications, admin_admission_documents, admin_admission_assessment, admin_selection, admin_conversion, admin_admission_reports,
     teacher_dashboard, teacher_classes, teacher_attendance,
     teacher_homework, teacher_marks, teacher_announcements,
     student_dashboard, student_academics,

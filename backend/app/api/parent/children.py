@@ -1,6 +1,7 @@
 from datetime import date as Date
 
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -10,8 +11,10 @@ from app.models import (
     Exam,
     ExamSchedule,
     FeeInvoice,
+    LeaveType,
     Mark,
     Guardian,
+    StudentLeaveRequest,
     StudentGuardian,
     Student,
     Employee,
@@ -19,7 +22,7 @@ from app.models import (
     UserRole,
 )
 from app.schemas.common import AttendanceMonth, ReportCard, StudentHomeworkOut
-from app.services import assessment, attendance, fees, homework, notices, scoping
+from app.services import assessment, attendance, fees, homework, leave, notices, scoping
 from app.services.common import current_enrolment, enrolment_map
 
 router = APIRouter(prefix="/parent", tags=["parent"])
@@ -196,3 +199,45 @@ def my_profile(user: User = Depends(parent_only), db: Session = Depends(get_db))
 @router.get("/notices")
 def my_notices(user: User = Depends(parent_only), db: Session = Depends(get_db)) -> list:
     return notices.visible_to(db, user)
+
+
+class LeaveIn(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    student_id: int
+    from_date: Date
+    to_date: Date
+    type: LeaveType = LeaveType.sick
+    reason: str = Field(min_length=3, max_length=400)
+
+
+@router.post("/leave-requests", status_code=201)
+def apply_for_leave(
+    body: LeaveIn, user: User = Depends(parent_only), db: Session = Depends(get_db)
+) -> dict:
+    """A guardian asking for their own child to be away (§5.8.5).
+
+    Only a request: it changes the register when someone approves it.
+    """
+    row = leave.apply_for(
+        db, user, body.student_id, body.from_date, body.to_date, body.type, body.reason
+    )
+    return leave.to_out(db, row)
+
+
+@router.get("/leave-requests")
+def my_leave_requests(
+    student_id: int, user: User = Depends(parent_only), db: Session = Depends(get_db)
+) -> list[dict]:
+    scoping.assert_can_read_student(db, user, student_id)
+    enrolment = attendance.enrolment_of(db, student_id)
+    if enrolment is None:
+        return []
+    return [
+        leave.to_out(db, r)
+        for r in db.scalars(
+            select(StudentLeaveRequest)
+            .where(StudentLeaveRequest.enrolment_id == enrolment.id)
+            .order_by(StudentLeaveRequest.from_date.desc())
+        )
+    ]
