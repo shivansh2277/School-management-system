@@ -64,6 +64,25 @@ Measured on 7 September 2026 by running the commands below, not recalled.
 > before any Part 4 work, was **61** plus `alembic_version`. Corrected here
 > rather than carried forward.
 
+**How the suite is wired**, because the two URLs are easy to confuse:
+
+- The **suite runs on Postgres**, not SQLite. `TEST_DATABASE_URL` defaults to
+  `postgresql+psycopg://sunrise:sunrise@localhost:5432/sunrise_test`, and
+  `conftest.py` drops and recreates the `public` schema once per session, then
+  seeds once. Do not assume SQLite from `DATABASE_URL`.
+- **`tests/test_migrations.py` is the exception**: it shells out with
+  `DATABASE_URL` pointed at SQLite, which is why a migration using `now()`,
+  `true`, `ALTER COLUMN` or `ADD CONSTRAINT` fails there and passes everywhere
+  else. Use `op.batch_alter_table` and SQLAlchemy Core, not raw SQL.
+- Each test runs inside a transaction that is rolled back, so writes do not
+  leak between tests — **except** where a service commits internally
+  (`fees.generate()` does; see §9.6).
+- The fixtures worth knowing: `client` and `db` (sharing one session),
+  `admin` / `cashier` / `teacher` / `other_teacher` / `student` / `parent` as
+  auth headers, `admin_user` as a `User` row for calling services directly, and
+  `ids` for the handful of primary keys most tests need — including
+  `ids["school"]` and `ids["year"]`.
+
 ```bash
 cd backend
 ../.venv/Scripts/python.exe -m pytest -q                    # 452 passed
@@ -237,7 +256,7 @@ Design decisions in Part 3 that a later session should not undo:
 
 ---
 
-### Part 4, 7 September — examinations, report cards and HR
+### Part 4, 7–8 September — examinations, report cards, HR, payroll
 
 | Commit | What |
 |---|---|
