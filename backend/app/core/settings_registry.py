@@ -74,6 +74,14 @@ SETTINGS: list[SettingDef] = [
         30,
         "Maximum teaching periods one teacher may be scheduled per week",
     ),
+    # The office's wall clock. Nothing had needed one until quiet hours, and
+    # CLAUDE.md records what comparing a local date against a UTC column
+    # already cost once — the office is five and a half hours ahead of the
+    # column. A setting rather than a constant because the product is sold to
+    # schools, and §0.4b's "Lucknow first" is a starting point.
+    SettingDef(
+        "school.timezone", str, "Asia/Kolkata", "IANA timezone of the school's office"
+    ),
     # --- communication (§5.9, §0.11). Email only for v1; the other two
     # channels exist behind the same provider interface and stay off until a
     # school has DLT registration, which is a legal step and not a toggle

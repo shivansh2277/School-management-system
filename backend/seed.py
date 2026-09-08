@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.core.db import Base, SessionLocal, engine
 from app.core.security import hash_password
 from app.core.document_types import DEFAULT_TYPES
+from app.core.message_templates import DEFAULT_TEMPLATES
 from app.services import documents
 from app.services import transport as transport_svc
 from app.core.permissions import LEGACY_ROLE_MAP
@@ -77,6 +78,8 @@ from app.models import (
     Vehicle,
     VehicleOwnership,
     EmployeeType,
+    MessageCategory,
+    MessageTemplate,
     Setting,
     Student,
     SchoolPeriod,
@@ -695,6 +698,12 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
                 f"{SURNAMES[(i - 1) % len(SURNAMES)]}"
             ),
             phone=mobile,
+            # §0.11 made email the only v1 channel, and a school that only ever
+            # collected mobile numbers can reach nobody. Most families here
+            # have an address and **every seventh deliberately does not**, so
+            # the unreachable list of §5.9.10 is a real number on a fresh
+            # install rather than an empty screen that looks like it works.
+            email=None if i % 7 == 0 else f"parent{i:03d}@example.com",
         )
         db.add(u)
         db.flush()
@@ -1118,6 +1127,30 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
                     if enq_status in admission_svc.CLOSED_ENQUIRY_STATUSES
                     else TODAY + timedelta(days=i % 5)
                 ),
+            )
+        )
+    db.flush()
+
+    # The wording a school starts with, and then edits (§0.18). Idempotent
+    # like the document checklist: only the codes that are missing are added,
+    # so a school that has already superseded one keeps its own version.
+    have_templates = set(
+        db.scalars(
+            select(MessageTemplate.code).where(
+                MessageTemplate.school_id == school.id
+            )
+        )
+    )
+    for code, name, category, subject, tmpl_body in DEFAULT_TEMPLATES:
+        if code in have_templates:
+            continue
+        db.add(
+            MessageTemplate(
+                code=code,
+                name=name,
+                category=MessageCategory(category),
+                subject=subject,
+                body=tmpl_body,
             )
         )
     db.flush()

@@ -4,6 +4,7 @@ Importing this module registers every handler, so both the worker and the tests
 need only `import app.jobs`.
 """
 
+import logging
 from datetime import date as Date
 
 from sqlalchemy import select
@@ -19,6 +20,8 @@ from app.models import (
 )
 from app.services import audit, fees
 from app.services.jobs import handler
+
+log = logging.getLogger("jobs.handlers")
 
 
 @handler("fees.overdue_sweep")
@@ -65,7 +68,44 @@ def overdue_sweep(db: Session, job: Job) -> dict:
             fined += 1
             charged += int(amount)
     db.flush()
-    return {"marked_overdue": len(stale), "late_fees_charged": fined, "total": charged}
+
+    # And chase them. The sweep already knows exactly who is behind, so the
+    # defaulter list is a query it has effectively just run — and
+    # `comms.notify` addresses it through `fees.defaulters()`, the same
+    # function the office's screen uses, so the families dunned are the
+    # families listed (§5.10.9).
+    #
+    # `notify` returns None when the school has not written its own wording,
+    # rather than failing the sweep. A school losing its overdue *marking*
+    # because it never edited a template would be the tail wagging the dog.
+    from app.services import comms
+
+    # Caught deliberately. `jobs.run_one` rolls the transaction back when a
+    # handler raises, so an exception from the chase would undo the overdue
+    # marking and the late fees this sweep just computed — a communication
+    # problem silently reversing the money work is precisely the coupling
+    # §5.9.9 exists to prevent, one layer further in than the gateway timeout
+    # it names. The failure is reported in the job result rather than dropped.
+    chased, chase_error = 0, None
+    try:
+        chase = comms.notify(
+            db,
+            job.school_id,
+            template_code="fees.overdue",
+            audience={"kind": "defaulters"},
+        )
+        chased = len(chase.recipients) if chase else 0
+    except Exception as exc:  # noqa: BLE001 - the money work must stand
+        chase_error = f"{type(exc).__name__}: {exc}"[:300]
+        log.warning("fee chase failed for school %s: %s", job.school_id, exc)
+
+    return {
+        "marked_overdue": len(stale),
+        "late_fees_charged": fined,
+        "total": charged,
+        "chased": chased,
+        "chase_error": chase_error,
+    }
 
 
 @handler("fees.generate_invoices")
@@ -103,6 +143,28 @@ def offer_sweep(db: Session, job: Job) -> dict:
     return selection.expire_offers(db, job.school_id)
 
 
+@handler("comms.dispatch")
+def comms_dispatch(db: Session, job: Job) -> dict:
+    """Send a message's queued recipients.
+
+    This handler existing is the whole point of §5.9.9's first rule: a gateway
+    timeout must never fail the action that triggered the message. Nothing in a
+    route opens a socket to a mail server, so a parent's fee payment cannot
+    fail because Brevo was slow.
+
+    A message that has vanished is not an error worth failing the job over — it
+    was cancelled, or the transaction that created it rolled back after the
+    enqueue. Say so and move on.
+    """
+    from app.models import Message
+    from app.services import comms
+
+    message = db.get(Message, int((job.payload or {})["message_id"]))
+    if message is None or message.school_id != job.school_id:
+        return {"skipped": "message no longer exists"}
+    return comms.dispatch(db, message)
+
+
 @handler("transport.document_expiry")
 def transport_document_expiry(db: Session, job: Job) -> dict:
     """The nightly vehicle and crew compliance pass (§5.6.9).
@@ -121,11 +183,46 @@ def transport_document_expiry(db: Session, job: Job) -> dict:
     """
     from app.services import transport
 
+    from app.services import comms
+
     found = transport.expiring_papers(db, job.school_id)
+    expired = sum(1 for f in found if f["days_left"] < 0)
+
+    # §5.6.9 wants the alert to reach the Transport Manager, and until
+    # Communication landed this handler produced a payload with nowhere to send
+    # it. Addressed by *permission* rather than by role name, so a school that
+    # renames the role or splits it in two still reaches whoever actually holds
+    # the job.
+    # Same reason as the fee sweep: a handler that raises rolls its
+    # transaction back, and the compliance list is worth having even on a day
+    # the mail server is down.
+    sent, notify_error = None, None
+    try:
+        sent = comms.notify(
+            db,
+            job.school_id,
+            template_code="transport.compliance_alert",
+            audience={"kind": "staff", "permission": "transport.setup.write"},
+            extra={
+                "expiring": str(len(found)),
+                "already_expired": str(expired),
+                "expiry_list": "\n".join(
+                    f"- {f['owner']}: {f['document']} expires {f['expires_on']}"
+                    f" ({f['days_left']} days)"
+                    for f in found
+                ),
+            },
+        ) if found else None
+    except Exception as exc:  # noqa: BLE001 - the report must stand
+        notify_error = f"{type(exc).__name__}: {exc}"[:300]
+        log.warning("expiry alert failed for school %s: %s", job.school_id, exc)
+
     return {
         "checked_on": str(Date.today()),
         "expiring": len(found),
-        "already_expired": sum(1 for f in found if f["days_left"] < 0),
+        "already_expired": expired,
+        "notified": len(sent.recipients) if sent else 0,
+        "notify_error": notify_error,
         "items": found,
     }
 

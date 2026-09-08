@@ -17,6 +17,16 @@ class Settings(BaseSettings):
     STORAGE_SECRET_KEY: str = ""
     STORAGE_BUCKET: str = "sunrise-documents"
     STORAGE_LOCAL_PATH: str = "./var/documents"
+    # Empty host means the console backend, so neither the tests nor a bare
+    # `uvicorn` need a mail server — and nothing is ever accidentally sent to a
+    # real parent from a laptop. Brevo and Resend both speak SMTP, which is why
+    # there is no provider SDK here (§0.11).
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = ""
+
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
