@@ -28,10 +28,11 @@ MODULES: list[Module] = [
     Module("fees", "Fees", built=True, default_enabled=True),
     Module("homework", "Homework (mobile app)", built=True, default_enabled=True),
     Module("communication", "Notices and communication", built=True, default_enabled=True),
-    Module("admission", "Admission", built=False, default_enabled=True),
+    Module("admission", "Admission", built=True, default_enabled=True),
     Module("timetable", "Timetable", built=True, default_enabled=True),
-    Module("hr", "HR and payroll", built=False, default_enabled=False),
+    Module("hr", "HR and payroll", built=True, default_enabled=False),
     Module("transport", "Transport", built=True, default_enabled=False),
+    Module("reports", "Reports and analytics", built=True, default_enabled=True),
 ]
 
 BY_CODE = {m.code: m for m in MODULES}

@@ -595,6 +595,54 @@ def totals(db: Session, run: PayrollRun) -> dict:
     }
 
 
+def cost_by_month(db: Session, school_id: int) -> list[dict]:
+    """What staff actually cost the school, by month.
+
+    Written here rather than in the report that wanted it, because payroll owns
+    what a month's wage bill is and section 5.10.9 wants one definition rather
+    than two queries that drift. The expense side of "revenue versus expense"
+    (section 5.10.10) is this function, called.
+
+    Only approved and paid runs count. A draft run is an arithmetic exercise
+    somebody is still editing, and putting it on a management chart would show
+    a cost the school has not committed to. A supplementary run adds to its
+    month rather than replacing it, which is the whole reason `run_no` is part
+    of the key.
+
+    `employer_cost`, not `net_pay`: the employer's PF and ESI contributions are
+    money the school spends and no payslip pays out.
+
+    Months with no committed run are absent, not zero (section 5.10.9). A
+    school that has not run March's payroll yet has an unknown March, not a
+    free one.
+    """
+    rows = db.execute(
+        select(
+            PayrollRun.year,
+            PayrollRun.month,
+            func.sum(Payslip.employer_cost),
+            func.count(Payslip.id),
+        )
+        .join(Payslip, Payslip.run_id == PayrollRun.id)
+        .where(
+            PayrollRun.school_id == school_id,
+            PayrollRun.status.in_(
+                (PayrollRunStatus.approved, PayrollRunStatus.paid)
+            ),
+        )
+        .group_by(PayrollRun.year, PayrollRun.month)
+        .order_by(PayrollRun.year, PayrollRun.month)
+    ).all()
+    return [
+        {
+            "month": f"{year:04d}-{month:02d}",
+            "employer_cost": money(Decimal(cost)),
+            "payslips": count,
+        }
+        for year, month, cost, count in rows
+    ]
+
+
 def register(db: Session, run: PayrollRun, code: str) -> list[dict]:
     """A statutory register: every payslip carrying one component (§5.3.10).
 

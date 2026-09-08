@@ -14,6 +14,8 @@ from sqlalchemy.orm import Session
 from app.models import (
     AcademicYear,
     ClassSection,
+    Enrolment,
+    EnrolmentStatus,
     ExamSchedule,
     FeeInvoice,
     FeeInvoiceLine,
@@ -221,6 +223,112 @@ def fee_trend(db: Session, school_id: int) -> list[dict]:
     ).all()
     # only months that have collections; no zero-filled placeholder points
     return [{"month": f"{y}-{m:02d}", "collected": Decimal(v)} for y, m, v in rows]
+
+
+def student_teacher_ratio(db: Session, year: AcademicYear) -> dict:
+    """Students per teacher (section 5.10.10).
+
+    Both counts come from `totals()` rather than from two fresh queries, so the
+    ratio on a report and the headcounts on the dashboard cannot disagree - the
+    reconciliation rule of section 5.10.9, applied to the smallest possible
+    number.
+
+    A school with no active teachers gets `null`, not a division by zero and
+    not a placeholder. It is a real state during setup.
+    """
+    counted = totals(db, year)
+    students, teachers = counted["students"], counted["teachers"]
+    return {
+        "students": students,
+        "teachers": teachers,
+        "ratio": round(students / teachers, 1) if teachers else None,
+    }
+
+
+def enrolment_trend(db: Session, school_id: int) -> list[dict]:
+    """Heads on the roll each year, and how many of them stayed (5.10.10).
+
+    Retention is measured against the year immediately before: of the students
+    enrolled then, how many appear again now. That is the number a board asks
+    for, and it is computable from `enrolments` alone because a student sits in
+    exactly one section per year - the invariant the enrolment split exists to
+    hold.
+
+    The first year has no year before it, so its retention is `null` rather
+    than 0 or 100. Inventing either would be the fabricated data point section
+    5.10.9 forbids, and it is the one a trend line is most likely to be
+    misread from.
+    """
+    years = list(
+        db.scalars(
+            select(AcademicYear)
+            .where(AcademicYear.school_id == school_id)
+            .order_by(AcademicYear.start_date)
+        )
+    )
+    rolls: list[set[int]] = [
+        set(
+            db.scalars(
+                select(Enrolment.student_id).where(
+                    Enrolment.academic_year_id == y.id,
+                    Enrolment.status == EnrolmentStatus.active,
+                )
+            )
+        )
+        for y in years
+    ]
+    out = []
+    for i, (year, roll) in enumerate(zip(years, rolls, strict=True)):
+        if not roll:
+            # A year nobody has been enrolled into yet is not a year with zero
+            # students; it is a year that has not started.
+            continue
+        previous = rolls[i - 1] if i else None
+        out.append(
+            {
+                "academic_year": year.code,
+                "students": len(roll),
+                "retained": len(roll & previous) if previous else None,
+                "retention_percent": (
+                    round(len(roll & previous) / len(previous) * 100, 1)
+                    if previous
+                    else None
+                ),
+            }
+        )
+    return out
+
+
+def revenue_vs_expense(db: Session, school_id: int) -> list[dict]:
+    """Fee collected against staff cost, by month (section 5.10.10).
+
+    Neither number is computed here. Revenue is `fee_trend()`, which already
+    owns "what was collected in a month" and is what the dashboard chart plots;
+    expense is `payroll.cost_by_month()`, which owns the wage bill. This
+    function only lines them up, which is what keeps the management chart and
+    the two module screens telling the same story.
+
+    A month present on one side and absent on the other carries `null` for the
+    missing half, not zero. The school that has collected March's fees but not
+    yet approved March's payroll has an unknown expense, and a zero bar there
+    would read as a month the staff worked free.
+
+    This is fee collection against payroll only. It is not a profit and loss:
+    the system holds no other expense, and calling it one would be a claim the
+    data cannot defend.
+    """
+    from app.services import payroll
+
+    revenue = {r["month"]: r["collected"] for r in fee_trend(db, school_id)}
+    expense = {r["month"]: r["employer_cost"] for r in payroll.cost_by_month(db, school_id)}
+    return [
+        {
+            "month": month,
+            "collected": revenue.get(month),
+            "staff_cost": expense.get(month),
+        }
+        for month in sorted(set(revenue) | set(expense))
+    ]
 
 
 def month_attendance(
