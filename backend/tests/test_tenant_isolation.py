@@ -9,6 +9,7 @@ a convention into a boundary.
 from decimal import Decimal
 
 import pytest
+from fastapi import HTTPException
 from sqlalchemy import select
 
 from app.models import (
@@ -16,9 +17,12 @@ from app.models import (
     AcademicYearStatus,
     Exam,
     School,
+    Student,
     Subject,
+    User,
+    UserRole,
 )
-from app.services import grading
+from app.services import grading, scoping
 from app.services.common import grade_for
 
 
@@ -78,3 +82,56 @@ def test_a_grade_is_computed_from_this_schools_scale_only(db, rival, ids):
     """35% is a D on the demo school's scale. It must not become an A1 because
     another customer defined a band at 1%."""
     assert grade_for(db, ids["school"], 35) == "D"
+
+
+@pytest.fixture()
+def rival_student(db, rival):
+    """One child on the rival school's roll, with nothing linking them here."""
+    u = User(
+        school_id=rival.id,
+        role=UserRole.student,
+        login_id="RIVAL0001",
+        password_hash="x",
+        full_name="Rival Child",
+    )
+    db.add(u)
+    db.flush()
+    s = Student(school_id=rival.id, user_id=u.id, admission_no="9999000001")
+    db.add(s)
+    db.flush()
+    return s
+
+
+def test_the_student_roster_shows_only_this_schools_children(
+    client, admin, rival_student
+):
+    """The roster query carried `school_id` on the table and never filtered on
+    it - the section 4 defect, on the largest table of personal data here."""
+    r = client.get("/admin/students", headers=admin, params={"page_size": 200})
+    assert r.status_code == 200, r.text
+    assert "Rival Child" not in [i["full_name"] for i in r.json()["items"]]
+
+
+def test_another_schools_student_cannot_be_opened_by_id(client, admin, rival_student):
+    r = client.get(f"/admin/students/{rival_student.id}", headers=admin)
+    assert r.status_code == 404, r.text
+
+
+def test_another_schools_student_cannot_be_edited(client, admin, rival_student):
+    """The worse half: the roster leaked reads, this one accepted writes."""
+    r = client.patch(
+        f"/admin/students/{rival_student.id}",
+        headers=admin,
+        json={"full_name": "Renamed By A Stranger"},
+    )
+    assert r.status_code == 404, r.text
+
+
+def test_the_scoping_gate_refuses_another_schools_student(
+    db, admin_user, rival_student
+):
+    """`assert_can_read_student` is the chokepoint thirteen routes call, and
+    its admin branch returned the row without ever looking at the tenant."""
+    with pytest.raises(HTTPException) as excinfo:
+        scoping.assert_can_read_student(db, admin_user, rival_student.id)
+    assert excinfo.value.status_code == 404

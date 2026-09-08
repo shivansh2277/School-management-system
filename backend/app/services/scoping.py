@@ -89,7 +89,13 @@ def assert_teaches_subject_in_section(
 
 def assert_can_read_student(db: Session, user: User, student_id: int) -> Student:
     student = db.get(Student, student_id)
-    if student is None:
+    # The tenant boundary comes before every role rule, and answers 404 rather
+    # than 403: whether another customer has a student with this id is itself
+    # not this school's business. The role branches below happen to bind a
+    # teacher, guardian and student to their own school through the sections
+    # and links they check; the admin branch checked nothing at all, which left
+    # this chokepoint's thirteen callers cross-tenant readable.
+    if student is None or student.school_id != user.school_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Student not found")
     if user.role == UserRole.admin:
         return student

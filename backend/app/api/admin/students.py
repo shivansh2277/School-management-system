@@ -76,6 +76,18 @@ class StudentUpdate(BaseModel):
     custom: dict | None = None
 
 
+def _owned(db: Session, user: User, student_id: int) -> Student:
+    """This school's student, or 404.
+
+    `db.get()` is not tenant-aware, and three handlers here used it bare, so a
+    guessed id read - and in one case edited - another customer's child.
+    """
+    s = db.get(Student, student_id)
+    if s is None or s.school_id != user.school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Student not found")
+    return s
+
+
 def _row(db: Session, s: Student) -> dict:
     enrolment = current_enrolment(db, s.id)
     guardians = db.scalars(
@@ -107,7 +119,14 @@ def list_students(
     user: User = Depends(admin_only),
     db: Session = Depends(get_db),
 ) -> Page:
-    stmt = select(Student).join(User, User.id == Student.user_id)
+    # Carrying `school_id` is not filtering on it (CLAUDE.md, HANDOFF section
+    # 4). This is the roster of every child in the school, so the omission here
+    # was the widest of that family.
+    stmt = (
+        select(Student)
+        .join(User, User.id == Student.user_id)
+        .where(Student.school_id == user.school_id)
+    )
     if class_section_id is not None:
         stmt = stmt.where(
             Student.id.in_(
@@ -227,9 +246,7 @@ def create_student(
 def student_detail(
     student_id: int, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> dict:
-    s = db.get(Student, student_id)
-    if s is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Student not found")
+    s = _owned(db, user, student_id)
     enrolment = current_enrolment(db, s.id)
     exam = assessment.latest_exam_with_marks(
         db, s.school_id, enrolment.class_section_id if enrolment else None
@@ -256,9 +273,7 @@ def update_student(
     user: User = Depends(admin_only),
     db: Session = Depends(get_db),
 ) -> dict:
-    s = db.get(Student, student_id)
-    if s is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Student not found")
+    s = _owned(db, user, student_id)
     # class_section_id and roll_no live on the enrolment now. Setting them on
     # the Student silently did nothing: SQLAlchemy accepts the attribute, the
     # column is not there, and the move was lost.
@@ -304,9 +319,7 @@ def deactivate_student(
     user: User = Depends(admin_only),
     db: Session = Depends(get_db),
 ) -> Response:
-    s = db.get(Student, student_id)
-    if s is None or s.school_id != user.school_id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Student not found")
+    s = _owned(db, user, student_id)
     before = audit.snapshot(s.user, ["is_active"])
     s.user.is_active = False  # portal access revoked; the record is retained
     audit.record(
