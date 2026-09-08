@@ -1,7 +1,8 @@
 # Sunrise ERP — Session Handoff
 
 **Written:** 6 September 2026 · **revised 8 September 2026** (Parts 2, 3, and
-Part 4's examinations, report cards, HR, payroll and **transport**)
+Part 4's examinations, report cards, HR, payroll, **transport** and
+**communication**)
 **Branch:** `part-1-foundation` — **nothing pushed, ever.** Count the commits
 with `git log --oneline main..HEAD | wc -l`; a number written here goes stale on
 the next commit, including the one that updates this file.
@@ -45,13 +46,13 @@ Measured on 8 September 2026 by running the commands below, not recalled.
 
 | Measure | Value |
 |---|---|
-| Backend tests | **490 passing**, ~110 s |
-| Database tables | **81, plus `alembic_version`** |
-| Alembic migrations | **28** (verified from empty **on Postgres**, then seed, then worker) |
-| API surface | **201 paths, 248 operations** |
-| Permissions / system roles | **72** / 14 |
-| Job handlers | `fees.overdue_sweep`, `fees.generate_invoices`, `admission.offer_sweep`, `transport.document_expiry`, `system.heartbeat` |
-| Demo school | 100 students, 10 sections, 12 teachers, 98 guardians |
+| Backend tests | **522 passing**, ~108 s |
+| Database tables | **85, plus `alembic_version`** |
+| Alembic migrations | **29** (verified from empty **on Postgres**, then seed, then worker) |
+| API surface | **210 paths, 259 operations** |
+| Permissions / system roles | **77** / 14 |
+| Job handlers | `fees.overdue_sweep`, `fees.generate_invoices`, `admission.offer_sweep`, `transport.document_expiry`, `comms.dispatch`, `system.heartbeat` |
+| Demo school | 100 students, 10 sections, 12 teachers, 98 guardians — **84 of them with an email address**, and 14 deliberately without |
 | Demo fee ledger | 300 invoices, **900 lines** (810 + 90 transport), 170 payments, 410 allocations, 2 sibling concessions |
 | Demo attendance | 5,800 rows over 58 working days, plus 2 holidays inside the window |
 | Demo timetable | 6 periods, 300 slots, **0 teacher clashes, 0 room clashes**, and **every teacher on exactly 25 periods — spread 0** |
@@ -59,6 +60,7 @@ Measured on 8 September 2026 by running the commands below, not recalled.
 | Demo grading | 1 active scale (CBSE v1), 8 bands |
 | Demo HR | **6 departments** (4 with a head), **16 employees**, 4 leave types (CL 12 / SL 10 / EL 15 / LWP 0) |
 | Demo payroll | 11 components, **16 salary structures** (PGT ₹42,000 / TGT ₹32,000 / PRT ₹19,500 / Transport Manager ₹28,000 / Driver ₹16,000 / Attendant ₹11,000). An August run: **16 payslips**, 25 working days, **₹4,82,500 earnings, ₹4,53,081.25 net, ₹5,11,450 employer cost** |
+| Demo communication | 4 message templates, and an outbox the nightly jobs fill: one overdue sweep chases **100 families (86 sent, 14 unreachable)** and the expiry sweep notifies 1 |
 | Demo transport | 2 vehicles (40 + 32 seats), 2 active routes, 7 stops, 3 fee slabs, **30 children riding** (18 on R1, 12 on R2), both routes roadworthy, 13 compliance documents, 1 paper lapsing inside the 60-day horizon |
 
 > The previous revision recorded **60** tables. The real count on 7 September,
@@ -93,7 +95,7 @@ Measured on 8 September 2026 by running the commands below, not recalled.
 
 ```bash
 cd backend
-../.venv/Scripts/python.exe -m pytest -q                    # 490 passed
+../.venv/Scripts/python.exe -m pytest -q                    # 522 passed
 ../.venv/Scripts/python.exe -m alembic upgrade head
 ../.venv/Scripts/python.exe seed.py
 ../.venv/Scripts/python.exe worker.py --once                # runs due jobs
@@ -468,6 +470,40 @@ Design decisions in Part 4 that a later session should not undo:
   their stops with no warning. The refusal already sits on every path that
   assigns; what was missing was the office knowing in time to renew.
 
+### Part 4, 8 September — communication
+
+| Commit | What |
+|---|---|
+| `Model an outbox with a delivery record, and nothing else yet` | Four tables where §5.9.5 lists nine. `notices` gains one nullable `message_id`. |
+| `Move the defaulter list into the service, so the chase and the screen agree` | It lived in the route; the chase became the second caller. |
+| `Send email from the worker, with an opt-out that knows what it may refuse` | The service, the provider seam, the API, 30 tests, and the first two senders wired. |
+| `Let the notice board put a notice in people's inboxes` | Publishing can now also send. |
+
+**What communication decided, and why:**
+
+- **Dispatch happens in the worker, and a test proves it.** §5.9.9: a gateway
+  timeout must never fail the action that triggered the message. A test
+  installs a provider that raises on any send and drives the whole
+  compose-and-send path through it.
+- **`MANDATORY_CATEGORIES` is the opt-out line, in one place.** A parent may
+  opt out of a circular and may not opt out of "your child is absent" or "the
+  school is closed". The preference is **stored either way** rather than
+  refused at the checkbox — it is what they asked for, and the override
+  belongs where the school's obligation is.
+- **No family's data reaches another family, by construction.** The render is
+  handed one recipient's `context` and has nothing else to reach for. The fee
+  chase is the worst case and a test renders every recipient to prove it.
+- **`string.Template`, not `str.format`.** A template body is typed into a text
+  box by office staff; `format_map` would let `{x.__class__.__mro__}` walk out
+  of the values it was handed.
+- **`smtplib`, not a provider SDK.** Brevo and Resend both speak SMTP.
+  Switching provider is four environment variables, not a dependency.
+- **An automated send skips the bulk-approval gate.** The gate stops a person
+  mailing the whole school by accident; a nightly chase on a template the
+  school wrote and a schedule it enabled was approved once, deliberately.
+- **An unreachable family gets a delivery row saying so**, rather than being
+  silently absent from the list.
+
 ---
 
 ## 4. Things that would be expensive to rediscover
@@ -562,6 +598,16 @@ and `sorted_tables` cannot order a cycle — it silently drops those foreign key
 from the sort and warns that it may raise instead in a later release, which made
 `seed.py::wipe()` correct only by luck. Wipe now issues one `TRUNCATE ...
 CASCADE` on Postgres, which needs no order at all.
+
+**`jobs.run_one` rolls the transaction back when a handler raises**, so
+anything a handler does *after* its real work is undone by a later failure.
+Wiring the fee chase onto the end of `fees.overdue_sweep` meant an exception
+from a mail server would silently reverse the overdue marking and the late fees
+the sweep had just computed — a communication failure undoing money work, which
+is the coupling §5.9.9 exists to prevent one layer in from the gateway timeout
+it names. Both wired handlers now catch and report in their result.
+`tests/test_comms.py::test_a_broken_chase_does_not_undo_the_late_fees` fails
+without the guard.
 
 **A job handler must be defined in `app/jobs.py`, not beside the service it
 calls.** Importing that one module is what registers every handler, and it is
@@ -903,6 +949,13 @@ Raised by transport, none blocking:
 | Q | **Should the sibling concession come off the bus fare?** §0.6's 10% is stored with a null `fee_head_id`, meaning every head, so it now does — transport is the first optional head anything bills. Defensible either way, and it fell out of an existing rule meeting a new line rather than anybody choosing it. A school wanting the other answer can already scope a concession to a head. Pinned by `test_a_sibling_concession_comes_off_the_bus_fare_too`. | Before a real school's first transport invoice |
 | R | **What hour should the nightly sweeps actually run at?** `at_hour` is UTC, so `fees.overdue_sweep` fires at 07:30 in Lucknow and `admission.offer_sweep` at 11:30 — not the 02:00 and 06:00 their comments claimed. The new `transport.document_expiry` is set at 01:00 UTC / 06:30 local. The existing two are left alone on purpose: moving a school's nightly sweep is a decision, not a tidy-up. | Before go-live |
 
+Raised by communication, none blocking:
+
+| # | Question | Needed by |
+|---|---|---|
+| S | **Should fee reminders be unrefusable?** `MANDATORY_CATEGORIES` holds `emergency` and `attendance` — the two §5.9.9 names. A school that wants its dues reminders to override an opt-out is making a policy choice somebody should make out loud; it is one line. | Before go-live |
+| T | **Is email-only viable for this school?** §0.11 chose it, and the demo showed the assumption underneath: a Lucknow school collects mobile numbers, not addresses. 84 of 98 seeded guardians have an email only because the seed now gives them one. If a real school's parents are 40% reachable, SMS stops being a v2 nicety. `/admin/comms/unreachable` is the number to look at first. | Before the first real circular |
+
 Raised by payroll, none blocking:
 
 | # | Question | Needed by |
@@ -913,71 +966,36 @@ Raised by payroll, none blocking:
 
 ---
 
-## 9. Where to start next session — communication, then reports
+## 9. Where to start next session — reports, then the two guides
 
-**Transport is done**: schema, service, API, 37 tests, the fee opt-in, the demo
-seed and the expiry job. What remains of Part 4 is **communication and
-reports**, and then the two guides.
+**Transport and communication are both done.** What remains of Part 4 is
+**reports**, and then `CONFIGURATION-GUIDE.md` and `EXTENSION-GUIDE.md`.
 
-**`CONFIGURATION-GUIDE.md` and `EXTENSION-GUIDE.md` are still held back** until
-the owner has looked over the modules. They describe what the other modules
-built, so writing them before those settle means writing them twice.
-Checkpoint 4 does not close until the configuration guide exists — it is the
-only thing standing between here and the end of Part 4 — but it is the last
-thing to write.
+Communication shipped as an outbox with a delivery record, an email provider
+behind a seam, versioned templates, opt-out with a stated override, quiet
+hours, bulk approval, and an emergency broadcast on its own permission and its
+own endpoint. **Two of the six senders in the wiring table are connected** —
+the fee defaulter chase and the transport compliance alert — plus the notice
+board. The other four are the first thing to pick up if you want more of
+communication before reports:
 
-**Nothing is blocked on the owner.** §8's open items (M, N, O, P, Q, R and the
-earlier E–J) are all refinements.
-
----
-
-### 9.1 Communication (§5.9) — do this first
-
-Smaller than transport, and mostly a matter of doing one thing properly: an
-outbox with a delivery record.
-
-**The rule that shapes it: dispatch happens in the worker.** §5.9.9 is direct —
-a gateway timeout must never fail the action that triggered the message.
-`services/jobs.py` is the queue and already survives a restart, so sending is
-`enqueue()` plus a handler, never an inline HTTP call from a route. **Put the
-handler in `app/jobs.py`**, not beside the service — see §4; transport got that
-wrong first and the job would have failed silently every night.
-
-**Email only for v1** (§0.11), behind a provider interface so SMS and WhatsApp
-can be wired later and stay disabled per school until DLT registration exists.
-The owner's address is the reply-to.
-
-**Every module before this has notifications it wants and cannot send.** They
-were deliberately not stubbed, so expect to go back and wire each one:
-
-| Where | What it wants to send |
+| Where | Still to wire |
 |---|---|
 | Admission (§5.1.6) | acknowledgement, document reminder, hall ticket, offer letter, expiry warning |
-| Fees | the defaulter chase, and a receipt |
+| Fees | the receipt (the chase is done) |
 | Examinations | report card published |
 | Staff leave | a colleague has been assigned to cover a lesson |
 | Payroll | a payslip is available |
-| **Transport** | route change, delay, and **the document expiry sweep, which already produces its payload and has nowhere to send it** |
 
-**Design points worth settling before writing:**
-
-- **The recipient model must accept a bare phone number or email**, because an
-  applicant is not a user (CLAUDE.md's rule) and most applicants never become
-  one.
-- **Templates are versioned**, so the exact text sent stays reproducible — the
-  same shape as grading scales and report cards, and `services/grading.py`
-  already shows the versioning-plus-freeze pattern.
-- **Opt-out is respected for informational messages and overridden for
-  statutory or emergency ones.** A parent cannot opt out of "your child is
-  absent" or "the school is closed".
-- **No family's data may appear in another family's message.** A careless bulk
-  merge is the realistic way that happens.
-- `notices` already exists, with an audience enum and no delivery record.
-  Extend it rather than adding a parallel concept beside it.
+Each is the same three lines the fee chase is — a template in
+`core/message_templates.py`, a `comms.notify()` call, and the guard that stops
+a mail failure rolling back the work it was attached to (§4). **Read that trap
+before wiring the next one**: it is the one thing here that can silently
+corrupt something that matters.
 
 ---
 
-### 9.2 Reports (§5.10)
+### 9.1 Reports (§5.10)
 
 Last, because it describes what everything else built.
 
@@ -1020,7 +1038,7 @@ child actually pay" figure would need to consult the opt-in, which is
 
 ---
 
-### 9.3 What Parts 3 and 4 built that these two should reuse
+### 9.2 What Parts 3 and 4 built that reports should reuse
 
 | Reach for | Rather than |
 |---|---|
@@ -1035,10 +1053,12 @@ child actually pay" figure would need to consult the opt-in, which is
 | `core/settings_registry.py` | new columns for policy switches (§3.15) |
 | `services/school_settings.py::module_enabled` | a UI-only feature switch |
 | `fees.OPT_IN_SOURCES` | a second way to say "bill only those who chose this" |
+| `comms.notify()` and `core/message_templates.py` | any new way to send anything |
+| `fees.defaulters()` | a second defaulter query; it moved out of its route so the chase and the screen could agree |
 | `NOT_BLANKET_READ` | naming a sensitive permission `.read` and hoping |
 | `tests/test_tenant_isolation.py` | writing a new cross-tenant check from scratch |
 
-### 9.4 Checkpoint 4
+### 9.3 Checkpoint 4
 
 - ~~A CBSE report card publishes and stays frozen~~ — **done and tested**
   (`tests/test_report_cards.py`).
@@ -1048,7 +1068,7 @@ child actually pay" figure would need to consult the opt-in, which is
 - A non-technical reader can change a fee rule using only
   `CONFIGURATION-GUIDE.md` — **held until the owner clears the modules above.**
 
-### 9.5 Before starting
+### 9.4 Before starting
 
 1. `git log --oneline main..HEAD` — read them; the messages carry the
    reasoning deliberately.
@@ -1058,8 +1078,9 @@ child actually pay" figure would need to consult the opt-in, which is
    and CI has never run, so the first push is also the first CI run — expect it
    to find something, and it grows with every part that lands.
 4. The web dashboard is further behind than ever: known broken against the fee
-   API (§7), and examinations, HR, payroll and transport have all landed since
-   anyone last opened it. Nothing in `web/` knows transport exists.
+   API (§7), and examinations, HR, payroll, transport and communication have all landed
+   since anyone last opened it. Nothing in `web/` knows transport or the
+   outbox exists.
 
 **Two warnings from this session.**
 

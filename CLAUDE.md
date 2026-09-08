@@ -23,7 +23,7 @@ branches of one school. A tenant is a customer. Work is on branch
 
 ```bash
 cd backend
-../.venv/Scripts/python.exe -m pytest -q          # 490 tests, ~110s
+../.venv/Scripts/python.exe -m pytest -q          # 522 tests, ~108s
 ../.venv/Scripts/python.exe -m pytest tests/test_rbac.py -q       # one file
 ../.venv/Scripts/python.exe -m alembic upgrade head
 ../.venv/Scripts/python.exe seed.py               # idempotent
