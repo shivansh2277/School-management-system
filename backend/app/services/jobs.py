@@ -152,14 +152,23 @@ def drain(db: Session, limit: int = 100) -> int:
     return done
 
 
-# (kind, every_minutes, at_hour). 02:00 IST for the daily sweep: after the
-# day's collections are in, before the office opens. The migration inserts
-# these too; keeping the list here as well is what lets a database built by
-# `create_all` — every test database — have a schedule at all.
+# (kind, every_minutes, at_hour). The migration inserts these too; keeping the
+# list here as well is what lets a database built by `create_all` — every test
+# database — have a schedule at all.
+#
+# **`at_hour` is compared against the UTC hour**, not the school's. The office
+# these are timed for is UTC+5:30, so `2` fires at 07:30 in Lucknow and `6` at
+# 11:30 — which is not what the comments below them used to claim, and is how
+# `test_the_scheduler_queues_a_due_job_once_per_slot` came to fail for one hour
+# a day. The hours are left as they are rather than quietly shifted: changing
+# when a school's nightly sweep runs is the owner's call, and it is raised as
+# HANDOFF §8 item R.
 DEFAULT_SCHEDULES: list[tuple[str, int, int | None]] = [
     ("fees.overdue_sweep", 1440, 2),
-    # 06:00, so a seat released overnight is offered on before the office opens.
     ("admission.offer_sweep", 1440, 6),
+    # 01:00 UTC, 06:30 in the office: the compliance list is on the Transport
+    # Manager's desk before the first bus leaves rather than after it.
+    ("transport.document_expiry", 1440, 1),
     ("system.heartbeat", 60, None),
 ]
 

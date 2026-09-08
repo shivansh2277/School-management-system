@@ -195,3 +195,20 @@ def test_a_schedule_queues_one_job_per_school(db):
     assert {j.school_id for j in queued} == active
     assert other.id in active and suspended.id not in active
     assert all(isinstance(j, Job) for j in queued)
+
+
+def test_every_default_schedule_has_a_handler():
+    """A scheduled job with no handler fails at 03:00 and nowhere else.
+
+    Handlers register by importing `app.jobs`, so one defined anywhere else —
+    in the service it belongs to, say — is registered only if something happens
+    to import that service. A worker process never does. That is exactly how
+    `transport.document_expiry` was written the first time: the code was
+    correct, the schedule was correct, and the job would have failed nightly
+    with "No handler registered" until somebody read the worker log.
+    """
+    import app.jobs  # noqa: F401 - importing is what registers them
+
+    from app.services.jobs import DEFAULT_SCHEDULES, HANDLERS
+
+    assert [kind for kind, _, _ in DEFAULT_SCHEDULES if kind not in HANDLERS] == []

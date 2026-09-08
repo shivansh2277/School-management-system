@@ -36,7 +36,6 @@ from app.models import (
     DocumentType,
     Employee,
     Enrolment,
-    Job,
     OwnerType,
     Route,
     RouteStatus,
@@ -49,7 +48,7 @@ from app.models import (
     Vehicle,
     VehicleStatus,
 )
-from app.services import audit, jobs
+from app.services import audit
 from app.services.fee_setup import money
 
 # The papers a bus must hold. §5.6.9 names all four, and each is a document
@@ -691,20 +690,8 @@ def expiring_papers(db: Session, school_id: int, within_days: int = EXPIRY_HORIZ
     return out
 
 
-@jobs.handler("transport.document_expiry")
-def _expiry_sweep(db: Session, job: Job) -> dict:
-    """The nightly compliance pass (§5.6.9).
-
-    It reports rather than acts. Grounding a bus because a certificate lapsed
-    overnight would strand a hundred children at their stops with no warning to
-    anybody; the refusal already sits on every path that *assigns*, so what is
-    missing is the office knowing in time to renew. Once Communication lands
-    this result is what it sends to the Transport Manager.
-    """
-    found = expiring_papers(db, job.school_id)
-    return {
-        "checked_on": str(Date.today()),
-        "expiring": len(found),
-        "already_expired": sum(1 for f in found if f["days_left"] < 0),
-        "items": found,
-    }
+# The nightly sweep that reads this lives in `app/jobs.py` with every other
+# handler, because importing that one module is what registers them all — for
+# the worker and for the tests. A handler defined here would exist only once
+# something happened to import this service, which for a worker process is
+# never, and the job would fail with "no handler registered" at 03:00.

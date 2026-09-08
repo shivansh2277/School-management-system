@@ -103,6 +103,33 @@ def offer_sweep(db: Session, job: Job) -> dict:
     return selection.expire_offers(db, job.school_id)
 
 
+@handler("transport.document_expiry")
+def transport_document_expiry(db: Session, job: Job) -> dict:
+    """The nightly vehicle and crew compliance pass (§5.6.9).
+
+    It reports rather than acts, and that is deliberate. Grounding a bus at
+    03:00 because a certificate lapsed overnight would strand a hundred
+    children at their stops with no warning to anybody. The hard refusal
+    already sits on every path that *assigns* a vehicle or a driver; what was
+    missing is the office finding out in time to renew.
+
+    §5.6.9 asks for warnings at 60, 30 and 7 days. One pass reports everything
+    inside the widest window and says how many days are left, rather than three
+    schedules that each have to be kept in step with the other two. Papers that
+    have already lapsed are included with a negative `days_left`: an expired
+    permit is more urgent than one expiring next month, not less.
+    """
+    from app.services import transport
+
+    found = transport.expiring_papers(db, job.school_id)
+    return {
+        "checked_on": str(Date.today()),
+        "expiring": len(found),
+        "already_expired": sum(1 for f in found if f["days_left"] < 0),
+        "items": found,
+    }
+
+
 @handler("system.heartbeat")
 def heartbeat(db: Session, job: Job) -> dict:
     """Proves the scheduler and worker are actually alive.
