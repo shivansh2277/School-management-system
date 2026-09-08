@@ -9,15 +9,24 @@ from decimal import Decimal
 def test_totals_match_direct_counts(client, admin, db):
     """Each headline number is the count it claims to be.
 
-    The staff figure counts employees whose *user account* is active, not
-    employees. Those were the same number until the demo gained drivers, who
-    are staff records without a working login — §5.6.8 gives a driver app
-    access "later" — and the test passed only because nothing had ever
-    distinguished the two.
+    Two things narrow the teacher count, and the test needs both or it proves
+    nothing.
+
+    The *user account* must be active, not merely the employee row. Those were
+    the same number until the demo gained drivers, who are staff records
+    without a working login — §5.6.8 gives a driver app access "later".
+
+    And the employee must be **teaching staff**. This assertion previously
+    counted every active employee and called the result `teachers`, which is
+    how the Transport Manager came to be one: the demo school reported 13
+    against its 12, and §5.10.10's student:teacher ratio inherited the error
+    from the field it is built on. A test that mirrors the implementation
+    rather than the intent will agree with a bug forever, which is what this
+    one did.
     """
     from sqlalchemy import func, select
 
-    from app.models import ClassSection, Employee, Student, User
+    from app.models import ClassSection, Employee, EmployeeType, Student, User
 
     stats = client.get("/admin/dashboard/stats", headers=admin).json()
     assert stats["totals"]["students"] == db.query(Student).count()
@@ -29,7 +38,16 @@ def test_totals_match_direct_counts(client, admin, db):
         .join(User, User.id == Employee.user_id)
         .where(User.is_active)
     )
-    assert stats["totals"]["teachers"] == active_staff
+    active_teaching = db.scalar(
+        select(func.count())
+        .select_from(Employee)
+        .join(User, User.id == Employee.user_id)
+        .where(User.is_active, Employee.employee_type == EmployeeType.teaching)
+    )
+    assert stats["totals"]["teachers"] == active_teaching
+    assert active_teaching < active_staff, (
+        "the demo has non-teaching staff, or this assertion proves nothing"
+    )
     assert active_staff < db.query(Employee).count(), (
         "the demo has staff without a login, or this assertion proves nothing"
     )

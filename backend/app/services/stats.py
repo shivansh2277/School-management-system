@@ -23,6 +23,7 @@ from app.models import (
     Mark,
     Student,
     Employee,
+    EmployeeType,
     TimetableSlot,
     User,
 )
@@ -47,11 +48,20 @@ def totals(db: Session, year: AcademicYear) -> dict:
         .join(User, User.id == Student.user_id)
         .where(Student.school_id == school_id, User.is_active)
     )
+    # Teaching staff, not all staff. This counted every active employee, so
+    # the Transport Manager was a teacher: the demo school read 13 where it has
+    # 12, and section 5.10.10's student:teacher ratio inherited the error from
+    # the field it is built on. `employee_type` is the column that already
+    # knows the difference.
     teachers = db.scalar(
         select(func.count())
         .select_from(Employee)
         .join(User, User.id == Employee.user_id)
-        .where(Employee.school_id == school_id, User.is_active)
+        .where(
+            Employee.school_id == school_id,
+            User.is_active,
+            Employee.employee_type == EmployeeType.teaching,
+        )
     )
     classes = db.scalar(
         select(func.count())

@@ -15,7 +15,7 @@ that stays a gap instead of becoming a zero.
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.models import AcademicYear, PayrollRunStatus, Payslip
 from app.services import payroll, stats
@@ -192,3 +192,32 @@ def test_revenue_versus_expense_reuses_the_two_owning_functions(
         r["month"] for r in payroll.cost_by_month(db, school_id)
     }
     assert rows[f"{YEAR}-{MONTH:02d}"]["staff_cost"] > Decimal(0)
+
+
+def test_only_teaching_staff_count_as_teachers(db, ids):
+    """`totals()` counted every active employee, so the Transport Manager was a
+    teacher: the demo school read 13 against its 12, and section 5.10.10's
+    student:teacher ratio inherited it. Found by running the report against the
+    seeded database and not recognising the number."""
+    from app.models import Employee, EmployeeType, User
+
+    year = db.get(AcademicYear, ids["year"])
+    teaching = db.scalar(
+        select(func.count())
+        .select_from(Employee)
+        .join(User, User.id == Employee.user_id)
+        .where(
+            Employee.school_id == ids["school"],
+            User.is_active,
+            Employee.employee_type == EmployeeType.teaching,
+        )
+    )
+    all_staff = db.scalar(
+        select(func.count())
+        .select_from(Employee)
+        .join(User, User.id == Employee.user_id)
+        .where(Employee.school_id == ids["school"], User.is_active)
+    )
+    assert teaching < all_staff, "the demo school has non-teaching staff to exclude"
+    assert stats.totals(db, year)["teachers"] == teaching
+    assert stats.student_teacher_ratio(db, year)["teachers"] == teaching
