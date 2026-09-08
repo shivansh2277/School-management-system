@@ -1,22 +1,10 @@
 import { NavLink, Outlet } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthContext";
-
-/** Only screens that exist are linked. BLUEPRINT section 18: no dead menu items. */
-const NAV = [
-  ["/", "Dashboard"],
-  ["/students", "Students"],
-  ["/teachers", "Teachers"],
-  ["/classes", "Classes"],
-  ["/attendance", "Attendance"],
-  ["/exams", "Exams"],
-  ["/fees", "Fees"],
-  ["/notices", "Notices"],
-  ["/settings", "Settings"],
-] as const;
+import { groupedNav } from "../screens";
 
 export function Shell() {
-  const { me, logout } = useAuth();
+  const { me, logout, can, hasModule } = useAuth();
   return (
     <div className="min-h-screen flex">
       <aside className="w-60 shrink-0 bg-primary text-white/90 p-4 flex flex-col">
@@ -24,20 +12,27 @@ export function Shell() {
           <p className="font-semibold text-white">Sunrise</p>
           <p className="text-xs text-white/70">Public School</p>
         </div>
-        <nav className="space-y-1 flex-1">
-          {NAV.map(([to, label]) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === "/"}
-              className={({ isActive }) =>
-                `block rounded-input px-3 py-2 text-sm ${
-                  isActive ? "bg-white text-primary font-medium" : "hover:bg-white/10"
-                }`
-              }
-            >
-              {label}
-            </NavLink>
+        <nav className="space-y-4 flex-1">
+          {groupedNav(can, hasModule).map(({ group, screens }) => (
+            <div key={group}>
+              <p className="px-3 pb-1 text-[11px] uppercase tracking-wide text-white/50">{group}</p>
+              <div className="space-y-1">
+                {screens.map((screen) => (
+                  <NavLink
+                    key={screen.path}
+                    to={screen.path}
+                    end={screen.path === "/"}
+                    className={({ isActive }) =>
+                      `block rounded-input px-3 py-2 text-sm ${
+                        isActive ? "bg-white text-primary font-medium" : "hover:bg-white/10"
+                      }`
+                    }
+                  >
+                    {screen.label}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
       </aside>
