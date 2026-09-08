@@ -22,6 +22,7 @@ from app.models import (
 )
 from app.services import attendance as svc
 from app.services import leave as leave_svc
+from app.services import scoping
 from app.services.rbac import require_permission
 from app.services.school_settings import module_enabled
 
@@ -57,16 +58,34 @@ def absentees(
     user: User = Depends(reader),
     db: Session = Depends(get_db),
 ) -> list[dict]:
+    # A class teacher gets their own section, not the school. This route was
+    # gated on `attendance.record.read` school-wide and nothing else, and a
+    # teacher holds that - so it answered TCH001 with all 100 children, names,
+    # admission numbers and all. Same helper the report gate uses.
+    class_section_id = scoping.narrow_to_own_sections(
+        db, user, class_section_id, "The absentee list"
+    )
     return svc.absentees(db, user.school_id, date or Date.today(), class_section_id)
 
 
 @router.get("/shortage")
 def shortage(
-    threshold: float = 75.0,
+    threshold: float | None = None,
     class_section_id: int | None = None,
     user: User = Depends(reader),
     db: Session = Depends(get_db),
 ) -> list[dict]:
+    """Children below the attendance threshold.
+
+    `threshold` now defaults to the school's setting rather than to 75.0 in the
+    signature. What counts as short attendance is a policy - CBSE's 75% is the
+    common answer and not the only one - and every other policy number here
+    lives in `core/settings_registry.py` (CLAUDE.md: money rules are settings,
+    not constants).
+    """
+    class_section_id = scoping.narrow_to_own_sections(
+        db, user, class_section_id, "The shortage list"
+    )
     return svc.shortage(db, user.school_id, threshold, class_section_id)
 
 

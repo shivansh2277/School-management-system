@@ -101,12 +101,11 @@ def _authorise(db: Session, user: User, authz: Authz, report: Report, params: di
         raise scoping.forbidden(
             f"{report.name} covers the whole school, which is not yours to run"
         )
-    section_id = params.get("class_section_id")
-    if section_id is None:
-        raise scoping.forbidden(
-            f"{report.name} must name one of your class sections"
-        )
-    scoping.assert_teaches_section(db, user, section_id)
+    # The same helper the admin attendance screens use, so a report and the
+    # screen beside it cannot answer the same question differently.
+    params["class_section_id"] = scoping.narrow_to_own_sections(
+        db, user, params.get("class_section_id"), report.name
+    )
     return params
 
 
@@ -172,8 +171,11 @@ RUNNERS = {
     "attendance.absentees": lambda db, u, p: attendance.absentees(
         db, u.school_id, p.get("on") or _today(), p.get("class_section_id")
     ),
+    # `p.get("threshold")` and not a default of 75.0: passing a number here
+    # would mean the report ignored the school's own setting, which is the
+    # drift section 5.10.9 forbids. None lets the owning function read it.
     "attendance.shortage": lambda db, u, p: attendance.shortage(
-        db, u.school_id, p.get("threshold", 75.0), p.get("class_section_id")
+        db, u.school_id, p.get("threshold"), p.get("class_section_id")
     ),
     "academics.performance": lambda db, u, p: stats.performance(
         db, u.school_id, p.get("class_section_id")

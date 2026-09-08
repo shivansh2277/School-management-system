@@ -72,6 +72,38 @@ def assert_teaches_section(db: Session, user: User, class_section_id: int) -> No
         raise forbidden("You do not teach this class section")
 
 
+def narrow_to_own_sections(
+    db: Session, user: User, class_section_id: int | None, what: str = "This list"
+) -> int | None:
+    """Hold a whole-school read down to one section the caller actually teaches.
+
+    The single definition of ERP_BLUEPRINT section 5.10.8's "Class Teacher (own
+    section)", used by the admin attendance screens and by the report gate, so
+    a report and the screen beside it cannot answer the same question
+    differently.
+
+    It exists because the permission layer cannot do this job. A teacher holds
+    `attendance.record.read` school-wide - their permissions are unscoped by
+    design and the restriction has always lived here (HANDOFF section 4) - so
+    `require_permission(..., school_wide=True)` passes for them. It stops a
+    guardian, whose grant is scoped to their own children, and nobody else.
+
+    Omitting the section is refused rather than quietly widened. Returning
+    every section a teacher teaches would be defensible, but "no filter" is
+    exactly how this leaked in the first place: a missing parameter must not
+    mean the whole school.
+
+    Anyone who is not a teacher is unchanged: an office clerk, a principal and
+    an auditor read the school, which is what their roles are for.
+    """
+    if user.role is not UserRole.teacher:
+        return class_section_id
+    if class_section_id is None:
+        raise forbidden(f"{what} must name one of your class sections")
+    assert_teaches_section(db, user, class_section_id)
+    return class_section_id
+
+
 def assert_teaches_subject_in_section(
     db: Session, user: User, class_section_id: int, subject_id: int
 ) -> None:

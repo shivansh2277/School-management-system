@@ -40,6 +40,17 @@ SETTINGS: list[SettingDef] = [
         "Discount for a sibling of a child already enrolled, as a percentage",
     ),
     SettingDef("fees.due_day", int, 10, "Day of the month a monthly invoice falls due"),
+    # --- attendance. What counts as short attendance is a policy, not a
+    # constant: CBSE's 75% is the common answer and a school may set its own,
+    # and the shortage list is what a child is warned or debarred on. It sat as
+    # a bare default in a function signature until reports made it a parameter
+    # and the inconsistency with every other policy number here was obvious.
+    SettingDef(
+        "attendance.shortage_threshold",
+        int,
+        75,
+        "Attendance percentage below which a child appears on the shortage list",
+    ),
     # The late-fee rule of §0.6, as four numbers rather than one formula buried
     # in code. The cap exists because 100/day uncapped passes a monthly fee
     # inside two months; a school wanting a gentler rule changes these values.

@@ -346,13 +346,29 @@ def section_summary(
 
 
 def shortage(
-    db: Session, school_id: int, threshold: float = 75.0, class_section_id: int | None = None
+    db: Session,
+    school_id: int,
+    threshold: float | None = None,
+    class_section_id: int | None = None,
 ) -> list[dict]:
     """Children below the attendance threshold, worst first.
 
     §5.8.10 wants this "early enough to act" — the value is in seeing it in
     November, not in the week before the exam.
+
+    `threshold` defaults to the school's `attendance.shortage_threshold`
+    setting rather than to a number in this signature. A child appearing on
+    this list can be warned or debarred, which makes the cut-off a policy the
+    school owns — the same reason the late fee, the sibling concession and the
+    teacher load ceiling are settings (CLAUDE.md). An explicit argument still
+    wins, so a report can ask "who is under 60" without changing the policy.
     """
+    if threshold is None:
+        from app.services import school_settings
+
+        threshold = float(
+            school_settings.get(db, school_id, "attendance.shortage_threshold")
+        )
     q = select(Enrolment).where(
         Enrolment.school_id == school_id, Enrolment.status == EnrolmentStatus.active
     )
