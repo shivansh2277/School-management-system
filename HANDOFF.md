@@ -906,6 +906,17 @@ read have moved (§7).
 - **`/admin/configuration` has no UI at all.** Settings, module switches and
   custom fields are API-only; §0.18 says the configuration screens must be
   usable by a records clerk, and that screen does not exist yet.
+- **`students.profile.export` is granted and enforced by nothing.** Grep
+  `app/api/` for it: no hits. The permission exists precisely to separate "may
+  see this on screen" from "may download two thousand of them" — §10.2 makes a
+  point of it — and today it gates no route. Verified 8 September 2026.
+- **`AuditAction.export` has never been written.** Referenced zero times in
+  `app/`. §5.10.9 requires exports of personal data to be audited; the enum
+  member has been waiting since Part 1. Both of these are Reports' first job
+  (§9.1), and both are the same shape as the `FeeHeadType.optional` defect —
+  a control that exists in the vocabulary and is enforced nowhere.
+- **`core/modules.py` still marks `admission` and `hr` as `built=False`.** Both
+  are built. It is the honest-bookkeeping field, so it is currently lying.
 - **Zero frontend tests** still. Unchanged from v0 and still a real gap.
 - **The old Vercel/Neon deployment is now stale** — the schema there predates
   all nineteen migrations. Hosting moves to Oracle Cloud (`DEPLOY.md`).
@@ -995,46 +1006,149 @@ corrupt something that matters.
 
 ---
 
-### 9.1 Reports (§5.10)
+### 9.1 Reports (§5.10) — the last module
 
-Last, because it describes what everything else built.
+Last on purpose, because it describes what everything else built. Most of the
+arithmetic already exists; what does not exist is a governed home for it.
+
+**Before anything else, two things this brief checked rather than assumed.**
+Both are the same shape as the `FeeHeadType.optional` defect transport found —
+a control that exists in the vocabulary and is enforced nowhere:
+
+- **`AuditAction.export` is referenced zero times in `app/`.** The enum member
+  has been there since Part 1. §5.10.9 requires that exports of personal data
+  be audited — who, what, when, how many rows — and nothing has ever written
+  one.
+- **`students.profile.export` is granted to the Admin Officer and required by
+  no route.** Grep `app/api/` for it and there are no hits. The permission that
+  exists specifically to separate "may see this on screen" from "may download
+  two thousand of them" currently gates nothing, so the separation §10.2 is
+  proud of is decorative. Reports is the module that either makes it real or
+  should delete it.
+
+Fixing those two is the smallest useful first commit, and it is worth doing
+before any report exists to leak through.
+
+---
 
 **The rule with teeth: a report obeys the same permission and scope as the
 screen.** §5.10.9 calls a report becoming a way to see rows you cannot see
-directly the most common data-leak path in an ERP. The seam already exists here
-— `require_permission()` at the route, `services/scoping.py` over the rows — so
-a report must go through both and never assemble its own query outside them.
-`tests/test_tenant_isolation.py` is the shape of the test that proves it.
+directly *the most common data-leak path in an ERP*. The seam already exists —
+`require_permission()` at the route, `services/scoping.py` over the rows — so a
+report must go through both and never assemble its own query outside them.
+
+The realistic failure is not malice, it is convenience: a report service that
+takes `school_id` and builds its own `select()` is faster to write than one
+that goes through the scoping helpers, and it silently serves a class teacher
+the whole school. **CLAUDE.md §4 already records this happening once** — four
+read paths carried `school_id` without filtering on it, and two genuinely
+leaked. `tests/test_tenant_isolation.py` plants a rival school and is where the
+next such check belongs. Add a guardian and a class teacher to it for the
+report routes, not only a second tenant.
 
 **Numbers must reconcile.** One definition, not two queries that drift. This
-has bitten twice now: `stats.exam_percentages()` and `report_card()` had to be
-held to the same arithmetic when absent marks arrived, and transport's
-`/admin/transport/charges` deliberately calls the same
-`charges_for_month()` the fee run does rather than recomputing it. The same
-applies to fee collection, the attendance percentage and payroll totals.
+has now bitten or been deliberately avoided three times, which is why it is the
+rule stated most often in this file:
 
-**Exports containing personal data are audited** — who, what, when, how many
-rows. `students.profile.export` is already separate from `.read` for this
-reason, and `audit_log` takes an `export` action it has never been given.
+- `stats.exam_percentages()` and `report_card()` had to be held to the same
+  arithmetic when absent marks arrived, and a test pins them together;
+- `/admin/transport/charges` calls the same `charges_for_month()` the fee run
+  uses rather than recomputing it;
+- `fees.defaulters()` was moved out of its route this session precisely so the
+  chase and the screen could not disagree.
+
+**A report that needs a number must call the function that owns it.** If the
+function does not exist yet, write it in the owning service and let the report
+call it — never the reverse.
+
+**Every report states its academic year, filter set and generation timestamp on
+the output** (§5.10.9). A printed report with no context is a report that will
+be misquoted in a board meeting, and this system has already had one document
+class that needed freezing for exactly that reason (§0.8, report cards).
 
 **No fabricated data points**: a month with no invoices shows no bar rather
-than a zero bar. `fees.collection` already does this deliberately; §5.10.9
-makes it a system-wide rule.
+than a zero bar. `fees.collection()` already does this deliberately; §5.10.9
+makes it system-wide. `comms.preview()` had to be fixed for this in the same
+session it was written — it returned a hardcoded `"unreachable": 0` — so the
+temptation is real and recent.
 
-Most of what management asks for already exists as service functions —
-`services/stats.py`, `fees.day_book()`, `attendance.section_summary()`,
-`timetable.workload()`, `payroll.register()`, `payroll.cost_by_department()`
-and now `transport.seats()` and `transport.expiring_papers()`. Reports is
-mostly a matter of giving those a governed, permission-checked home and a
-report library, not of writing new arithmetic.
+---
+
+**What already exists, and is the actual content of the report library.**
+Verified by reading the services on 8 September, not recalled:
+
+| Service | Functions a report would call |
+|---|---|
+| `services/stats.py` | `totals`, `exam_percentages`, `performance`, `top_performers`, `fee_trend`, `month_attendance`, `today_schedule` |
+| `services/fees.py` | `daybook`, `defaulters`, `collection`, `ledger`, `outstanding_invoices`, `late_fee_charged` |
+| `services/attendance.py` | `summarise`, `absentees`, `section_summary`, `student_month`, `student_percent`, `shortage`, `working_days` |
+| `services/timetable.py` | `workload`, `completeness`, `grid`, `free_teachers`, `day_plan` |
+| `services/payroll.py` | `register`, `cost_by_department`, `totals` |
+| `services/admission_reports.py` | `funnel`, `by_source`, `seat_utilisation`, `demographics`, `rejections`, `cycle_time`, `dashboard` |
+| `services/transport.py` | `seats` (route utilisation), `expiring_papers`, `charges_for_month`, `awaiting_assignment` |
+| `services/comms.py` | `delivery_report`, `unreachable_contacts` |
+
+That is most of §5.10.10 already written. **Reports is mostly a matter of
+giving these a governed, permission-checked home and a report library — not of
+writing new arithmetic.** Where a §5.10.10 KPI has no function above (revenue
+versus expense by month, enrolment and retention trend, student:teacher ratio,
+chronic absenteeism), write it in the owning service.
+
+---
+
+**Entities: what §5.10.5 lists, and what is likely to earn its table.**
+
+§5.10.5 names `saved_reports`, `report_schedules`, `report_runs`,
+`export_audit`, and four summary tables. Apply the same test transport and
+communication used — does anything read it yet?
+
+- **`export_audit` should not be a table.** `audit_log` already has the shape,
+  the tenant key, the actor and the JSON payload, and `AuditAction.export` is
+  the member waiting for it. A second audit trail is a second place to forget
+  to look.
+- **The four summary tables are a performance answer to a problem nobody has
+  measured.** 100 students and 300 invoices do not need `attendance_summary`;
+  a materialised summary that can disagree with the ledger it summarises is the
+  drift §5.10.9 forbids, bought in exchange for speed nobody has asked for.
+  Leave them until a query is actually slow, and say so.
+- **`report_runs` earns its table only alongside async running** (§5.10.9's
+  heavy-report rule). If reports are synchronous for now, a run row records
+  nothing anybody reads.
+- **`saved_reports` and `report_schedules` are the two that are probably
+  real** — but note that a scheduled report emailing a PDF each Monday is
+  `services/jobs.py` plus `comms.notify()`, both of which now exist, rather
+  than a new mechanism.
+
+A defensible v1 is: **a report registry in code** (the same shape as
+`core/permissions.py`, `core/modules.py`, `core/message_templates.py` and
+`fees.OPT_IN_SOURCES` — this codebase has a strong precedent for it), each
+entry naming its permission, its parameters and the service function it calls;
+plus `saved_reports` if a school genuinely needs to store its own filter sets.
+That gives the Report Library of §5.10.3 without four tables nothing reads.
+
+---
+
+**Leave out of this module**, and say so rather than half-building:
+
+- Custom/ad-hoc report builder. A query builder behind a records clerk's screen
+  is the injection surface §3.16 refused a `formula` calculation method over.
+- Board/statutory return formats — nobody has produced the actual form.
+- Watermarking (§5.10.9 says "can be"), and download-expiry tracking.
+- Drill-down as a stored concept; it is a UI behaviour over the same functions.
+
+---
 
 **One reporting wrinkle transport introduced**, worth deciding rather than
 inheriting: a fee plan's `monthly_total` sums its items, and the transport item
 carries zero because the real price is on the stop's slab. So class 10's plan
 reads ₹2,800 — correct for a child who does not take the bus, and short by the
 slab for one who does. `tests/test_fee_setup.py` pins it. A "what does this
-child actually pay" figure would need to consult the opt-in, which is
+child actually pay" figure has to consult the opt-in, which is
 `charges_for_month()`.
+
+**And one piece of stale bookkeeping to fix in passing:** `core/modules.py`
+still says `built=False` for `admission` and `hr`, both of which are built. It
+is the honest-bookkeeping field, so it should be honest.
 
 ---
 
