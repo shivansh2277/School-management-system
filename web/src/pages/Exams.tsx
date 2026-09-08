@@ -6,21 +6,13 @@ import { Card, DataTable, FormField, Modal, Pill, inputClass } from "../componen
 import { useClasses } from "./useClasses";
 
 type Exam = { id: number; name: string; term: string; start_date: string; end_date: string };
-type Paper = {
-  id: number;
-  class_label: string;
-  subject: string;
-  exam_date: string;
-  max_marks: string;
-  marks_entered: boolean;
-};
 
 export function Exams() {
   const qc = useQueryClient();
   const [openExam, setOpenExam] = useState<Exam | null>(null);
   const [creating, setCreating] = useState(false);
 
-  const exams = useQuery({ queryKey: ["exams"], queryFn: () => api.get<Exam[]>("/admin/exams") });
+  const exams = useQuery({ queryKey: ["exams"], queryFn: () => api.get("/admin/exams") });
 
   return (
     <>
@@ -35,7 +27,7 @@ export function Exams() {
           </button>
         }
       >
-        <DataTable<Exam>
+        <DataTable
           rows={exams.data ?? []}
           loading={exams.isLoading}
           onRowClick={setOpenExam}
@@ -107,11 +99,13 @@ function ExamDetail({ exam, onClose }: { exam: Exam; onClose: () => void }) {
   const classes = useClasses();
   const subjects = useQuery({
     queryKey: ["subjects"],
-    queryFn: () => api.get<{ id: number; name: string }[]>("/admin/subjects"),
+    // /admin/subjects has no response_model; only id and name are read here.
+    queryFn: () => api.get("/admin/subjects") as Promise<{ id: number; name: string }[]>,
   });
   const papers = useQuery({
     queryKey: ["exam-schedule", exam.id],
-    queryFn: () => api.get<Paper[]>(`/admin/exams/${exam.id}/schedule`),
+    queryFn: () =>
+      api.get(`/admin/exams/${exam.id}/schedule` as "/admin/exams/{exam_id}/schedule"),
   });
 
   const [form, setForm] = useState({
@@ -125,7 +119,7 @@ function ExamDetail({ exam, onClose }: { exam: Exam; onClose: () => void }) {
 
   const add = useMutation({
     mutationFn: () =>
-      api.post(`/admin/exams/${exam.id}/schedule`, {
+      api.post(`/admin/exams/${exam.id}/schedule` as "/admin/exams/{exam_id}/schedule", {
         class_section_id: Number(form.class_section_id),
         subject_id: Number(form.subject_id),
         exam_date: form.exam_date,
@@ -136,7 +130,7 @@ function ExamDetail({ exam, onClose }: { exam: Exam; onClose: () => void }) {
 
   return (
     <Modal title={exam.name} onClose={onClose}>
-      <DataTable<Paper>
+      <DataTable
         rows={papers.data ?? []}
           loading={papers.isLoading}
         empty="No papers scheduled for this exam yet."
