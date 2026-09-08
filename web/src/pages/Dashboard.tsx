@@ -37,7 +37,9 @@ const PERF_LABELS: [keyof Stats["performance"], string][] = [
 export function Dashboard() {
   const { data, isLoading } = useQuery({
     queryKey: ["admin-stats"],
-    queryFn: () => api.get<Stats>("/admin/dashboard/stats"),
+    // The backend route has no response_model, so the generated schema types
+    // it only as `{[key: string]: unknown}` - Stats documents the real shape.
+    queryFn: () => api.get("/admin/dashboard/stats") as Promise<Stats>,
   });
 
   if (isLoading || !data) return <p className="text-ink-faint">Loading...</p>;
