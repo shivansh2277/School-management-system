@@ -68,10 +68,15 @@ def test_the_roll_lists_everyone_in_service_marked_or_not(
     rows = client.get(
         "/admin/staff-attendance", headers=admin, params={"date": str(monday)}
     ).json()
-    assert len(rows) == 12, "twelve staff, none marked yet"
+    assert len(rows) == 16, "twelve teachers and four transport staff, none marked"
     assert all(r["status"] is None for r in rows)
-    assert rows[0]["employee_code"] == "TCH001"
-    assert rows[0]["department"] == "Science and Mathematics"
+    # Ordered by employee code, so the bus attendant comes first. Drivers are
+    # on the staff register for the same reason they are on the payroll: they
+    # come to work, and somebody marks them.
+    assert rows[0]["employee_code"] == "ATT001"
+    assert rows[0]["department"] == "Transport"
+    teacher = next(r for r in rows if r["employee_code"] == "TCH001")
+    assert teacher["department"] == "Science and Mathematics"
 
 
 def test_a_day_the_school_is_shut_cannot_be_marked(db, admin_user, teacher_1):

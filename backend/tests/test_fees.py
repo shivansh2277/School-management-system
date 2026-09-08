@@ -50,7 +50,10 @@ def test_an_invoice_has_lines_that_sum_to_its_payable(client, admin, db, ids):
     client.post("/admin/fees/invoices/generate", json=NEXT_MONTH, headers=admin)
     rows = client.get("/admin/fees/invoices?month=12&year=2026", headers=admin).json()
     invoice = rows[0]
-    assert len(invoice["lines"]) == 2  # tuition and development
+    # Tuition and development, plus a transport line if this child rides.
+    heads = {line["description"] for line in invoice["lines"]}
+    assert {"Tuition Fee", "Development Fee"} <= heads
+    assert heads <= {"Tuition Fee", "Development Fee", "Transport Fee"}
     net = sum(Decimal(line["net"]) for line in invoice["lines"])
     assert Decimal(invoice["payable"]) == net
     assert Decimal(invoice["charged"]) - Decimal(invoice["discount"]) == net

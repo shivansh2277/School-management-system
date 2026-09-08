@@ -21,6 +21,7 @@ from app.models import (
     Payslip,
     PayslipLine,
     SalaryComponent,
+    SalaryStructure,
 )
 from app.services import payroll as svc
 from app.services import staff_attendance, staff_leave
@@ -270,7 +271,9 @@ def test_a_run_covers_everyone_with_a_structure_and_names_everyone_without(
     db.flush()
 
     result = svc.calculate(db, admin_user, run)
-    assert len(result["payslips"]) == 12
+    # Sixteen: twelve teachers plus the transport manager, two drivers and the
+    # bus attendant, who are employees and are paid like anybody else.
+    assert len(result["payslips"]) == 16
     assert result["without_structure"] == ["TCH960"]
 
 
@@ -279,7 +282,7 @@ def test_recalculating_an_open_run_replaces_rather_than_duplicates(
 ):
     svc.calculate(db, admin_user, run)
     svc.calculate(db, admin_user, run)
-    assert len(db.scalars(select(Payslip).where(Payslip.run_id == run.id)).all()) == 12
+    assert len(db.scalars(select(Payslip).where(Payslip.run_id == run.id)).all()) == 16
 
 
 def test_an_approved_run_cannot_be_recalculated(db, admin_user, run):
@@ -373,11 +376,35 @@ def test_a_statutory_register_is_a_query_across_payslips(db, admin_user, run):
     """Why lines are a table and not a frozen blob."""
     svc.calculate(db, admin_user, run)
     pf = svc.register(db, run, "PF")
-    assert len(pf) == 12
+    assert len(pf) == 16
     assert sum(r["amount"] for r in pf) > 0
 
+    # ESI applies below a gross threshold, so the register is a subset rather
+    # than a headcount. Asserted as the rule: everyone on it earns under the
+    # threshold and somebody above it is absent, which stays true whoever the
+    # demo school hires next. It was one PRT until the school gained two
+    # drivers and a bus attendant.
     esi = svc.register(db, run, "ESI")
-    assert len(esi) == 1, "only the one person under the threshold"
+    threshold = db.scalar(
+        select(SalaryComponent.applies_below_gross).where(
+            SalaryComponent.school_id == run.school_id, SalaryComponent.code == "ESI"
+        )
+    )
+    on_esi = {r["employee_code"] for r in esi}
+    everyone = {r["employee_code"] for r in svc.register(db, run, "PF")}
+    assert 0 < len(on_esi) < len(everyone)
+    grosses = dict(
+        db.execute(
+            select(Employee.employee_code, SalaryStructure.monthly_gross)
+            .join(SalaryStructure, SalaryStructure.employee_id == Employee.id)
+            .where(
+                SalaryStructure.school_id == run.school_id,
+                SalaryStructure.is_active.is_(True),
+            )
+        ).all()
+    )
+    assert all(grosses[code] < threshold for code in on_esi)
+    assert all(grosses[code] >= threshold for code in everyone - on_esi)
 
 
 def test_cost_by_department_adds_up_to_the_run(db, admin_user, run):
@@ -443,7 +470,7 @@ def test_a_payroll_run_completes_for_the_demo_school(client, admin, db):
     calculated = client.post(f"/admin/payroll/runs/{run_id}/calculate", headers=admin)
     assert calculated.status_code == 200, calculated.text
     body = calculated.json()
-    assert body["payslips"] == 12
+    assert body["payslips"] == 16
     assert body["without_structure"] == []
     assert Decimal(body["net_pay"]) > 0
 
@@ -458,7 +485,7 @@ def test_a_payroll_run_completes_for_the_demo_school(client, admin, db):
     assert paid.json()["status"] == "paid"
 
     slips = client.get(f"/admin/payroll/runs/{run_id}/payslips", headers=admin).json()
-    assert len(slips) == 12
+    assert len(slips) == 16
     one = slips[0]
     assert Decimal(one["total_earnings"]) == Decimal(one["monthly_gross"])
     assert {line["code"] for line in one["lines"]} >= {"BASIC", "HRA", "CONV", "SPL"}

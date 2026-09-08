@@ -58,11 +58,19 @@ def test_a_plan_cannot_carry_a_head_from_another_school(client, admin, db):
 
 
 def test_the_seeded_plan_totals_the_class_fee(client, admin, db):
-    """Two lines, and they add back up to the flat amount they replaced."""
+    """The billable lines add back up to the flat amount they replaced.
+
+    Three items now, not two: the transport head sits on every plan carrying
+    zero, because it is billed only to the children who ride and priced from
+    the slab on their stop. So the plan's monthly total is what a child who
+    does not take the bus pays, and it is unchanged.
+    """
     plans = client.get("/admin/fees/plans", headers=admin).json()
     ten = next(p for p in plans if p["class_name"] == "10")
-    assert len(ten["items"]) == 2
+    assert len(ten["items"]) == 3
     assert Decimal(ten["monthly_total"]) == Decimal("2800.00")
+    transport = next(i for i in ten["items"] if i["fee_head"] == "Transport Fee")
+    assert Decimal(transport["amount"]) == Decimal("0.00")
 
 
 def test_an_individual_assignment_overrides_the_class_plan(client, admin, db, ids):

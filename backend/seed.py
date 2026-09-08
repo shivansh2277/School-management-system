@@ -16,6 +16,8 @@ from sqlalchemy.orm import Session
 from app.core.db import Base, SessionLocal, engine
 from app.core.security import hash_password
 from app.core.document_types import DEFAULT_TYPES
+from app.services import documents
+from app.services import transport as transport_svc
 from app.core.permissions import LEGACY_ROLE_MAP
 from app.services import jobs as jobs_svc
 from app.services import audit as audit_svc
@@ -67,6 +69,14 @@ from app.models import (
     Guardian,
     StudentGuardian,
     School,
+    Route,
+    RouteStatus,
+    TransportAssignmentStatus,
+    TransportDirection,
+    TransportFeeSlab,
+    Vehicle,
+    VehicleOwnership,
+    EmployeeType,
     Setting,
     Student,
     SchoolPeriod,
@@ -150,6 +160,58 @@ DEPARTMENTS = [
     ("HUM", "Humanities"),
     ("PRI", "Primary"),
     ("ADM", "Administration"),
+    # Drivers and the attendant are employees like anybody else (§5.6.6), so
+    # they need a department rather than a table of their own.
+    ("TRA", "Transport"),
+]
+
+# Two buses, three distance slabs and two routes. Small on purpose: the demo
+# exists to prove the rules run, and a fleet of twelve would prove the same
+# thing more slowly.
+VEHICLES = [
+    ("UP32AB1234", "Tata Starbus 40", 40),
+    ("UP32CD5678", "Eicher Skyline 32", 32),
+]
+SLABS = [("0-5 km", "800.00"), ("5-10 km", "1100.00"), ("10-15 km", "1500.00")]
+# (code, name, registration, [(stop, landmark, pickup, drop, slab index)])
+ROUTES = [
+    (
+        "R1",
+        "Gomti Nagar",
+        "UP32AB1234",
+        [
+            ("Vibhuti Khand", "Fun Republic Mall", (6, 40), (14, 25), 0),
+            ("Patrakarpuram", "Patrakarpuram Crossing", (6, 55), (14, 40), 0),
+            ("Vinay Khand", "Lohia Park Gate 2", (7, 10), (14, 55), 1),
+            ("Vikas Khand", "Ambedkar Park", (7, 25), (15, 10), 2),
+        ],
+    ),
+    (
+        "R2",
+        "Alambagh and Krishna Nagar",
+        "UP32CD5678",
+        [
+            ("Krishna Nagar", "Sadar Bazaar", (6, 45), (14, 30), 1),
+            ("Alambagh Bus Station", "Alambagh Terminal", (7, 0), (14, 45), 1),
+            ("Kanpur Road", "Phoenix Palassio", (7, 20), (15, 5), 2),
+        ],
+    ),
+]
+# (login, name, designation, papers). The two drivers and the attendant have
+# no working login — §5.6.8 gives a driver app access "later", and an account
+# nobody uses with a known demo password is worse than no account.
+# (login, name, designation, papers, can log in, monthly gross). The driver
+# and attendant grosses sit below the ESI threshold of 21,000 and the manager's
+# above it, which is the same spread the teaching scales were given: a
+# statutory component that applies to some staff and not others is only
+# exercised if the demo has both.
+TRANSPORT_STAFF = [
+    ("TRM001", "Rakesh Chandra Dubey", "Transport Manager", (), True, 28000),
+    ("DRV001", "Suresh Kumar Yadav", "Driver",
+     ("driving_licence", "police_verification"), False, 16000),
+    ("DRV002", "Ram Naresh Verma", "Driver",
+     ("driving_licence", "police_verification"), False, 16000),
+    ("ATT001", "Sunita Devi", "Bus Attendant", ("police_verification",), False, 11000),
 ]
 
 # Classes 10 down to 1, one section each. 10-A first so it keeps the lowest
@@ -932,10 +994,23 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
                     amount=development,
                     frequency=FeeFrequency.monthly,
                 ),
+                # On every plan, and billed only to the children who actually
+                # ride. Before `generate()` learned what an `optional` head
+                # means, this one line charged all hundred of them. The amount
+                # here is never used: transport is priced from the slab on the
+                # stop the child boards at.
+                FeePlanItem(
+                    school_id=school.id,
+                    fee_head_id=heads["TRANSPORT"].id,
+                    amount=Decimal("0.00"),
+                    frequency=FeeFrequency.monthly,
+                ),
             ],
         )
         db.add(plan)
     db.flush()
+
+    _seed_transport(db, school, departments, enrolment_of, students)
 
     # The demo parent has two children, so the sibling rule has something to
     # act on and the concession register is not empty on a fresh install.
@@ -1063,6 +1138,172 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
     db.commit()
 
 
+def _seed_transport(db: Session, school, departments: dict, enrolment_of: dict, students: list) -> None:
+    """Two buses, two routes and the children on them.
+
+    Built through the real service rather than by inserting rows, for the same
+    reason the fee ledger and the timetable are: `svc.set_stops`,
+    `svc.set_status` and `svc.assign` are what a school will actually call, so
+    a defect in the capacity check or the compliance refusal breaks seeding
+    here rather than only failing a test.
+
+    Which means the compliance papers have to be real `documents` rows, because
+    a route cannot go active without them. The bytes are placeholder demo
+    content, the way the student names are; the row, the type and the expiry
+    are what the refusal reads.
+    """
+    if db.scalar(select(Vehicle).where(Vehicle.school_id == school.id)) is not None:
+        return  # idempotent, like the rest of the seed
+
+    admin_user = db.scalar(
+        select(User).where(User.school_id == school.id, User.role == UserRole.admin)
+    )
+    doc_types = {
+        t.code: t
+        for t in db.scalars(
+            select(DocumentType).where(DocumentType.school_id == school.id)
+        )
+    }
+
+    def paper(owner_type, owner_id, code, expires_on):
+        documents.upload(
+            db,
+            actor=admin_user,
+            owner_type=owner_type,
+            owner_id=owner_id,
+            filename=f"{code}-{owner_id}.pdf",
+            mime_type="application/pdf",
+            data=f"DEMO {code} for {owner_type.value} {owner_id}".encode(),
+            document_type_id=doc_types[code].id,
+            expires_on=expires_on,
+        )
+
+    # --- crew
+    crew = {}
+    for i, (login, name, designation, papers, can_log_in, gross) in enumerate(
+        TRANSPORT_STAFF
+    ):
+        u = User(
+            role=UserRole.admin,
+            login_id=login,
+            password_hash=hash_password(DEMO_PASSWORDS[UserRole.admin]),
+            full_name=name,
+            email=f"{login.lower()}@sunrisepublic.edu",
+            phone=f"98765{40000 + i:05d}",
+            is_active=can_log_in,
+        )
+        db.add(u)
+        db.flush()
+        e = Employee(
+            user_id=u.id,
+            employee_code=login,
+            employee_type=EmployeeType.support if papers else EmployeeType.administrative,
+            joining_date=date(2021, 4, 1),
+            department_id=departments["TRA"].id,
+            designation=designation,
+        )
+        db.add(e)
+        db.flush()
+        for code in papers:
+            paper(OwnerType.employee, e.id, code, TODAY + timedelta(days=400))
+        # A driver is on the payroll like anybody else. Leaving them off it
+        # would put four people in the staff register that the monthly run
+        # silently skips, which is the oversight `without_structure` exists to
+        # surface rather than something the demo should model.
+        payroll_svc.set_structure(
+            db,
+            admin_user,
+            e,
+            effective_from=date(2026, 4, 1),
+            monthly_gross=Decimal(gross),
+            note=f"{designation} scale",
+        )
+        crew[login] = e
+
+    # --- vehicles and their papers
+    vehicles = {}
+    for i, (registration, model, capacity) in enumerate(VEHICLES):
+        v = Vehicle(
+            registration_no=registration,
+            make_model=model,
+            capacity=capacity,
+            ownership=VehicleOwnership.owned,
+        )
+        db.add(v)
+        db.flush()
+        for j, code in enumerate(transport_svc.VEHICLE_PAPERS):
+            # One paper on the first bus lapses in 45 days, so the compliance
+            # dashboard has something in it on a fresh install and the 60-day
+            # horizon is visibly doing something. Still valid, so the route
+            # stays roadworthy — an expired one would ground the demo.
+            due = 45 if (i, j) == (0, 3) else 300 + j * 30
+            paper(OwnerType.vehicle, v.id, code, TODAY + timedelta(days=due))
+        vehicles[registration] = v
+
+    # --- slabs
+    slabs = []
+    for name, amount in SLABS:
+        row = TransportFeeSlab(name=name, monthly_amount=Decimal(amount))
+        db.add(row)
+        slabs.append(row)
+    db.flush()
+
+    # --- routes, through the service so the rules run
+    routes = []
+    for idx, (code, name, registration, stops) in enumerate(ROUTES):
+        r = Route(
+            code=code,
+            name=name,
+            vehicle_id=vehicles[registration].id,
+            driver_id=crew[f"DRV{idx + 1:03d}"].id,
+            attendant_id=crew["ATT001"].id if idx == 0 else None,
+            distance_km=Decimal("12.50") + idx,
+        )
+        db.add(r)
+        db.flush()
+        transport_svc.set_stops(
+            db,
+            r,
+            [
+                {
+                    "sequence": n + 1,
+                    "name": stop_name,
+                    "landmark": landmark,
+                    "pickup_time": time(*pickup),
+                    "drop_time": time(*drop),
+                    "fee_slab_id": slabs[slab_index].id,
+                }
+                for n, (stop_name, landmark, pickup, drop, slab_index) in enumerate(stops)
+            ],
+            admin_user,
+        )
+        transport_svc.set_status(db, r, RouteStatus.active, admin_user)
+        routes.append(r)
+
+    # --- riders. Every fourth child by roll number, spread across both routes
+    # and every stop, so route utilisation and the fee opt-in both have a
+    # spread rather than one bus full and one empty.
+    all_stops = [stop for r in routes for stop in r.stops]
+    riders = [s for s in students if enrolment_of[s.id].roll_no % 4 == 1]
+    started = date(TODAY.year if TODAY.month >= 4 else TODAY.year - 1, 4, 1)
+    for n, student in enumerate(riders):
+        row = transport_svc.assign(
+            db,
+            actor=admin_user,
+            enrolment=enrolment_of[student.id],
+            stop=all_stops[n % len(all_stops)],
+            direction=TransportDirection.both,
+            start_date=started,
+        )
+        transport_svc.set_assignment_status(
+            db,
+            actor=admin_user,
+            row=row,
+            new_status=TransportAssignmentStatus.active,
+        )
+    db.flush()
+
+
 def _assign_roles(db: Session, roles: dict, sections: list) -> None:
     """Give every seeded account the system role matching its primary role.
 
@@ -1073,9 +1314,18 @@ def _assign_roles(db: Session, roles: dict, sections: list) -> None:
     for user in db.scalars(select(User)):
         # One deliberate exception to the legacy map: the counter clerk holds
         # `fee_collector`, which has no void and no concession approval.
+        # Drivers and the attendant are staff records, not accounts: their
+        # user rows exist because `employees.user_id` is not nullable, and
+        # §5.6.8 gives a driver app access "later". Granting them the
+        # `super_admin` the legacy map would hand any `admin` row is how a demo
+        # password ends up holding every permission in the product.
+        if user.login_id.startswith(("DRV", "ATT")):
+            continue
         code = (
             "fee_collector"
             if user.login_id == CASHIER_LOGIN
+            else "transport_manager"
+            if user.login_id.startswith("TRM")
             else LEGACY_ROLE_MAP[user.role.value]
         )
         # Students and guardians hold their permissions over their own records

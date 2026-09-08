@@ -7,12 +7,32 @@ from decimal import Decimal
 
 
 def test_totals_match_direct_counts(client, admin, db):
-    from app.models import ClassSection, Student, Employee
+    """Each headline number is the count it claims to be.
+
+    The staff figure counts employees whose *user account* is active, not
+    employees. Those were the same number until the demo gained drivers, who
+    are staff records without a working login — §5.6.8 gives a driver app
+    access "later" — and the test passed only because nothing had ever
+    distinguished the two.
+    """
+    from sqlalchemy import func, select
+
+    from app.models import ClassSection, Employee, Student, User
 
     stats = client.get("/admin/dashboard/stats", headers=admin).json()
     assert stats["totals"]["students"] == db.query(Student).count()
-    assert stats["totals"]["teachers"] == db.query(Employee).count()
     assert stats["totals"]["classes"] == db.query(ClassSection).count()
+
+    active_staff = db.scalar(
+        select(func.count())
+        .select_from(Employee)
+        .join(User, User.id == Employee.user_id)
+        .where(User.is_active)
+    )
+    assert stats["totals"]["teachers"] == active_staff
+    assert active_staff < db.query(Employee).count(), (
+        "the demo has staff without a login, or this assertion proves nothing"
+    )
 
 
 def test_fees_collected_matches_the_allocated_payments(client, admin, db):

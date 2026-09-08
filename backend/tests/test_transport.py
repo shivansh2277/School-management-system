@@ -95,7 +95,7 @@ def bus(db, admin_user):
     """A four-seat bus with every paper valid for a year."""
     v = Vehicle(
         school_id=admin_user.school_id,
-        registration_no="UP32AB1234",
+        registration_no="UP32TT0001",
         make_model="Tata Starbus",
         capacity=4,
     )
@@ -121,7 +121,9 @@ def driver(db, admin_user, ids):
 @pytest.fixture()
 def slab(db, admin_user):
     s = TransportFeeSlab(
-        school_id=admin_user.school_id, name="0-5 km", monthly_amount=Decimal("800.00")
+        school_id=admin_user.school_id,
+        name="Test near",
+        monthly_amount=Decimal("800.00"),
     )
     db.add(s)
     db.flush()
@@ -133,8 +135,8 @@ def route(db, admin_user, bus, driver, slab):
     """An active route with two stops, ready to carry children."""
     r = Route(
         school_id=admin_user.school_id,
-        code="R1",
-        name="Gomti Nagar",
+        code="T1",
+        name="Test Gomti Nagar",
         vehicle_id=bus.id,
         driver_id=driver.id,
     )
@@ -167,13 +169,23 @@ def route(db, admin_user, bus, driver, slab):
 
 @pytest.fixture()
 def riders(db, ids):
-    """Six active enrolments — more than the four-seat bus holds."""
+    """Six active enrolments the seed has *not* already put on a bus.
+
+    The demo school runs two real routes with thirty children on them, and a
+    child who already holds a live assignment is refused a second one — which
+    is itself a rule tested below. Picking blindly off the roster would make
+    half this file fail for the right reason at the wrong moment.
+    """
+    taken = select(TransportAssignment.enrolment_id).where(
+        TransportAssignment.status.in_(svc.LIVE)
+    )
     rows = list(
         db.scalars(
             select(Enrolment)
             .where(
                 Enrolment.school_id == ids["school"],
                 Enrolment.status == EnrolmentStatus.active,
+                Enrolment.id.not_in(taken),
             )
             .order_by(Enrolment.id)
             .limit(6)
@@ -181,6 +193,16 @@ def riders(db, ids):
     )
     assert len(rows) == 6
     return rows
+
+
+def _mine(charges: dict, riders: list) -> dict:
+    """The charges belonging to this test's own riders.
+
+    The seed runs two real routes with thirty children on them and they are
+    correctly billed, so a bare `== {}` would be asserting that the demo data
+    does not exist rather than that the opt-in works.
+    """
+    return {e.id: charges[e.id] for e in riders if e.id in charges}
 
 
 def _assign(db, admin_user, route, enrolment, start=None, seq=1):
@@ -296,7 +318,7 @@ def test_a_smaller_bus_cannot_be_swapped_under_the_children_already_on_board(
     for enrolment in riders[:4]:
         _assign(db, admin_user, route, enrolment)
     small = Vehicle(
-        school_id=admin_user.school_id, registration_no="UP32XY0001", capacity=2
+        school_id=admin_user.school_id, registration_no="UP32TT0002", capacity=2
     )
     db.add(small)
     db.flush()
@@ -327,7 +349,7 @@ def test_a_bus_with_expired_insurance_cannot_be_put_on_the_road(
 
     r = Route(
         school_id=admin_user.school_id,
-        code="R9",
+        code="T9",
         name="Expired",
         vehicle_id=bus.id,
         driver_id=driver.id,
@@ -351,13 +373,13 @@ def test_a_paper_nobody_uploaded_is_a_refusal_not_a_pass(db, admin_user, driver)
     how a compliance check quietly stops checking anything.
     """
     bare = Vehicle(
-        school_id=admin_user.school_id, registration_no="UP32ZZ9999", capacity=10
+        school_id=admin_user.school_id, registration_no="UP32TT0003", capacity=10
     )
     db.add(bare)
     db.flush()
     r = Route(
         school_id=admin_user.school_id,
-        code="R8",
+        code="T8",
         name="Bare",
         vehicle_id=bare.id,
         driver_id=driver.id,
@@ -410,7 +432,7 @@ def test_a_driver_without_a_police_verification_cannot_crew_a_route(
 
     r = Route(
         school_id=admin_user.school_id,
-        code="R7",
+        code="T7",
         name="Unchecked",
         vehicle_id=bus.id,
         driver_id=unchecked.id,
@@ -487,7 +509,7 @@ def test_the_compliance_block_has_no_override_either(db):
 
 def test_stop_timings_must_increase_along_the_route(db, admin_user, bus, driver):
     r = Route(
-        school_id=admin_user.school_id, code="R2", name="Backwards", vehicle_id=bus.id,
+        school_id=admin_user.school_id, code="T2", name="Backwards", vehicle_id=bus.id,
         driver_id=driver.id,
     )
     db.add(r)
@@ -512,7 +534,7 @@ def test_one_bus_cannot_be_on_two_routes_at_the_same_time(
     """The same shape as `timetable.conflicts()`: a bus, like a teacher, is in
     one place at a time. A 6:45-7:05 pickup leaves it free at 7:45."""
     second = Route(
-        school_id=admin_user.school_id, code="R3", name="Overlap", vehicle_id=bus.id,
+        school_id=admin_user.school_id, code="T3", name="Overlap", vehicle_id=bus.id,
         driver_id=driver.id,
     )
     db.add(second)
@@ -525,12 +547,12 @@ def test_one_bus_cannot_be_on_two_routes_at_the_same_time(
             admin_user,
         )
     assert e.value.status_code == 409
-    assert "is on route R1" in e.value.detail
+    assert "is on route T1" in e.value.detail
 
 
 def test_a_second_trip_after_the_first_is_fine(db, admin_user, route, bus, driver):
     second = Route(
-        school_id=admin_user.school_id, code="R4", name="Second trip",
+        school_id=admin_user.school_id, code="T4", name="Second trip",
         vehicle_id=bus.id, driver_id=driver.id,
     )
     db.add(second)
@@ -599,15 +621,17 @@ def test_only_children_on_the_bus_are_charged_for_it(db, admin_user, route, ride
             db, actor=admin_user, row=row, new_status=TransportAssignmentStatus.active
         )
     charges = svc.charges_for_month(db, admin_user.school_id, 2026, 5)
-    assert len(charges) == 2
-    assert set(charges) == {e.id for e in riders[:2]}
-    assert all(v == Decimal("800.00") for v in charges.values())
+    mine = _mine(charges, riders)
+    assert set(mine) == {e.id for e in riders[:2]}
+    assert all(v == Decimal("800.00") for v in mine.values())
+    # The four who were not put on a bus are absent, not zero.
+    assert all(e.id not in charges for e in riders[2:])
 
 
 def test_a_requested_seat_is_not_a_billed_one(db, admin_user, route, riders):
     """A seat that has been asked for is not a service delivered."""
     _assign(db, admin_user, route, riders[0], start=Date(2026, 4, 1))
-    assert svc.charges_for_month(db, admin_user.school_id, 2026, 5) == {}
+    assert riders[0].id not in svc.charges_for_month(db, admin_user.school_id, 2026, 5)
 
 
 def test_a_mid_month_start_is_prorated_by_the_days_actually_ridden(
@@ -644,7 +668,7 @@ def test_ending_an_assignment_stops_the_next_invoice_and_keeps_the_history(
     june = svc.charges_for_month(db, admin_user.school_id, 2026, 6)
     # 1-10 May is 10 of 31 days: 800 * 10 / 31 = 258.06 (half up).
     assert may[riders[0].id] == Decimal("258.06")
-    assert june == {}
+    assert riders[0].id not in june
     # The row survives, which is what "preserves history" means.
     assert db.get(TransportAssignment, row.id).end_reason == "moved house"
 
@@ -670,7 +694,7 @@ def test_a_stop_with_no_slab_bills_nothing_rather_than_guessing(
     svc.set_assignment_status(
         db, actor=admin_user, row=row, new_status=TransportAssignmentStatus.active
     )
-    assert svc.charges_for_month(db, admin_user.school_id, 2026, 4) == {}
+    assert riders[0].id not in svc.charges_for_month(db, admin_user.school_id, 2026, 4)
 
 
 # --- expiry alerts ----------------------------------------------------------
@@ -696,7 +720,7 @@ def test_the_expiry_sweep_reports_lapsed_papers_as_well_as_lapsing_ones(
     puc = [f for f in found if f["code"] == "vehicle_puc" and f["owner_id"] == bus.id]
     assert len(puc) == 1
     assert puc[0]["days_left"] < 0
-    assert puc[0]["owner"] == "UP32AB1234"
+    assert puc[0]["owner"] == "UP32TT0001"
 
 
 # --- the module switch and the permission gate ------------------------------
@@ -733,6 +757,22 @@ def test_a_parent_sees_their_own_childs_bus_and_not_another_familys(
             Enrolment.status == EnrolmentStatus.active,
         )
     )
+    # This child may already be one of the seed's thirty riders, and a child
+    # may hold only one live assignment — which is the rule tested above.
+    existing = db.scalar(
+        select(TransportAssignment).where(
+            TransportAssignment.enrolment_id == enrolment.id,
+            TransportAssignment.status.in_(svc.LIVE),
+        )
+    )
+    if existing is not None:
+        svc.set_assignment_status(
+            db,
+            actor=admin_user,
+            row=existing,
+            new_status=TransportAssignmentStatus.ended,
+            reason="moved to the test route",
+        )
     row = _assign(db, admin_user, route, enrolment)
     svc.set_assignment_status(
         db, actor=admin_user, row=row, new_status=TransportAssignmentStatus.active
@@ -780,20 +820,20 @@ def transport_on_the_plan(db, admin_user, slab):
         )
     )
     assert head is not None and head.type is FeeHeadType.optional
-    for plan in db.scalars(
-        select(FeePlan).where(FeePlan.school_id == admin_user.school_id)
-    ):
-        db.add(
-            FeePlanItem(
-                school_id=admin_user.school_id,
-                fee_plan_id=plan.id,
-                fee_head_id=head.id,
-                # Deliberately a wrong, eye-catching number: nothing should
-                # ever bill it. The price comes from the stop's slab.
-                amount=Decimal("9999.00"),
-                frequency=FeeFrequency.monthly,
+    items = list(
+        db.scalars(
+            select(FeePlanItem).where(
+                FeePlanItem.school_id == admin_user.school_id,
+                FeePlanItem.fee_head_id == head.id,
             )
         )
+    )
+    assert items, "the seed puts the transport head on every class plan"
+    for item in items:
+        # A deliberately wrong, eye-catching number. Nothing should ever bill
+        # it: the price comes from the slab on the stop the child boards at.
+        item.amount = Decimal("9999.00")
+        item.frequency = FeeFrequency.monthly
     db.flush()
     return head
 
@@ -835,16 +875,31 @@ def test_putting_transport_on_a_plan_does_not_charge_the_whole_school(
     fees.generate(db, month, year, admin_user.school_id)
 
     charged = _transport_lines(db, transport_on_the_plan.id, year, month)
-    assert set(charged) == {e.id for e in riders[:2]}
-    # And the rest of the school was billed for tuition and nothing else.
-    everyone = db.scalar(
+    # Exactly the children with a live assignment, and no others. Stated as
+    # the invariant rather than as a count, because the demo school already
+    # runs two routes with thirty children on them.
+    riding = set(
+        db.scalars(
+            select(TransportAssignment.enrolment_id).where(
+                TransportAssignment.school_id == admin_user.school_id,
+                TransportAssignment.status == TransportAssignmentStatus.active,
+            )
+        )
+    )
+    assert set(charged) == riding
+    assert {e.id for e in riders[:2]} <= set(charged)
+
+    invoiced = db.scalar(
         select(func.count(FeeInvoice.id)).where(
             FeeInvoice.school_id == admin_user.school_id,
             FeeInvoice.period_year == year,
             FeeInvoice.period_month == month,
         )
     )
-    assert everyone > 50
+    # The point of the whole change: far more children were invoiced than were
+    # charged for a bus. Before it, these two numbers were equal.
+    assert invoiced > 50
+    assert len(charged) < invoiced
 
 
 def test_the_bus_is_priced_from_the_stop_not_from_the_plan(
@@ -858,7 +913,7 @@ def test_the_bus_is_priced_from_the_stop_not_from_the_plan(
     """
     far = TransportFeeSlab(
         school_id=admin_user.school_id,
-        name="10-15 km",
+        name="Test far",
         monthly_amount=Decimal("1500.00"),
     )
     db.add(far)
@@ -935,7 +990,9 @@ def test_a_child_who_leaves_the_service_stops_being_billed_for_it(
         reason="left the school",
     )
     fees.generate(db, month, year, admin_user.school_id)
-    assert _transport_lines(db, transport_on_the_plan.id, year, month) == {}
+    assert riders[0].id not in _transport_lines(
+        db, transport_on_the_plan.id, year, month
+    )
 
 
 def test_a_sibling_concession_comes_off_the_bus_fare_too(
@@ -963,6 +1020,20 @@ def test_a_sibling_concession_comes_off_the_bus_fare_too(
     )
     assert younger is not None, "the seed grants at least one sibling concession"
 
+    existing = db.scalar(
+        select(TransportAssignment).where(
+            TransportAssignment.enrolment_id == younger.id,
+            TransportAssignment.status.in_(svc.LIVE),
+        )
+    )
+    if existing is not None:
+        svc.set_assignment_status(
+            db,
+            actor=admin_user,
+            row=existing,
+            new_status=TransportAssignmentStatus.ended,
+            reason="moved to the test route",
+        )
     row = _assign(db, admin_user, route, younger, start=Date(2026, 4, 1))
     svc.set_assignment_status(
         db, actor=admin_user, row=row, new_status=TransportAssignmentStatus.active
