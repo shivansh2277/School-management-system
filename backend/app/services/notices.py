@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
@@ -14,6 +15,8 @@ from app.models import (
 )
 from app.schemas.common import NoticeCreate, NoticeOut
 from app.services import scoping
+
+log = logging.getLogger("notices")
 
 SCHOOL_WIDE = {
     NoticeAudience.all,
@@ -39,9 +42,55 @@ def to_out(db: Session, items: list[Notice]) -> list[NoticeOut]:
             class_label=labels.get(n.class_section_id) if n.class_section_id else None,
             published_by=authors.get(n.published_by, ""),
             published_at=n.published_at,
+            message_id=n.message_id,
         )
         for n in items
     ]
+
+
+# Which comms audience each notice audience becomes. `students` is absent on
+# purpose: a student's contact of record is their guardian's, and mailing a
+# child directly is a decision about children and email that nobody has taken.
+# Publishing to students still works — it simply does not send, and the caller
+# is told so rather than left to assume it did.
+NOTIFIABLE = {
+    NoticeAudience.all: {"kind": "all_guardians"},
+    NoticeAudience.parents: {"kind": "all_guardians"},
+    NoticeAudience.teachers: {"kind": "staff"},
+}
+
+
+def _notify(db: Session, user: User, notice: Notice) -> int | None:
+    """Send the notice as a message, reusing the outbox rather than growing a
+    second delivery mechanism beside it (HANDOFF §9.1).
+
+    Returns the message id, or `None` where this audience has no email route.
+    A failure to send does not unpublish the notice: the board is the record,
+    the message is a courtesy on top of it, and a mail server being down is not
+    a reason for the circular to vanish off the wall.
+    """
+    from app.services import comms
+
+    if notice.audience is NoticeAudience.class_:
+        audience = {"kind": "section", "class_section_id": notice.class_section_id}
+    else:
+        audience = NOTIFIABLE.get(notice.audience)
+    if audience is None:
+        return None
+
+    try:
+        message = comms.notify(
+            db,
+            notice.school_id,
+            template_code="general.notice",
+            audience=audience,
+            actor=user,
+            extra={"notice_title": notice.title, "notice_body": notice.body},
+        )
+    except Exception:  # noqa: BLE001 - the board is the record
+        log.exception("notice %s published but not sent", notice.id)
+        return None
+    return message.id if message else None
 
 
 def publish(db: Session, user: User, body: NoticeCreate) -> NoticeOut:
@@ -70,6 +119,9 @@ def publish(db: Session, user: User, body: NoticeCreate) -> NoticeOut:
         published_at=datetime.now(UTC),
     )
     db.add(notice)
+    db.flush()
+    if body.notify:
+        notice.message_id = _notify(db, user, notice)
     db.commit()
     return to_out(db, [notice])[0]
 

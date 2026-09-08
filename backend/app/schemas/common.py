@@ -220,6 +220,9 @@ class NoticeCreate(BaseModel):
     body: str
     audience: NoticeAudience
     class_section_id: int | None = None
+    # Off by default: publishing to the board and mailing four hundred families
+    # are different acts, and the second should be asked for.
+    notify: bool = False
 
 
 class AnnouncementCreate(BaseModel):
@@ -238,6 +241,9 @@ class NoticeOut(BaseModel):
     class_label: str | None
     published_by: str
     published_at: datetime
+    # None when nothing was sent — either it was not asked for, or this
+    # audience has no email route. Saying so beats letting the office assume.
+    message_id: int | None = None
 
 
 # --- timetable --------------------------------------------------------------

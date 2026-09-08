@@ -760,3 +760,53 @@ def test_the_transport_expiry_alert_reaches_whoever_holds_the_permission(
     assert rows, "somebody holds transport.setup.write"
     everyone = comms.resolve(db, admin_user.school_id, {"kind": "staff"})
     assert len(rows) < len(everyone), "not the whole staff room"
+
+
+def test_publishing_a_notice_can_also_put_it_in_people_s_inboxes(
+    db, admin_user, client, admin, ids
+):
+    """§9.1: extend `notices` rather than growing a second concept beside it.
+
+    The board entry is the record and the message is a courtesy on top of it,
+    linked by one nullable column rather than a parallel notice-shaped delivery
+    mechanism with its own audience enum.
+    """
+    r = client.post(
+        "/admin/notices",
+        headers=admin,
+        json={
+            "title": "Sports day",
+            "body": "Sports day is on Friday.",
+            "audience": "class",
+            "class_section_id": ids["section_10a"],
+            "notify": True,
+        },
+    )
+    assert r.status_code == 201, r.text
+    message_id = r.json()["message_id"]
+    assert message_id is not None
+
+    message = db.get(Message, message_id)
+    assert message.category is MessageCategory.general
+    assert message.recipients
+    rendered = comms.render(message.body, message.recipients[0].context)
+    assert "Sports day is on Friday." in rendered
+
+
+def test_a_notice_goes_on_the_board_whether_or_not_it_is_mailed(
+    client, admin, ids
+):
+    """Publishing and mailing are different acts, and the second is asked for
+    rather than assumed."""
+    r = client.post(
+        "/admin/notices",
+        headers=admin,
+        json={
+            "title": "Library closed",
+            "body": "The library is shut on Monday.",
+            "audience": "class",
+            "class_section_id": ids["section_10a"],
+        },
+    )
+    assert r.status_code == 201
+    assert r.json()["message_id"] is None
