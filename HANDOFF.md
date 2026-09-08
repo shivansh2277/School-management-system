@@ -873,6 +873,37 @@ Deliberately, and each would be a table nothing reads yet:
   Communication, which is the next module. The expiry sweep already produces
   the payload; it has nowhere to send it.
 
+### Part 4 communication — what is not built
+
+Deliberately, and each for a stated reason:
+
+- **`parent_queries`.** Two-way messaging is its own feature with its own
+  inbox; it is not what "an outbox with a delivery record" means.
+- **`device_tokens` and push.** §0.11 is email only for v1.
+- **`communication_credits`.** Nothing to meter on a free email tier, and a
+  ledger that always reads zero teaches a school to ignore the screen.
+- **`delivery_receipts`, and with them `delivered` / `read` / `bounced`.** All
+  three need a provider webhook to observe. Three statuses nothing can ever set
+  would be a delivery report that lies by omission, so `DeliveryStatus` stops
+  at `queued / sent / failed / opted_out`. `provider_ref` is stored so a bounce
+  reported later can be matched back to the row that caused it — the webhook
+  has a landing place when somebody builds it.
+- **SMS and WhatsApp.** Wired behind the same provider interface and refused at
+  the send until `comms.channel.sms` / `.whatsapp` is switched on, which needs
+  DLT registration. §8 item T is whether email-only survives contact with a
+  real school's contact list.
+- **Scheduled/recurring messages.** `messages.scheduled_for` exists and quiet
+  hours use it, but there is no "send this every Monday" — that would be
+  `services/jobs.py` plus a schedule row, not a new mechanism.
+- **Per-person quiet hours and preferred language.** §5.9.4 lists both;
+  quiet hours are per-school, and §0.19 says localisation is not required.
+- **Custody restrictions (§5.9.9).** "Messages to a specific child's guardian
+  must respect custody restrictions where recorded" — nothing records them.
+  The guardian model has no custody field, so this rule has nothing to read
+  and is not enforced. Worth naming before somebody assumes it is.
+- **Four of the six senders.** Admission, fee receipts, results published,
+  leave cover and payslips still have nothing that sends them. See §9.
+
 ### Part 1 — infrastructure still owed
 
 **The backend list from §12 is now done.** What Part 1 still owes is
