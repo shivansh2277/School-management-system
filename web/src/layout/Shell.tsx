@@ -44,7 +44,10 @@ export function Shell() {
 
       <div className="flex-1 min-w-0">
         <header className="h-14 bg-surface border-b border-rule flex items-center justify-between px-6">
-          <span className="text-sm text-ink-soft">Academic year 2025-26</span>
+          <span className="text-sm text-ink-soft">
+            {me?.school_name}
+            {me?.academic_year ? ` · Academic year ${me.academic_year}` : ""}
+          </span>
           <div className="flex items-center gap-3 text-sm">
             <span className="text-ink-soft">{me?.user.full_name}</span>
             <button onClick={logout} className="text-primary hover:underline">
