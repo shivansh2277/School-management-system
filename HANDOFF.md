@@ -48,7 +48,7 @@ was re-measured, not adjusted.
 
 | Measure | Value |
 |---|---|
-| Backend tests | **578 passing**, ~127 s |
+| Backend tests | **600 passing**, ~162 s |
 | Database tables | **85, plus `alembic_version`** |
 | Alembic migrations | **29** (verified from empty **on Postgres**, then seed, then worker) |
 | API surface | **214 paths, 263 operations** |
@@ -99,7 +99,7 @@ was re-measured, not adjusted.
 
 ```bash
 cd backend
-../.venv/Scripts/python.exe -m pytest -q                    # 578 passed
+../.venv/Scripts/python.exe -m pytest -q                    # 600 passed
 ../.venv/Scripts/python.exe -m alembic upgrade head
 ../.venv/Scripts/python.exe seed.py
 ../.venv/Scripts/python.exe worker.py --once                # runs due jobs
@@ -565,7 +565,61 @@ registry docstring so the next reader can disagree on the evidence.
 
 ---
 
+### Part 4, 8 September — the live sweep
+
+**`functions.md` is the record of this**, written while testing: every function,
+what it does, and the measured result of running it.
+
+Method: a real `uvicorn` server on a freshly migrated and seeded Postgres,
+swept as all six demo logins — every GET operation, then 47 behaviour checks on
+the money arithmetic and the permission refusals. **578 tests were passing
+throughout.** The sweep found eight defects anyway, in three families:
+
+1. **Endpoints nothing ever called.** `/teacher/profile`,
+   `/teacher/classes/{id}/students` and `/student/profile` all returned 500 to
+   the very role they exist for — a column that never existed, an iteration
+   over `Enrolment` as though it were `Student`, and an undefined name.
+   `/parent/profile` 500'd for non-guardians.
+2. **A number nothing ever questioned.** `/teacher/classes` reported every class
+   as having **1000 students** (a cartesian product, 100 × 10), and the
+   dashboard counted the Transport Manager as a teacher — 13 for a school with
+   12, which the student:teacher ratio then inherited. **The existing test
+   agreed with that second one**, because it recomputed the implementation
+   rather than the intent.
+3. **Permission checks that pass the role and skip the row.** §8 items U and
+   the student roster — see §4's entry on this.
+
+All eight are fixed with regression tests, each proved to fail without its fix.
+
+**The web dashboard was measured rather than assumed.** `npx tsc --noEmit`
+exits 0 and that proves nothing: the app hand-declares its own API types. Of
+the twelve endpoints it calls, eleven work; `/admin/fees/structures` is a 404,
+so the Fees page is broken — which §7 already said, now confirmed and narrowed
+to exactly one endpoint.
+
+---
+
 ## 4. Things that would be expensive to rediscover
+
+**A green suite is not a working system, and this project has the numbers to
+prove it.** 578 tests passed while three of the mobile app's core screens
+returned 500 to their own role and a teacher's home screen said every class had
+a thousand children. A test suite exercises what somebody thought to call; the
+`/teacher`, `/student` and `/parent` endpoints had almost no coverage because
+attention had been on the admin API. **Sweep the running server as every role
+after any part lands** — it is an afternoon and it found eight things.
+
+**A cartesian product is silent in SQLAlchemy and loud in the log.**
+`db.query(Student).filter(Enrolment.class_section_id == x).count()` names two
+tables and joins neither, so it counts the cross product — 1000 for a class of
+ten. SQLAlchemy emits `SAWarning: SELECT statement has a cartesian product`,
+which nobody reads because it goes to the server log rather than to a test.
+**Grep the log for SAWarning after a sweep.**
+
+**A test that mirrors the implementation will agree with a bug forever.**
+`test_totals_match_direct_counts` recomputed "every active employee" and
+asserted `totals()["teachers"]` matched — so it passed while a bus manager was
+counted as a teacher. Assert the intent, not the query.
 
 **A report must be refused on scope as well as on permission, and the
 school-wide check is not what does it.** `require_permission(..., school_wide=True)`
