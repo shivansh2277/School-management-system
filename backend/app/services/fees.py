@@ -874,6 +874,72 @@ def ledger(db: Session, enrolment_id: int) -> dict:
     }
 
 
+def defaulters(
+    db: Session,
+    school_id: int,
+    *,
+    min_amount: Decimal = ZERO,
+    class_section_id: int | None = None,
+    on: Date | None = None,
+) -> list[dict]:
+    """Who owes what, worst first, with a contact to ring.
+
+    A list without a contact is a report; a list with one is the chase §5.5.3
+    asks for. The fine shown is the stored line, which the daily sweep keeps
+    current — this is a read, and reads do not charge anybody.
+
+    It lives here rather than in the route it was written in because it is now
+    asked for by two callers: the screen the office works from, and the
+    Communication module's defaulter chase. §5.10.9 is insistent that a number
+    have one definition — a chase that dunned a slightly different set of
+    families from the ones the screen listed would be the exact drift it warns
+    about, and it would be discovered by a parent.
+    """
+    on = on or Date.today()
+    q = select(FeeInvoice).where(
+        FeeInvoice.school_id == school_id,
+        FeeInvoice.status.not_in(DEAD),
+        FeeInvoice.settled_on.is_(None),
+    )
+    if class_section_id is not None:
+        q = q.where(
+            FeeInvoice.enrolment_id.in_(
+                select(Enrolment.id).where(Enrolment.class_section_id == class_section_id)
+            )
+        )
+
+    by_student: dict[int, dict] = {}
+    for invoice in db.scalars(q):
+        amounts = totals(db, invoice)
+        if amounts["balance"] <= ZERO:
+            continue
+        student = invoice.enrolment.student
+        row = by_student.setdefault(
+            student.id,
+            {
+                "student_id": student.id,
+                "enrolment_id": invoice.enrolment_id,
+                "student_name": student.user.full_name,
+                "admission_no": student.admission_no,
+                "class_label": invoice.enrolment.class_section.label,
+                "contact": primary_contact(db, student.id),
+                "months_due": 0,
+                "oldest_due_date": invoice.due_date,
+                "outstanding": ZERO,
+                "late_fee": ZERO,
+            },
+        )
+        row["months_due"] += 1
+        row["outstanding"] += amounts["balance"]
+        row["late_fee"] += late_fee_charged(db, invoice)
+        row["oldest_due_date"] = min(row["oldest_due_date"], invoice.due_date)
+
+    rows = [r for r in by_student.values() if r["outstanding"] >= min_amount]
+    for row in rows:
+        row["days_overdue"] = (on - row["oldest_due_date"]).days
+    return sorted(rows, key=lambda r: r["outstanding"], reverse=True)
+
+
 def collection(db: Session, year: int, school_id: int) -> dict:
     """Billed against collected, by month. Demand is net of concessions —
     a school cannot collect a discount it granted."""

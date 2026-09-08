@@ -189,53 +189,19 @@ def defaulters(
     user: User = Depends(admin_only),
     db: Session = Depends(get_db),
 ) -> list[dict]:
-    """Who owes what, worst first, with a phone number to ring.
+    """Who owes what, worst first, with a phone number to ring (§5.5.3).
 
-    A list without a contact is a report; a list with one is the chase §5.5.3
-    asks for. The fine shown is the stored line, which the daily sweep keeps
-    current — this is a read, and reads do not charge anybody.
+    Thin, like the rest of this router. The list itself moved into
+    `services/fees.py` when the defaulter chase in Communication needed the
+    same one — two queries would drift, and §5.10.9 names that as the way a
+    number stops meaning anything.
     """
-    q = select(FeeInvoice).where(
-        FeeInvoice.school_id == user.school_id,
-        FeeInvoice.status.not_in(svc.DEAD),
-        FeeInvoice.settled_on.is_(None),
+    return svc.defaulters(
+        db,
+        user.school_id,
+        min_amount=min_amount,
+        class_section_id=class_section_id,
     )
-    if class_section_id is not None:
-        q = q.where(
-            FeeInvoice.enrolment_id.in_(
-                select(Enrolment.id).where(Enrolment.class_section_id == class_section_id)
-            )
-        )
-    by_student: dict[int, dict] = {}
-    today = Date.today()
-    for invoice in db.scalars(q):
-        amounts = svc.totals(db, invoice)
-        if amounts["balance"] <= 0:
-            continue
-        student = invoice.enrolment.student
-        row = by_student.setdefault(
-            student.id,
-            {
-                "student_id": student.id,
-                "enrolment_id": invoice.enrolment_id,
-                "student_name": student.user.full_name,
-                "admission_no": student.admission_no,
-                "class_label": invoice.enrolment.class_section.label,
-                "contact": svc.primary_contact(db, student.id),
-                "months_due": 0,
-                "oldest_due_date": invoice.due_date,
-                "outstanding": Decimal("0"),
-                "late_fee": Decimal("0"),
-            },
-        )
-        row["months_due"] += 1
-        row["outstanding"] += amounts["balance"]
-        row["late_fee"] += svc.late_fee_charged(db, invoice)
-        row["oldest_due_date"] = min(row["oldest_due_date"], invoice.due_date)
-    rows = [r for r in by_student.values() if r["outstanding"] >= min_amount]
-    for row in rows:
-        row["days_overdue"] = (today - row["oldest_due_date"]).days
-    return sorted(rows, key=lambda r: r["outstanding"], reverse=True)
 
 
 @router.get("/fees/daybook")
