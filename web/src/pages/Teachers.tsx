@@ -16,7 +16,8 @@ type Row = {
 export function Teachers() {
   const { data, isLoading } = useQuery({
     queryKey: ["teachers"],
-    queryFn: () => api.get<Row[]>("/admin/teachers"),
+    // /admin/teachers has no response_model in the schema; Row documents it.
+    queryFn: () => api.get("/admin/teachers") as Promise<Row[]>,
   });
 
   return (
