@@ -62,6 +62,12 @@ class MeOut(BaseModel):
     school_code: str | None = None
     school_name: str | None = None
     academic_year: str | None = None
+    # Which modules this school has switched on. It travels here rather than
+    # being fetched from /admin/configuration because that route needs
+    # `admin.settings.read`, which the fee collector, accountant, exam
+    # controller and transport manager do not hold — exactly the staff whose
+    # navigation has to hide a module the school does not use.
+    modules: list[str] = []
     # exactly one of these is populated, by role
     admission_no: str | None = None
     class_label: str | None = None

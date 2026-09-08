@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.deps import get_current_user
+from app.core.modules import MODULES
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -32,7 +33,7 @@ from app.schemas.auth import (
     TokenPair,
     UserOut,
 )
-from app.services import rbac, scoping
+from app.services import rbac, school_settings, scoping
 from app.services.common import class_label_map, current_enrolment
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -107,6 +108,11 @@ def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)) ->
         school_code=school.code if school else None,
         school_name=school.name if school else None,
         academic_year=year.code if year else None,
+        modules=[
+            m.code
+            for m in MODULES
+            if school_settings.enabled(db, user.school_id, m.code)
+        ],
     )
     if user.role == UserRole.student:
         s = scoping.student_for(db, user)

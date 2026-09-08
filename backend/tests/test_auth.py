@@ -93,3 +93,28 @@ def test_change_password(client, student, STUDENT_LOGIN):
         ).status_code
         == 200
     )
+
+
+def test_me_reports_which_modules_the_school_has_on(client, admin, db, admin_user):
+    """The clients hide a switched-off module, and most staff cannot read the
+    configuration screen to find out: `admin.settings.read` is not held by the
+    fee collector, accountant, exam controller or transport manager. So the
+    fact travels on /auth/me, beside the permissions the nav is already built
+    from."""
+    from app.services import school_settings
+
+    school_settings.set_many(db, admin_user, {"feature.transport": False, "feature.fees": True})
+
+    body = client.get("/auth/me", headers=admin).json()
+    assert "fees" in body["modules"]
+    assert "transport" not in body["modules"]
+
+    school_settings.set_many(db, admin_user, {"feature.transport": True})
+    assert "transport" in client.get("/auth/me", headers=admin).json()["modules"]
+
+
+def test_every_reported_module_is_a_real_module(client, admin):
+    from app.core.modules import BY_CODE
+
+    for code in client.get("/auth/me", headers=admin).json()["modules"]:
+        assert code in BY_CODE
