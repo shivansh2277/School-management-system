@@ -1,4 +1,6 @@
-from datetime import date as Date
+import csv
+import io
+from datetime import UTC, date as Date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel
@@ -22,7 +24,7 @@ from app.models import (
     UserRole,
 )
 from app.schemas.common import Page
-from app.services import assessment, attendance, audit, homework
+from app.services import assessment, attendance, audit, homework, tenancy
 from app.services import custom_fields as cf
 from app.services.common import current_enrolment
 
@@ -110,15 +112,14 @@ def _row(db: Session, s: Student) -> dict:
     }
 
 
-@router.get("/students", response_model=Page)
-def list_students(
-    class_section_id: int | None = None,
-    q: str | None = None,
-    page: int = 1,
-    page_size: int = 25,
-    user: User = Depends(admin_only),
-    db: Session = Depends(get_db),
-) -> Page:
+def _roster(user: User, class_section_id: int | None, q: str | None):
+    """The roster query, shared by the screen and the export.
+
+    One query, not two, on purpose: section 5.10.9 calls a report that shows
+    rows the screen would not the most common data-leak path in an ERP, and the
+    realistic way that happens is a download handler written to be quick rather
+    than written to match. Sharing the statement means it cannot drift.
+    """
     # Carrying `school_id` is not filtering on it (CLAUDE.md, HANDOFF section
     # 4). This is the roster of every child in the school, so the omission here
     # was the widest of that family.
@@ -137,12 +138,116 @@ def list_students(
         )
     if q:
         like = f"%{q}%"
-        stmt = stmt.where(or_(User.full_name.ilike(like), Student.admission_no.ilike(like)))
+        stmt = stmt.where(
+            or_(User.full_name.ilike(like), Student.admission_no.ilike(like))
+        )
+    return stmt.order_by(Student.admission_no)
+
+
+@router.get("/students", response_model=Page)
+def list_students(
+    class_section_id: int | None = None,
+    q: str | None = None,
+    page: int = 1,
+    page_size: int = 25,
+    user: User = Depends(admin_only),
+    db: Session = Depends(get_db),
+) -> Page:
+    stmt = _roster(user, class_section_id, q)
     total = db.scalar(select(func.count()).select_from(stmt.subquery()))
-    rows = db.scalars(
-        stmt.order_by(Student.admission_no).offset((page - 1) * page_size).limit(page_size)
-    ).all()
+    rows = db.scalars(stmt.offset((page - 1) * page_size).limit(page_size)).all()
     return Page(items=[_row(db, s) for s in rows], total=total, page=page, page_size=page_size)
+
+
+# The columns a bulk export carries. Deliberately the roster's own fields plus
+# the contact details an office actually needs, and deliberately not the whole
+# record: date of birth, address and the school's custom fields stay behind the
+# per-student screen. An export is where over-collection becomes permanent.
+EXPORT_COLUMNS = [
+    "admission_no",
+    "full_name",
+    "class_label",
+    "roll_no",
+    "guardian_name",
+    "guardian_phone",
+    "is_active",
+]
+
+
+@router.get("/students/export")
+def export_students(
+    class_section_id: int | None = None,
+    q: str | None = None,
+    user: User = Depends(require_permission("students.profile.export", school_wide=True)),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Download the roster as CSV.
+
+    This route exists to make two controls real that until now gated nothing.
+
+    `students.profile.export` was granted to the Admin Officer and required by
+    no route in `app/api/`, so the separation section 10.2 is proud of - being
+    allowed to see a child on screen is not being allowed to download two
+    thousand of them - was decorative. It is now the only way to get the file,
+    and it is demanded school-wide so a guardian's own-children grant cannot
+    reach it.
+
+    `AuditAction.export` had been in the enum since Part 1 and had never once
+    been written. Every download is now a row in `audit_log` naming the actor,
+    the filters and the count (section 5.10.9).
+
+    The rows come from `_roster()`, the same statement the screen uses, so this
+    cannot become a way to see what the screen would not.
+
+    This is a GET that commits, which CLAUDE.md otherwise forbids. The rule
+    exists to stop incidental writes on a read - v0's `refresh_overdue()`
+    moving invoice statuses from inside a dashboard query. Here the write *is*
+    the point: section 5.10.9 requires the download to be audited, and an audit
+    row written only on some other request would not record the download. The
+    exception is this route and the ones like it, not a licence generally.
+    """
+    year = tenancy.current_year(db, user.school_id)
+    rows = db.scalars(_roster(user, class_section_id, q)).all()
+    items = [_row(db, s) for s in rows]
+
+    buf = io.StringIO(newline="")
+    # Section 5.10.9: an export states its year, its filters and when it was
+    # made. A printed report with no context is one that gets misquoted, and a
+    # CSV on somebody's desktop six months from now is exactly that case.
+    filters = {"class_section_id": class_section_id, "q": q}
+    stated = ", ".join(f"{k}={v}" for k, v in filters.items() if v is not None) or "none"
+    print(
+        f"# Sunrise ERP student roster | academic year {year.code}"
+        f" | filters: {stated}"
+        f" | generated {datetime.now(UTC):%Y-%m-%d %H:%M} UTC"
+        f" by {user.full_name}",
+        file=buf,
+    )
+    writer = csv.DictWriter(buf, fieldnames=EXPORT_COLUMNS, extrasaction="ignore")
+    writer.writeheader()
+    writer.writerows(items)
+
+    audit.record_export(
+        db,
+        actor=user,
+        school_id=user.school_id,
+        what="student",
+        rows=len(items),
+        filters={k: v for k, v in filters.items() if v is not None},
+        academic_year_id=year.id,
+    )
+    db.commit()
+
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="students-{year.code}-'
+                f'{datetime.now(UTC):%Y%m%d}.csv"'
+            )
+        },
+    )
 
 
 @router.post("/students", status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_permission("students.profile.write"))])

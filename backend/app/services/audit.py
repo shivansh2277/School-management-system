@@ -72,6 +72,45 @@ def record(
     return row
 
 
+def record_export(
+    db: Session,
+    *,
+    actor: User,
+    school_id: int,
+    what: str,
+    rows: int,
+    filters: dict | None = None,
+    academic_year_id: int | None = None,
+) -> AuditLog:
+    """Record that personal data left the building.
+
+    ERP_BLUEPRINT section 5.10.9 requires exports of personal data to be
+    audited - who, what, when, how many rows - and `AuditAction.export` has
+    been in the enum since Part 1 without a single caller. The gap is the point:
+    an authorised bulk export is the most likely way a school's data actually
+    leaks (section 10.2), and an export nobody can reconstruct afterwards is one
+    nobody can investigate.
+
+    This writes into `audit_log` rather than a second `export_audit` table.
+    `audit_log` already carries the tenant key, the actor, the timestamp and a
+    JSON payload; a separate trail would only be a second place to forget to
+    look.
+
+    The filter set is stored alongside the count because "downloaded 40 rows" and
+    "downloaded 40 rows of class 10-A" are different events, and only the second
+    one can be answered against later.
+    """
+    return record(
+        db,
+        actor=actor,
+        school_id=school_id,
+        entity_type=what,
+        action=AuditAction.export,
+        after={"rows": rows, "filters": filters or {}},
+        academic_year_id=academic_year_id,
+    )
+
+
 def snapshot(obj, fields: list[str]) -> dict:
     """A plain-JSON view of the fields worth auditing on a model instance.
 
