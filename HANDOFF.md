@@ -1191,6 +1191,64 @@ Raised by payroll, none blocking:
 
 ---
 
+## 8b. Web ERP workstream — Slice 0 is built, its final review is not
+
+Started 8 Sep 2026. `functions.md` showed a 214-path API behind a 9-page UI, so
+the next workstream is **Web ERP integration**, decomposed into a foundation
+slice plus six module slices. Design:
+`docs/superpowers/specs/2026-09-08-web-erp-slice-0-foundation-design.md`.
+Plan: `docs/superpowers/plans/2026-09-08-web-erp-slice-0-foundation.md`.
+
+**Slice 0 is complete and committed — 19 commits, `8a63ed7..ffe6a59`.** All
+seven tasks were implemented and reviewed individually; every review came back
+spec ✅ and quality approved, one after a single fix round.
+
+Measured at the pause, not recalled:
+
+| | |
+|---|---|
+| Backend tests | **603 passing** (600 before the slice) |
+| `npx tsc --noEmit` | **exit 0, zero errors** (was 127 mid-slice, by design) |
+| Web tests | **15**, in 4 files — there were none before |
+| `npm run api:check` / `npm run build` | both pass |
+| `node smoke.mjs` | passes for all three staff roles against a live backend |
+
+What it changed:
+
+- `/auth/me` now returns the school's enabled `modules`. The only other source
+  was `/admin/configuration`, behind `admin.settings.read` — which the fee
+  collector, accountant, exam controller and transport manager do not hold.
+- `web/src/api/schema.d.ts` is generated from the FastAPI app (no server
+  needed), committed, and CI-checked for drift. `/admin/fees/structures` — the
+  404 that hid behind a green typecheck for weeks — is now a compile error, and
+  the Settings page points at `/admin/fees/plans`.
+- `web/src/screens.ts` declares each screen once; the sidebar and the router are
+  both derived from it, with two gates and a direct-navigation re-check.
+- The web client keeps the refresh token (it was discarded), maps 422s to
+  fields, and carries an idempotency-key helper.
+- **A backend defect the slice surfaced:** `/admin/attendance` and
+  `/admin/attendance/summary` were declared in the *exams* router, so reading an
+  attendance register demanded `exam.definition.read` and had no module gate.
+  The Exam Controller was served by the API while the UI hid the screen. Moved
+  to the attendance router, URLs unchanged.
+- **Four clock-dependent tests fixed**, all pre-existing. Two failed for ten
+  hours a day (comms quiet hours), two for one hour a day. The suite was green
+  at 16:26, red at 23:15, on identical code. CI runs in UTC and would have met
+  all four.
+
+**The one thing outstanding: the final whole-branch review never ran.** Its
+package is already built at
+`.superpowers/sdd/2026-09-08-web-erp-slice-0-foundation/review-final-focused.diff`
+(88 KB, generated files excluded). The ledger beside it holds every ruling and
+every deferred minor. Run that review before treating Slice 0 as closed, and do
+not delete that workspace until it has.
+
+Slices 1-6 and the new Slice 2a (printing — there is still **no admin-side
+receipt PDF**, so a counter clerk cannot print a receipt) are listed in §8 of
+the spec.
+
+---
+
 ## 9. Where to start next session — the two guides
 
 **Reports is done.** Part 4's last module landed on 8 September: 21 reports in
