@@ -31,7 +31,7 @@ MODULES: list[Module] = [
     Module("admission", "Admission", built=False, default_enabled=True),
     Module("timetable", "Timetable", built=True, default_enabled=True),
     Module("hr", "HR and payroll", built=False, default_enabled=False),
-    Module("transport", "Transport", built=False, default_enabled=False),
+    Module("transport", "Transport", built=True, default_enabled=False),
 ]
 
 BY_CODE = {m.code: m for m in MODULES}

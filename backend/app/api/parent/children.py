@@ -15,8 +15,11 @@ from app.models import (
     Mark,
     Guardian,
     StudentLeaveRequest,
+    Route,
     StudentGuardian,
     Student,
+    TransportAssignment,
+    TransportAssignmentStatus,
     Employee,
     User,
     UserRole,
@@ -241,3 +244,44 @@ def my_leave_requests(
             .order_by(StudentLeaveRequest.from_date.desc())
         )
     ]
+
+
+@router.get("/children/{student_id}/transport")
+def child_transport(
+    student_id: int,
+    user: User = Depends(require_permission("transport.assignment.read")),
+    db: Session = Depends(get_db),
+) -> dict | None:
+    """Which bus this child is on, where it stops and when (§5.6.8).
+
+    Scoped through `assert_can_read_student`, the same gate as everything else
+    here — a guardian sees their own child's stop and nobody else's, and the
+    driver's name and phone number are deliberately not in the payload.
+    """
+    scoping.assert_can_read_student(db, user, student_id)
+    enrolment = current_enrolment(db, student_id)
+    if enrolment is None:
+        return None
+    row = db.scalar(
+        select(TransportAssignment).where(
+            TransportAssignment.enrolment_id == enrolment.id,
+            TransportAssignment.status.in_(
+                (TransportAssignmentStatus.active, TransportAssignmentStatus.suspended)
+            ),
+        )
+    )
+    if row is None:
+        return None
+    stop = row.route_stop
+    route = db.get(Route, stop.route_id)
+    return {
+        "route": route.name,
+        "route_code": route.code,
+        "stop": stop.name,
+        "landmark": stop.landmark,
+        "pickup_time": stop.pickup_time,
+        "drop_time": stop.drop_time,
+        "direction": row.direction.value,
+        "status": row.status.value,
+        "since": row.start_date,
+    }

@@ -67,6 +67,7 @@ from app.models import (
     Guardian,
     StudentGuardian,
     School,
+    Setting,
     Student,
     SchoolPeriod,
     Subject,
@@ -1044,6 +1045,18 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
                 ),
             )
         )
+    db.flush()
+
+    # The demo school runs buses, so the transport module is on for it. Both
+    # transport and HR default to off in the registry — they are modules a
+    # school buys (§0.2c) — and the demo turning them on is what makes the
+    # switch itself exercised rather than assumed.
+    if db.scalar(
+        select(Setting).where(
+            Setting.school_id == school.id, Setting.key == "feature.transport"
+        )
+    ) is None:
+        db.add(Setting(key="feature.transport", value=True))
     db.flush()
 
     _assign_roles(db, roles, sections)
