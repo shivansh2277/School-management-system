@@ -380,7 +380,10 @@ Every endpoint it calls, checked live:
 | `/admin/fees/invoices/generate` | OK |
 | **`/admin/fees/structures`** | **404 — the endpoint no longer exists** |
 
-**11 of 12 work; the Fees page is broken.** It calls a deleted endpoint.
+**11 of 12 work; the *Settings* page is broken.** It calls a deleted endpoint.
+(Corrected: an earlier revision of this file said the Fees page. The dead call
+is `src/pages/Settings.tsx:35`, in the fee-structures panel of the settings
+screen. The Fees page itself is fine.)
 
 More important than that one 404: the web app has **8 pages** (Dashboard,
 Students, Classes, Teachers, Attendance, Exams, Fees, Notices, Settings) against
@@ -443,9 +446,10 @@ built this session.)*
 - **214 paths / 263 operations**; every GET called as all six roles.
 - **8 defects found, 8 fixed**, each with a regression test proved to fail
   without its fix.
-- **1 known break left**: the web dashboard's Fees page calls a deleted
-  endpoint. Unfixed because the web app is a rewrite waiting to happen, not a
-  patch.
+- **1 known break left**: the web dashboard's **Settings** page
+  (`src/pages/Settings.tsx:35`) calls the deleted `/admin/fees/structures`.
+  The replacement is `/admin/fees/plans`. Unfixed here; it is Task 7 of the
+  Slice 0 plan, where the compiler will point straight at it.
 
 The finding worth carrying forward: **a green suite is not a working system.**
 Every defect here lived behind a passing suite — three in endpoints nothing

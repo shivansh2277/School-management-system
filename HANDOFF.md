@@ -594,7 +594,7 @@ All eight are fixed with regression tests, each proved to fail without its fix.
 **The web dashboard was measured rather than assumed.** `npx tsc --noEmit`
 exits 0 and that proves nothing: the app hand-declares its own API types. Of
 the twelve endpoints it calls, eleven work; `/admin/fees/structures` is a 404,
-so the Fees page is broken — which §7 already said, now confirmed and narrowed
+so the **Settings** page is broken — which §7 already said, now confirmed and narrowed
 to exactly one endpoint.
 
 ---

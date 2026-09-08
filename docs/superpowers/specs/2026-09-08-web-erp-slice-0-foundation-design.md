@@ -39,8 +39,8 @@ sees the same nine menu items, and the header renders the hardcoded string
 `"Academic year 2025-26"` while the API is serving the real value.
 
 **2. Types are hand-written, so `tsc` cannot see the backend.** `npx tsc
---noEmit` exits 0 while `/admin/fees/structures` — which the Fees page calls —
-returns **404**. The endpoint was deleted; the frontend never found out. A
+--noEmit` exits 0 while `/admin/fees/structures` — which the Settings page
+calls at `src/pages/Settings.tsx:35` — returns **404**. The endpoint was deleted; the frontend never found out. A
 passing typecheck currently proves nothing.
 
 **3. There are no tests.** For a target of "a real school could run on it",
@@ -267,8 +267,8 @@ Seven independently committable steps, in order:
 6. **Test setup:** Vitest + RTL + MSW, the gate tests, `smoke.mjs`, CI drift
    check.
 7. **Migrate the existing nine pages** onto the registry and typed client —
-   including the Fees page's dead endpoint, which the compiler will now point
-   at.
+   including the Settings page's dead endpoint, which the compiler will now
+   point at.
 
 ---
 
