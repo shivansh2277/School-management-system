@@ -178,7 +178,11 @@ def child_profile(
 
 @router.get("/profile")
 def my_profile(user: User = Depends(parent_only), db: Session = Depends(get_db)) -> dict:
-    p = db.scalar(select(Guardian).where(Guardian.user_id == user.id))
+    # `parent_only` is `students.profile.read`, which an office clerk and a
+    # teacher also hold, so non-guardians reach this route. The bare query
+    # returned None for them and the next line raised - a 500 where the answer
+    # is "you are not a parent". `guardian_for` is the shared gate that says so.
+    p = scoping.guardian_for(db, user)
     links = db.scalars(select(StudentGuardian).where(StudentGuardian.guardian_id == p.id)).all()
     return {
         "id": p.id,

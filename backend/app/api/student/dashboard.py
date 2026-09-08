@@ -10,7 +10,12 @@ from app.services.rbac import require_permission
 from app.models import ExamSchedule, Student, TimetableSlot, User, UserRole
 from app.schemas.common import SlotOut
 from app.services import assessment, attendance, homework, notices, scoping
-from app.services.common import require_current_enrolment, section_labels, subject_names
+from app.services.common import (
+    current_enrolment,
+    require_current_enrolment,
+    section_labels,
+    subject_names,
+)
 from app.services.stats import DAY_KEYS
 
 router = APIRouter(prefix="/student", tags=["student"])
@@ -74,6 +79,10 @@ def profile(user: User = Depends(student_only), db: Session = Depends(get_db)) -
     from app.models import Guardian, StudentGuardian
 
     s = scoping.student_for(db, user)
+    # `enrolment` was used below and never defined, so this endpoint raised a
+    # NameError for every student who called it. The class and roll number are
+    # facts about the year, so they come from the enrolment.
+    enrolment = current_enrolment(db, s.id)
     guardians = db.scalars(
         select(Guardian).join(StudentGuardian, StudentGuardian.guardian_id == Guardian.id).where(
             StudentGuardian.student_id == s.id

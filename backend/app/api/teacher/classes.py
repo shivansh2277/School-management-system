@@ -41,9 +41,11 @@ def my_classes(user: User = Depends(teacher_only), db: Session = Depends(get_db)
                 "class_label": labels.get(section_id, ""),
                 "is_class_teacher": section.class_teacher_id == me.id,
                 "subjects": sorted(owned.get(section_id, [])),
-                "student_count": db.query(Student)
-                .filter(Enrolment.class_section_id == section_id)
-                .count(),
+                # `db.query(Student).filter(Enrolment...)` named two tables
+                # and joined neither, so SQLAlchemy built a cartesian product
+                # and this counted 100 students x 10 enrolments = 1000 for a
+                # class of ten. Count the enrolments, which is what a roll is.
+                "student_count": len(roster(db, section_id)),
             }
         )
     return out
@@ -56,14 +58,18 @@ def class_roster(
     db: Session = Depends(get_db),
 ) -> list[dict]:
     scoping.assert_teaches_section(db, user, class_section_id)
+    # `roster()` returns Enrolments, not Students - deliberately, because a
+    # roll number belongs to the year rather than to the child. This bound the
+    # loop variable as if they were students, so every attribute was wrong and
+    # the endpoint raised on the first row.
     return [
         {
-            "id": s.id,
-            "full_name": s.user.full_name,
+            "id": e.student_id,
+            "full_name": e.student.user.full_name,
             "roll_no": e.roll_no,
-            "admission_no": s.admission_no,
+            "admission_no": e.student.admission_no,
         }
-        for s in roster(db, class_section_id)
+        for e in roster(db, class_section_id)
     ]
 
 
@@ -88,7 +94,7 @@ def my_profile(user: User = Depends(teacher_only), db: Session = Depends(get_db)
     return {
         "id": me.id,
         "full_name": user.full_name,
-        "employee_id": me.employee_id,
+        "employee_code": me.employee_code,
         "qualification": me.qualification,
         "joining_date": me.joining_date,
         "email": user.email,
