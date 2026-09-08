@@ -26,20 +26,31 @@ const FIELDS: [keyof School, string][] = [
   ["academic_year", "Academic year"],
 ];
 
+type Band = { id: number; min_percent: string; grade: string };
+// `/admin/fees/plans` was rebuilt in Part 3 around heads/plans/items and the
+// backend route returns a plain dict, so the generated schema can't type its
+// shape further than `{[key: string]: unknown}` - this local type documents
+// the fields the screen actually reads.
+type Plan = { id: number; name: string; class_name: string; monthly_total: string };
+
 export function Settings() {
   const qc = useQueryClient();
-  const school = useQuery({ queryKey: ["settings"], queryFn: () => api.get<School>("/admin/settings") });
+  const school = useQuery({
+    queryKey: ["settings"],
+    queryFn: () => api.get("/admin/settings") as Promise<School>,
+  });
+  // `/admin/fees/structures` was deleted when Part 3 rebuilt fees, and this
+  // call has been a silent 404 ever since - the reason this slice generates
+  // types. The replacement is the fee plan, which carries its own monthly
+  // total summed from the items that recur monthly.
   const structures = useQuery({
-    queryKey: ["fee-structures"],
-    queryFn: () => api.get<{ id: number; class_name: string; monthly_amount: string }[]>(
-      "/admin/fees/structures",
-    ),
+    queryKey: ["fee-plans"],
+    queryFn: () => api.get("/admin/fees/plans") as Promise<Plan[]>,
   });
 
   const bands = useQuery({
     queryKey: ["grade-bands"],
-    queryFn: () =>
-      api.get<{ id: number; min_percent: string; grade: string }[]>("/admin/grade-bands"),
+    queryFn: () => api.get("/admin/grade-bands") as Promise<Band[]>,
   });
 
   const [form, setForm] = useState<School | null>(null);
@@ -112,7 +123,7 @@ export function Settings() {
               key: "amt",
               header: "Monthly amount",
               align: "right",
-              render: (r) => money(r.monthly_amount),
+              render: (r) => money(r.monthly_total),
             },
           ]}
         />
