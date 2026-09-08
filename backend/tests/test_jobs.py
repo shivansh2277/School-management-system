@@ -134,6 +134,20 @@ def _heartbeat(db):
 
 
 def test_the_scheduler_queues_a_due_job_once_per_slot(db):
+    """One due schedule queues one job, and queues it once.
+
+    The other schedules are switched off first, and that is not tidiness. They
+    are daily jobs with an `at_hour`, and `admission.offer_sweep` runs at 06:00
+    **UTC** — which is 11:30 in the office this is built for. Leaving them
+    enabled made this test pass for twenty-three hours a day and fail during
+    the twenty-fourth, on a machine whose clock nobody would think to blame.
+    CI has never run; it would have found this at some point and it would not
+    have been obvious.
+    """
+    from sqlalchemy import select
+
+    for other in db.scalars(select(ScheduledJob)):
+        other.enabled = False
     sched = _heartbeat(db)
     sched.enabled = True
     sched.next_run_at = None
@@ -144,6 +158,7 @@ def test_the_scheduler_queues_a_due_job_once_per_slot(db):
     second = jobs.tick_schedules(db, now)  # same minute, same slot
 
     assert len(first) == 1
+    assert first[0].kind == "system.heartbeat"
     assert second == []
 
 

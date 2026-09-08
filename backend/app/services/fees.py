@@ -12,6 +12,7 @@ Everything here obeys three rules from ERP_BLUEPRINT §3.9:
 
 import calendar
 import uuid
+from collections.abc import Callable
 from datetime import UTC, date as Date, datetime
 from decimal import Decimal
 
@@ -45,6 +46,35 @@ from app.services import audit, fee_setup, school_settings
 from app.services.fee_setup import money
 
 ZERO = Decimal("0.00")
+# What makes `FeeHeadType.optional` mean something.
+#
+# `generate()` used to bill every monthly item on a plan with no regard to the
+# head's type, so putting the transport head on a plan charged every child in
+# the school for the bus — precisely the outcome that enum's own docstring
+# warns about, with nothing implementing the protection.
+#
+# An optional head is now billed only where an opt-in exists for that enrolment
+# in that month, and this maps the head's code to the module that knows. The
+# default for an optional head with no source here is to bill *nobody*, which
+# is the safe direction: a school that adds a `MEALS` head and forgets to wire
+# it up under-bills and notices, rather than silently charging four hundred
+# families for a lunch they never ordered.
+#
+# The resolver is `(db, school_id, year, month) -> {enrolment_id: amount}`, and
+# it prices the line as well as gating it: transport comes from the assigned
+# stop's slab, not from a figure on the plan.
+OPT_IN_SOURCES: dict[str, "Callable[[Session, int, int, int], dict[int, Decimal]]"] = {}
+
+
+def _opt_in_sources() -> dict:
+    """Resolved on first use, because `services/transport.py` imports the fee
+    catalogue for `money()` and importing it at module scope would close the
+    circle."""
+    if not OPT_IN_SOURCES:
+        from app.services import transport
+
+        OPT_IN_SOURCES["TRANSPORT"] = transport.charges_for_month
+    return OPT_IN_SOURCES
 # Statuses that no longer represent money anyone expects to receive.
 DEAD = (InvoiceStatus.voided, InvoiceStatus.written_off)
 # The late fee is an ordinary line against an ordinary head, so head-wise
@@ -386,6 +416,35 @@ def outstanding_invoices(db: Session, enrolment_id: int) -> list[FeeInvoice]:
     return [i for i in invoices if totals(db, i)["balance"] > ZERO]
 
 
+def _line_for(item, enrolment_id: int, opt_ins: dict, concessions: dict) -> FeeInvoiceLine | None:
+    """One invoice line, or `None` where this child is not charged this head.
+
+    A recurring or one-time head bills the amount on the plan. An **optional**
+    head bills only where an opt-in says so, and at the amount the opt-in
+    names — the transport slab of the stop the child actually boards at, not a
+    figure typed onto the plan that would be the same for a two-kilometre ride
+    and a twenty-kilometre one.
+    """
+    if item.head.type is FeeHeadType.optional:
+        amount = opt_ins.get(item.head.code, {}).get(enrolment_id)
+        if amount is None:
+            return None
+    else:
+        amount = item.amount
+
+    return FeeInvoiceLine(
+        school_id=item.school_id,
+        fee_head_id=item.fee_head_id,
+        description=item.head.name,
+        amount=amount,
+        # Snapshotted, not recomputed: an invoice already shown to a parent
+        # must not change when a concession is edited later.
+        discount=fee_setup.discount_on(
+            amount, item.fee_head_id, concessions.get(enrolment_id, [])
+        ),
+    )
+
+
 def generate(db: Session, month: int, year: int, school_id: int, actor: User | None = None) -> dict:
     """Bill one month for a whole school.
 
@@ -418,6 +477,11 @@ def generate(db: Session, month: int, year: int, school_id: int, actor: User | N
         )
     )
     concessions = fee_setup.concessions_for(db, [e.id for e in enrolments], due)
+    # One query per optional head for the whole school, not one per child.
+    opt_ins = {
+        code: resolve(db, school_id, year, month)
+        for code, resolve in _opt_in_sources().items()
+    }
 
     created = skipped = 0
     billed = ZERO
@@ -431,7 +495,15 @@ def generate(db: Session, month: int, year: int, school_id: int, actor: User | N
             skipped += 1
             continue
         items = [i for i in plan.items if i.frequency is FeeFrequency.monthly]
-        if not items:
+        lines = [
+            line
+            for line in (_line_for(item, enrolment.id, opt_ins, concessions) for item in items)
+            if line is not None
+        ]
+        # No lines is not an error and never was: a class may simply not be
+        # billed. It now also covers a plan whose only monthly item is an
+        # optional head nobody on it opted into.
+        if not lines:
             skipped += 1
             continue
 
@@ -447,20 +519,7 @@ def generate(db: Session, month: int, year: int, school_id: int, actor: User | N
             issued_on=issued_on,
             due_date=due,
             status=InvoiceStatus.overdue if due < Date.today() else InvoiceStatus.issued,
-            lines=[
-                FeeInvoiceLine(
-                    school_id=school_id,
-                    fee_head_id=item.fee_head_id,
-                    description=item.head.name,
-                    amount=item.amount,
-                    # Snapshotted, not recomputed: an invoice already shown to a
-                    # parent must not change when a concession is edited later.
-                    discount=fee_setup.discount_on(
-                        item.amount, item.fee_head_id, concessions.get(enrolment.id, [])
-                    ),
-                )
-                for item in items
-            ],
+            lines=lines,
         )
         db.add(invoice)
         created += 1

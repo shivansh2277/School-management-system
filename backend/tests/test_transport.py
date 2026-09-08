@@ -17,14 +17,24 @@ from datetime import date as Date, time as Time, timedelta
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.models import (
+    ConcessionStatus,
+    ConcessionType,
     Document,
     DocumentType,
     Employee,
     Enrolment,
     EnrolmentStatus,
+    FeeConcession,
+    FeeFrequency,
+    FeeHead,
+    FeeHeadType,
+    FeeInvoice,
+    FeeInvoiceLine,
+    FeePlan,
+    FeePlanItem,
     OwnerType,
     Route,
     RouteStatus,
@@ -37,7 +47,7 @@ from app.models import (
     Vehicle,
     VehicleStatus,
 )
-from app.services import documents, school_settings, transport as svc
+from app.services import documents, fees, school_settings, transport as svc
 
 TODAY = Date.today()
 NEXT_YEAR = TODAY + timedelta(days=365)
@@ -746,3 +756,244 @@ def test_a_teacher_cannot_run_the_transport_desk(client, teacher):
         json={"registration_no": "UP32QQ0000", "capacity": 30},
     )
     assert r.status_code == 403
+
+
+# --- the fee opt-in ---------------------------------------------------------
+#
+# The one piece of new money-path code transport needed. `fees.generate()`
+# billed every monthly item on a plan with no regard to the head's type, so
+# putting the transport head on a plan charged every child in the school for
+# the bus. `FeeHeadType.optional` existed and nothing read it.
+
+
+@pytest.fixture()
+def transport_on_the_plan(db, admin_user, slab):
+    """Put the transport head on every class plan, as a school actually would.
+
+    This is the arrangement that used to be a trap. Before the opt-in existed,
+    these two lines were enough to bill a hundred families for a bus service
+    two of them use.
+    """
+    head = db.scalar(
+        select(FeeHead).where(
+            FeeHead.school_id == admin_user.school_id, FeeHead.code == "TRANSPORT"
+        )
+    )
+    assert head is not None and head.type is FeeHeadType.optional
+    for plan in db.scalars(
+        select(FeePlan).where(FeePlan.school_id == admin_user.school_id)
+    ):
+        db.add(
+            FeePlanItem(
+                school_id=admin_user.school_id,
+                fee_plan_id=plan.id,
+                fee_head_id=head.id,
+                # Deliberately a wrong, eye-catching number: nothing should
+                # ever bill it. The price comes from the stop's slab.
+                amount=Decimal("9999.00"),
+                frequency=FeeFrequency.monthly,
+            )
+        )
+    db.flush()
+    return head
+
+
+def _future_month():
+    """A month the seed has not already billed, so `generate` is not a no-op."""
+    anchor = Date.today() + timedelta(days=200)
+    return anchor.year, anchor.month
+
+
+def _transport_lines(db, head_id, year, month):
+    return dict(
+        db.execute(
+            select(FeeInvoice.enrolment_id, FeeInvoiceLine.amount)
+            .join(FeeInvoiceLine, FeeInvoiceLine.invoice_id == FeeInvoice.id)
+            .where(
+                FeeInvoice.period_year == year,
+                FeeInvoice.period_month == month,
+                FeeInvoiceLine.fee_head_id == head_id,
+            )
+        ).all()
+    )
+
+
+def test_putting_transport_on_a_plan_does_not_charge_the_whole_school(
+    db, admin_user, route, riders, transport_on_the_plan
+):
+    """The defect this opt-in exists to prevent, stated as a number.
+
+    Two children ride the bus; the rest of the school does not. Before the
+    change every active enrolment would have carried a Rs 9,999 transport line.
+    """
+    for enrolment in riders[:2]:
+        row = _assign(db, admin_user, route, enrolment, start=Date(2026, 4, 1))
+        svc.set_assignment_status(
+            db, actor=admin_user, row=row, new_status=TransportAssignmentStatus.active
+        )
+    year, month = _future_month()
+    fees.generate(db, month, year, admin_user.school_id)
+
+    charged = _transport_lines(db, transport_on_the_plan.id, year, month)
+    assert set(charged) == {e.id for e in riders[:2]}
+    # And the rest of the school was billed for tuition and nothing else.
+    everyone = db.scalar(
+        select(func.count(FeeInvoice.id)).where(
+            FeeInvoice.school_id == admin_user.school_id,
+            FeeInvoice.period_year == year,
+            FeeInvoice.period_month == month,
+        )
+    )
+    assert everyone > 50
+
+
+def test_the_bus_is_priced_from_the_stop_not_from_the_plan(
+    db, admin_user, route, riders, transport_on_the_plan
+):
+    """A twenty-kilometre ride is not the same money as a two-kilometre one.
+
+    The plan item carries Rs 9,999 and nothing bills it: the amount comes from
+    the slab on the stop the child actually boards at, which is what lets one
+    transport head serve a dozen stops without a plan per stop.
+    """
+    far = TransportFeeSlab(
+        school_id=admin_user.school_id,
+        name="10-15 km",
+        monthly_amount=Decimal("1500.00"),
+    )
+    db.add(far)
+    db.flush()
+    route.stops[1].fee_slab_id = far.id
+    db.flush()
+
+    near = _assign(db, admin_user, route, riders[0], start=Date(2026, 4, 1), seq=1)
+    distant = _assign(db, admin_user, route, riders[1], start=Date(2026, 4, 1), seq=2)
+    for row in (near, distant):
+        svc.set_assignment_status(
+            db, actor=admin_user, row=row, new_status=TransportAssignmentStatus.active
+        )
+
+    year, month = _future_month()
+    fees.generate(db, month, year, admin_user.school_id)
+    charged = _transport_lines(db, transport_on_the_plan.id, year, month)
+    assert charged[riders[0].id] == Decimal("800.00")
+    assert charged[riders[1].id] == Decimal("1500.00")
+
+
+def test_an_optional_head_with_no_opt_in_source_bills_nobody(
+    db, admin_user, riders, transport_on_the_plan
+):
+    """The safe default for a head nobody wired up.
+
+    A school that adds a `MEALS` head and forgets to connect it under-bills and
+    finds out at the counter. The other direction charges four hundred families
+    for a lunch nobody ordered, and they find out too, differently.
+    """
+    head = FeeHead(
+        school_id=admin_user.school_id,
+        name="Meals",
+        code="MEALS",
+        type=FeeHeadType.optional,
+    )
+    db.add(head)
+    db.flush()
+    for plan in db.scalars(
+        select(FeePlan).where(FeePlan.school_id == admin_user.school_id)
+    ):
+        db.add(
+            FeePlanItem(
+                school_id=admin_user.school_id,
+                fee_plan_id=plan.id,
+                fee_head_id=head.id,
+                amount=Decimal("1200.00"),
+                frequency=FeeFrequency.monthly,
+            )
+        )
+    db.flush()
+
+    year, month = _future_month()
+    fees.generate(db, month, year, admin_user.school_id)
+    assert _transport_lines(db, head.id, year, month) == {}
+
+
+def test_a_child_who_leaves_the_service_stops_being_billed_for_it(
+    db, admin_user, route, riders, transport_on_the_plan
+):
+    """§5.6.9 with §0.6, through the real biller rather than through
+    `charges_for_month` alone."""
+    row = _assign(db, admin_user, route, riders[0], start=Date(2026, 4, 1))
+    svc.set_assignment_status(
+        db, actor=admin_user, row=row, new_status=TransportAssignmentStatus.active
+    )
+    year, month = _future_month()
+    svc.set_assignment_status(
+        db,
+        actor=admin_user,
+        row=row,
+        new_status=TransportAssignmentStatus.ended,
+        end_date=Date(year, month, 1) - timedelta(days=1),
+        reason="left the school",
+    )
+    fees.generate(db, month, year, admin_user.school_id)
+    assert _transport_lines(db, transport_on_the_plan.id, year, month) == {}
+
+
+def test_a_sibling_concession_comes_off_the_bus_fare_too(
+    db, admin_user, route, transport_on_the_plan
+):
+    """Pinning a consequence rather than asserting a decision.
+
+    §0.6's sibling concession is stored with a null `fee_head_id`, which means
+    "every head". Transport is the first optional head that anything bills, so
+    this is the first time that rule reaches a bus fare: 10% off Rs 800 is
+    Rs 80. Defensible, but it fell out of an existing rule meeting a new line
+    rather than anybody choosing it, so HANDOFF §8 item Q asks the owner. A
+    school wanting the other answer can already scope a concession to a head.
+    """
+    younger = db.scalar(
+        select(Enrolment)
+        .join(FeeConcession, FeeConcession.enrolment_id == Enrolment.id)
+        .where(
+            FeeConcession.school_id == admin_user.school_id,
+            FeeConcession.type == ConcessionType.sibling,
+            FeeConcession.status == ConcessionStatus.approved,
+            FeeConcession.fee_head_id.is_(None),
+            Enrolment.status == EnrolmentStatus.active,
+        )
+    )
+    assert younger is not None, "the seed grants at least one sibling concession"
+
+    row = _assign(db, admin_user, route, younger, start=Date(2026, 4, 1))
+    svc.set_assignment_status(
+        db, actor=admin_user, row=row, new_status=TransportAssignmentStatus.active
+    )
+    year, month = _future_month()
+    fees.generate(db, month, year, admin_user.school_id)
+    line = db.scalar(
+        select(FeeInvoiceLine)
+        .join(FeeInvoice, FeeInvoice.id == FeeInvoiceLine.invoice_id)
+        .where(
+            FeeInvoice.enrolment_id == younger.id,
+            FeeInvoice.period_year == year,
+            FeeInvoice.period_month == month,
+            FeeInvoiceLine.fee_head_id == transport_on_the_plan.id,
+        )
+    )
+    assert line.amount == Decimal("800.00")
+    assert line.discount == Decimal("80.00")
+
+
+def test_billing_the_bus_twice_still_bills_it_once(
+    db, admin_user, route, riders, transport_on_the_plan
+):
+    """The idempotency the whole generator rests on is untouched by the opt-in:
+    a retried batch job creates nothing the second time."""
+    row = _assign(db, admin_user, route, riders[0], start=Date(2026, 4, 1))
+    svc.set_assignment_status(
+        db, actor=admin_user, row=row, new_status=TransportAssignmentStatus.active
+    )
+    year, month = _future_month()
+    first = fees.generate(db, month, year, admin_user.school_id)
+    second = fees.generate(db, month, year, admin_user.school_id)
+    assert first["created"] > 0
+    assert second["created"] == 0
