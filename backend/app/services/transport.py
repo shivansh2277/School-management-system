@@ -30,16 +30,19 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import (
+    Application,
     AuditAction,
     Document,
     DocumentStatus,
     DocumentType,
     Employee,
     Enrolment,
+    EnrolmentStatus,
     OwnerType,
     Route,
     RouteStatus,
     RouteStop,
+    Student,
     TransportAssignment,
     TransportAssignmentStatus,
     TransportDirection,
@@ -586,6 +589,50 @@ def set_assignment_status(
     )
     db.flush()
     return row
+
+
+def awaiting_assignment(db: Session, school_id: int) -> list[dict]:
+    """Children who asked for the bus at admission and are not on one yet.
+
+    `applications.transport_required` has been captured on every application
+    since Part 2 and read by nothing — a tick box a parent filled in that
+    reached no queue and no screen. This is where it goes.
+
+    It is a work list, not an automatic assignment. The form records *that* a
+    family wants transport, never which stop, and picking one for them from a
+    postal address would be a guess made about a seven-year-old's walk to the
+    bus. So the office gets the name, the class and the address on file, and
+    chooses.
+    """
+    rows = db.execute(
+        select(Application, Student, Enrolment)
+        .join(Student, Student.id == Application.student_id)
+        .join(Enrolment, Enrolment.student_id == Student.id)
+        .where(
+            Application.school_id == school_id,
+            Application.transport_required.is_(True),
+            Application.student_id.is_not(None),
+            Enrolment.status == EnrolmentStatus.active,
+            Enrolment.id.not_in(
+                select(TransportAssignment.enrolment_id).where(
+                    TransportAssignment.status.in_(LIVE)
+                )
+            ),
+        )
+        .order_by(Application.id)
+    ).all()
+    return [
+        {
+            "enrolment_id": enrolment.id,
+            "student_id": student.id,
+            "name": student.user.full_name,
+            "admission_no": student.admission_no,
+            "application_no": application.application_no,
+            # The only thing the system knows that helps choose a stop.
+            "address": student.address,
+        }
+        for application, student, enrolment in rows
+    ]
 
 
 # --- what it costs ----------------------------------------------------------

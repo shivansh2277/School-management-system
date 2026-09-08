@@ -507,6 +507,20 @@ def charges(
     }
 
 
+@router.get("/requests")
+def requests(
+    user: User = Depends(desk_reader), db: Session = Depends(get_db)
+) -> list[dict]:
+    """Families who asked for the bus on their admission form and have no seat.
+
+    `transport_required` has been on every application since Part 2 and read by
+    nothing. It seeds this queue rather than an assignment: the form says a
+    family wants transport, never which stop, and choosing one for them off a
+    postal address would be a guess about a child's walk to the bus.
+    """
+    return svc.awaiting_assignment(db, user.school_id)
+
+
 @router.get("/expiring")
 def expiring(
     within_days: int = Query(default=svc.EXPIRY_HORIZON_DAYS, ge=1, le=365),

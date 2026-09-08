@@ -1068,3 +1068,55 @@ def test_billing_the_bus_twice_still_bills_it_once(
     second = fees.generate(db, month, year, admin_user.school_id)
     assert first["created"] > 0
     assert second["created"] == 0
+
+
+# --- the admission form's transport tick box --------------------------------
+
+
+def test_a_family_who_asked_for_the_bus_at_admission_reaches_a_queue(
+    db, admin_user, route, riders
+):
+    """`applications.transport_required` finally goes somewhere.
+
+    It has been captured on every application since Part 2 and read by nothing:
+    a box a parent ticked that reached no screen and no list, so the office
+    asked them again from scratch. It seeds a work queue rather than an
+    assignment, because the form records *that* a family wants transport and
+    never which stop — choosing one off a postal address would be a guess about
+    a seven-year-old's walk to the bus.
+    """
+    from app.models import AdmissionCycle, Application, Gender
+
+    cycle = db.scalar(
+        select(AdmissionCycle).where(AdmissionCycle.school_id == admin_user.school_id)
+    )
+    assert cycle is not None, "the seed opens an admission cycle"
+    student_id = db.get(Enrolment, riders[0].id).student_id
+    db.add(
+        Application(
+            school_id=admin_user.school_id,
+            cycle_id=cycle.id,
+            first_name="Asked",
+            last_name="For Transport",
+            date_of_birth=Date(2016, 5, 4),
+            gender=Gender.female,
+            class_applying_for="1",
+            transport_required=True,
+            student_id=student_id,
+        )
+    )
+    db.flush()
+
+    waiting = svc.awaiting_assignment(db, admin_user.school_id)
+    assert riders[0].id in {w["enrolment_id"] for w in waiting}
+
+    # Once they are on a bus they leave the queue, which is what makes it a
+    # queue rather than a list of everyone who ever asked.
+    _assign(db, admin_user, route, riders[0])
+    after = svc.awaiting_assignment(db, admin_user.school_id)
+    assert riders[0].id not in {w["enrolment_id"] for w in after}
+
+
+def test_a_family_who_did_not_ask_is_not_in_the_queue(db, admin_user, riders):
+    waiting = svc.awaiting_assignment(db, admin_user.school_id)
+    assert {w["enrolment_id"] for w in waiting} & {e.id for e in riders} == set()
