@@ -85,7 +85,12 @@ from app.models.enums import (
     SchoolStatus,
     SubstitutionStatus,
     StudentStatus,
+    TransportAssignmentStatus,
+    TransportDirection,
     UserRole,
+    VehicleOwnership,
+    VehicleStatus,
+    RouteStatus,
 )
 from app.models.fees import (
     FeeConcession,
@@ -128,6 +133,13 @@ from app.models.payroll import (
     SalaryComponent,
     SalaryStructure,
     SalaryStructureItem,
+)
+from app.models.transport import (
+    Route,
+    RouteStop,
+    TransportAssignment,
+    TransportFeeSlab,
+    Vehicle,
 )
 from app.models.enrolment import Enrolment
 from app.models.audit import AuditLog, NumberSequence

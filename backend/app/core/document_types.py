@@ -24,6 +24,9 @@ DEFAULT_TYPES = [
     ("employee_id_proof", "Identity Proof", "employee", True, None, False, True),
     ("employee_qualification", "Qualification Certificate", "employee", True, None, False, False),
     ("police_verification", "Police Verification", "employee", True, None, True, True),
+    # Not mandatory for staff at large — a librarian needs no licence — but
+    # the transport compliance check refuses to crew a route without one.
+    ("driving_licence", "Driving Licence", "employee", False, None, True, True),
     ("vehicle_insurance", "Insurance", "vehicle", True, None, True, False),
     ("vehicle_fitness", "Fitness Certificate", "vehicle", True, None, True, False),
     ("vehicle_permit", "Permit", "vehicle", True, None, True, False),

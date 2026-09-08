@@ -81,6 +81,13 @@ PERMISSIONS: list[tuple[str, str]] = [
     # --- communication
     ("comms.notice.read", "Read notices"),
     ("comms.notice.publish", "Publish a notice"),
+    # --- transport. Four rather than one per table: §5.6.8 distinguishes only
+    # between designing the service and putting children on it, and a
+    # permission nobody grants separately is a permission nobody needs.
+    ("transport.setup.read", "View vehicles, routes, stops and fee slabs"),
+    ("transport.setup.write", "Register vehicles and design routes, stops and fee slabs"),
+    ("transport.assignment.read", "View which children ride which bus"),
+    ("transport.assignment.manage", "Put a child on a stop, and end an assignment"),
     # --- hr
     ("hr.employee.read", "View staff records"),
     ("hr.employee.write", "Create and edit staff records"),
@@ -162,6 +169,8 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "fees.concession.approve",
             "fees.payment.void",
             "comms.notice.publish",
+            "transport.setup.write",
+            "transport.assignment.manage",
             "hr.employee.write",
             "hr.employee.exit",
             "hr.department.write",
@@ -207,6 +216,9 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "hr.leave.apply",
             "hr.attendance.mark",
             "comms.notice.publish",
+            # §5.6.8 gives the Admin Officer transport setup but not the
+            # assignment desk: who rides the bus is the Transport Manager's.
+            "transport.setup.write",
             "admission.enquiry.write",
             "admission.cycle.write",
             "admission.application.write",
@@ -324,6 +336,7 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "homework.item.write",
             "comms.notice.read",
             "comms.notice.publish",
+            "transport.assignment.read",
             # §5.1.8: a teacher marks the papers for a slot they were given and
             # sits on interview panels. They do not otherwise work admissions.
             "admission.assessment.enter",
@@ -355,6 +368,24 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "comms.notice.read",
             "fees.invoice.read",
             "fees.payment.pay_own",
+            "transport.assignment.read",
+        ],
+    ),
+    (
+        "transport_manager",
+        "Transport Manager",
+        [
+            # Runs the service end to end, and sees nothing else. Notably no
+            # fees permission: §5.6.8 gives transport money to the Accountant,
+            # and the transport charge is billed by the ordinary fee run.
+            "students.profile.read",
+            "academics.class.read",
+            "transport.setup.read",
+            "transport.setup.write",
+            "transport.assignment.read",
+            "transport.assignment.manage",
+            "hr.employee.read",
+            "comms.notice.read",
         ],
     ),
     (

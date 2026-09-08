@@ -470,3 +470,44 @@ class ConcessionStatus(StrEnum):
     approved = "approved"
     rejected = "rejected"
     expired = "expired"
+
+
+class VehicleStatus(StrEnum):
+    """ERP_BLUEPRINT §5.6.7. Only `active` may carry children: the other three
+    are the reasons a bus is off the road, kept distinct because "in the
+    workshop this week" and "sold" are not the same operational fact."""
+
+    active = "active"
+    under_maintenance = "under_maintenance"
+    grounded = "grounded"
+    retired = "retired"
+
+
+class VehicleOwnership(StrEnum):
+    owned = "owned"
+    hired = "hired"
+
+
+class RouteStatus(StrEnum):
+    planned = "planned"
+    active = "active"
+    suspended = "suspended"
+    closed = "closed"
+
+
+class TransportDirection(StrEnum):
+    """Which legs of the journey a child rides. `both` is the ordinary case."""
+
+    pickup = "pickup"
+    drop = "drop"
+    both = "both"
+
+
+class TransportAssignmentStatus(StrEnum):
+    """§5.6.7. `ended` is not a delete: the row stays so the history of who rode
+    which bus survives, and only the billing stops (§5.6.9)."""
+
+    requested = "requested"
+    active = "active"
+    suspended = "suspended"
+    ended = "ended"
