@@ -1,14 +1,14 @@
 # Sunrise ERP — Session Handoff
 
 **Written:** 6 September 2026 · **revised 8 September 2026** (Parts 2, 3, and
-Part 4's examinations, report cards, HR and payroll)
+Part 4's examinations, report cards, HR, payroll and **transport**)
 **Branch:** `part-1-foundation` — **nothing pushed, ever.** Count the commits
 with `git log --oneline main..HEAD | wc -l`; a number written here goes stale on
 the next commit, including the one that updates this file.
 **Repo:** `C:\Users\SHIVANSH\OneDrive\Documents\AGENTS\school-management-system\`
 **Remote:** https://github.com/shivansh2277/School-management-system
 
-Every number below was measured on 7 September 2026, not recalled. Anything
+Every number below was measured on 8 September 2026, not recalled. Anything
 unverified says so.
 
 > This supersedes `Sunrise-HANDOFF.md` (in the parent AGENTS folder) for
@@ -41,28 +41,36 @@ sessions — Parts 3 and 4 will each span several.
 
 ## 2. Verified current state
 
-Measured on 7 September 2026 by running the commands below, not recalled.
+Measured on 8 September 2026 by running the commands below, not recalled.
 
 | Measure | Value |
 |---|---|
-| Backend tests | **452 passing**, ~104 s |
-| Database tables | **76, plus `alembic_version`** |
-| Alembic migrations | **27** (verified from empty **on Postgres**, then seed, then worker) |
-| API surface | **185 paths, 229 operations** |
-| Permissions / system roles | **68** / 13 |
-| Job handlers | `fees.overdue_sweep`, `fees.generate_invoices`, `admission.offer_sweep`, `system.heartbeat` |
+| Backend tests | **490 passing**, ~110 s |
+| Database tables | **81, plus `alembic_version`** |
+| Alembic migrations | **28** (verified from empty **on Postgres**, then seed, then worker) |
+| API surface | **201 paths, 248 operations** |
+| Permissions / system roles | **72** / 14 |
+| Job handlers | `fees.overdue_sweep`, `fees.generate_invoices`, `admission.offer_sweep`, `transport.document_expiry`, `system.heartbeat` |
 | Demo school | 100 students, 10 sections, 12 teachers, 98 guardians |
-| Demo fee ledger | 300 invoices, 810 lines, 170 payments, 410 allocations, 2 sibling concessions |
+| Demo fee ledger | 300 invoices, **900 lines** (810 + 90 transport), 170 payments, 410 allocations, 2 sibling concessions |
 | Demo attendance | 5,800 rows over 58 working days, plus 2 holidays inside the window |
 | Demo timetable | 6 periods, 300 slots, **0 teacher clashes, 0 room clashes**, and **every teacher on exactly 25 periods — spread 0** |
 | Demo examinations | 1 CBSE scheme, 8 components over 2 terms, 4 Term 1 exams, 240 papers, **2,400 marks, none over its paper's maximum** |
 | Demo grading | 1 active scale (CBSE v1), 8 bands |
-| Demo HR | 5 departments (4 with a head), 12 staff placed, 4 leave types (CL 12 / SL 10 / EL 15 / LWP 0) |
-| Demo payroll | 11 components, 12 salary structures (PGT ₹42,000 / TGT ₹32,000 / PRT ₹19,500). An August run: 12 payslips, 25 working days, ₹4,11,500 earnings, ₹3,86,663.75 net, ₹4,36,190 employer cost |
+| Demo HR | **6 departments** (4 with a head), **16 employees**, 4 leave types (CL 12 / SL 10 / EL 15 / LWP 0) |
+| Demo payroll | 11 components, **16 salary structures** (PGT ₹42,000 / TGT ₹32,000 / PRT ₹19,500 / Transport Manager ₹28,000 / Driver ₹16,000 / Attendant ₹11,000). An August run: **16 payslips**, 25 working days, **₹4,82,500 earnings, ₹4,53,081.25 net, ₹5,11,450 employer cost** |
+| Demo transport | 2 vehicles (40 + 32 seats), 2 active routes, 7 stops, 3 fee slabs, **30 children riding** (18 on R1, 12 on R2), both routes roadworthy, 13 compliance documents, 1 paper lapsing inside the 60-day horizon |
 
 > The previous revision recorded **60** tables. The real count on 7 September,
 > before any Part 4 work, was **61** plus `alembic_version`. Corrected here
 > rather than carried forward.
+
+> **The 900 fee lines are the transport opt-in measured rather than asserted.**
+> The ledger held 810 before transport landed; thirty riders over three months
+> is ninety more. Had the transport head billed everyone the way it did before
+> `generate()` learned what `FeeHeadType.optional` means, it would have been
+> three hundred more. That difference is the whole of §9.1's warning, in one
+> number.
 
 **How the suite is wired**, because the two URLs are easy to confuse:
 
@@ -85,7 +93,7 @@ Measured on 7 September 2026 by running the commands below, not recalled.
 
 ```bash
 cd backend
-../.venv/Scripts/python.exe -m pytest -q                    # 452 passed
+../.venv/Scripts/python.exe -m pytest -q                    # 490 passed
 ../.venv/Scripts/python.exe -m alembic upgrade head
 ../.venv/Scripts/python.exe seed.py
 ../.venv/Scripts/python.exe worker.py --once                # runs due jobs
@@ -409,6 +417,57 @@ Design decisions in Part 4 that a later session should not undo:
   section taking two subjects each cannot balance — thirty assignments over
   twelve people is 2.5 each.
 
+### Part 4, 8 September — transport
+
+| Commit | What |
+|---|---|
+| `Model the bus service on the tables Parts 3 and 4 already built` | Five tables where §5.6.5 lists eleven. No `drivers` (an employee), no `vehicle_documents` (a `document`, using the `OwnerType.vehicle` that had sat unused since Part 1), no trip/fuel/maintenance/incident logs. Four permissions and the Transport Manager role §5.6.8 names. |
+| `Refuse to run a bus unsafely, rather than warning about it` | The service, the API and 29 tests. The capacity block and the compliance block, both hard. |
+| `Keep uploaded documents out of the repository` | `STORAGE_LOCAL_PATH` was never ignored, so a test run swept 302 stray PDFs into the tree. |
+| `Make FeeHeadType.optional mean something, instead of being a label` | The money path. `generate()` learns that an optional head bills only where an opt-in exists. |
+| `Run two real bus routes in the demo, through the real service` | The seed, built by calling the service rather than inserting rows. |
+| `Register the expiry sweep where the worker will actually find it` | The handler was in the service, where nothing imports it; a scheduled job would have failed nightly. |
+| `Give the admission form's transport tick box somewhere to go` | `applications.transport_required` finally reaches a queue. |
+
+**What the transport module decided, and why:**
+
+- **Two rules are refusals with no override, and that is deliberate.** A route
+  may not exceed its vehicle's seating capacity; a bus without valid
+  insurance, fitness, permit and PUC may not run, nor may anybody crew it
+  without a current licence and a police verification. The timetable's
+  comparable ceiling *is* overridable (`timetable.slot.override`) because the
+  cost of being wrong there is a tired teacher. Here it is a child on an
+  uninsured bus. There is no permission that skips these and no `reason=`
+  parameter, and **two tests assert that by inspecting the signatures** — if a
+  `force` or `reason` argument ever appears, the suite fails.
+- **Missing papers refuse, not only expired ones**, and **a blank expiry
+  refuses too**. Somebody uploads the permit and leaves the date empty; a
+  check that only compares dates would read that as valid forever.
+- **The compliance check sits on `set_crew` as well as on activation.**
+  Guarding only activation would leave the back door open — swapping a
+  compliant driver for a lapsed one on a running route is exactly as unsafe.
+- **The capacity block guards both directions.** `assign` refuses the fifth
+  child onto a four-seat bus; `set_crew` refuses to put a two-seater under
+  four children already on board.
+- **`requested` and `suspended` count against capacity.** A seat somebody is
+  coming back to is taken. Counting only `active` would fill a bus twice over
+  on paper and turn children away at the door.
+- **A route with no vehicle refuses rather than waving children through.** A
+  capacity check that cannot run must not read as unlimited.
+- **`routes` has no `direction` column** although §5.6.4 asks for one: a stop
+  carries both a pickup and a drop time, so one route covers morning and
+  afternoon rather than two mirror-image routes that drift apart.
+- **`uq_transport_assignment_live` is a billing guarantee before it is a data
+  rule.** One live assignment per enrolment means the month's transport charge
+  is one slab, so nothing downstream arbitrates between two buses. That is
+  stricter than §5.6.9 — see §8 item P.
+- **Transport is priced from the stop's slab, never from the plan item.** That
+  is what lets one head serve a dozen stops instead of needing a plan per slab.
+- **The expiry sweep reports rather than acts.** Grounding a bus at 03:00
+  because a certificate lapsed overnight would strand a hundred children at
+  their stops with no warning. The refusal already sits on every path that
+  assigns; what was missing was the office knowing in time to renew.
+
 ---
 
 ## 4. Things that would be expensive to rediscover
@@ -503,6 +562,38 @@ and `sorted_tables` cannot order a cycle — it silently drops those foreign key
 from the sort and warns that it may raise instead in a later release, which made
 `seed.py::wipe()` correct only by luck. Wipe now issues one `TRUNCATE ...
 CASCADE` on Postgres, which needs no order at all.
+
+**A job handler must be defined in `app/jobs.py`, not beside the service it
+calls.** Importing that one module is what registers every handler, and it is
+what the worker and the tests import. `transport.document_expiry` was first
+written inside `services/transport.py`, which reads well and does not work: a
+worker process never imports that service, so the job would have failed nightly
+with "No handler registered" until somebody read a log. Nothing caught it
+because the schedule had not been added yet either.
+`tests/test_jobs.py::test_every_default_schedule_has_a_handler` now pins it.
+
+**`ScheduledJob.at_hour` is compared against the UTC hour, not the school's.**
+The comments beside the two original schedules claimed IST, so
+`fees.overdue_sweep` actually fires at 07:30 in Lucknow and
+`admission.offer_sweep` at 11:30 — mid-morning, not "before the office opens"
+as its comment said. It is also why
+`test_the_scheduler_queues_a_due_job_once_per_slot` failed for exactly one hour
+a day and passed for the other twenty-three, on a machine whose clock nobody
+would think to blame. The comment is fixed; **the hours are deliberately
+unchanged**, because moving a school's nightly sweep is a decision, not a
+tidy-up. See §8 item R.
+
+**`STORAGE_LOCAL_PATH` defaults to `./var/documents` and was not ignored by
+git.** The first commit that ran the transport tests swept 302 stray PDFs into
+the tree. Test artefacts here; in a real checkout they would be children's
+birth certificates. `.gitignore` now covers `backend/var/`.
+
+**Fixtures that invent demo-shaped data collide with a seed that has grown.**
+The transport tests originally used registration `UP32AB1234`, route codes
+`R1`/`R2` and a `0-5 km` slab — every one of which the seed then created for
+real, and each collision is a unique-constraint error in a fixture rather than
+a legible failure. They now live in their own namespace (`UP32TT…`, `T1`…), and
+`riders` deliberately selects children the seed has *not* already put on a bus.
 
 **`BCRYPT_ROUNDS` is configurable and tests use 4.** Seeding 210 accounts at the
 production work factor was ~70 s of every run. This changes the work factor, not
@@ -698,6 +789,29 @@ and §5.3 ask for that this does not do:
   built.
 - **No payroll UI.**
 
+### Part 4 transport — what is not built
+
+Deliberately, and each would be a table nothing reads yet:
+
+- **GPS tracking and the route map view.** `vehicles.gps_device_id` is
+  recorded because §5.6.4 asks for it and a school that later buys tracking
+  needs somewhere to put the id. Nothing reads it.
+- **Attendance-on-bus**, the daily trip log, the fuel and maintenance logs and
+  the incident register. None is needed for a school to run a bus service
+  safely.
+- **Cost per route** (§5.6.10) — it needs the fuel and maintenance figures
+  above. Route utilisation, which does not, is built (`transport.seats`).
+- **A stop cannot be suggested from a child's address.** §5.6.6 wants distance
+  to drive stop suggestion; nothing geocodes, so the office chooses from the
+  work queue.
+- **A driver has no login.** §5.6.8 says "if given app access later", and the
+  seeded drivers' user rows exist only because `employees.user_id` is not
+  nullable. They are marked inactive and `_assign_roles` skips them — without
+  that, the legacy role map would have handed a demo password `super_admin`.
+- **Nothing notifies.** Route changes, delays and the expiry alerts all want
+  Communication, which is the next module. The expiry sweep already produces
+  the payload; it has nowhere to send it.
+
 ### Part 1 — infrastructure still owed
 
 **The backend list from §12 is now done.** What Part 1 still owes is
@@ -781,6 +895,14 @@ Raised by the Part 4 work, none blocking:
 | ~~K~~ | ~~Do staff leave balances carry forward?~~ | **Answered 7 Sep 2026: no. Unused leave lapses.** Already the behaviour; now stated and pinned by a test. *Whether earned leave should accrue monthly rather than open at the full quota is still open — see N.* |
 | ~~L~~ | ~~Is a half-day absence half a day's pay?~~ | **Answered 7 Sep 2026: no deduction at all — a half day is paid as a full day.** Built and tested. |
 
+Raised by transport, none blocking:
+
+| # | Question | Needed by |
+|---|---|---|
+| P | **May a child use one route for pickup and a different one for drop?** §5.6.9 allows one active assignment *per direction*; the build is stricter and allows one per child, full stop. The stricter rule is what makes the month's transport charge one slab rather than a sum of two that something would have to arbitrate between. Loosening it means deciding how a split rider is billed. | Before a school with two campuses' worth of geography signs |
+| Q | **Should the sibling concession come off the bus fare?** §0.6's 10% is stored with a null `fee_head_id`, meaning every head, so it now does — transport is the first optional head anything bills. Defensible either way, and it fell out of an existing rule meeting a new line rather than anybody choosing it. A school wanting the other answer can already scope a concession to a head. Pinned by `test_a_sibling_concession_comes_off_the_bus_fare_too`. | Before a real school's first transport invoice |
+| R | **What hour should the nightly sweeps actually run at?** `at_hour` is UTC, so `fees.overdue_sweep` fires at 07:30 in Lucknow and `admission.offer_sweep` at 11:30 — not the 02:00 and 06:00 their comments claimed. The new `transport.document_expiry` is set at 01:00 UTC / 06:30 local. The existing two are left alone on purpose: moving a school's nightly sweep is a decision, not a tidy-up. | Before go-live |
+
 Raised by payroll, none blocking:
 
 | # | Question | Needed by |
@@ -791,104 +913,35 @@ Raised by payroll, none blocking:
 
 ---
 
-## 9. Where to start next session — transport, communication, reports
+## 9. Where to start next session — communication, then reports
 
-**Examinations, report cards, HR and payroll are done, and both halves of
-Checkpoint 4 pass as tests.** What remains of Part 4 is **transport,
-communication and reports**.
+**Transport is done**: schema, service, API, 37 tests, the fee opt-in, the demo
+seed and the expiry job. What remains of Part 4 is **communication and
+reports**, and then the two guides.
 
-**`CONFIGURATION-GUIDE.md` and `EXTENSION-GUIDE.md` are deliberately held back**
-until the owner has looked over the three modules below and given the go-ahead.
-They describe what the other modules built, so writing them before those modules
-settle means writing them twice. Checkpoint 4 does not close until the
-configuration guide exists — it is the only thing standing between here and the
-end of Part 4 — but it is the last thing to write, not the next.
+**`CONFIGURATION-GUIDE.md` and `EXTENSION-GUIDE.md` are still held back** until
+the owner has looked over the modules. They describe what the other modules
+built, so writing them before those settle means writing them twice.
+Checkpoint 4 does not close until the configuration guide exists — it is the
+only thing standing between here and the end of Part 4 — but it is the last
+thing to write.
 
-**Nothing is blocked on the owner.** Every §8 item that gated work has been
-answered; the open ones (M, N, O and the earlier E–J) are refinements.
-
----
-
-### 9.1 Transport (§5.6) — do this first
-
-The biggest of the three, the only one with genuine safety rules, and the one
-the other two will want to notify and report on.
-
-**Correcting something an earlier revision of this document got wrong.** It said
-the fee side was "nearly free" because `fee_heads` already has an `optional`
-type. **That is not true, and following it would charge every child in the
-school for the bus.** Verified on 8 September 2026:
-
-- The seed has a `TRANSPORT` head of type `optional`. It sits on **no plan** and
-  has **never been billed** — it is a label nothing reads.
-- `fees.generate()` bills `[i for i in plan.items if i.frequency is monthly]`
-  with **no filter on head type**. Put the transport head on a plan and every
-  child on that plan is billed for it. The enum's own docstring warns about
-  precisely this outcome, and nothing implements the protection.
-
-So **transport billing needs a real opt-in, and it is the one piece of new
-money-path code this module needs.** Two shapes, and the second is right:
-
-- A per-student plan override through `student_fee_plans`, which already exists.
-  Rejected: it needs one plan per stop slab, so a school with twelve stops keeps
-  twelve near-identical plans and the fee catalogue becomes unreadable.
-- **`generate()` learns that an `optional` head bills only where an opt-in
-  exists** — for transport, an active `transport_assignments` row for that
-  enrolment covering that month, priced from that stop's slab. One targeted
-  change in one place, and it finally makes `FeeHeadType.optional` mean
-  something.
-
-Treat that as a change to the money path: `assert_period_open()`, the
-idempotency index on (enrolment, period) and the existing fee tests all sit
-around it, and `seed.py` runs the real biller, so a mistake there breaks seeding
-rather than only a test.
-
-**The two hard blocks — refusals, not warnings.** §5.6.9 is explicit, and both
-are child-safety rules with the second also a legal one:
-
-- **A route may not exceed its vehicle's seating capacity.**
-- **A vehicle with expired insurance, fitness, permit or PUC cannot be assigned
-  to an active route**, and a driver with an expired licence or missing police
-  verification cannot be assigned at all.
-
-Neither should be expressible as an override with a reason, unlike the timetable
-workload ceiling. Keeping that distinction deliberate is the point.
-
-**What to reuse rather than build:**
-
-- **Drivers and attendants are `employees`**, already carrying department,
-  status and the exit rule. Do not create a `drivers` table holding a name and a
-  phone number; put the licence and verification on the employee record or hang
-  them off `documents`.
-- **Vehicle papers are `documents`.** `OwnerType.vehicle` already exists in the
-  enum, unused, waiting for exactly this. Expiry alerts are then a scheduled job
-  handler over one query — `services/jobs.py` has `@handler`, `enqueue()` and a
-  schedule table — not a new alerting mechanism.
-- **Stop timings must increase monotonically along a route**, and two routes
-  cannot use one vehicle at overlapping times. The second is the same shape as
-  `timetable.conflicts()`; read that before writing a fresh clash checker.
-- **Ending an assignment stops future billing and preserves history** (§5.6.9),
-  which sits correctly with §0.6's no-refunds rule: a mid-year departure stops
-  the next invoice and refunds nothing already paid.
-- **`applications.transport_required` is captured at admission and goes
-  nowhere.** It should seed the assignment request rather than being asked
-  again from scratch.
-
-Leave out of this module: GPS tracking, the route map view, attendance-on-bus,
-and the fuel and maintenance logs. None is needed for a school to run a bus
-service safely, and each is a table nothing would read yet.
+**Nothing is blocked on the owner.** §8's open items (M, N, O, P, Q, R and the
+earlier E–J) are all refinements.
 
 ---
 
-### 9.2 Communication (§5.9)
+### 9.1 Communication (§5.9) — do this first
 
-Smaller, and mostly a matter of doing one thing properly: an outbox with a
-delivery record.
+Smaller than transport, and mostly a matter of doing one thing properly: an
+outbox with a delivery record.
 
 **The rule that shapes it: dispatch happens in the worker.** §5.9.9 is direct —
 a gateway timeout must never fail the action that triggered the message.
 `services/jobs.py` is the queue and already survives a restart, so sending is
-`enqueue()` plus a handler, never an inline HTTP call from a route.
+`enqueue()` plus a handler, never an inline HTTP call from a route. **Put the
+handler in `app/jobs.py`**, not beside the service — see §4; transport got that
+wrong first and the job would have failed silently every night.
 
 **Email only for v1** (§0.11), behind a provider interface so SMS and WhatsApp
 can be wired later and stay disabled per school until DLT registration exists.
@@ -904,7 +957,7 @@ were deliberately not stubbed, so expect to go back and wire each one:
 | Examinations | report card published |
 | Staff leave | a colleague has been assigned to cover a lesson |
 | Payroll | a payslip is available |
-| Transport | route change, delay |
+| **Transport** | route change, delay, and **the document expiry sweep, which already produces its payload and has nowhere to send it** |
 
 **Design points worth settling before writing:**
 
@@ -924,7 +977,7 @@ were deliberately not stubbed, so expect to go back and wire each one:
 
 ---
 
-### 9.3 Reports (§5.10)
+### 9.2 Reports (§5.10)
 
 Last, because it describes what everything else built.
 
@@ -935,73 +988,91 @@ directly the most common data-leak path in an ERP. The seam already exists here
 a report must go through both and never assemble its own query outside them.
 `tests/test_tenant_isolation.py` is the shape of the test that proves it.
 
-**Numbers must reconcile.** One definition, not two queries that drift. This has
-already bitten once this part: `stats.exam_percentages()` and `report_card()`
-had to be held to the same arithmetic when absent marks arrived, and a test now
-pins them together. The same applies to fee collection, the attendance
-percentage and payroll totals.
+**Numbers must reconcile.** One definition, not two queries that drift. This
+has bitten twice now: `stats.exam_percentages()` and `report_card()` had to be
+held to the same arithmetic when absent marks arrived, and transport's
+`/admin/transport/charges` deliberately calls the same
+`charges_for_month()` the fee run does rather than recomputing it. The same
+applies to fee collection, the attendance percentage and payroll totals.
 
 **Exports containing personal data are audited** — who, what, when, how many
 rows. `students.profile.export` is already separate from `.read` for this
 reason, and `audit_log` takes an `export` action it has never been given.
 
-**No fabricated data points**: a month with no invoices shows no bar rather than
-a zero bar. `fees.collection` already does this deliberately; §5.10.9 makes it a
-system-wide rule.
+**No fabricated data points**: a month with no invoices shows no bar rather
+than a zero bar. `fees.collection` already does this deliberately; §5.10.9
+makes it a system-wide rule.
 
 Most of what management asks for already exists as service functions —
 `services/stats.py`, `fees.day_book()`, `attendance.section_summary()`,
-`timetable.workload()`, `payroll.register()` and `payroll.cost_by_department()`.
-Reports is mostly a matter of giving those a governed, permission-checked home
-and a report library, not of writing new arithmetic.
+`timetable.workload()`, `payroll.register()`, `payroll.cost_by_department()`
+and now `transport.seats()` and `transport.expiring_papers()`. Reports is
+mostly a matter of giving those a governed, permission-checked home and a
+report library, not of writing new arithmetic.
+
+**One reporting wrinkle transport introduced**, worth deciding rather than
+inheriting: a fee plan's `monthly_total` sums its items, and the transport item
+carries zero because the real price is on the stop's slab. So class 10's plan
+reads ₹2,800 — correct for a child who does not take the bus, and short by the
+slab for one who does. `tests/test_fee_setup.py` pins it. A "what does this
+child actually pay" figure would need to consult the opt-in, which is
+`charges_for_month()`.
 
 ---
 
-### 9.4 What Parts 3 and 4 built that these three should reuse
+### 9.3 What Parts 3 and 4 built that these two should reuse
 
 | Reach for | Rather than |
 |---|---|
-| `services/jobs.py` (`@handler`, `enqueue`, schedules) | any inline send, or a new alerting mechanism |
-| `documents` and the unused `OwnerType.vehicle` | a new table for vehicle papers |
+| `services/jobs.py` (`@handler` **in `app/jobs.py`**, `enqueue`, schedules) | any inline send, or a new alerting mechanism |
+| `documents` and `OwnerType.vehicle` | a new table for vehicle papers |
 | `employees` | a `drivers` table |
-| `services/timetable.py::conflicts()` | a fresh clash checker for vehicle timings |
+| `services/timetable.py::conflicts()` | a fresh clash checker |
 | `holidays` and `attendance.working_days()` | a second calendar, anywhere |
 | `services/grading.py` versioning + freeze | a second frozen-document mechanism for message templates |
 | `audit.next_number()` | any `max(seq) + 1` for a document number |
 | `fees.primary_contact()` | a third way to find who to ring |
 | `core/settings_registry.py` | new columns for policy switches (§3.15) |
 | `services/school_settings.py::module_enabled` | a UI-only feature switch |
+| `fees.OPT_IN_SOURCES` | a second way to say "bill only those who chose this" |
 | `NOT_BLANKET_READ` | naming a sensitive permission `.read` and hoping |
 | `tests/test_tenant_isolation.py` | writing a new cross-tenant check from scratch |
 
-### 9.5 Checkpoint 4
+### 9.4 Checkpoint 4
 
 - ~~A CBSE report card publishes and stays frozen~~ — **done and tested**
   (`tests/test_report_cards.py`).
 - ~~A payroll run completes for the demo school~~ — **done and tested**
-  (`tests/test_payroll.py::test_a_payroll_run_completes_for_the_demo_school`).
+  (`tests/test_payroll.py::test_a_payroll_run_completes_for_the_demo_school`,
+  now 16 payslips).
 - A non-technical reader can change a fee rule using only
-  `CONFIGURATION-GUIDE.md` — **held until the owner clears the three modules
-  above.**
+  `CONFIGURATION-GUIDE.md` — **held until the owner clears the modules above.**
 
-### 9.6 Before starting
+### 9.5 Before starting
 
 1. `git log --oneline main..HEAD` — read them; the messages carry the
    reasoning deliberately.
 2. Run the suite (§2) and the by-hand Postgres check (§4). Believe neither
    number until you have seen it. SQLite hid three Postgres defects already.
-3. Decide with the owner whether to push first. Nothing has ever been pushed and
-   CI has never run, so the first push is also the first CI run — expect it to
-   find something, and it grows with every part that lands.
+3. Decide with the owner whether to push first. Nothing has ever been pushed
+   and CI has never run, so the first push is also the first CI run — expect it
+   to find something, and it grows with every part that lands.
 4. The web dashboard is further behind than ever: known broken against the fee
-   API (§7), and examinations, HR and payroll have all landed since anyone last
-   opened it.
+   API (§7), and examinations, HR, payroll and transport have all landed since
+   anyone last opened it. Nothing in `web/` knows transport exists.
 
-**One warning from writing this section.** `fees.generate()` commits internally.
-Poking at it from a throwaway script does **not** roll back — doing so left a
-stray fee head, a plan item and a hundred December invoices in `sunrise_test`
-before that was noticed. Reset the schema after experimenting rather than
-trusting a `rollback()`.
+**Two warnings from this session.**
+
+`fees.generate()` commits internally. Poking at it from a throwaway script does
+**not** roll back — doing so left a stray fee head, a plan item and a hundred
+December invoices in `sunrise_test` before that was noticed. Reset the schema
+after experimenting rather than trusting a `rollback()`.
+
+And **the demo school's id is not reliably 1.** `seed.py::wipe()` truncates
+without `RESTART IDENTITY`, so a reseed over an existing database produces
+id 2. A throwaway probe that hardcodes `school_id=1` returns empty results and
+looks exactly like a bug in the code it is probing — it cost twenty minutes
+this session. Read the id from `schools`.
 
 The memory file `sunrise-erp-build.md` carries the same state in short form for
 a session that starts cold.
