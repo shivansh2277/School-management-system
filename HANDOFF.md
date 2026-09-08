@@ -48,7 +48,7 @@ was re-measured, not adjusted.
 
 | Measure | Value |
 |---|---|
-| Backend tests | **567 passing**, ~130 s |
+| Backend tests | **578 passing**, ~127 s |
 | Database tables | **85, plus `alembic_version`** |
 | Alembic migrations | **29** (verified from empty **on Postgres**, then seed, then worker) |
 | API surface | **214 paths, 263 operations** |
@@ -99,7 +99,7 @@ was re-measured, not adjusted.
 
 ```bash
 cd backend
-../.venv/Scripts/python.exe -m pytest -q                    # 567 passed
+../.venv/Scripts/python.exe -m pytest -q                    # 578 passed
 ../.venv/Scripts/python.exe -m alembic upgrade head
 ../.venv/Scripts/python.exe seed.py
 ../.venv/Scripts/python.exe worker.py --once                # runs due jobs
@@ -1124,8 +1124,8 @@ Raised by reports, none blocking:
 
 | # | Question | Needed by |
 |---|---|---|
-| U | **Should `/admin/attendance/shortage` and `/admin/attendance/absentees` be open to a class teacher for the whole school?** They are today, and it was verified rather than assumed: a `TCH001` token gets 200, not 403. They are gated on `attendance.record.read` school-wide, which a teacher holds — §4's "a teacher's permissions are unscoped; the restriction is in the service" — and these two routes never applied the service half. §5.10.8 says class teacher, own section. The **report** versions are narrowed correctly; these two pre-existing screens are not. Left alone deliberately: narrowing them changes what the teacher app can call, which is a decision and not a tidy-up. | Before go-live |
-| V | **What is the attendance shortage threshold for this school?** 75% is the default in `attendance.shortage()` and it is a bare constant, not a setting — unlike the late fee, the sibling concession and the teacher load ceiling, which all live in `core/settings_registry.py` (CLAUDE.md: money rules are settings, not constants). The report exposes it as a parameter, so a school can pass its own, but the default is still a number in code. | Before a real school's first term |
+| ~~U~~ | ~~Should the attendance screens be open to a class teacher for the whole school?~~ **Answered 8 Sep 2026: no — a teacher sees only their own class.** Built. The leak was measured, not argued: `TCH001` class-teaches 10-A (10 children) and `/admin/attendance/shortage` returned all 100, with names, admission numbers and percentages, across all ten classes. Both screens now call `scoping.narrow_to_own_sections()`, which is also what the report gate uses — one statement of §5.10.8. Omitting the section is refused, not widened. `tests/test_attendance_scope.py`. |
+| ~~V~~ | ~~What is the attendance shortage threshold, and why is it a constant?~~ **Answered 8 Sep 2026: it is now `attendance.shortage_threshold`, a setting defaulting to 75.** A child on that list can be warned or debarred, so the cut-off is the school's, and it sits on the configuration screen with every other policy number. An explicit argument still wins, so a report may ask "who is under 60" without changing policy. |
 
 Raised by payroll, none blocking:
 

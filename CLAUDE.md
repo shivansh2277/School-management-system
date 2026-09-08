@@ -23,7 +23,7 @@ branches of one school. A tenant is a customer. Work is on branch
 
 ```bash
 cd backend
-../.venv/Scripts/python.exe -m pytest -q          # 567 tests, ~130s
+../.venv/Scripts/python.exe -m pytest -q          # 578 tests, ~127s
 ../.venv/Scripts/python.exe -m pytest tests/test_rbac.py -q       # one file
 ../.venv/Scripts/python.exe -m alembic upgrade head
 ../.venv/Scripts/python.exe seed.py               # idempotent
@@ -101,6 +101,12 @@ Postgres runs natively on this machine, not in Docker. `make testdb` uses
   fabricates rows cannot catch a bug in the code that will produce them.
 - **Seeded invoices already carry late fees**, because collection assesses the
   fine before allocating. Do not assume a seeded invoice has a round amount.
+- **A whole-school read must narrow a teacher, and the permission layer will
+  not do it.** A teacher holds most `.read` permissions school-wide, with the
+  restriction in the service, so `school_wide=True` stops a guardian and nobody
+  else. Any route or report answering across sections calls
+  `scoping.narrow_to_own_sections()`. Two attendance screens skipped it and
+  handed a class teacher all 100 children.
 - **A report is gated twice, not once.** `require_permission(school_wide=True)`
   stops a guardian; it does not stop a teacher, who holds most `.read`
   permissions school-wide with the restriction in the service. Reports go
