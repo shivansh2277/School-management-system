@@ -37,7 +37,7 @@ from app.models import (
     StudentGuardian,
     User,
 )
-from app.services import comms, jobs
+from app.services import comms, jobs, school_settings
 
 
 @pytest.fixture(autouse=True)
@@ -52,6 +52,28 @@ def console(monkeypatch):
     provider = comms.get_provider()
     assert isinstance(provider, comms.ConsoleProvider)
     return provider
+
+
+@pytest.fixture(autouse=True)
+def outside_quiet_hours(db, admin_user):
+    """Hold the clock outside quiet hours for every test that is not about them.
+
+    §5.9.9's quiet hours are 21:00-07:00 local, so `send()` schedules instead of
+    dispatching for ten hours of every day — and two tests here asserted
+    `sending` without controlling for it. They passed all afternoon and failed
+    all evening, which is the same trap §4 of the handoff records for
+    `test_the_scheduler_queues_a_due_job_once_per_slot`: a test that depends on
+    the wall clock fails on a machine whose clock nobody would think to blame.
+    CI would have met it head-on, since 21:00-07:00 IST is 15:30-01:30 UTC.
+
+    Start and end equal means the window is empty — `start <= hour < start` is
+    never true — so this disables quiet hours rather than guessing a safe hour.
+    The one test that *is* about quiet hours sets its own values in its body and
+    overrides this.
+    """
+    school_settings.set_many(
+        db, admin_user, {"comms.quiet_hours_start": 0, "comms.quiet_hours_end": 0}
+    )
 
 
 @pytest.fixture()
