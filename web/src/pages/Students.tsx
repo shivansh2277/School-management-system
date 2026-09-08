@@ -38,12 +38,17 @@ export function Students() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["students", q, classId],
-    queryFn: () => api.get<{ items: Row[]; total: number }>(`/admin/students?${params}`),
+    // Page.items is untyped in the schema (a generic pagination envelope), so
+    // the real item shape is asserted here rather than re-declared.
+    queryFn: () =>
+      api.get("/admin/students", `?${params}`) as Promise<{ items: Row[]; total: number }>,
   });
 
   const detail = useQuery({
     queryKey: ["student", openId],
-    queryFn: () => api.get<Detail>(`/admin/students/${openId}`),
+    // /admin/students/{student_id} has no response_model; Detail documents it.
+    queryFn: () =>
+      api.get(`/admin/students/${openId}` as "/admin/students/{student_id}") as Promise<Detail>,
     enabled: openId !== null,
   });
 

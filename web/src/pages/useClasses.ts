@@ -17,6 +17,8 @@ export type ClassRow = {
 export function useClasses() {
   return useQuery({
     queryKey: ["classes"],
-    queryFn: () => api.get<ClassRow[]>("/admin/classes"),
+    // /admin/classes has no response_model in the schema; ClassRow documents
+    // the real shape.
+    queryFn: () => api.get("/admin/classes") as Promise<ClassRow[]>,
   });
 }
