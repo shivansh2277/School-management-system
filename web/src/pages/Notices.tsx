@@ -5,16 +5,6 @@ import { api } from "../api/client";
 import { Card, DataTable, FormField, inputClass } from "../components/ui";
 import { useClasses } from "./useClasses";
 
-type Notice = {
-  id: number;
-  title: string;
-  body: string;
-  audience: string;
-  class_label: string | null;
-  published_by: string;
-  published_at: string;
-};
-
 const AUDIENCES = ["all", "students", "parents", "teachers", "class"];
 
 export function Notices() {
@@ -26,7 +16,7 @@ export function Notices() {
 
   const list = useQuery({
     queryKey: ["notices"],
-    queryFn: () => api.get<Notice[]>("/admin/notices"),
+    queryFn: () => api.get("/admin/notices"),
   });
 
   const publish = useMutation({
@@ -44,7 +34,7 @@ export function Notices() {
   });
 
   const remove = useMutation({
-    mutationFn: (id: number) => api.del(`/admin/notices/${id}`),
+    mutationFn: (id: number) => api.del(`/admin/notices/${id}` as "/admin/notices/{notice_id}"),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notices"] }),
   });
 
@@ -99,7 +89,7 @@ export function Notices() {
       </Card>
 
       <Card title="Published notices">
-        <DataTable<Notice>
+        <DataTable
           rows={list.data ?? []}
           loading={list.isLoading}
           empty="Nothing published yet."
