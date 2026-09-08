@@ -1,6 +1,6 @@
 # Sunrise ERP — Session Handoff
 
-**Written:** 6 September 2026 · **revised 7 September 2026** (Parts 2, 3, and
+**Written:** 6 September 2026 · **revised 8 September 2026** (Parts 2, 3, and
 Part 4's examinations, report cards, HR and payroll)
 **Branch:** `part-1-foundation` — **nothing pushed, ever.** Count the commits
 with `git log --oneline main..HEAD | wc -l`; a number written here goes stale on
@@ -574,6 +574,13 @@ where they sit, so seed ordering can change without breaking the suite.
 - **No bank or gateway reconciliation.** §5.5.9 asks for it as a first-class
   screen. There is no gateway (§0.10) and no bank feed, so the day book is
   where cash reconciliation stops for now.
+- **`FeeHeadType.optional` is declared and unread.** `fees.generate()` bills
+  every monthly item on a plan to every enrolment on it, with no filter on head
+  type, so an `optional` head placed on a plan would charge every child — the
+  outcome the enum's own docstring warns about. The seeded `TRANSPORT` head sits
+  on no plan and has never been billed, so nothing is wrong today, but there is
+  **no opt-in mechanism at all** and transport cannot bill until one exists.
+  Verified 8 September 2026; see §9.1 for the shape it should take.
 - **No refunds.** §0.6 says none, so nothing is built. `is_refundable` on a fee
   head is recorded and unused.
 - **No instalment plans.** §5.5.3 lists them; §0.6 locks monthly billing, so
@@ -769,70 +776,196 @@ Raised by payroll, none blocking:
 
 **Examinations, report cards, HR and payroll are done, and both halves of
 Checkpoint 4 pass as tests.** What remains of Part 4 is **transport,
-communication and reports**, plus the two guides — and the guides are a
-Checkpoint 4 condition, not optional.
+communication and reports**.
+
+**`CONFIGURATION-GUIDE.md` and `EXTENSION-GUIDE.md` are deliberately held back**
+until the owner has looked over the three modules below and given the go-ahead.
+They describe what the other modules built, so writing them before those modules
+settle means writing them twice. Checkpoint 4 does not close until the
+configuration guide exists — it is the only thing standing between here and the
+end of Part 4 — but it is the last thing to write, not the next.
 
 **Nothing is blocked on the owner.** Every §8 item that gated work has been
 answered; the open ones (M, N, O and the earlier E–J) are refinements.
 
-### Suggested order
+---
 
-1. **Transport** (§5.6) — the biggest of the three and the one with real rules.
-   The fee side is nearly free: `fee_heads` already has an `optional` type, so
-   transport bills through a plan item with no new billing path. Two hard
-   blocks, not warnings: **a route may not exceed the vehicle's seating
-   capacity**, and **a vehicle with expired insurance, fitness, permit or PUC
-   cannot be assigned to an active route** — child-safety rules, and the second
-   is a legal one. Drivers are `employees`, so HR already carries them. Document
-   expiry alerts are a job handler over the polymorphic `documents` table
-   rather than a new mechanism.
-2. **Communication** (§5.9) — the outbox and one email provider, dispatched in
-   the worker (`services/jobs.py` has the queue) so a gateway timeout never
-   fails the action that triggered the message. **Every module before this has
-   notifications it wants and cannot send**, and they were deliberately not
-   stubbed, so expect to go back and wire: admission stage transitions, the fee
-   defaulter chase, report card publication, leave approval (a colleague has to
-   be told they are covering), and payroll (nobody is told they have been paid).
-3. **Reports** (§5.10) and the guides. `CONFIGURATION-GUIDE.md` is what
-   Checkpoint 4 is still missing: a non-technical reader changing a fee rule
-   using only that document. Most of what it must describe now exists — fee
-   settings, grading scales, assessment schemes, leave types, salary components
-   — so it is writing rather than building.
+### 9.1 Transport (§5.6) — do this first
 
-Recruitment (§5.3), the examination gaps and the payroll gaps are all in §6 and
-unblock nothing; pick them up in an awkward-sized gap at the end of a session.
+The biggest of the three, the only one with genuine safety rules, and the one
+the other two will want to notify and report on.
 
-### What Parts 3 and 4 built that the rest should reuse rather than reinvent
+**Correcting something an earlier revision of this document got wrong.** It said
+the fee side was "nearly free" because `fee_heads` already has an `optional`
+type. **That is not true, and following it would charge every child in the
+school for the bus.** Verified on 8 September 2026:
+
+- The seed has a `TRANSPORT` head of type `optional`. It sits on **no plan** and
+  has **never been billed** — it is a label nothing reads.
+- `fees.generate()` bills `[i for i in plan.items if i.frequency is monthly]`
+  with **no filter on head type**. Put the transport head on a plan and every
+  child on that plan is billed for it. The enum's own docstring warns about
+  precisely this outcome, and nothing implements the protection.
+
+So **transport billing needs a real opt-in, and it is the one piece of new
+money-path code this module needs.** Two shapes, and the second is right:
+
+- A per-student plan override through `student_fee_plans`, which already exists.
+  Rejected: it needs one plan per stop slab, so a school with twelve stops keeps
+  twelve near-identical plans and the fee catalogue becomes unreadable.
+- **`generate()` learns that an `optional` head bills only where an opt-in
+  exists** — for transport, an active `transport_assignments` row for that
+  enrolment covering that month, priced from that stop's slab. One targeted
+  change in one place, and it finally makes `FeeHeadType.optional` mean
+  something.
+
+Treat that as a change to the money path: `assert_period_open()`, the
+idempotency index on (enrolment, period) and the existing fee tests all sit
+around it, and `seed.py` runs the real biller, so a mistake there breaks seeding
+rather than only a test.
+
+**The two hard blocks — refusals, not warnings.** §5.6.9 is explicit, and both
+are child-safety rules with the second also a legal one:
+
+- **A route may not exceed its vehicle's seating capacity.**
+- **A vehicle with expired insurance, fitness, permit or PUC cannot be assigned
+  to an active route**, and a driver with an expired licence or missing police
+  verification cannot be assigned at all.
+
+Neither should be expressible as an override with a reason, unlike the timetable
+workload ceiling. Keeping that distinction deliberate is the point.
+
+**What to reuse rather than build:**
+
+- **Drivers and attendants are `employees`**, already carrying department,
+  status and the exit rule. Do not create a `drivers` table holding a name and a
+  phone number; put the licence and verification on the employee record or hang
+  them off `documents`.
+- **Vehicle papers are `documents`.** `OwnerType.vehicle` already exists in the
+  enum, unused, waiting for exactly this. Expiry alerts are then a scheduled job
+  handler over one query — `services/jobs.py` has `@handler`, `enqueue()` and a
+  schedule table — not a new alerting mechanism.
+- **Stop timings must increase monotonically along a route**, and two routes
+  cannot use one vehicle at overlapping times. The second is the same shape as
+  `timetable.conflicts()`; read that before writing a fresh clash checker.
+- **Ending an assignment stops future billing and preserves history** (§5.6.9),
+  which sits correctly with §0.6's no-refunds rule: a mid-year departure stops
+  the next invoice and refunds nothing already paid.
+- **`applications.transport_required` is captured at admission and goes
+  nowhere.** It should seed the assignment request rather than being asked
+  again from scratch.
+
+Leave out of this module: GPS tracking, the route map view, attendance-on-bus,
+and the fuel and maintenance logs. None is needed for a school to run a bus
+service safely, and each is a table nothing would read yet.
+
+---
+
+### 9.2 Communication (§5.9)
+
+Smaller, and mostly a matter of doing one thing properly: an outbox with a
+delivery record.
+
+**The rule that shapes it: dispatch happens in the worker.** §5.9.9 is direct —
+a gateway timeout must never fail the action that triggered the message.
+`services/jobs.py` is the queue and already survives a restart, so sending is
+`enqueue()` plus a handler, never an inline HTTP call from a route.
+
+**Email only for v1** (§0.11), behind a provider interface so SMS and WhatsApp
+can be wired later and stay disabled per school until DLT registration exists.
+The owner's address is the reply-to.
+
+**Every module before this has notifications it wants and cannot send.** They
+were deliberately not stubbed, so expect to go back and wire each one:
+
+| Where | What it wants to send |
+|---|---|
+| Admission (§5.1.6) | acknowledgement, document reminder, hall ticket, offer letter, expiry warning |
+| Fees | the defaulter chase, and a receipt |
+| Examinations | report card published |
+| Staff leave | a colleague has been assigned to cover a lesson |
+| Payroll | a payslip is available |
+| Transport | route change, delay |
+
+**Design points worth settling before writing:**
+
+- **The recipient model must accept a bare phone number or email**, because an
+  applicant is not a user (CLAUDE.md's rule) and most applicants never become
+  one.
+- **Templates are versioned**, so the exact text sent stays reproducible — the
+  same shape as grading scales and report cards, and `services/grading.py`
+  already shows the versioning-plus-freeze pattern.
+- **Opt-out is respected for informational messages and overridden for
+  statutory or emergency ones.** A parent cannot opt out of "your child is
+  absent" or "the school is closed".
+- **No family's data may appear in another family's message.** A careless bulk
+  merge is the realistic way that happens.
+- `notices` already exists, with an audience enum and no delivery record.
+  Extend it rather than adding a parallel concept beside it.
+
+---
+
+### 9.3 Reports (§5.10)
+
+Last, because it describes what everything else built.
+
+**The rule with teeth: a report obeys the same permission and scope as the
+screen.** §5.10.9 calls a report becoming a way to see rows you cannot see
+directly the most common data-leak path in an ERP. The seam already exists here
+— `require_permission()` at the route, `services/scoping.py` over the rows — so
+a report must go through both and never assemble its own query outside them.
+`tests/test_tenant_isolation.py` is the shape of the test that proves it.
+
+**Numbers must reconcile.** One definition, not two queries that drift. This has
+already bitten once this part: `stats.exam_percentages()` and `report_card()`
+had to be held to the same arithmetic when absent marks arrived, and a test now
+pins them together. The same applies to fee collection, the attendance
+percentage and payroll totals.
+
+**Exports containing personal data are audited** — who, what, when, how many
+rows. `students.profile.export` is already separate from `.read` for this
+reason, and `audit_log` takes an `export` action it has never been given.
+
+**No fabricated data points**: a month with no invoices shows no bar rather than
+a zero bar. `fees.collection` already does this deliberately; §5.10.9 makes it a
+system-wide rule.
+
+Most of what management asks for already exists as service functions —
+`services/stats.py`, `fees.day_book()`, `attendance.section_summary()`,
+`timetable.workload()`, `payroll.register()` and `payroll.cost_by_department()`.
+Reports is mostly a matter of giving those a governed, permission-checked home
+and a report library, not of writing new arithmetic.
+
+---
+
+### 9.4 What Parts 3 and 4 built that these three should reuse
 
 | Reach for | Rather than |
 |---|---|
-| `audit.next_number()` | any `max(seq) + 1` for a certificate or document number |
-| `fee_heads`' `optional` type and a plan item | a separate transport billing path |
+| `services/jobs.py` (`@handler`, `enqueue`, schedules) | any inline send, or a new alerting mechanism |
+| `documents` and the unused `OwnerType.vehicle` | a new table for vehicle papers |
+| `employees` | a `drivers` table |
+| `services/timetable.py::conflicts()` | a fresh clash checker for vehicle timings |
 | `holidays` and `attendance.working_days()` | a second calendar, anywhere |
-| `staff_attendance.lop_days()` | a second definition of absent days |
-| `services/payroll.py::compute()` | recomputing a payslip anywhere else — the preview and the run already share it |
+| `services/grading.py` versioning + freeze | a second frozen-document mechanism for message templates |
+| `audit.next_number()` | any `max(seq) + 1` for a document number |
+| `fees.primary_contact()` | a third way to find who to ring |
 | `core/settings_registry.py` | new columns for policy switches (§3.15) |
 | `services/school_settings.py::module_enabled` | a UI-only feature switch |
-| `fees.primary_contact()` | a third way to find who to ring |
-| `services/grading.py` versioning + freeze | a second "frozen document" mechanism |
-| `services/report_cards.py::publish` | a fresh publication path; store the rendered payload |
-| `substitutions` | a second "who is covering" table |
-| `documents` (polymorphic, accepts a `vehicle` owner already) | a new table for vehicle papers |
-| `audit_log` | a per-module change log table |
 | `NOT_BLANKET_READ` | naming a sensitive permission `.read` and hoping |
 | `tests/test_tenant_isolation.py` | writing a new cross-tenant check from scratch |
 
-### Checkpoint 4 passes when
+### 9.5 Checkpoint 4
 
 - ~~A CBSE report card publishes and stays frozen~~ — **done and tested**
   (`tests/test_report_cards.py`).
 - ~~A payroll run completes for the demo school~~ — **done and tested**
   (`tests/test_payroll.py::test_a_payroll_run_completes_for_the_demo_school`).
 - A non-technical reader can change a fee rule using only
-  `CONFIGURATION-GUIDE.md` — **the guide does not exist yet. This is the only
-  thing standing between here and Checkpoint 4.**
+  `CONFIGURATION-GUIDE.md` — **held until the owner clears the three modules
+  above.**
 
-### Before starting
+### 9.6 Before starting
 
 1. `git log --oneline main..HEAD` — read them; the messages carry the
    reasoning deliberately.
@@ -841,9 +974,15 @@ unblock nothing; pick them up in an awkward-sized gap at the end of a session.
 3. Decide with the owner whether to push first. Nothing has ever been pushed and
    CI has never run, so the first push is also the first CI run — expect it to
    find something, and it grows with every part that lands.
-4. The web dashboard is further behind than ever: it is known broken against the
-   fee API (§7), and examinations, HR and payroll have all landed since anyone
+4. The web dashboard is further behind than ever: known broken against the fee
+   API (§7), and examinations, HR and payroll have all landed since anyone last
    opened it.
+
+**One warning from writing this section.** `fees.generate()` commits internally.
+Poking at it from a throwaway script does **not** roll back — doing so left a
+stray fee head, a plan item and a hundred December invoices in `sunrise_test`
+before that was noticed. Reset the schema after experimenting rather than
+trusting a `rollback()`.
 
 The memory file `sunrise-erp-build.md` carries the same state in short form for
 a session that starts cold.
