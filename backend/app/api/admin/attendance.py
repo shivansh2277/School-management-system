@@ -7,7 +7,7 @@ requests are waiting.
 
 from datetime import date as Date
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -20,6 +20,7 @@ from app.models import (
     StudentLeaveRequest,
     User,
 )
+from app.schemas.common import AttendanceSummary, RollRow
 from app.services import attendance as svc
 from app.services import leave as leave_svc
 from app.services import scoping
@@ -34,6 +35,39 @@ router = APIRouter(
 
 reader = require_permission("attendance.record.read", school_wide=True)
 corrector = require_permission("attendance.record.correct", school_wide=True)
+
+
+@router.get("", response_model=list[RollRow])
+def attendance_roll(
+    class_section_id: int,
+    date: Date,
+    user: User = Depends(reader),
+    db: Session = Depends(get_db),
+) -> list[RollRow]:
+    """Read-only: admins do not mark attendance (BLUEPRINT §9 matrix).
+
+    Moved here from `api/admin/exams.py`, where it was declared on the exams
+    router and so gated on `exam.definition.read` instead of
+    `attendance.record.read`. That let the Exam Controller (who holds the exam
+    permission but not the attendance one) read the roll while the `/attendance`
+    web screen — gated on `attendance.record.read` per `web/src/screens.ts` —
+    stayed hidden from them, and let anyone holding `attendance.record.read`
+    alone open that screen and get a 403 from both of its fetches. The route
+    now lives on the router whose permission it actually needs.
+    """
+    return svc.roll_sheet(db, class_section_id, date)
+
+
+@router.get("/summary", response_model=AttendanceSummary)
+def attendance_summary(
+    date_from: Date | None = Query(None, alias="from"),
+    date_to: Date | None = Query(None, alias="to"),
+    class_section_id: int | None = None,
+    user: User = Depends(reader),
+    db: Session = Depends(get_db),
+) -> AttendanceSummary:
+    """See `attendance_roll` above for why this moved out of `exams.py`."""
+    return svc.section_summary(db, user.school_id, class_section_id, date_from, date_to)
 
 
 class HolidayIn(BaseModel):

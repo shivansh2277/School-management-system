@@ -9,6 +9,7 @@ from datetime import date, timedelta
 
 from sqlalchemy import select
 
+from app.core.security import hash_password
 from app.models import (
     Attendance,
     AttendanceStatus,
@@ -16,9 +17,16 @@ from app.models import (
     Enrolment,
     Holiday,
     LeaveStatus,
+    Permission,
+    Role,
+    RolePermission,
     StudentLeaveRequest,
+    User,
+    UserRole,
 )
 from app.services import attendance as svc
+from app.services import rbac
+from tests.conftest import auth
 
 
 def last_working_day(days_back: int = 1) -> date:
@@ -342,3 +350,70 @@ def test_the_shortage_list_is_worst_first(client, admin):
     assert rows, "with a 100% threshold everyone with a mark should appear"
     percents = [r["percent"] for r in rows]
     assert percents == sorted(percents)
+
+
+def test_the_attendance_roll_is_gated_on_the_attendance_permission_not_the_exam_one(
+    client, db, ids
+):
+    """`GET /admin/attendance` used to live on the exams router and so checked
+    `exam.definition.read` - the permission the Exam Controller holds, not the
+    one the `/attendance` web screen (`web/src/screens.ts`) actually declares.
+    That let an Exam Controller read a register the UI hid from them, and
+    denied anyone who held only `attendance.record.read`, the exact case the
+    screen registry exists to prevent. The route now checks the permission it
+    was always supposed to."""
+    day = last_working_day(1)
+    params = f"?class_section_id={ids['section_10a']}&date={day}"
+
+    exam_controller = User(
+        school_id=1,
+        role=UserRole.admin,
+        login_id="examctrl.test@sunrisepublic.edu",
+        password_hash=hash_password("Test@123"),
+        full_name="Exam Controller (test)",
+    )
+    db.add(exam_controller)
+    db.flush()
+    exam_role = db.scalar(select(Role).where(Role.school_id == 1, Role.code == "exam_controller"))
+    rbac.assign(db, exam_controller, exam_role)
+    db.commit()
+    exam_ctrl_token = client.post(
+        "/auth/login",
+        json={
+            "role": "admin",
+            "login_id": "examctrl.test@sunrisepublic.edu",
+            "password": "Test@123",
+        },
+    ).json()["access_token"]
+
+    denied = client.get(f"/admin/attendance{params}", headers=auth(exam_ctrl_token))
+    assert denied.status_code == 403, "exam.definition.read must not open the attendance roll"
+
+    # A role holding only attendance.record.read, school-wide, must be let in.
+    attendance_reader = User(
+        school_id=1,
+        role=UserRole.admin,
+        login_id="attendanceonly.test@sunrisepublic.edu",
+        password_hash=hash_password("Test@123"),
+        full_name="Attendance Reader (test)",
+    )
+    db.add(attendance_reader)
+    reader_role = Role(school_id=1, code="attendance_reader_test", name="Attendance Reader (test)")
+    db.add(reader_role)
+    db.flush()
+    permission = db.scalar(select(Permission).where(Permission.code == "attendance.record.read"))
+    db.add(RolePermission(school_id=1, role_id=reader_role.id, permission_id=permission.id))
+    db.flush()
+    rbac.assign(db, attendance_reader, reader_role)
+    db.commit()
+    reader_token = client.post(
+        "/auth/login",
+        json={
+            "role": "admin",
+            "login_id": "attendanceonly.test@sunrisepublic.edu",
+            "password": "Test@123",
+        },
+    ).json()["access_token"]
+
+    allowed = client.get(f"/admin/attendance{params}", headers=auth(reader_token))
+    assert allowed.status_code == 200, "attendance.record.read alone must open the roll"

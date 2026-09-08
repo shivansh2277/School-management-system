@@ -362,43 +362,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/attendance": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Attendance Roll
-         * @description Read-only: admins do not mark attendance (BLUEPRINT §9 matrix).
-         */
-        get: operations["attendance_roll_admin_attendance_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/attendance/summary": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Attendance Summary */
-        get: operations["attendance_summary_admin_attendance_summary_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/admin/exams/papers/{exam_schedule_id}/lock": {
         parameters: {
             query?: never;
@@ -1824,6 +1787,55 @@ export interface paths {
          *     remembering which families are new.
          */
         post: operations["sibling_sweep_admin_fees_concessions_sibling_sweep_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/attendance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Attendance Roll
+         * @description Read-only: admins do not mark attendance (BLUEPRINT §9 matrix).
+         *
+         *     Moved here from `api/admin/exams.py`, where it was declared on the exams
+         *     router and so gated on `exam.definition.read` instead of
+         *     `attendance.record.read`. That let the Exam Controller (who holds the exam
+         *     permission but not the attendance one) read the roll while the `/attendance`
+         *     web screen — gated on `attendance.record.read` per `web/src/screens.ts` —
+         *     stayed hidden from them, and let anyone holding `attendance.record.read`
+         *     alone open that screen and get a 403 from both of its fetches. The route
+         *     now lives on the router whose permission it actually needs.
+         */
+        get: operations["attendance_roll_admin_attendance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/attendance/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Attendance Summary
+         * @description See `attendance_roll` above for why this moved out of `exams.py`.
+         */
+        get: operations["attendance_summary_admin_attendance_summary_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -7094,71 +7106,6 @@ export interface operations {
             };
         };
     };
-    attendance_roll_admin_attendance_get: {
-        parameters: {
-            query: {
-                class_section_id: number;
-                date: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RollRow"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    attendance_summary_admin_attendance_summary_get: {
-        parameters: {
-            query?: {
-                from?: string | null;
-                to?: string | null;
-                class_section_id?: number | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AttendanceSummary"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     lock_paper_admin_exams_papers__exam_schedule_id__lock_post: {
         parameters: {
             query?: never;
@@ -10128,6 +10075,71 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    attendance_roll_admin_attendance_get: {
+        parameters: {
+            query: {
+                class_section_id: number;
+                date: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RollRow"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    attendance_summary_admin_attendance_summary_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                class_section_id?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

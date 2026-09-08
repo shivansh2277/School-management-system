@@ -1,6 +1,4 @@
-from datetime import date as Date
-
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -10,17 +8,14 @@ from app.core.db import get_db
 from app.services.rbac import require_permission
 from app.models import Exam, ExamSchedule, User, UserRole
 from app.schemas.common import (
-    AttendanceSummary,
     MarksRequest,
     MarksRosterRow,
     ExamCreate,
     ExamScheduleCreate,
     ExamScheduleOut,
     ExamOut,
-    RollRow,
 )
 from app.services import assessment, schemes
-from app.services import attendance as attendance_svc
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 admin_only = require_permission("exam.definition.read", school_wide=True)
@@ -99,30 +94,6 @@ def exam_schedule(
         )
     )
     return assessment.schedule_out(db, rows)
-
-
-@router.get("/attendance", response_model=list[RollRow])
-def attendance_roll(
-    class_section_id: int,
-    date: Date,
-    user: User = Depends(admin_only),
-    db: Session = Depends(get_db),
-) -> list[RollRow]:
-    """Read-only: admins do not mark attendance (BLUEPRINT §9 matrix)."""
-    return attendance_svc.roll_sheet(db, class_section_id, date)
-
-
-@router.get("/attendance/summary", response_model=AttendanceSummary)
-def attendance_summary(
-    date_from: Date | None = Query(None, alias="from"),
-    date_to: Date | None = Query(None, alias="to"),
-    class_section_id: int | None = None,
-    user: User = Depends(admin_only),
-    db: Session = Depends(get_db),
-) -> AttendanceSummary:
-    return attendance_svc.section_summary(
-        db, user.school_id, class_section_id, date_from, date_to
-    )
 
 
 class UnlockRequest(BaseModel):
