@@ -1,6 +1,6 @@
 """The admission dashboard and its reports (§5.1.3 screen 1, §5.1.10)."""
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 
 import pytest
 from sqlalchemy import select
@@ -116,7 +116,13 @@ def test_demographics_count_verified_priority_only(client, admin, cycle_id):
 
 def test_the_dashboard_shows_todays_work(client, admin, cycle_id):
     app = _applicant(client, admin, "Scheduled", "9833300030")
-    in_an_hour = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
+    # Midday in the school's own day, not "an hour from now": the dashboard's
+    # window is local midnight to local midnight, so `now + 1 hour` fell into
+    # tomorrow whenever the suite ran after 23:00 and the assertion below found
+    # nothing. Noon is inside today's window whatever time the suite runs.
+    in_an_hour = (
+        datetime.combine(date.today(), time(12, 0)).astimezone(UTC).isoformat()
+    )
     client.post(
         f"/admin/admission/applications/{app['id']}/assessments",
         json={"assessment_type": "written_test", "scheduled_at": in_an_hour, "venue": "Hall B"},

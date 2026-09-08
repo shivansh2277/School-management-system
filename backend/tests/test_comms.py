@@ -514,12 +514,26 @@ def test_a_small_send_needs_nobody(db, admin_user, ids):
 
 
 def test_quiet_hours_hold_a_circular_and_never_an_emergency(db, admin_user):
-    """§5.9.9. Set the window to cover the whole day so the assertion does not
-    depend on what time the suite happens to run."""
+    """§5.9.9.
+
+    The window is built around the hour the suite is actually running in, which
+    is the only way to be certain it contains it. The previous version set
+    0 to 23 and said in its docstring that this covered the whole day; it does
+    not — `inside` is `start <= hour < end`, so hour 23 fell outside and this
+    test failed for one hour in every twenty-four. Widening to 0..24 is not
+    available either: `quiet_until` computes its release with
+    `now.replace(hour=end)`, and hour 24 does not exist.
+
+    An hour-long window starting now covers both branches correctly: at 23:00 it
+    wraps to end 0, and `hour >= 23 or hour < 0` still holds.
+    """
     from app.services import school_settings
 
+    hour = comms._local_now(db, admin_user.school_id).hour
     school_settings.set_many(
-        db, admin_user, {"comms.quiet_hours_start": 0, "comms.quiet_hours_end": 23}
+        db,
+        admin_user,
+        {"comms.quiet_hours_start": hour, "comms.quiet_hours_end": (hour + 1) % 24},
     )
     held = comms.quiet_until(db, admin_user.school_id, MessageCategory.general)
     assert held is not None
