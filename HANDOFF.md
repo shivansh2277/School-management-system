@@ -686,11 +686,26 @@ Admission numbers now come from a sequence in the format decided in §0.21:
 | Teacher | `TCH001` | `Teacher@123` |
 | Student | `2024000001` | `Student@123` |
 | Parent | `9876500001` | `Parent@123` |
+| Transport Manager | `TRM001` | `Admin@123` |
 
 `TCH001` still class-teaches 10-A and teaches it Mathematics — the walkthrough
 depends on it, and the seed pins that deliberately. `2024000001` is roll 1 of
 10-A. The demo parent still has exactly two children so the child switcher has
 something to switch between.
+
+`TRM001` is new in Part 4 and holds the `transport_manager` role — the only
+account that can work the transport module without being the admin. **The two
+drivers (`DRV001`, `DRV002`) and the attendant (`ATT001`) deliberately cannot
+log in**: their `users` rows exist only because `employees.user_id` is not
+nullable, they are marked inactive, and `_assign_roles` skips them. Without
+that skip the legacy role map would hand a demo password `super_admin`, because
+a staff `users.role` has to be `admin` to be staff at all.
+
+**Guardian email addresses are new**, and they matter for Communication:
+§0.11 made email the only v1 channel and the demo previously had none at all.
+84 of 98 guardians now have `parentNNN@example.com`, and **every seventh
+deliberately has none**, so §5.9.10's unreachable list is a real number on a
+fresh install rather than an empty screen that looks like it works.
 
 The counter clerk is new in Part 3 and holds the `fee_collector` role: it may
 take money and may not void or approve a concession. It exists so §5.5.9's
