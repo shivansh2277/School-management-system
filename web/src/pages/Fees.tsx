@@ -37,19 +37,22 @@ export function Fees() {
 
   const invoices = useQuery({
     queryKey: ["invoices", month, year],
-    queryFn: () => api.get<Invoice[]>(`/admin/fees/invoices?month=${month}&year=${year}`),
+    // /admin/fees/invoices has no response_model; Invoice documents the shape.
+    queryFn: () =>
+      api.get("/admin/fees/invoices", `?month=${month}&year=${year}`) as Promise<Invoice[]>,
   });
   const collection = useQuery({
     queryKey: ["collection", year],
-    queryFn: () => api.get<Collection>(`/admin/fees/collection?year=${year}`),
+    // /admin/fees/collection has no response_model; Collection documents it.
+    queryFn: () => api.get("/admin/fees/collection", `?year=${year}`) as Promise<Collection>,
   });
 
   const generate = useMutation({
     mutationFn: () =>
-      api.post<{ created: number; skipped: number }>("/admin/fees/invoices/generate", {
-        month,
-        year,
-      }),
+      api.post("/admin/fees/invoices/generate", { month, year }) as Promise<{
+        created: number;
+        skipped: number;
+      }>,
     onSuccess: (r) => {
       setNote(`${r.created} invoice(s) created, ${r.skipped} already existed.`);
       qc.invalidateQueries({ queryKey: ["invoices"] });
@@ -91,7 +94,7 @@ export function Fees() {
         </div>
         {note && <p className="text-sm text-ink-soft mb-3">{note}</p>}
 
-        <DataTable<Invoice>
+        <DataTable
           rows={invoices.data ?? []}
           loading={invoices.isLoading}
           empty="No invoices for this month yet. Use Generate invoices."
