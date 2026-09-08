@@ -5,16 +5,6 @@ import { api } from "../api/client";
 import { Card, DataTable, Empty, Pill, inputClass } from "../components/ui";
 import { useClasses } from "./useClasses";
 
-type Roll = {
-  student_id: number;
-  full_name: string;
-  roll_no: number;
-  status: string | null;
-  remarks: string | null;
-};
-
-type Summary = { present: number; absent: number; leave: number; percent: number | null };
-
 const today = () => new Date().toISOString().slice(0, 10);
 
 export function Attendance() {
@@ -27,14 +17,14 @@ export function Attendance() {
   const roll = useQuery({
     queryKey: ["admin-roll", activeClass, date],
     queryFn: () =>
-      api.get<Roll[]>(`/admin/attendance?class_section_id=${activeClass}&date=${date}`),
+      api.get("/admin/attendance", `?class_section_id=${activeClass}&date=${date}`),
     enabled: Boolean(activeClass),
   });
 
   const summary = useQuery({
     queryKey: ["admin-att-summary", activeClass],
     queryFn: () =>
-      api.get<Summary>(`/admin/attendance/summary?class_section_id=${activeClass}`),
+      api.get("/admin/attendance/summary", `?class_section_id=${activeClass}`),
     enabled: Boolean(activeClass),
   });
 
@@ -72,7 +62,7 @@ export function Attendance() {
         ) : marked.length === 0 ? (
           <Empty>No attendance marked for this date yet.</Empty>
         ) : (
-          <DataTable<Roll>
+          <DataTable
             rows={roll.data ?? []}
             empty="No students in this section."
             columns={[
