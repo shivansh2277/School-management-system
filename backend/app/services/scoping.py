@@ -72,6 +72,26 @@ def assert_teaches_section(db: Session, user: User, class_section_id: int) -> No
         raise forbidden("You do not teach this class section")
 
 
+def readable_section_ids(db: Session, user: User) -> list[int] | None:
+    """Sections this caller may read children in, or None for the whole school.
+
+    None means unrestricted, not "none" - the same distinction
+    `Authz.scope_ids` makes, and for the same reason: a caller that treated an
+    empty list and None alike would silently widen a scoped read into a
+    school-wide one.
+
+    A teacher gets the sections they class-teach or teach a subject in. Every
+    other role reads the school, which is what an office clerk, a principal and
+    an auditor are for.
+
+    This is the list form of `narrow_to_own_sections`, for the screens that
+    answer across sections rather than about one.
+    """
+    if user.role is not UserRole.teacher:
+        return None
+    return class_section_ids_for(db, user)
+
+
 def narrow_to_own_sections(
     db: Session, user: User, class_section_id: int | None, what: str = "This list"
 ) -> int | None:

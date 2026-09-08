@@ -26,6 +26,7 @@ from app.models import (
 from app.schemas.common import Page
 from app.services import assessment, attendance, audit, homework, tenancy
 from app.services import custom_fields as cf
+from app.services import scoping
 from app.services.common import current_enrolment
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -83,6 +84,12 @@ def _owned(db: Session, user: User, student_id: int) -> Student:
 
     `db.get()` is not tenant-aware, and three handlers here used it bare, so a
     guessed id read - and in one case edited - another customer's child.
+
+    Writes only. Reading a child goes through
+    `scoping.assert_can_read_student`, which applies the role scope on top of
+    the tenant one; the write handlers here are gated on
+    `students.profile.write`, which no teacher holds, so the roles that reach
+    them read the whole school anyway.
     """
     s = db.get(Student, student_id)
     if s is None or s.school_id != user.school_id:
@@ -112,7 +119,7 @@ def _row(db: Session, s: Student) -> dict:
     }
 
 
-def _roster(user: User, class_section_id: int | None, q: str | None):
+def _roster(db: Session, user: User, class_section_id: int | None, q: str | None):
     """The roster query, shared by the screen and the export.
 
     One query, not two, on purpose: section 5.10.9 calls a report that shows
@@ -136,6 +143,20 @@ def _roster(user: User, class_section_id: int | None, q: str | None):
                 )
             )
         )
+    # And a teacher sees the children they teach, not the school. This roster
+    # carries date of birth, address and a guardian's phone number through to
+    # the detail screen and the export, and it was answering any of the twelve
+    # teachers for all hundred children. Same rule as the attendance screens
+    # and the report library, from the same helper.
+    allowed = scoping.readable_section_ids(db, user)
+    if allowed is not None:
+        stmt = stmt.where(
+            Student.id.in_(
+                select(Enrolment.student_id).where(
+                    Enrolment.class_section_id.in_(allowed)
+                )
+            )
+        )
     if q:
         like = f"%{q}%"
         stmt = stmt.where(
@@ -153,7 +174,7 @@ def list_students(
     user: User = Depends(admin_only),
     db: Session = Depends(get_db),
 ) -> Page:
-    stmt = _roster(user, class_section_id, q)
+    stmt = _roster(db, user, class_section_id, q)
     total = db.scalar(select(func.count()).select_from(stmt.subquery()))
     rows = db.scalars(stmt.offset((page - 1) * page_size).limit(page_size)).all()
     return Page(items=[_row(db, s) for s in rows], total=total, page=page, page_size=page_size)
@@ -207,7 +228,7 @@ def export_students(
     exception is this route and the ones like it, not a licence generally.
     """
     year = tenancy.current_year(db, user.school_id)
-    rows = db.scalars(_roster(user, class_section_id, q)).all()
+    rows = db.scalars(_roster(db, user, class_section_id, q)).all()
     items = [_row(db, s) for s in rows]
 
     buf = io.StringIO(newline="")
@@ -351,7 +372,11 @@ def create_student(
 def student_detail(
     student_id: int, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> dict:
-    s = _owned(db, user, student_id)
+    # The shared gate, not `_owned`: it applies the role scope as well as the
+    # tenant one, so a teacher gets the children they teach and an office clerk
+    # still gets the school. A teacher who knows an id must not be able to read
+    # another section's child, and an id is guessable.
+    s = scoping.assert_can_read_student(db, user, student_id)
     enrolment = current_enrolment(db, s.id)
     exam = assessment.latest_exam_with_marks(
         db, s.school_id, enrolment.class_section_id if enrolment else None

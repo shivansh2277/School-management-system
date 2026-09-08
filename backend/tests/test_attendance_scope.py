@@ -148,3 +148,54 @@ def test_the_report_and_the_screen_use_the_same_threshold(client, admin, db, adm
     report = client.get("/admin/reports/attendance.shortage", headers=admin).json()["data"]
     assert len(screen) == len(report) == 100
     assert [r["student_id"] for r in screen] == [r["student_id"] for r in report]
+
+
+# --- the student roster, narrowed the same way (found by the live sweep)
+
+
+def _foreign_child(client, admin, teacher):
+    """A child in a section this teacher does not teach."""
+    mine = {c["class_label"] for c in client.get("/teacher/classes", headers=teacher).json()}
+    everyone = client.get(
+        "/admin/students", headers=admin, params={"page_size": 200}
+    ).json()["items"]
+    return next(s for s in everyone if s["class_label"] not in mine), mine
+
+
+def test_a_teacher_reads_only_their_own_sections_children(client, admin, teacher):
+    """The roster carries a guardian's phone, and the detail screen behind it
+    carries date of birth and home address. It was answering any of the twelve
+    teachers for all one hundred children."""
+    victim, mine = _foreign_child(client, admin, teacher)
+    seen = client.get("/admin/students", headers=teacher, params={"page_size": 200}).json()
+    assert seen["total"] < 100
+    assert {s["class_label"] for s in seen["items"]} <= mine
+    assert victim["id"] not in {s["id"] for s in seen["items"]}
+
+
+def test_a_teacher_cannot_open_another_sections_child_by_id(client, admin, teacher):
+    """An id is guessable, so narrowing only the list would be no narrowing."""
+    victim, _ = _foreign_child(client, admin, teacher)
+    r = client.get(f"/admin/students/{victim['id']}", headers=teacher)
+    assert r.status_code == 403, r.text
+
+
+def test_a_teacher_can_still_open_their_own_pupil(client, teacher, ids):
+    roster = client.get(
+        f"/teacher/classes/{ids['section_10a']}/students", headers=teacher
+    ).json()
+    r = client.get(f"/admin/students/{roster[0]['id']}", headers=teacher)
+    assert r.status_code == 200, r.text
+    assert r.json()["class_label"] == "10-A"
+
+
+def test_the_office_still_reads_every_child(client, admin):
+    body = client.get("/admin/students", headers=admin, params={"page_size": 200}).json()
+    assert body["total"] == 100
+
+
+def test_a_teachers_export_is_narrowed_too_if_they_could_run_it(client, teacher):
+    """A teacher does not hold `students.profile.export`, so the download is
+    refused outright - but the export shares `_roster()`, so the narrowing
+    would apply to it as well if a school ever granted them the permission."""
+    assert client.get("/admin/students/export", headers=teacher).status_code == 403
