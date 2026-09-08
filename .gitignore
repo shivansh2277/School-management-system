@@ -12,3 +12,7 @@ mobile/.env
 node_modules/
 dist/
 .expo/
+
+# Object storage when running without a bucket: LocalStorage writes uploaded
+# documents here. Test and demo artefacts, never source.
+backend/var/
