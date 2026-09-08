@@ -81,6 +81,17 @@ PERMISSIONS: list[tuple[str, str]] = [
     # --- communication
     ("comms.notice.read", "Read notices"),
     ("comms.notice.publish", "Publish a notice"),
+    ("comms.message.read", "View the outbox and its delivery report"),
+    ("comms.message.send", "Compose and send a message"),
+    (
+        "comms.message.approve",
+        "Approve a bulk send above the school's threshold (§5.9.9)",
+    ),
+    (
+        "comms.emergency.broadcast",
+        "Send an emergency broadcast, which overrides opt-out and quiet hours",
+    ),
+    ("comms.template.manage", "Create and supersede message templates"),
     # --- transport. Four rather than one per table: §5.6.8 distinguishes only
     # between designing the service and putting children on it, and a
     # permission nobody grants separately is a permission nobody needs.
@@ -169,6 +180,13 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "fees.concession.approve",
             "fees.payment.void",
             "comms.notice.publish",
+            "comms.message.send",
+            # §5.9.8 gives the emergency broadcast to the Principal alone. It
+            # overrides every opt-out and the quiet hours, so it is the one
+            # permission in this module that is not shared out.
+            "comms.emergency.broadcast",
+            "comms.message.approve",
+            "comms.template.manage",
             "transport.setup.write",
             "transport.assignment.manage",
             "hr.employee.write",
@@ -216,6 +234,12 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "hr.leave.apply",
             "hr.attendance.mark",
             "comms.notice.publish",
+            # §5.9.8: general communication. Deliberately not
+            # `comms.message.approve` — whoever composes a bulk send is not who
+            # signs it off, the same segregation the fee counter and the
+            # payroll run already have.
+            "comms.message.send",
+            "comms.template.manage",
             # §5.6.8 gives the Admin Officer transport setup but not the
             # assignment desk: who rides the bus is the Transport Manager's.
             "transport.setup.write",
@@ -245,6 +269,10 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "fees.payment.collect",
             "fees.payment.void",
             "comms.notice.read",
+            # §5.9.8 scopes the Accountant to fee-related communication. The
+            # permission is held school-wide and the restriction is in the
+            # service, the same separation the teacher's marks entry uses.
+            "comms.message.send",
         ],
     ),
     (
@@ -336,6 +364,11 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "homework.item.write",
             "comms.notice.read",
             "comms.notice.publish",
+            # §5.9.8: own section only. The permission is unscoped and the
+            # restriction lives in the service, which is the rule §4 of the
+            # handoff warns about — a route that skips service scoping must be
+            # gated on something a teacher does not hold.
+            "comms.message.send",
             "transport.assignment.read",
             # §5.1.8: a teacher marks the papers for a slot they were given and
             # sits on interview panels. They do not otherwise work admissions.
@@ -386,6 +419,7 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "transport.assignment.manage",
             "hr.employee.read",
             "comms.notice.read",
+            "comms.message.send",
         ],
     ),
     (

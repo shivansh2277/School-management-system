@@ -74,6 +74,41 @@ SETTINGS: list[SettingDef] = [
         30,
         "Maximum teaching periods one teacher may be scheduled per week",
     ),
+    # --- communication (§5.9, §0.11). Email only for v1; the other two
+    # channels exist behind the same provider interface and stay off until a
+    # school has DLT registration, which is a legal step and not a toggle
+    # anybody should be able to flip by accident.
+    SettingDef(
+        "comms.from_name", str, "Sunrise Public School", "Name outgoing email is sent as"
+    ),
+    SettingDef(
+        "comms.reply_to",
+        str,
+        "",
+        "Address replies go to. §0.11 makes this the owner's, not a no-reply box",
+    ),
+    SettingDef("comms.channel.sms", bool, False, "Enable SMS (needs DLT registration)"),
+    SettingDef(
+        "comms.channel.whatsapp", bool, False, "Enable WhatsApp (needs a business account)"
+    ),
+    # §5.9.9: quiet hours for anything that is not an emergency. Stored as
+    # local hours, because the rule a school states is "not after nine at
+    # night" and not "not after 15:30 UTC".
+    SettingDef(
+        "comms.quiet_hours_start", int, 21, "Hour after which non-urgent messages wait"
+    ),
+    SettingDef(
+        "comms.quiet_hours_end", int, 7, "Hour before which non-urgent messages wait"
+    ),
+    # §5.9.9: a bulk send above this needs a second person to approve it. The
+    # number is a school's to choose — a hundred-child school and a
+    # two-thousand-child school do not mean the same thing by "bulk".
+    SettingDef(
+        "comms.bulk_approval_threshold",
+        int,
+        50,
+        "Recipients above which a send needs approval",
+    ),
     *(
         SettingDef(
             f"feature.{m.code}",

@@ -142,3 +142,8 @@ class Notice(TenantBase):
     )
     published_by: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
     published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # A notice is what appears on the board; a message is what goes out to
+    # people. Publishing can do both, and this is the link — one nullable
+    # column rather than a second notice-shaped concept living beside this one
+    # with its own audience enum and its own delivery record.
+    message_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("messages.id"))

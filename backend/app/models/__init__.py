@@ -85,6 +85,10 @@ from app.models.enums import (
     SchoolStatus,
     SubstitutionStatus,
     StudentStatus,
+    Channel,
+    DeliveryStatus,
+    MessageCategory,
+    MessageStatus,
     TransportAssignmentStatus,
     TransportDirection,
     UserRole,
@@ -133,6 +137,12 @@ from app.models.payroll import (
     SalaryComponent,
     SalaryStructure,
     SalaryStructureItem,
+)
+from app.models.comms import (
+    Message,
+    MessageRecipient,
+    MessageTemplate,
+    NotificationPreference,
 )
 from app.models.transport import (
     Route,

@@ -511,3 +511,58 @@ class TransportAssignmentStatus(StrEnum):
     active = "active"
     suspended = "suspended"
     ended = "ended"
+
+
+class Channel(StrEnum):
+    """§0.11: email only for v1. The other two exist so the provider interface
+    has something to be an interface *to*, and stay disabled per school until
+    DLT registration exists — not so that a half-built SMS path can be
+    switched on by accident."""
+
+    email = "email"
+    sms = "sms"
+    whatsapp = "whatsapp"
+
+
+class MessageCategory(StrEnum):
+    """What a message is about, which is what opt-out is decided against.
+
+    §5.9.9 draws the line: informational messages respect an opt-out, statutory
+    and emergency ones override it. `MANDATORY_CATEGORIES` in
+    `services/comms.py` is that line, written down.
+    """
+
+    emergency = "emergency"
+    attendance = "attendance"
+    fees = "fees"
+    examination = "examination"
+    transport = "transport"
+    admission = "admission"
+    hr = "hr"
+    general = "general"
+
+
+class MessageStatus(StrEnum):
+    """§5.9.7, minus `sending` as a resting state: dispatch is a job, so a
+    message is either waiting to be picked up or has been."""
+
+    draft = "draft"
+    scheduled = "scheduled"
+    sending = "sending"
+    completed = "completed"
+    failed = "failed"
+    cancelled = "cancelled"
+
+
+class DeliveryStatus(StrEnum):
+    """§5.9.7, trimmed to the states an SMTP send can actually reach.
+
+    `delivered`, `read` and `bounced` need a provider webhook to observe, and
+    three statuses nothing can ever set would be a delivery report that lies
+    by omission. They belong with the webhook that reports them.
+    """
+
+    queued = "queued"
+    sent = "sent"
+    failed = "failed"
+    opted_out = "opted_out"
