@@ -7,7 +7,7 @@
  * on one laptop drifts exactly like the hand-written types it replaced.
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -18,10 +18,11 @@ const repo = resolve(here, "..", "..");
 const out = join(here, "..", "src", "api", "schema.d.ts");
 const check = process.argv.includes("--check");
 
-const python =
+const venv =
   process.platform === "win32"
     ? join(repo, ".venv", "Scripts", "python.exe")
     : join(repo, ".venv", "bin", "python");
+const python = existsSync(venv) ? venv : "python";
 
 const schema = execFileSync(
   python,
