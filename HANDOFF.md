@@ -1,8 +1,8 @@
 # Sunrise ERP — Session Handoff
 
 **Written:** 6 September 2026 · **revised 8 September 2026** (Parts 2, 3, and
-Part 4's examinations, report cards, HR, payroll, **transport** and
-**communication**)
+Part 4's examinations, report cards, HR, payroll, transport, communication and
+**reports** — which completes every module of Part 4)
 **Branch:** `part-1-foundation` — **nothing pushed, ever.** Count the commits
 with `git log --oneline main..HEAD | wc -l`; a number written here goes stale on
 the next commit, including the one that updates this file.
@@ -36,21 +36,25 @@ sessions — Parts 3 and 4 will each span several.
 | 1 | Foundation: tenancy, enrolments, RBAC, audit, jobs, documents | **backend complete** |
 | 2 | Admission, including the public online portal | **backend complete; Checkpoint 2 passes in tests** |
 | 3 | Fees rebuild + attendance + timetable | **backend complete; Checkpoint 3 passes in tests** |
-| 4 | Examinations, HR/payroll, transport, communication, reports | **examinations, report cards, HR and payroll done — both halves of Checkpoint 4 pass; transport, communication and reports not started** |
+| 4 | Examinations, HR/payroll, transport, communication, reports | **every module built.** Two of Checkpoint 4's three items pass in tests; the third is `CONFIGURATION-GUIDE.md`, not yet written |
 
 ---
 
 ## 2. Verified current state
 
 Measured on 8 September 2026 by running the commands below, not recalled.
+Reports landed after the previous revision of this table; every figure below
+was re-measured, not adjusted.
 
 | Measure | Value |
 |---|---|
-| Backend tests | **522 passing**, ~108 s |
+| Backend tests | **567 passing**, ~130 s |
 | Database tables | **85, plus `alembic_version`** |
 | Alembic migrations | **29** (verified from empty **on Postgres**, then seed, then worker) |
-| API surface | **210 paths, 259 operations** |
-| Permissions / system roles | **77** / 14 |
+| API surface | **214 paths, 263 operations** |
+| Permissions / system roles | **77** / 14 — reports added none; it reuses each module's own |
+| Report library | **21 reports over 9 categories**, declared in `core/report_registry.py`. No new tables |
+| Modules | **11**, all now `built=True` (`reports` is new; `admission` and `hr` were stale) |
 | Job handlers | `fees.overdue_sweep`, `fees.generate_invoices`, `admission.offer_sweep`, `transport.document_expiry`, `comms.dispatch`, `system.heartbeat` |
 | Demo school | 100 students, 10 sections, 12 teachers, 98 guardians — **84 of them with an email address**, and 14 deliberately without |
 | Demo fee ledger | 300 invoices, **900 lines** (810 + 90 transport), 170 payments, 410 allocations, 2 sibling concessions |
@@ -95,7 +99,7 @@ Measured on 8 September 2026 by running the commands below, not recalled.
 
 ```bash
 cd backend
-../.venv/Scripts/python.exe -m pytest -q                    # 522 passed
+../.venv/Scripts/python.exe -m pytest -q                    # 567 passed
 ../.venv/Scripts/python.exe -m alembic upgrade head
 ../.venv/Scripts/python.exe seed.py
 ../.venv/Scripts/python.exe worker.py --once                # runs due jobs
@@ -506,7 +510,81 @@ Design decisions in Part 4 that a later session should not undo:
 
 ---
 
+### Part 4, 8 September — reports
+
+Four commits. The first two were not reports at all; they were what reading the
+ground turned up before a report existed to leak through it.
+
+**`ed80db0` Filter the student roster on the school that asked for it.** The
+brief was to start with two controls that gate nothing. Underneath them was
+something worse and still open: `/admin/students` never filtered on `school_id`
+at all. A rival school's child appeared in the roster, could be opened by id,
+and could be renamed by PATCH. This is the §4 family — carrying the tenant key
+without filtering on it — still live on the largest table of personal data in
+the system, and an export over that query would have handed a stranger's roster
+over as a file. Fixed at the chokepoint: `scoping.assert_can_read_student` now
+checks the tenant before any role rule, which closes it for all thirteen of its
+callers rather than for the one route that was noticed. It answers 404 rather
+than 403, because whether another customer has a student with that id is not
+this school's business either. Four regression tests, each confirmed failing
+first.
+
+**`aa712d8` Make the export permission and the export audit gate something.**
+`GET /admin/students/export` is now the only way to get the roster as a file. It
+demands `students.profile.export` **school-wide**, so neither a teacher's
+blanket read nor a guardian's own-children grant reaches it, and every download
+writes an `AuditAction.export` row naming actor, filters and count — the first
+time that enum member has ever been written. The audit goes in `audit_log`, not
+the `export_audit` table §5.10.5 lists. The rows come from `_roster()`,
+extracted so the screen and the download run the *same statement*; that is the
+shape every report after it follows. The columns are the roster's own plus
+guardian contact — deliberately not date of birth, address or custom fields, because
+an export is where over-collection becomes permanent.
+
+**`90b0def` Write the three management figures nobody owned, where the data
+lives.** Of §5.10.10's nine KPIs, four had no function. One — chronic
+absenteeism — turned out to be `attendance.shortage()` under another name and
+was left alone rather than given a synonym. The other three were written in the
+service that owns the data: `payroll.cost_by_month()` (approved and paid runs
+only, employer cost not net pay), `stats.student_teacher_ratio()` (both
+headcounts from `totals()`, so it cannot disagree with the dashboard), and
+`stats.enrolment_trend()` (retention against the year before; the first year is
+`null`, not 0 or 100). `stats.revenue_vs_expense()` computes neither number — it
+lines up `fee_trend()` and `cost_by_month()` and leaves the missing half null,
+because a zero staff cost in a month payroll has not been approved reads as a
+month the staff worked free. Also the stale `built=False` on `admission` and
+`hr`, both built since Parts 2 and 4.
+
+**`53fc047` Give the arithmetic Parts 2 to 4 wrote a governed home.** Three
+files: `core/report_registry.py` (21 reports, each naming permission, module,
+parameters and reach), `services/reports.py` (the gate, and one thin runner per
+report), `api/admin/reports.py` (library, viewer, export centre). Every runner
+is one line calling the function that owns its number; none writes arithmetic.
+**No new tables** — see §9.1 below for the reasoning, which is also in the
+registry docstring so the next reader can disagree on the evidence.
+
+---
+
 ## 4. Things that would be expensive to rediscover
+
+**A report must be refused on scope as well as on permission, and the
+school-wide check is not what does it.** `require_permission(..., school_wide=True)`
+stops a guardian, whose grants are scoped to their own children. It does not
+stop a *teacher*, because a teacher holds `attendance.record.read` and
+`exam.marks.read` school-wide by design — the restriction has always lived in
+the service (see the entry below). So `reports._authorise()` does both: the
+permission school-wide, and then a teacher narrowed to a section they actually
+teach through `scoping.assert_teaches_section`. Building only the first half
+would have looked correct, passed a guardian test, and handed every class
+teacher the whole school. Proved load-bearing by disabling the branch and
+watching two tests fail.
+
+**`pathlib.write_text()` on Windows defaults to cp1252, not UTF-8.** A patch
+script that round-tripped a source file through `read_text()`/`write_text()`
+mangled every em dash into an undecodable byte and produced a `SyntaxError`
+inside a docstring — which reads like a Python problem and is an encoding
+problem. Always pass `encoding="utf-8"` to both. Cost about ten minutes and one
+`git checkout` this session.
 
 **The migration test runs on SQLite, and SQLite hides Postgres bugs.** It does
 not enforce foreign keys and it accepts `1` for a boolean; both cost time on
@@ -904,6 +982,35 @@ Deliberately, and each for a stated reason:
 - **Four of the six senders.** Admission, fee receipts, results published,
   leave cover and payslips still have nothing that sends them. See §9.
 
+### Part 4 reports — what is not built
+
+Left out deliberately, and named here rather than half-built:
+
+- **A custom / ad-hoc report builder.** A query builder behind a records
+  clerk's screen is the injection surface §3.16 refused a `formula`
+  calculation method over. The registry declares what each report takes, and
+  an undeclared parameter is a 422 naming the ones that exist.
+- **Board and statutory return formats.** Nobody has produced the actual form.
+- **Watermarking** (§5.10.9 says "can be") and download-expiry tracking. The
+  `requested -> generated -> downloaded -> expired` export lifecycle of
+  §5.10.7 is not modelled; an export is one audited event.
+- **Drill-down as a stored concept.** It is a UI behaviour over the same
+  functions.
+- **`saved_reports` and `report_schedules`.** The two entities of §5.10.5 that
+  are probably real, and neither is built. A school storing its own filter
+  sets is a genuine want nobody has asked for yet; a scheduled report emailing
+  a PDF each Monday is `services/jobs.py` plus `comms.notify()`, both of which
+  exist, rather than a new mechanism.
+- **Asynchronous running.** Every report is synchronous. §5.10.9's heavy-report
+  rule and `report_runs` arrive together or not at all, and nothing here has
+  been measured as slow at 100 students.
+- **PDF output.** CSV only. `app/pdf/` exists for receipts and report cards if
+  a report ever needs it.
+- **Receivables ageing** as its own report. `fees.defaulters()` carries
+  `days_overdue` and `oldest_due_date` per family, which is the same data
+  un-bucketed; the buckets are a decision nobody has made.
+- **Nothing in `web/` knows reports exist.** Same as transport and the outbox.
+
 ### Part 1 — infrastructure still owed
 
 **The backend list from §12 is now done.** What Part 1 still owes is
@@ -1013,6 +1120,13 @@ Raised by communication, none blocking:
 | S | **Should fee reminders be unrefusable?** `MANDATORY_CATEGORIES` holds `emergency` and `attendance` — the two §5.9.9 names. A school that wants its dues reminders to override an opt-out is making a policy choice somebody should make out loud; it is one line. | Before go-live |
 | T | **Is email-only viable for this school?** §0.11 chose it, and the demo showed the assumption underneath: a Lucknow school collects mobile numbers, not addresses. 84 of 98 seeded guardians have an email only because the seed now gives them one. If a real school's parents are 40% reachable, SMS stops being a v2 nicety. `/admin/comms/unreachable` is the number to look at first. | Before the first real circular |
 
+Raised by reports, none blocking:
+
+| # | Question | Needed by |
+|---|---|---|
+| U | **Should `/admin/attendance/shortage` and `/admin/attendance/absentees` be open to a class teacher for the whole school?** They are today, and it was verified rather than assumed: a `TCH001` token gets 200, not 403. They are gated on `attendance.record.read` school-wide, which a teacher holds — §4's "a teacher's permissions are unscoped; the restriction is in the service" — and these two routes never applied the service half. §5.10.8 says class teacher, own section. The **report** versions are narrowed correctly; these two pre-existing screens are not. Left alone deliberately: narrowing them changes what the teacher app can call, which is a decision and not a tidy-up. | Before go-live |
+| V | **What is the attendance shortage threshold for this school?** 75% is the default in `attendance.shortage()` and it is a bare constant, not a setting — unlike the late fee, the sibling concession and the teacher load ceiling, which all live in `core/settings_registry.py` (CLAUDE.md: money rules are settings, not constants). The report exposes it as a parameter, so a school can pass its own, but the default is still a number in code. | Before a real school's first term |
+
 Raised by payroll, none blocking:
 
 | # | Question | Needed by |
@@ -1023,18 +1137,26 @@ Raised by payroll, none blocking:
 
 ---
 
-## 9. Where to start next session — reports, then the two guides
+## 9. Where to start next session — the two guides
 
-**Transport and communication are both done.** What remains of Part 4 is
-**reports**, and then `CONFIGURATION-GUIDE.md` and `EXTENSION-GUIDE.md`.
+**Reports is done.** Part 4's last module landed on 8 September: 21 reports in
+a registry, the gate, the library, the viewer and an audited CSV export, over
+`567` passing tests. What remains of Checkpoint 4 is
+**`CONFIGURATION-GUIDE.md`**, and after it **`EXTENSION-GUIDE.md`**. The owner
+asked for both to be held until the modules were clear; they now are.
 
-Communication shipped as an outbox with a delivery record, an email provider
-behind a seam, versioned templates, opt-out with a stated override, quiet
-hours, bulk approval, and an emergency broadcast on its own permission and its
-own endpoint. **Two of the six senders in the wiring table are connected** —
-the fee defaulter chase and the transport compliance alert — plus the notice
-board. The other four are the first thing to pick up if you want more of
-communication before reports:
+The other candidate work, in the order it is worth doing:
+
+| Where | What |
+|---|---|
+| Communication | Four of the six senders in the wiring table are still unconnected — see the table below |
+| §8 items U and V | Two scope and configuration questions reports raised; U is a live inconsistency between a report and the screen beside it |
+| `web/` | Further behind than ever: examinations, HR, payroll, transport, communication and now reports have all landed since anyone opened it |
+| Push and CI | 73 commits, never pushed, CI has never run |
+
+**Two of the six senders in the wiring table are connected** — the fee
+defaulter chase and the transport compliance alert — plus the notice board. The
+other four:
 
 | Where | Still to wire |
 |---|---|
@@ -1052,171 +1174,66 @@ corrupt something that matters.
 
 ---
 
-### 9.1 Reports (§5.10) — the last module
+### 9.1 What reports actually became, and what was argued down
 
-Last on purpose, because it describes what everything else built. Most of the
-arithmetic already exists; what does not exist is a governed home for it.
+The brief proposed a report registry in code over §5.10.5's four-plus-four
+tables, and asked for a disagreement if there was one. There was not; the
+evidence went the same way, and the reasoning is in the docstring of
+`core/report_registry.py` so it can be argued with on the evidence rather than
+from memory.
 
-**Before anything else, two things this brief checked rather than assumed.**
-Both are the same shape as the `FeeHeadType.optional` defect transport found —
-a control that exists in the vocabulary and is enforced nowhere:
+**No new tables.** Applying the test transport and communication both used —
+does anything read it yet:
 
-- **`AuditAction.export` is referenced zero times in `app/`.** The enum member
-  has been there since Part 1. §5.10.9 requires that exports of personal data
-  be audited — who, what, when, how many rows — and nothing has ever written
-  one.
-- **`students.profile.export` is granted to the Admin Officer and required by
-  no route.** Grep `app/api/` for it and there are no hits. The permission that
-  exists specifically to separate "may see this on screen" from "may download
-  two thousand of them" currently gates nothing, so the separation §10.2 is
-  proud of is decorative. Reports is the module that either makes it real or
-  should delete it.
+- **`export_audit` is `audit_log`.** It already had the tenant key, the actor,
+  the timestamp and the JSON payload, and `AuditAction.export` was the enum
+  member waiting for it. It is now written by both export routes.
+- **The four summary tables are not built.** `attendance_summary`,
+  `fee_collection_summary`, `result_summary` and `admission_funnel_summary` are
+  a performance answer to a problem nobody has measured. 100 students and 300
+  invoices do not need them, and a materialised summary that can disagree with
+  the ledger it summarises is exactly the drift §5.10.9 forbids — bought for
+  speed nobody asked for. Build one when a query is measured slow.
+- **`report_runs` is not built.** It earns its table alongside asynchronous
+  running. These reports are synchronous, so a run row records nothing anybody
+  reads.
+- **`saved_reports` and `report_schedules` are not built either**, though they
+  are the two that are probably real. A scheduled Monday email is
+  `services/jobs.py` plus `comms.notify()`, both of which exist.
 
-Fixing those two is the smallest useful first commit, and it is worth doing
-before any report exists to leak through.
+**The gate is two checks, not one, and that is the part worth remembering.**
+Demanding the permission school-wide stops a guardian, whose grants are scoped
+to their own children. It does **not** stop a teacher: `attendance.record.read`
+and `exam.marks.read` are held school-wide by design, with the restriction in
+the service (§4). So `reports._authorise()` also narrows a teacher to a section
+they teach, through `scoping.assert_teaches_section` rather than a fresh check.
+Building only the first half would have looked right and handed every class
+teacher the whole school.
 
----
+**Reports reuse; they do not recompute.** Every runner in `services/reports.py`
+is one line calling the function that owns its number. Where §5.10.10 named a
+KPI with no owner, the number was written in the owning service first and the
+report calls it — `payroll.cost_by_month()`, `stats.student_teacher_ratio()`,
+`stats.enrolment_trend()`, `stats.revenue_vs_expense()`. Chronic absenteeism
+turned out to be `attendance.shortage()` already and was left alone.
 
-**The rule with teeth: a report obeys the same permission and scope as the
-screen.** §5.10.9 calls a report becoming a way to see rows you cannot see
-directly *the most common data-leak path in an ERP*. The seam already exists —
-`require_permission()` at the route, `services/scoping.py` over the rows — so a
-report must go through both and never assemble its own query outside them.
+**Two things a future report must not undo.** No fabricated data points: the
+owning functions already omit an empty month rather than emitting a zero bar,
+and the report layer must not helpfully put it back. And every output carries
+its academic year, filter set and generation timestamp — in the JSON `meta`
+block, and as the `#` first line of every CSV.
 
-The realistic failure is not malice, it is convenience: a report service that
-takes `school_id` and builds its own `select()` is faster to write than one
-that goes through the scoping helpers, and it silently serves a class teacher
-the whole school. **CLAUDE.md §4 already records this happening once** — four
-read paths carried `school_id` without filtering on it, and two genuinely
-leaked. `tests/test_tenant_isolation.py` plants a rival school and is where the
-next such check belongs. Add a guardian and a class teacher to it for the
-report routes, not only a second tenant.
+### 9.2 Where the report library is, in four files
 
-**Numbers must reconcile.** One definition, not two queries that drift. This
-has now bitten or been deliberately avoided three times, which is why it is the
-rule stated most often in this file:
-
-- `stats.exam_percentages()` and `report_card()` had to be held to the same
-  arithmetic when absent marks arrived, and a test pins them together;
-- `/admin/transport/charges` calls the same `charges_for_month()` the fee run
-  uses rather than recomputing it;
-- `fees.defaulters()` was moved out of its route this session precisely so the
-  chase and the screen could not disagree.
-
-**A report that needs a number must call the function that owns it.** If the
-function does not exist yet, write it in the owning service and let the report
-call it — never the reverse.
-
-**Every report states its academic year, filter set and generation timestamp on
-the output** (§5.10.9). A printed report with no context is a report that will
-be misquoted in a board meeting, and this system has already had one document
-class that needed freezing for exactly that reason (§0.8, report cards).
-
-**No fabricated data points**: a month with no invoices shows no bar rather
-than a zero bar. `fees.collection()` already does this deliberately; §5.10.9
-makes it system-wide. `comms.preview()` had to be fixed for this in the same
-session it was written — it returned a hardcoded `"unreachable": 0` — so the
-temptation is real and recent.
-
----
-
-**What already exists, and is the actual content of the report library.**
-Verified by reading the services on 8 September, not recalled:
-
-| Service | Functions a report would call |
+| File | What it holds |
 |---|---|
-| `services/stats.py` | `totals`, `exam_percentages`, `performance`, `top_performers`, `fee_trend`, `month_attendance`, `today_schedule` |
-| `services/fees.py` | `daybook`, `defaulters`, `collection`, `ledger`, `outstanding_invoices`, `late_fee_charged` |
-| `services/attendance.py` | `summarise`, `absentees`, `section_summary`, `student_month`, `student_percent`, `shortage`, `working_days` |
-| `services/timetable.py` | `workload`, `completeness`, `grid`, `free_teachers`, `day_plan` |
-| `services/payroll.py` | `register`, `cost_by_department`, `totals` |
-| `services/admission_reports.py` | `funnel`, `by_source`, `seat_utilisation`, `demographics`, `rejections`, `cycle_time`, `dashboard` |
-| `services/transport.py` | `seats` (route utilisation), `expiring_papers`, `charges_for_month`, `awaiting_assignment` |
-| `services/comms.py` | `delivery_report`, `unreachable_contacts` |
+| `app/core/report_registry.py` | The 21 definitions. Each names a permission, a module, its parameters and its reach. A report cannot exist without a permission — the field is required to construct one |
+| `app/services/reports.py` | `_authorise()` (the gate), `_coerce()` (parameters), `RUNNERS` (one line each), `run()`, `available()` |
+| `app/api/admin/reports.py` | `GET /admin/reports` (library), `/{code}` (viewer), `/{code}/export` (audited CSV) |
+| `tests/test_reports.py` | 24 tests. `test_every_registered_report_runs` is the one that earns its keep: a registry entry whose function has drifted is otherwise found by whoever opens that report in front of somebody |
 
-That is most of §5.10.10 already written. **Reports is mostly a matter of
-giving these a governed, permission-checked home and a report library — not of
-writing new arithmetic.** Where a §5.10.10 KPI has no function above (revenue
-versus expense by month, enrolment and retention trend, student:teacher ratio,
-chronic absenteeism), write it in the owning service.
-
----
-
-**Entities: what §5.10.5 lists, and what is likely to earn its table.**
-
-§5.10.5 names `saved_reports`, `report_schedules`, `report_runs`,
-`export_audit`, and four summary tables. Apply the same test transport and
-communication used — does anything read it yet?
-
-- **`export_audit` should not be a table.** `audit_log` already has the shape,
-  the tenant key, the actor and the JSON payload, and `AuditAction.export` is
-  the member waiting for it. A second audit trail is a second place to forget
-  to look.
-- **The four summary tables are a performance answer to a problem nobody has
-  measured.** 100 students and 300 invoices do not need `attendance_summary`;
-  a materialised summary that can disagree with the ledger it summarises is the
-  drift §5.10.9 forbids, bought in exchange for speed nobody has asked for.
-  Leave them until a query is actually slow, and say so.
-- **`report_runs` earns its table only alongside async running** (§5.10.9's
-  heavy-report rule). If reports are synchronous for now, a run row records
-  nothing anybody reads.
-- **`saved_reports` and `report_schedules` are the two that are probably
-  real** — but note that a scheduled report emailing a PDF each Monday is
-  `services/jobs.py` plus `comms.notify()`, both of which now exist, rather
-  than a new mechanism.
-
-A defensible v1 is: **a report registry in code** (the same shape as
-`core/permissions.py`, `core/modules.py`, `core/message_templates.py` and
-`fees.OPT_IN_SOURCES` — this codebase has a strong precedent for it), each
-entry naming its permission, its parameters and the service function it calls;
-plus `saved_reports` if a school genuinely needs to store its own filter sets.
-That gives the Report Library of §5.10.3 without four tables nothing reads.
-
----
-
-**Leave out of this module**, and say so rather than half-building:
-
-- Custom/ad-hoc report builder. A query builder behind a records clerk's screen
-  is the injection surface §3.16 refused a `formula` calculation method over.
-- Board/statutory return formats — nobody has produced the actual form.
-- Watermarking (§5.10.9 says "can be"), and download-expiry tracking.
-- Drill-down as a stored concept; it is a UI behaviour over the same functions.
-
----
-
-**One reporting wrinkle transport introduced**, worth deciding rather than
-inheriting: a fee plan's `monthly_total` sums its items, and the transport item
-carries zero because the real price is on the stop's slab. So class 10's plan
-reads ₹2,800 — correct for a child who does not take the bus, and short by the
-slab for one who does. `tests/test_fee_setup.py` pins it. A "what does this
-child actually pay" figure has to consult the opt-in, which is
-`charges_for_month()`.
-
-**And one piece of stale bookkeeping to fix in passing:** `core/modules.py`
-still says `built=False` for `admission` and `hr`, both of which are built. It
-is the honest-bookkeeping field, so it should be honest.
-
----
-
-### 9.2 What Parts 3 and 4 built that reports should reuse
-
-| Reach for | Rather than |
-|---|---|
-| `services/jobs.py` (`@handler` **in `app/jobs.py`**, `enqueue`, schedules) | any inline send, or a new alerting mechanism |
-| `documents` and `OwnerType.vehicle` | a new table for vehicle papers |
-| `employees` | a `drivers` table |
-| `services/timetable.py::conflicts()` | a fresh clash checker |
-| `holidays` and `attendance.working_days()` | a second calendar, anywhere |
-| `services/grading.py` versioning + freeze | a second frozen-document mechanism for message templates |
-| `audit.next_number()` | any `max(seq) + 1` for a document number |
-| `fees.primary_contact()` | a third way to find who to ring |
-| `core/settings_registry.py` | new columns for policy switches (§3.15) |
-| `services/school_settings.py::module_enabled` | a UI-only feature switch |
-| `fees.OPT_IN_SOURCES` | a second way to say "bill only those who chose this" |
-| `comms.notify()` and `core/message_templates.py` | any new way to send anything |
-| `fees.defaulters()` | a second defaulter query; it moved out of its route so the chase and the screen could agree |
-| `NOT_BLANKET_READ` | naming a sensitive permission `.read` and hoping |
-| `tests/test_tenant_isolation.py` | writing a new cross-tenant check from scratch |
+Adding a report is one registry entry and one runner line. If it needs a number
+nobody owns, write that in the owning service and call it — never the reverse.
 
 ### 9.3 Checkpoint 4
 
@@ -1226,7 +1243,8 @@ is the honest-bookkeeping field, so it should be honest.
   (`tests/test_payroll.py::test_a_payroll_run_completes_for_the_demo_school`,
   now 16 payslips).
 - A non-technical reader can change a fee rule using only
-  `CONFIGURATION-GUIDE.md` — **held until the owner clears the modules above.**
+  `CONFIGURATION-GUIDE.md` — **the only one left, and now unblocked.** Every
+  module it has to describe is built.
 
 ### 9.4 Before starting
 
@@ -1238,11 +1256,26 @@ is the honest-bookkeeping field, so it should be honest.
    and CI has never run, so the first push is also the first CI run — expect it
    to find something, and it grows with every part that lands.
 4. The web dashboard is further behind than ever: known broken against the fee
-   API (§7), and examinations, HR, payroll, transport and communication have all landed
-   since anyone last opened it. Nothing in `web/` knows transport or the
-   outbox exists.
+   API (§7), and examinations, HR, payroll, transport, communication and now
+   reports have all landed since anyone last opened it. Nothing in `web/` knows
+   transport, the outbox or the report library exists.
 
-**Two warnings from this session.**
+**Warnings from the reports session (8 September).**
+
+**Read the ground before trusting a brief, including this one.** The reports
+brief opened with two controls that gated nothing, and both were real. What it
+did not know was that `/admin/students` had no tenant filter at all — a defect
+of the family §4 already documents, still live, on the largest table of personal
+data in the system. It was found by writing a probe test against the running
+suite rather than by reading the route, and the route reads fine. **When a
+module is about to expose existing queries in a new way, probe the queries.**
+
+**Two pre-existing screens were left deliberately unfixed** — see §8 item U.
+`/admin/attendance/shortage` and `/admin/attendance/absentees` answer a class
+teacher for the whole school. The report equivalents do not. Narrowing the
+screens changes what the teacher app may call, which is the owner's decision.
+
+**Earlier warnings that still stand.**
 
 `fees.generate()` commits internally. Poking at it from a throwaway script does
 **not** roll back — doing so left a stray fee head, a plan item and a hundred
@@ -1253,7 +1286,12 @@ And **the demo school's id is not reliably 1.** `seed.py::wipe()` truncates
 without `RESTART IDENTITY`, so a reseed over an existing database produces
 id 2. A throwaway probe that hardcodes `school_id=1` returns empty results and
 looks exactly like a bug in the code it is probing — it cost twenty minutes
-this session. Read the id from `schools`.
+in the transport session. Read the id from `schools`. A related one caught this
+session: a throwaway script using `app.core.db.SessionLocal` talks to the
+**dev** database from `DATABASE_URL`, not to `sunrise_test`, and the dev one is
+several parts behind — the missing table it reports is stale schema, not a bug
+in the code being probed. Probe through pytest, which uses the seeded test
+database the suite does.
 
 The memory file `sunrise-erp-build.md` carries the same state in short form for
 a session that starts cold.

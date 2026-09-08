@@ -23,7 +23,7 @@ branches of one school. A tenant is a customer. Work is on branch
 
 ```bash
 cd backend
-../.venv/Scripts/python.exe -m pytest -q          # 522 tests, ~108s
+../.venv/Scripts/python.exe -m pytest -q          # 567 tests, ~130s
 ../.venv/Scripts/python.exe -m pytest tests/test_rbac.py -q       # one file
 ../.venv/Scripts/python.exe -m alembic upgrade head
 ../.venv/Scripts/python.exe seed.py               # idempotent
@@ -101,6 +101,11 @@ Postgres runs natively on this machine, not in Docker. `make testdb` uses
   fabricates rows cannot catch a bug in the code that will produce them.
 - **Seeded invoices already carry late fees**, because collection assesses the
   fine before allocating. Do not assume a seeded invoice has a round amount.
+- **A report is gated twice, not once.** `require_permission(school_wide=True)`
+  stops a guardian; it does not stop a teacher, who holds most `.read`
+  permissions school-wide with the restriction in the service. Reports go
+  through `services/reports.py::_authorise()`, which does both. Add a report by
+  adding a registry entry and a runner — never by writing a query.
 - **Money rules are settings, not constants.** The late fee, the sibling
   concession, the due day and the teacher load ceiling all live in
   `core/settings_registry.py`; changing behaviour by editing a number in code
