@@ -28,8 +28,6 @@ export function Attendance() {
     enabled: Boolean(activeClass),
   });
 
-  const marked = (roll.data ?? []).filter((r) => r.status !== null);
-
   return (
     <>
       <Card title="Attendance">
@@ -58,7 +56,7 @@ export function Attendance() {
         </p>
 
         <DataTable
-          rows={marked}
+          rows={roll.data ?? []} // Roster deliberately includes unmarked students so unmarked children are visible
           loading={roll.isLoading}
           error={roll.error}
           empty="No attendance marked for this date yet."
