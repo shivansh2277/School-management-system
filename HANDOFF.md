@@ -1209,7 +1209,7 @@ Measured at the pause, not recalled:
 |---|---|
 | Backend tests | **603 passing** (600 before the slice) |
 | `npx tsc --noEmit` | **exit 0, zero errors** (was 127 mid-slice, by design) |
-| Web tests | **15**, in 4 files — there were none before |
+| Web tests | **24**, in 7 files — there were none before |
 | `npm run api:check` / `npm run build` | both pass |
 | `node smoke.mjs` | passes for all three staff roles against a live backend |
 
@@ -1236,12 +1236,28 @@ What it changed:
   at 16:26, red at 23:15, on identical code. CI runs in UTC and would have met
   all four.
 
-**The one thing outstanding: the final whole-branch review never ran.** Its
-package is already built at
-`.superpowers/sdd/2026-09-08-web-erp-slice-0-foundation/review-final-focused.diff`
-(88 KB, generated files excluded). The ledger beside it holds every ruling and
-every deferred minor. Run that review before treating Slice 0 as closed, and do
-not delete that workspace until it has.
+**The final whole-branch review has now run** (25 commits, `8a63ed7..2fc558f`).
+It raised nine findings; five were fixed before merge and four are scheduled:
+
+- **Fixed:** seven of eleven staff roles landed on a permission-denied panel at
+  login (the Dashboard needs `admin.settings.read` and login sent everyone to
+  `/`); a refused or failed query rendered as an empty table, so a fees-module-off
+  school read "No fee structure configured" about its own money; 422s displayed
+  as "Request failed with 422"; `money()` parsed through a float under a comment
+  saying it must not; no catch-all route.
+- **Before Slice 1:** the registry takes one permission and one module per screen
+  but a screen makes several calls — `/settings` crosses the `fees` module gate
+  undeclared. Make it `permissions[]` / `modules[]` now, not after sixty entries
+  exist. Also: `smoke.mjs` should derive the nav from `screens.ts` as §5 specified
+  rather than only checking for 404s, and request bodies are still untyped while
+  Slices 1-6 are mostly writes.
+- **Backend, scheduled:** four routers declare module gates the backend does not
+  enforce (`students`, `examinations`, `notices`, `teachers`) — a switch that
+  reads off to the office and on to everyone else. And the admin fee routes have
+  no response models, so `Decimal` ships as a JSON **float**; fix before Slice 2
+  posts money back.
+
+**The old note said this review had not run; it has.**
 
 Slices 1-6 and the new Slice 2a (printing — there is still **no admin-side
 receipt PDF**, so a counter clerk cannot print a receipt) are listed in §8 of
