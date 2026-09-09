@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import { useAuth } from "./AuthContext";
-import type { Screen } from "../screens";
+import { missingModule, missingPermission, type Screen } from "../screens";
 
 /**
  * The third gate. Hiding a menu item is not access control - typing /payroll in
@@ -9,26 +9,33 @@ import type { Screen } from "../screens";
  *
  * It renders an in-page refusal rather than redirecting: a redirect on a
  * permission failure reads as a crash to the person it happens to.
+ *
+ * A screen declares every module and every permission its read path needs, and
+ * all of them are required. The refusal names the first one missing, because a
+ * message that says only "not allowed" sends the reader to the source anyway.
  */
 export function RequirePermission({ screen, children }: { screen: Screen; children: ReactNode }) {
   const { can, hasModule } = useAuth();
 
-  if (screen.module !== undefined && !hasModule(screen.module)) {
+  const offModule = missingModule(screen, hasModule);
+  if (offModule !== undefined) {
     return (
       <div className="rounded-card bg-surface border border-rule p-8">
         <p className="font-medium text-ink">Not enabled</p>
         <p className="text-sm text-ink-soft mt-1">
-          The {screen.module} module is not switched on for this school.
+          The {offModule} module is not switched on for this school.
         </p>
       </div>
     );
   }
-  if (!can(screen.permission)) {
+
+  const lacking = missingPermission(screen, can);
+  if (lacking !== undefined) {
     return (
       <div className="rounded-card bg-surface border border-rule p-8">
         <p className="font-medium text-ink">You do not have permission</p>
         <p className="text-sm text-ink-soft mt-1">
-          {screen.label} needs <code>{screen.permission}</code>, which your role does not hold.
+          {screen.label} needs <code>{lacking}</code>, which your role does not hold.
         </p>
       </div>
     );

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { api, money } from "../api/client";
+import { useAuth } from "../auth/AuthContext";
 import { Card, DataTable, FormField, inputClass } from "../components/ui";
 
 type School = {
@@ -43,9 +44,18 @@ export function Settings() {
   // call has been a silent 404 ever since - the reason this slice generates
   // types. The replacement is the fee plan, which carries its own monthly
   // total summed from the items that recur monthly.
+  //
+  // This is the one panel on this screen that crosses a module boundary:
+  // `/admin/fees/plans` sits behind `module_enabled("fees")`, while the rest of
+  // Settings is a school's own profile and is always available. So the panel
+  // gates itself rather than the screen declaring the fees module - a school
+  // with fees switched off must still be able to edit its own name.
+  const { hasModule } = useAuth();
+  const feesOn = hasModule("fees");
   const structures = useQuery({
     queryKey: ["fee-plans"],
     queryFn: () => api.get("/admin/fees/plans") as Promise<Plan[]>,
+    enabled: feesOn,
   });
 
   const bands = useQuery({
@@ -113,6 +123,7 @@ export function Settings() {
         />
       </Card>
 
+      {feesOn && (
       <Card title="Fee structure">
         <DataTable
           rows={structures.data ?? []}
@@ -130,6 +141,7 @@ export function Settings() {
           ]}
         />
       </Card>
+      )}
     </>
   );
 }

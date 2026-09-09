@@ -16,22 +16,42 @@ const venv =
 const python = existsSync(venv) ? venv : "python";
 
 /**
- * Every permission the registry names must exist in the backend catalogue.
+ * Every permission and every module the registry names must exist in the
+ * backend catalogues.
  *
  * A typo here is a screen nobody can open, or a gate that never matches. The
  * backend pins the same property for its report registry
  * (test_every_report_names_a_permission_that_exists); this is the twin.
  */
+function backendList(expr: string): string[] {
+  return JSON.parse(
+    execFileSync(python, ["-c", `import json;${expr}`], {
+      cwd: join(repo, "backend"),
+      encoding: "utf8",
+    }),
+  );
+}
+
 describe("the registry's permissions", () => {
   it("all exist in backend core/permissions.py", () => {
-    const raw = execFileSync(
-      python,
-      ["-c", "import json;from app.core.permissions import PERMISSIONS;print(json.dumps([c for c,_ in PERMISSIONS]))"],
-      { cwd: join(repo, "backend"), encoding: "utf8" },
+    const known = backendList(
+      "from app.core.permissions import PERMISSIONS;print(json.dumps([c for c,_ in PERMISSIONS]))",
     );
-    const known: string[] = JSON.parse(raw);
     for (const screen of SCREENS) {
-      expect(known, `${screen.path} names ${screen.permission}`).toContain(screen.permission);
+      for (const permission of screen.permissions) {
+        expect(known, `${screen.path} names ${permission}`).toContain(permission);
+      }
+    }
+  });
+
+  it("all module codes exist in backend core/modules.py", () => {
+    const known = backendList(
+      "from app.core.modules import MODULES;print(json.dumps([m.code for m in MODULES]))",
+    );
+    for (const screen of SCREENS) {
+      for (const code of screen.modules ?? []) {
+        expect(known, `${screen.path} names module ${code}`).toContain(code);
+      }
     }
   });
 });
