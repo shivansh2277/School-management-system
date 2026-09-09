@@ -59,3 +59,24 @@ describe("the index route at /", () => {
     vi.doUnmock("./auth/AuthContext");
   });
 });
+
+describe("an unregistered path", () => {
+  it("renders a not-found panel inside the shell instead of a blank pane", async () => {
+    vi.resetModules();
+    vi.doMock("./auth/AuthContext", () => ({
+      useAuth: () => ({
+        me: feeCollector,
+        loading: false,
+        login: vi.fn(),
+        logout: vi.fn(),
+        can: (p: string) => feeCollector.permissions.includes(p),
+        hasModule: (c: string) => feeCollector.modules.includes(c),
+      }),
+    }));
+    const { App: MockedApp } = await import("./App");
+    renderWithAuth(<MockedApp />, feeCollector, "/nowhere");
+
+    expect(await screen.findByText("Page not found")).toBeInTheDocument();
+    vi.doUnmock("./auth/AuthContext");
+  });
+});

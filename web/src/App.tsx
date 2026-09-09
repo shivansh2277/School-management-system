@@ -37,6 +37,15 @@ function Home() {
   return <Navigate to={first.path} replace />;
 }
 
+function NotFound() {
+  return (
+    <div className="rounded-card bg-surface border border-rule p-8">
+      <p className="font-medium text-ink">Page not found</p>
+      <p className="text-sm text-ink-soft mt-1">There is nothing at this address.</p>
+    </div>
+  );
+}
+
 export function App() {
   return (
     <Routes>
@@ -62,6 +71,7 @@ export function App() {
             }
           />
         ))}
+        <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
   );
