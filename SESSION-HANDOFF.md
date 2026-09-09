@@ -212,9 +212,32 @@ were already found. A red first run is information, not a sign that something
 broke locally. Budget a round of CI fixes after the push.
 
 **Check before pushing:** `backend/var/` is gitignored (it once staged 302
-uploaded PDFs), no `.env` or credential is staged, and `web/smoke.mjs` contains
-three demo passwords — seed credentials, low stakes, but the owner should know
-they are going public.
+uploaded PDFs) and no `.env` is staged. The demo passwords have already been
+cleaned out of `web/smoke.mjs` (it now requires `SMOKE_PASSWORD`) and
+`PASSWORDS.md` is gitignored and untracked — verified.
+
+**But default passwords remain in application code, and they are product
+behaviour rather than test data:**
+
+```
+backend/app/api/admin/students.py:45   password: str = "Parent@123"
+backend/app/api/admin/students.py:65   password: str = "Student@123"
+backend/app/api/admin/teachers.py:37   password: str = "Teacher@123"
+backend/app/services/conversion.py:51  DEFAULT_STUDENT_PASSWORD = "Student@123"
+backend/app/services/conversion.py:52  DEFAULT_GUARDIAN_PASSWORD = "Parent@123"
+```
+
+So every account a real school creates without supplying a password — including
+every applicant converted to a student, which is the normal path — gets a
+password that will be in a public repository the moment this branch is pushed.
+The literals in `seed.py`, `conftest.py` and the tests are fine; these five are
+not, because they are what production does.
+
+**This is the owner's decision, not yours.** The options are roughly: require a
+password at creation (a 422 rather than a default); generate a random one and
+return it once for the office to hand over; or keep the default and force a
+change at first login. Raise it before pushing and let him choose — do not pick
+one, and do not push without telling him this is in the diff.
 
 ---
 
