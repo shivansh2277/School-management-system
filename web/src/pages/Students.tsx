@@ -37,7 +37,7 @@ export function Students() {
   if (q) params.set("q", q);
   if (classId) params.set("class_section_id", classId);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["students", q, classId],
     // Page.items is untyped in the schema (a generic pagination envelope), so
     // the real item shape is asserted here rather than re-declared.
@@ -86,6 +86,7 @@ export function Students() {
         <DataTable<Row>
           rows={data?.items ?? []}
           loading={isLoading}
+          error={error}
           onRowClick={(r) => setOpenId(r.id)}
           empty="No students match this filter."
           columns={[

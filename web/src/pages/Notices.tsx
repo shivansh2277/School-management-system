@@ -93,6 +93,7 @@ export function Notices() {
         <DataTable
           rows={list.data ?? []}
           loading={list.isLoading}
+          error={list.error}
           empty="Nothing published yet."
           columns={[
             { key: "title", header: "Title", render: (n) => n.title },

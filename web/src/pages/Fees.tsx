@@ -97,6 +97,7 @@ export function Fees() {
         <DataTable
           rows={invoices.data ?? []}
           loading={invoices.isLoading}
+          error={invoices.error}
           empty="No invoices for this month yet. Use Generate invoices."
           columns={[
             { key: "name", header: "Student", render: (i) => i.student_name },

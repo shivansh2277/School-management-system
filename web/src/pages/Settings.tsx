@@ -99,6 +99,7 @@ export function Settings() {
         <DataTable
           rows={bands.data ?? []}
           loading={bands.isLoading}
+          error={bands.error}
           empty="No grade bands configured."
           columns={[
             { key: "grade", header: "Grade", render: (r) => r.grade },
@@ -116,6 +117,7 @@ export function Settings() {
         <DataTable
           rows={structures.data ?? []}
           loading={structures.isLoading}
+          error={structures.error}
           empty="No fee structure configured."
           columns={[
             { key: "class", header: "Class", render: (r) => r.class_name },

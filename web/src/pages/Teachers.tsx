@@ -14,7 +14,7 @@ type Row = {
 };
 
 export function Teachers() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["teachers"],
     // /admin/teachers has no response_model in the schema; Row documents it.
     queryFn: () => api.get("/admin/teachers") as Promise<Row[]>,
@@ -25,6 +25,7 @@ export function Teachers() {
       <DataTable<Row>
         rows={data ?? []}
           loading={isLoading}
+          error={error}
         empty="No teachers on record."
         columns={[
           { key: "emp", header: "Employee ID", render: (r) => r.employee_code },

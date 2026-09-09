@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { ApiError } from "../api/errors";
 import { statusColor, theme } from "../theme";
 
 export function Card({ title, children, action }: { title?: string; children: ReactNode; action?: ReactNode }) {
@@ -42,12 +43,28 @@ export function Empty({ children }: { children: ReactNode }) {
   return <p className="text-sm text-ink-faint py-6 text-center">{children}</p>;
 }
 
+/**
+ * A distinct message for a query that failed, so a 403/404/500 never reads
+ * as "we checked and there is genuinely nothing here" - which for a fee
+ * structure or an invoice list is a false statement about the school's
+ * money, not a cosmetic gap.
+ */
+function ErrorState({ error }: { error: unknown }) {
+  let message = "Could not load this. Try again.";
+  if (error instanceof ApiError) {
+    if (error.status === 403) message = "Refused: your role does not have permission to view this.";
+    else if (error.status === 404) message = "Not available for this school.";
+  }
+  return <p className="text-sm text-danger py-6 text-center">{message}</p>;
+}
+
 export function DataTable<T>({
   columns,
   rows,
   onRowClick,
   empty,
   loading = false,
+  error,
 }: {
   columns: { key: string; header: string; render: (row: T) => ReactNode; align?: "right" }[];
   rows: T[];
@@ -55,8 +72,11 @@ export function DataTable<T>({
   empty: string;
   /** While fetching, an empty table means "not known yet", not "none exist". */
   loading?: boolean;
+  /** The query's error, if any. Takes priority over the empty state. */
+  error?: unknown;
 }) {
   if (loading && rows.length === 0) return <Empty>Loading...</Empty>;
+  if (error && rows.length === 0) return <ErrorState error={error} />;
   if (rows.length === 0) return <Empty>{empty}</Empty>;
   return (
     <div className="overflow-x-auto">

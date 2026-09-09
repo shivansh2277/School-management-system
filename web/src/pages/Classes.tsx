@@ -62,6 +62,7 @@ function ClassDetail({ row, onClose }: { row: ClassRow; onClose: () => void }) {
       <DataTable
         rows={roster.data ?? []}
           loading={roster.isLoading}
+          error={roster.error}
         empty="No students in this section."
         columns={[
           { key: "roll", header: "Roll", render: (r) => r.roll_no },
@@ -74,6 +75,7 @@ function ClassDetail({ row, onClose }: { row: ClassRow; onClose: () => void }) {
       <DataTable
         rows={timetable.data ?? []}
           loading={timetable.isLoading}
+          error={timetable.error}
         empty="No timetable seeded for this section."
         columns={[
           { key: "day", header: "Day", render: (s) => s.day_of_week.toUpperCase() },

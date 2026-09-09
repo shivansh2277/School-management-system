@@ -57,27 +57,23 @@ export function Attendance() {
           Read only. Attendance is marked by the class teacher in the mobile app.
         </p>
 
-        {roll.isLoading ? (
-          <Empty>Loading...</Empty>
-        ) : marked.length === 0 ? (
-          <Empty>No attendance marked for this date yet.</Empty>
-        ) : (
-          <DataTable
-            rows={roll.data ?? []}
-            empty="No students in this section."
-            columns={[
-              { key: "roll", header: "Roll", render: (r) => r.roll_no },
-              { key: "name", header: "Name", render: (r) => r.full_name },
-              {
-                key: "status",
-                header: "Status",
-                render: (r) =>
-                  r.status ? <Pill status={r.status}>{r.status}</Pill> : <span className="text-ink-faint">-</span>,
-              },
-              { key: "rem", header: "Remarks", render: (r) => r.remarks ?? "-" },
-            ]}
-          />
-        )}
+        <DataTable
+          rows={marked}
+          loading={roll.isLoading}
+          error={roll.error}
+          empty="No attendance marked for this date yet."
+          columns={[
+            { key: "roll", header: "Roll", render: (r) => r.roll_no },
+            { key: "name", header: "Name", render: (r) => r.full_name },
+            {
+              key: "status",
+              header: "Status",
+              render: (r) =>
+                r.status ? <Pill status={r.status}>{r.status}</Pill> : <span className="text-ink-faint">-</span>,
+            },
+            { key: "rem", header: "Remarks", render: (r) => r.remarks ?? "-" },
+          ]}
+        />
       </Card>
 
       <Card title="Section summary (all recorded days)">
