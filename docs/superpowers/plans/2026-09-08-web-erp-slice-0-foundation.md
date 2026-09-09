@@ -21,7 +21,7 @@
 - **Existing UI primitives live in `src/components/ui.tsx`** and are already exported: `Card`, `StatCard`, `Pill`, `Empty`, `DataTable`, `Modal`, `FormField`, `inputClass`. Extend that file; do not create a parallel component library.
 - **Commit after every task.** Commit messages carry the reasoning — why, not just what (CLAUDE.md).
 - **The demo school's id is not 1.** It is whatever `schools` holds; read it, never hardcode.
-- Backend demo logins: admin `admin@sunrisepublic.edu` / `Admin@123`; fee counter `counter@sunrisepublic.edu` / `Admin@123`; transport manager `TRM001` / `Admin@123`. All three log in with `role: "admin"`.
+- Backend demo logins: admin `admin@sunrisepublic.edu`; fee counter `counter@sunrisepublic.edu`; transport manager `TRM001`. All three log in with `role: "admin"`. Passwords are in the gitignored `PASSWORDS.md`.
 
 ---
 
@@ -1297,9 +1297,11 @@ Create `web/smoke.mjs`:
 const BASE = process.argv[2] ?? "http://127.0.0.1:8000";
 
 const STAFF = [
-  { who: "admin", login_id: "admin@sunrisepublic.edu", password: "Admin@123" },
-  { who: "fee counter", login_id: "counter@sunrisepublic.edu", password: "Admin@123" },
-  { who: "transport manager", login_id: "TRM001", password: "Admin@123" },
+  // Superseded: smoke.mjs now takes the password from SMOKE_PASSWORD and
+  // holds none of its own. See PASSWORDS.md (gitignored) for the demo values.
+  { who: "admin", login_id: "admin@sunrisepublic.edu" },
+  { who: "fee counter", login_id: "counter@sunrisepublic.edu" },
+  { who: "transport manager", login_id: "TRM001" },
 ];
 
 /** Endpoints the current screens depend on. Extend as slices add screens. */

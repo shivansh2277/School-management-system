@@ -6,7 +6,10 @@ import { useAuth } from "./AuthContext";
 export function LoginPage() {
   const { me, login } = useAuth();
   const [loginId, setLoginId] = useState("admin@sunrisepublic.edu");
-  const [password, setPassword] = useState("Admin@123");
+  // Not prefilled. This is the staff dashboard, and a password sitting in a
+  // sign-in field is a password in every screenshot and every recording of it.
+  // The demo values are in the gitignored PASSWORDS.md.
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -67,7 +70,7 @@ export function LoginPage() {
         </button>
 
         <p className="text-xs text-ink-faint">
-          Demo admin: admin@sunrisepublic.edu / Admin@123
+          Demo admin: admin@sunrisepublic.edu — password in PASSWORDS.md
         </p>
       </form>
     </div>

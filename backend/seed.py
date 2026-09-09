@@ -6,6 +6,7 @@ twice in a row leaves an identical database. Safe immediately before a demo.
 
 from __future__ import annotations
 
+import os
 import random
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
@@ -296,11 +297,23 @@ PERIOD_TIMES = [
     (time(13, 30), time(14, 0)),
 ]
 
+# The demo passwords, one per role. Overridable in one place: set
+# SUNRISE_DEMO_PASSWORD and every seeded account uses it instead. This is the
+# only file that needs to state them - PASSWORDS.md (gitignored) writes them
+# out for whoever is running the demo, and web/smoke.mjs takes its own from
+# SMOKE_PASSWORD rather than hardcoding one.
+#
+# They are demo credentials for a locally seeded database and protect nothing.
+# The real issue is next door and recorded in ERP_BLUEPRINT sections 5 and 11:
+# accounts created through the API get a fixed default password with no forced
+# change on first login. That is a v0 gap in the product, not in this seed.
+_DEMO_PASSWORD = os.environ.get("SUNRISE_DEMO_PASSWORD")
+
 DEMO_PASSWORDS = {
-    UserRole.admin: "Admin@123",
-    UserRole.teacher: "Teacher@123",
-    UserRole.student: "Student@123",
-    UserRole.parent: "Parent@123",
+    UserRole.admin: _DEMO_PASSWORD or "Admin@123",
+    UserRole.teacher: _DEMO_PASSWORD or "Teacher@123",
+    UserRole.student: _DEMO_PASSWORD or "Student@123",
+    UserRole.parent: _DEMO_PASSWORD or "Parent@123",
 }
 
 

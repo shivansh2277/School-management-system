@@ -10,11 +10,44 @@
  */
 const BASE = process.argv[2] ?? "http://127.0.0.1:8000";
 
+/**
+ * Credentials come from the environment. This file holds none.
+ *
+ * A password committed to a public repository is a password in a search index,
+ * and this script is the only place in the web app that needs a real one. It is
+ * required rather than defaulted: a default is still a committed password, and
+ * a script that silently falls back to a well-known one is the thing that ends
+ * up pointed at staging.
+ *
+ *   SMOKE_PASSWORD='...' node smoke.mjs http://127.0.0.1:8077
+ *
+ * The demo values live in PASSWORDS.md, which is gitignored. Login ids are
+ * overridable too, so this runs against any deployment.
+ */
+const env = process.env;
+const PASSWORD = env.SMOKE_PASSWORD;
+if (!PASSWORD) {
+  console.error(
+    [
+      "SMOKE_PASSWORD is not set.",
+      "",
+      "This script signs in as three staff roles and deliberately holds no",
+      "password of its own. Pass the seeded demo password (see the local,",
+      "gitignored PASSWORDS.md) or the password for whatever you are pointing",
+      "it at:",
+      "",
+      `  SMOKE_PASSWORD='...' node smoke.mjs ${BASE}`,
+      "",
+    ].join("\n"),
+  );
+  process.exit(2);
+}
+
 const STAFF = [
-  { who: "admin", login_id: "admin@sunrisepublic.edu", password: "Admin@123" },
-  { who: "fee counter", login_id: "counter@sunrisepublic.edu", password: "Admin@123" },
-  { who: "transport manager", login_id: "TRM001", password: "Admin@123" },
-];
+  { who: "admin", login_id: env.SMOKE_ADMIN_ID ?? "admin@sunrisepublic.edu" },
+  { who: "fee counter", login_id: env.SMOKE_COUNTER_ID ?? "counter@sunrisepublic.edu" },
+  { who: "transport manager", login_id: env.SMOKE_TRANSPORT_ID ?? "TRM001" },
+].map((s) => ({ ...s, password: PASSWORD }));
 
 /**
  * Endpoints the current screens depend on, with the module each sits behind.

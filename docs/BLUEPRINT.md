@@ -873,14 +873,19 @@ primary colour `#5B4BE0`.
 Marks must be varied enough that the performance donut has all four buckets populated and
 the top-3 list is not a tie.
 
-### Demo credentials (printed on both login screens)
+### Demo credentials
 
-| Role | Login id | Password |
-|---|---|---|
-| Admin | `admin@sunrisepublic.edu` | `Admin@123` |
-| Teacher | `TCH001` | `Teacher@123` |
-| Student | `SPS2024001` | `Student@123` |
-| Parent | `9876500001` | `Parent@123` |
+Login ids are printed on both login screens. Passwords are in `PASSWORDS.md`,
+which is gitignored. **Superseded in part:** admission numbers are now
+`YYYY` + a six-digit counter (§0.21), so the student login is `2024000001`
+and `SPS2024001` no longer exists.
+
+| Role | Login id |
+|---|---|
+| Admin | `admin@sunrisepublic.edu` |
+| Teacher | `TCH001` |
+| Student | `2024000001` |
+| Parent | `9876500001` |
 
 The parent `9876500001` **must be one of the two with two children**, so the switcher is
 visible on the default demo account.

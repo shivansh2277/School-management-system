@@ -811,14 +811,18 @@ normalises with `_utc()`.
 Admission numbers now come from a sequence in the format decided in §0.21:
 `YYYY` + a six-digit counter. The old `SPS2024001` no longer exists.
 
-| Role | Login | Password |
-|---|---|---|
-| Admin | `admin@sunrisepublic.edu` | `Admin@123` |
-| Fee counter clerk | `counter@sunrisepublic.edu` | `Admin@123` |
-| Teacher | `TCH001` | `Teacher@123` |
-| Student | `2024000001` | `Student@123` |
-| Parent | `9876500001` | `Parent@123` |
-| Transport Manager | `TRM001` | `Admin@123` |
+Passwords are in `PASSWORDS.md`, which is gitignored — one per role, set in
+`backend/seed.py::DEMO_PASSWORDS` and overridable with `SUNRISE_DEMO_PASSWORD`.
+
+| Role | Login |
+|---|---|
+| Admin | `admin@sunrisepublic.edu` |
+| Fee counter clerk | `counter@sunrisepublic.edu` |
+| Teacher | `TCH001` |
+| Student | `2024000001` |
+| Parent | `9876500001` |
+| Transport Manager | `TRM001` |
+| Driver | `DRV001` |
 
 `TCH001` still class-teaches 10-A and teaches it Mathematics — the walkthrough
 depends on it, and the seed pins that deliberately. `2024000001` is roll 1 of

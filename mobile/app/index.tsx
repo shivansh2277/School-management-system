@@ -7,11 +7,20 @@ import { useAuth, type Role } from "../src/auth/AuthContext";
 import { Button, Loading, s } from "../src/components/ui";
 import { theme } from "../src/theme";
 
-/** Demo credentials are printed on the login screen so a reviewer gets in unaided. */
-const DEMO: Record<Role, { loginId: string; password: string; hint: string }> = {
-  student: { loginId: "SPS2024001", password: "Student@123", hint: "Admission number" },
-  parent: { loginId: "9876500001", password: "Parent@123", hint: "Registered mobile number" },
-  teacher: { loginId: "TCH001", password: "Teacher@123", hint: "Employee ID" },
+/**
+ * Demo login ids are printed on the login screen so a reviewer gets in
+ * unaided. The passwords are not: a password on a login screen is a password
+ * in every screenshot of it, and this file is public. They are in the
+ * gitignored PASSWORDS.md.
+ *
+ * `SPS2024001` was prefilled here until 9 September 2026 and had not existed
+ * for some time - admission numbers became `YYYY` plus a six-digit counter
+ * (ERP_BLUEPRINT section 0.21), so the demo student login was simply wrong.
+ */
+const DEMO: Record<Role, { loginId: string; hint: string }> = {
+  student: { loginId: "2024000001", hint: "Admission number" },
+  parent: { loginId: "9876500001", hint: "Registered mobile number" },
+  teacher: { loginId: "TCH001", hint: "Employee ID" },
 };
 
 const ROLES: Role[] = ["student", "parent", "teacher"];
@@ -20,7 +29,7 @@ export default function Login() {
   const { me, loading, login } = useAuth();
   const [role, setRole] = useState<Role>("student");
   const [loginId, setLoginId] = useState(DEMO.student.loginId);
-  const [password, setPassword] = useState(DEMO.student.password);
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -30,7 +39,7 @@ export default function Login() {
   const pickRole = (next: Role) => {
     setRole(next);
     setLoginId(DEMO[next].loginId);
-    setPassword(DEMO[next].password);
+    setPassword("");
     setError(null);
   };
 
@@ -110,7 +119,7 @@ export default function Login() {
           <Text style={s.meta}>Demo accounts</Text>
           {ROLES.map((r) => (
             <Text key={r} style={s.meta}>
-              {r}: {DEMO[r].loginId} / {DEMO[r].password}
+              {r}: {DEMO[r].loginId}
             </Text>
           ))}
           <Text style={[s.meta, { marginTop: 6 }]}>
