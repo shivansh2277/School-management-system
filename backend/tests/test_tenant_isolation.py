@@ -10,7 +10,6 @@ from decimal import Decimal
 
 import pytest
 from fastapi import HTTPException
-from sqlalchemy import select
 
 from app.models import (
     AcademicYear,

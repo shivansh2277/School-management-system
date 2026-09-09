@@ -52,7 +52,11 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install pytest ruff
+          # ruff pinned: unpinned, CI installs whatever is latest that day, and
+          # ruff's default rule set has widened across releases - so the rules
+          # this project is held to could change with no commit and no warning.
+          # The first CI run met exactly that. Bump it deliberately.
+          pip install pytest ruff==0.16.6
 
       - name: Lint
         run: ruff check app seed.py worker.py tests

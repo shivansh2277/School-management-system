@@ -17,7 +17,7 @@ import shutil
 import uuid
 from datetime import timedelta
 from pathlib import Path
-from typing import BinaryIO, Protocol
+from typing import Protocol
 
 from app.core.config import settings
 

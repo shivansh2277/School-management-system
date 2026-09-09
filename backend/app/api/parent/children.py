@@ -13,7 +13,6 @@ from app.models import (
     FeeInvoice,
     LeaveType,
     Mark,
-    Guardian,
     StudentLeaveRequest,
     Route,
     StudentGuardian,
@@ -22,7 +21,6 @@ from app.models import (
     TransportAssignmentStatus,
     Employee,
     User,
-    UserRole,
 )
 from app.schemas.common import AttendanceMonth, ReportCard, StudentHomeworkOut
 from app.services import assessment, attendance, fees, homework, leave, notices, scoping

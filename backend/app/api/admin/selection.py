@@ -16,7 +16,6 @@ from app.models import (
     DecisionOutcome,
     User,
     WaitlistEntry,
-    WaitlistStatus,
 )
 from app.services import admission
 from app.services import applications as app_svc

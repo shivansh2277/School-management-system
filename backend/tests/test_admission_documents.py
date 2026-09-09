@@ -6,9 +6,7 @@ everything at application time is worked around by staff typing junk.
 """
 
 import pytest
-from sqlalchemy import select
 
-from app.models import Application, ApplicationStatus, DocumentType, OwnerType
 from app.services import storage
 
 PDF = b"%PDF-1.4\n%demo birth certificate\n"

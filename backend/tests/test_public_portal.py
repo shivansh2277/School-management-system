@@ -6,7 +6,6 @@ schools exist, leak another family's application, or let a script fill the
 register.
 """
 
-from datetime import date
 
 import pytest
 from sqlalchemy import select

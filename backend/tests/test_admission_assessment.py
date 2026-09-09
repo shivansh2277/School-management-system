@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy import select
 
-from app.models import Interview, User
+from app.models import User
 
 YESTERDAY = (datetime.now(UTC) - timedelta(days=1)).isoformat()
 TOMORROW = (datetime.now(UTC) + timedelta(days=1)).isoformat()

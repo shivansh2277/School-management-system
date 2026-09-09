@@ -4,7 +4,7 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy import select
 
-from app.models import AuditAction, AuditLog, FeePayment, NumberSequence, Student, User
+from app.models import AuditAction, AuditLog, FeePayment, NumberSequence
 from app.services import audit
 
 

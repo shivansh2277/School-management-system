@@ -5,7 +5,6 @@ that should not be a block, a block that should not be a warning, and a status
 that must not move silently.
 """
 
-from datetime import date
 
 import pytest
 from sqlalchemy import select

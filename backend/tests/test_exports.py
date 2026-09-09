@@ -114,6 +114,6 @@ def test_the_export_permission_is_required_and_not_the_read_one(client, teacher,
     assert client.get("/admin/students/export", headers=parent).status_code == 403
 
 
-def test_another_schools_children_are_not_in_the_file(client, admin, rival_student):
+def test_another_schools_children_are_not_in_the_file(client, admin, rival_student):  # noqa: F811
     body = client.get("/admin/students/export", headers=admin).text
     assert "Rival Child" not in body

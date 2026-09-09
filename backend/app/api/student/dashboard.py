@@ -7,13 +7,12 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.services import timetable as timetable_svc
 from app.services.rbac import require_permission
-from app.models import ExamSchedule, Student, TimetableSlot, User, UserRole
+from app.models import ExamSchedule, Student, User
 from app.schemas.common import SlotOut
 from app.services import assessment, attendance, homework, notices, scoping
 from app.services.common import (
     current_enrolment,
     require_current_enrolment,
-    section_labels,
     subject_names,
 )
 from app.services.stats import DAY_KEYS

@@ -5,7 +5,7 @@ from datetime import date, timedelta
 import pytest
 from sqlalchemy import select
 
-from app.models import AdmissionCycle, AdmissionOffer, Application, OfferStatus
+from app.models import AdmissionCycle, AdmissionOffer, Application
 
 
 @pytest.fixture()

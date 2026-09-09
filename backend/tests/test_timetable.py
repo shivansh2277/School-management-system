@@ -15,7 +15,6 @@ from app.models import (
     DayOfWeek,
     Employee,
     SchoolPeriod,
-    Substitution,
     SubstitutionStatus,
     TimetableSlot,
 )

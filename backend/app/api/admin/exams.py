@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from app.core.db import get_db
 from app.services.rbac import require_permission
 from app.services.school_settings import module_enabled
-from app.models import Exam, ExamSchedule, User, UserRole
+from app.models import Exam, ExamSchedule, User
 from app.schemas.common import (
     MarksRequest,
     MarksRosterRow,

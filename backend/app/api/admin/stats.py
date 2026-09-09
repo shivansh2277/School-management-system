@@ -6,7 +6,7 @@ from app.core.db import get_db
 from app.services.rbac import require_permission
 from pydantic import BaseModel
 
-from app.models import Notice, User, UserRole
+from app.models import Notice, User
 from app.services import notices as notice_svc
 from app.services import stats as svc
 from app.services import tenancy

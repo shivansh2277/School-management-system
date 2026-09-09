@@ -17,7 +17,6 @@ from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
 from app.models import (
-    AdmissionCategory,
     Application,
     ApplicationFeePurpose,
     ApplicationGuardian,
@@ -30,10 +29,8 @@ from app.models import (
     Enrolment,
     EnrolmentStatus,
     Guardian,
-    GuardianRelation,
     OwnerType,
     PaymentStatus,
-    School,
     Student,
     StudentGuardian,
     StudentStatus,

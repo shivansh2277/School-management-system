@@ -16,7 +16,6 @@ from app.models import (
     AttendanceStatus,
     AuditLog,
     Employee,
-    PayrollRun,
     PayrollRunStatus,
     Payslip,
     PayslipLine,
@@ -515,7 +514,6 @@ def test_new_terms_cannot_start_the_same_day_as_the_old_ones(
     """Two structures effective the same date is ambiguous, and the check runs
     before the current one is stood down — otherwise the failure path left the
     employee on no terms at all."""
-    from app.models import SalaryStructure
 
     before = svc.active_structure(db, teacher_1.id)
     with pytest.raises(Exception) as e:

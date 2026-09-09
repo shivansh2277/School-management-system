@@ -19,7 +19,7 @@ a test pins each:
 question "how many days is this person not being paid for" is answered.
 """
 
-from datetime import UTC, date as Date, datetime, time
+from datetime import UTC, date as Date, datetime
 from decimal import Decimal
 
 from fastapi import HTTPException, status

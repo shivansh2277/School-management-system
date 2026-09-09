@@ -154,7 +154,6 @@ def top_performers(db: Session, school_id: int, limit: int = 3) -> list[dict]:
     percentages = exam_percentages(db, exam.id)
     if not percentages:
         return []
-    labels = section_labels(db, school_id)
     students = {
         s.id: s
         for s in db.scalars(

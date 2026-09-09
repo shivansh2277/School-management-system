@@ -17,7 +17,6 @@ function the report gate calls - one definition, so a report and the screen
 beside it cannot drift apart again.
 """
 
-import pytest
 
 from app.services import school_settings
 

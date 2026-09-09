@@ -24,7 +24,6 @@ from sqlalchemy.orm import Session
 
 from app.models import (
     AuditAction,
-    Enrolment,
     Exam,
     ExamSchedule,
     Mark,
@@ -40,7 +39,6 @@ from app.schemas.common import (
 )
 from app.services import audit, rbac, scoping
 from app.services.common import (
-    current_enrolment,
     grade_for,
     require_current_enrolment,
     roster,

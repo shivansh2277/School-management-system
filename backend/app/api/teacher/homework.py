@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.services.rbac import require_permission
-from app.models import Homework, User, UserRole
+from app.models import Homework, User
 from app.schemas.common import HomeworkCreate, HomeworkOut, HomeworkUpdate, SubmissionRow
 from app.services import homework as svc
 from app.services import scoping

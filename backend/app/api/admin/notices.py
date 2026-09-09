@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.services.rbac import require_permission
 from app.services.school_settings import module_enabled
-from app.models import Notice, User, UserRole
+from app.models import Notice, User
 from app.schemas.common import NoticeCreate, NoticeOut
 from app.services import notices as svc
 

@@ -22,7 +22,6 @@ from sqlalchemy.orm import Session
 
 from app.models import (
     AuditAction,
-    ClassSection,
     Enrolment,
     EnrolmentStatus,
     FeeFrequency,
@@ -38,7 +37,6 @@ from app.models import (
     InvoiceStatus,
     PaymentAllocation,
     School,
-    Student,
     StudentGuardian,
     User,
 )

@@ -5,7 +5,6 @@ a role that can read everything and write nothing has to be expressible without
 touching code (ERP_BLUEPRINT §3.5).
 """
 
-import pytest
 from sqlalchemy import select
 
 from app.core.permissions import SYSTEM_ROLES
@@ -85,7 +84,7 @@ def test_a_fee_collector_cannot_void_what_they_collect(client, db):
 
 
 def test_a_user_with_no_role_can_do_nothing(client, db):
-    user = make_user(db, "nobody@sunrisepublic.edu", name="No Role")
+    make_user(db, "nobody@sunrisepublic.edu", name="No Role")
     db.flush()
     headers = token_for(client, "nobody@sunrisepublic.edu")
     assert client.get("/admin/students", headers=headers).status_code == 403

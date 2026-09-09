@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.services.rbac import require_permission
-from app.models import ClassSubjectTeacher, ExamSchedule, Homework, Mark, User, UserRole
+from app.models import ClassSubjectTeacher, ExamSchedule, Homework, Mark, User
 from app.services import homework as hw_svc
 from app.services import scoping, stats
 from app.services.common import section_labels

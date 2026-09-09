@@ -9,7 +9,6 @@ from app.models import (
     Enrolment,
     Homework,
     HomeworkSubmission,
-    Student,
     Subject,
     Employee,
     User,

@@ -13,12 +13,8 @@ from sqlalchemy import select
 from app.models import (
     AuditAction,
     AuditLog,
-    ClassSection,
-    ClassSubjectTeacher,
-    Department,
     Employee,
     EmployeeStatus,
-    TimetableSlot,
     User,
 )
 from app.services import hr

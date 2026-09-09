@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.services.rbac import require_permission
-from app.models import ExamSchedule, User, UserRole
+from app.models import ExamSchedule, User
 from app.schemas.common import ExamScheduleOut, MarksRequest, MarksRosterRow
 from app.services import assessment as svc
 from app.services import scoping

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.services.rbac import require_permission
-from app.models import Exam, ExamSchedule, Mark, User, UserRole
+from app.models import Exam, ExamSchedule, Mark, User
 from app.schemas.common import (
     AttendanceMonth,
     ExamScheduleOut,

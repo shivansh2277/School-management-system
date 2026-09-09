@@ -87,12 +87,9 @@ from app.models import (
     Subject,
     Employee,
     TimetableSlot,
-    Role,
-    RolePermission,
     ScopeType,
     User,
     UserRole,
-    UserRoleAssignment,
 )
 
 ACADEMIC_YEAR = "2025-26"

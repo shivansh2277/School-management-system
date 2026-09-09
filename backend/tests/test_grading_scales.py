@@ -10,7 +10,7 @@ from decimal import Decimal
 import pytest
 from sqlalchemy import select
 
-from app.models import GradeBand, GradingScale
+from app.models import GradeBand
 from app.services import grading
 from app.services.common import grade_for
 

@@ -11,9 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.models import (
-    Application,
     Assessment,
-    AssessmentStatus,
     AssessmentSubject,
     AssessmentType,
     Interview,

@@ -11,7 +11,7 @@ from decimal import Decimal
 import pytest
 from sqlalchemy import select
 
-from app.models import AssessmentScheme, Exam, ExamSchedule, Mark, SchemeComponent
+from app.models import Exam, ExamSchedule, Mark
 from app.services import schemes
 
 SIMPLE = [("CT", "Class Test", "Term 1", Decimal(20))]

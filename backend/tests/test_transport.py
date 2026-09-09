@@ -38,7 +38,6 @@ from app.models import (
     OwnerType,
     Route,
     RouteStatus,
-    Student,
     TransportAssignment,
     TransportAssignmentStatus,
     TransportDirection,
@@ -47,7 +46,7 @@ from app.models import (
     Vehicle,
     VehicleStatus,
 )
-from app.services import documents, fees, school_settings, transport as svc
+from app.services import documents, fees, transport as svc
 
 TODAY = Date.today()
 NEXT_YEAR = TODAY + timedelta(days=365)

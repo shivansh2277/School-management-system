@@ -207,7 +207,6 @@ def test_every_default_schedule_has_a_handler():
     correct, the schedule was correct, and the job would have failed nightly
     with "No handler registered" until somebody read the worker log.
     """
-    import app.jobs  # noqa: F401 - importing is what registers them
 
     from app.services.jobs import DEFAULT_SCHEDULES, HANDLERS
 

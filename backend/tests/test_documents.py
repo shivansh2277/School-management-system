@@ -8,7 +8,7 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy import select
 
-from app.models import Document, DocumentStatus, DocumentType, OwnerType, User
+from app.models import DocumentStatus, DocumentType, OwnerType, User
 from app.services import documents, storage
 
 PDF = b"%PDF-1.4 pretend certificate"

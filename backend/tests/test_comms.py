@@ -12,28 +12,21 @@ would actually hurt if they were wrong, and most of this file is about them:
 * **the exact text sent stays reproducible** after the template is edited.
 """
 
-from datetime import UTC, date as Date, datetime, timedelta
-from decimal import Decimal
+from datetime import date as Date
 
 import pytest
 from sqlalchemy import func, select
 
 from app.models import (
     Channel,
-    ClassSection,
     DeliveryStatus,
-    Employee,
-    Enrolment,
-    EnrolmentStatus,
     Guardian,
     Job,
     JobStatus,
     Message,
     MessageCategory,
-    MessageRecipient,
     MessageStatus,
     MessageTemplate,
-    Student,
     StudentGuardian,
     User,
 )

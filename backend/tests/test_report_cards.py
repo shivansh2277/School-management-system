@@ -11,8 +11,8 @@ from decimal import Decimal
 import pytest
 from sqlalchemy import select
 
-from app.models import Enrolment, ExamSchedule, Exam, Mark, SchemeComponent
-from app.services import fees, grading, report_cards, schemes
+from app.models import Enrolment, ExamSchedule, Exam, Mark
+from app.services import grading, report_cards, schemes
 from app.services import school_settings
 
 

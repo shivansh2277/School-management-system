@@ -10,18 +10,13 @@ from app.models import (
     AcademicYear,
     ClassSection,
     ClassSubjectTeacher,
-    Homework,
-    HomeworkSubmission,
-    Student,
     Subject,
     Employee,
-    TimetableSlot,
     User,
-    UserRole,
 )
 from app.schemas.common import SlotOut
 from app.services import tenancy
-from app.services.common import roster, section_labels, subject_names
+from app.services.common import roster, subject_names
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 admin_only = require_permission("academics.class.read", school_wide=True)

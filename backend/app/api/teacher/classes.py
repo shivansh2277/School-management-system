@@ -8,11 +8,7 @@ from app.services.rbac import require_permission
 from app.models import (
     ClassSection,
     ClassSubjectTeacher,
-    Enrolment,
-    Student,
-    TimetableSlot,
     User,
-    UserRole,
 )
 from app.schemas.common import SlotOut
 from app.services import scoping
