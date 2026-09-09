@@ -19,7 +19,8 @@ disagrees.
 
 A multi-tenant school ERP being sold to **separate, independent schools** — not
 branches of one school. A tenant is a customer. Work is on branch
-`part-1-foundation`; **nothing has been pushed**.
+`part-1-foundation`, 112 commits ahead of `main`. The repo is on GitHub but
+**this branch has never been pushed and CI has never run**.
 
 ## Commands
 

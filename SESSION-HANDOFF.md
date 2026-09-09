@@ -154,10 +154,14 @@ npm test                  # 24 tests before your changes; more after Fix 1
 npm run api:check         # schema current — Fix 2 changes the schema, so regenerate
 npm run build
 
-# Live — start the backend on 8077 against the seeded DB first, then:
+# Live — start the backend on 8077 first, in another terminal.
+# NOTE the env var: without it uvicorn talks to the stale dev database, which is
+# several parts behind and looks exactly like a bug in whatever you are probing.
+cd ../backend
+DATABASE_URL=postgresql+psycopg://sunrise:sunrise@localhost:5432/sunrise_test ../.venv/Scripts/python.exe -m uvicorn app.main:app --port 8077
+
+# then, back in web/
 node smoke.mjs http://127.0.0.1:8077
-# To start that backend (note the env var — the default DB is the stale dev one):
-#   cd backend && DATABASE_URL=postgresql+psycopg://sunrise:sunrise@localhost:5432/sunrise_test #     ../.venv/Scripts/python.exe -m uvicorn app.main:app --port 8077
 ```
 
 **Fix 2 changes the OpenAPI schema** (gated routes gain a 404 response). Run
