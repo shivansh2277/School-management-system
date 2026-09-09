@@ -319,7 +319,10 @@ def test_checkpoint_2_portal_to_enrolled_student(client, admin, db):
     # A fee account: the next billing run invoices them like anybody else.
     from app.services import fees
 
-    fees.generate(db, month=date.today().month, year=date.today().year, school_id=student.school_id)
+    # One reading, so a month boundary between the two cannot bill the wrong
+    # period.
+    billing = date.today()
+    fees.generate(db, month=billing.month, year=billing.year, school_id=student.school_id)
     db.commit()
     invoice = db.scalar(
         select(FeeInvoice)

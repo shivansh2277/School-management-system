@@ -83,7 +83,7 @@ def test_the_fine_is_a_line_on_the_invoice(client, admin, db, ids):
     invoice = a_clean_invoice(client, admin, db, ids["student_1"], overdue_days=8)
     before = svc.totals(db, invoice)["balance"]
 
-    charged = svc.assess_late_fee(db, invoice, date.today())
+    charged = svc.assess_late_fee(db, invoice, invoice.due_date + timedelta(days=8))
     assert charged == Decimal("600.00"), "300 at day 5, plus three further days"
 
     db.refresh(invoice)
@@ -95,7 +95,7 @@ def test_the_fine_is_a_line_on_the_invoice(client, admin, db, ids):
 def test_reassessing_the_same_day_does_not_stack(client, admin, db, ids):
     invoice = a_clean_invoice(client, admin, db, ids["student_1"], overdue_days=8)
     for _ in range(3):
-        svc.assess_late_fee(db, invoice, date.today())
+        svc.assess_late_fee(db, invoice, invoice.due_date + timedelta(days=8))
     db.refresh(invoice)
     late = [line for line in invoice.lines if line.description.startswith("Late fee")]
     assert len(late) == 1 and late[0].amount == Decimal("600.00")
@@ -107,7 +107,7 @@ def test_the_clock_keeps_running_after_the_next_invoice_is_generated(
     """§8 item C, the locked answer. If generating a newer invoice stopped the
     clock, the fine below would stay at its day-8 value."""
     invoice = a_clean_invoice(client, admin, db, ids["student_1"], overdue_days=8)
-    assert svc.assess_late_fee(db, invoice, date.today()) == Decimal("600.00")
+    assert svc.assess_late_fee(db, invoice, invoice.due_date + timedelta(days=8)) == Decimal("600.00")
     db.commit()
 
     client.post(
@@ -116,7 +116,7 @@ def test_the_clock_keeps_running_after_the_next_invoice_is_generated(
     db.expire_all()
 
     invoice = db.get(FeeInvoice, invoice.id)
-    later = svc.assess_late_fee(db, invoice, date.today() + timedelta(days=4))
+    later = svc.assess_late_fee(db, invoice, invoice.due_date + timedelta(days=12))
     assert later == Decimal("1000.00"), "a newer invoice must not freeze the old fine"
 
 
@@ -126,7 +126,7 @@ def test_paying_stops_the_clock(client, admin, db, ids):
     db.commit()
 
     # collect() assesses first, so ask the ledger what is owed *after* that
-    svc.assess_late_fee(db, invoice, date.today())
+    svc.assess_late_fee(db, invoice, invoice.due_date + timedelta(days=8))
     db.commit()
     owed = svc.totals(db, invoice)["balance"]
     client.post(
@@ -141,7 +141,7 @@ def test_paying_stops_the_clock(client, admin, db, ids):
     frozen = svc.late_fee_charged(db, invoice)
     assert frozen == Decimal("600.00")
     # a month later the fine on a paid invoice has not moved
-    assert svc.assess_late_fee(db, invoice, date.today() + timedelta(days=30)) == frozen
+    assert svc.assess_late_fee(db, invoice, invoice.due_date + timedelta(days=38)) == frozen
     db.refresh(invoice)
     assert svc.late_fee_charged(db, invoice) == frozen
 
@@ -175,12 +175,12 @@ def test_the_fee_rule_is_configuration_not_code(client, admin, db, ids):
     )
     assert r.status_code == 200, r.text
     invoice = a_clean_invoice(client, admin, db, ids["student_1"], overdue_days=7)
-    assert svc.assess_late_fee(db, invoice, date.today()) == Decimal("600.00")  # 500 + 2×50
+    assert svc.assess_late_fee(db, invoice, invoice.due_date + timedelta(days=7)) == Decimal("600.00")  # 500 + 2×50
 
 
 def test_lowering_the_rule_does_not_refund_a_fine_already_charged(client, admin, db, ids):
     invoice = a_clean_invoice(client, admin, db, ids["student_1"], overdue_days=8)
-    charged = svc.assess_late_fee(db, invoice, date.today())
+    charged = svc.assess_late_fee(db, invoice, invoice.due_date + timedelta(days=8))
     db.commit()
 
     client.put(
@@ -190,7 +190,7 @@ def test_lowering_the_rule_does_not_refund_a_fine_already_charged(client, admin,
     )
     db.expire_all()
     invoice = db.get(FeeInvoice, invoice.id)
-    svc.assess_late_fee(db, invoice, date.today())
+    svc.assess_late_fee(db, invoice, invoice.due_date + timedelta(days=8))
     db.refresh(invoice)
     # Waiving a fine is a concession and needs approval; it is not a side
     # effect of editing a setting.

@@ -80,6 +80,7 @@ def test_an_enquiry_needs_only_a_name_and_a_number(client, admin):
 
 
 def test_a_status_only_moves_through_a_logged_interaction(client, admin):
+    follow_up = date.today() + timedelta(days=3)
     enquiry = client.post(
         "/admin/admission/enquiries",
         json={"enquirer_name": "Kavita Joshi", "mobile": "9000012346"},
@@ -92,14 +93,16 @@ def test_a_status_only_moves_through_a_logged_interaction(client, admin):
             "channel": "phone",
             "notes": "Explained the fee structure; will visit on Saturday.",
             "outcome": "interested",
-            "next_follow_up_on": str(date.today() + timedelta(days=3)),
+            "next_follow_up_on": str(follow_up),
         },
         headers=admin,
     )
     assert r.status_code == 201, r.text
     detail = r.json()
     assert detail["status"] == "interested"
-    assert detail["next_follow_up_on"] == str(date.today() + timedelta(days=3))
+    # The date sent, not a fresh reading: across midnight the second call
+    # returns a different day and the echo looks wrong.
+    assert detail["next_follow_up_on"] == str(follow_up)
     assert detail["interactions"][0]["notes"].startswith("Explained")
 
 

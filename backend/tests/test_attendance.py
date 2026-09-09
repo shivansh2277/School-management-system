@@ -48,7 +48,10 @@ def test_marking_twice_upserts_rather_than_duplicating(client, teacher, db, ids)
     rows = (
         db.query(Attendance)
         .join(Enrolment, Enrolment.id == Attendance.enrolment_id)
-        .filter(Enrolment.student_id.in_(students), Attendance.date == date.today())
+        # `day`, not a second `date.today()`: the rows were written for the
+        # date posted above, and a run crossing midnight between the two counts
+        # zero of them.
+        .filter(Enrolment.student_id.in_(students), Attendance.date == date.fromisoformat(day))
         .count()
     )
     assert rows == len(students)  # one row per student per day, not two

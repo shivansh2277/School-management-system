@@ -334,20 +334,42 @@ def test_a_voided_month_can_be_reissued(client, admin, db, ids):
 
 
 def test_a_read_never_moves_a_stored_status(client, admin, db):
-    """The v0 defect: `to_out()` committed from inside a GET."""
-    invoice = db.scalar(select(FeeInvoice).where(FeeInvoice.status == InvoiceStatus.issued))
-    if invoice is None:
-        invoice = db.scalars(select(FeeInvoice)).first()
-        invoice.status = InvoiceStatus.issued
-        invoice.due_date = invoice.due_date.replace(year=2020)
-        db.flush()
+    """The v0 defect: `to_out()` committed from inside a GET.
+
+    The invoice is built rather than found, and the date is a literal rather
+    than a reading of the clock. The previous version asked the clock twice -
+    once through the stored status, which `seed.py` sets with
+    `overdue if due < Date.today() else issued`, and once through
+    `presented_status` at request time - and branched on the difference. Every
+    seeded due date is the 10th of June, July or August 2026, so before that
+    last date an `issued` invoice existed and the test asserted nothing at all
+    about the presented status; after it, the test fell to picking a row out of
+    an unordered `select(FeeInvoice).first()`, and 100 of the 300 seeded
+    invoices carry a zero balance and therefore read as `paid`, not `overdue`.
+    A run that began on one date and finished on the next got one answer from
+    the seed and the other from the request.
+
+    So: one invoice that definitely still owes something, one due date that is
+    unambiguously in the past on any day this code ever runs, and both
+    assertions made unconditionally.
+    """
+    invoice = next(
+        i
+        for i in db.scalars(select(FeeInvoice).order_by(FeeInvoice.id))
+        if svc.totals(db, i)["balance"] > 0
+    )
+    invoice.status = InvoiceStatus.issued
+    invoice.due_date = date(2020, 6, 10)
+    db.flush()
     stored = invoice.status
+
     rows = client.get("/admin/fees/invoices", headers=admin).json()
     shown = next(r for r in rows if r["id"] == invoice.id)
+
     db.expire_all()
+    # The point of the test: the GET presented it differently and stored nothing.
     assert db.get(FeeInvoice, invoice.id).status is stored
-    if invoice.due_date.year == 2020:
-        assert shown["status"] == InvoiceStatus.overdue
+    assert shown["status"] == InvoiceStatus.overdue
 
 
 def test_collection_totals_equal_the_allocations(client, admin, db):

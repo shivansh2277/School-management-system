@@ -205,6 +205,11 @@ def test_checkpoint_3_bill_part_pay_fine_chase_collect_close(
 
     # 3. It falls overdue, and the sweep charges the fine.
     invoice = db.get(FeeInvoice, invoice.id)
+    # Two clock reads, and this one cannot be removed: `overdue_sweep` reads
+    # `Date.today()` itself, so the day count the fine below asserts is the gap
+    # between this line and the sweep three lines down. The window is
+    # microseconds rather than the whole test, which is as narrow as it gets
+    # without giving the sweep an "as of" argument.
     invoice.due_date = date.today() - timedelta(days=12)
     db.commit()
     jobs.enqueue(db, "fees.overdue_sweep", school_id=invoice.school_id)
