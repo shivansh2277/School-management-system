@@ -5,6 +5,7 @@ pydantic>=2
 pydantic-settings
 psycopg[binary]
 python-jose[cryptography]
+python-multipart
 passlib[bcrypt]
 bcrypt==4.0.1
 reportlab
