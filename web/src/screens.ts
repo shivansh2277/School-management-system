@@ -41,7 +41,7 @@ export type Screen = {
 
 export const SCREENS: Screen[] = [
   {
-    path: "/",
+    path: "/dashboard",
     label: "Dashboard",
     group: "Overview",
     permission: "admin.settings.read",
