@@ -2,6 +2,8 @@
 
 ## Read these first, in this order
 
+0. **`SESSION-HANDOFF.md`** — start here if you are picking up cold. What the
+   last session did, what is verified, and what to do next in order.
 1. **`HANDOFF.md`** (this directory) — current state, the commits and why each
    exists, and what is explicitly *not* verified.
 2. **`docs/ERP_BLUEPRINT.md` §0** — the 21 locked product decisions. **§0 wins
@@ -23,7 +25,7 @@ branches of one school. A tenant is a customer. Work is on branch
 
 ```bash
 cd backend
-../.venv/Scripts/python.exe -m pytest -q          # 578 tests, ~127s
+../.venv/Scripts/python.exe -m pytest -q          # 603 tests, ~125s
 ../.venv/Scripts/python.exe -m pytest tests/test_rbac.py -q       # one file
 ../.venv/Scripts/python.exe -m alembic upgrade head
 ../.venv/Scripts/python.exe seed.py               # idempotent
