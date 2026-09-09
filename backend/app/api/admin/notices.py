@@ -4,11 +4,15 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.services.rbac import require_permission
+from app.services.school_settings import module_enabled
 from app.models import Notice, User, UserRole
 from app.schemas.common import NoticeCreate, NoticeOut
 from app.services import notices as svc
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(
+    prefix="/admin", tags=["admin"],
+    dependencies=[Depends(module_enabled("communication"))],
+)
 admin_only = require_permission("comms.notice.read", school_wide=True)
 
 

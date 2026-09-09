@@ -15,8 +15,12 @@ from app.core.db import get_db
 from app.models import Enrolment, ReportCardPublication, User
 from app.services import report_cards as svc
 from app.services.rbac import require_permission
+from app.services.school_settings import module_enabled
 
-router = APIRouter(prefix="/admin/report-cards", tags=["admin"])
+router = APIRouter(
+    prefix="/admin/report-cards", tags=["admin"],
+    dependencies=[Depends(module_enabled("examinations"))],
+)
 reader = require_permission("exam.marks.read", school_wide=True)
 publisher = require_permission("exam.result.publish", school_wide=True)
 

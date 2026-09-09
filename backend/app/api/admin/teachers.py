@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.services.rbac import require_permission
+from app.services.school_settings import module_enabled
 from app.core.security import hash_password
 from app.models import (
     ClassSection,
@@ -18,7 +19,10 @@ from app.models import (
 )
 from app.services.common import section_labels, subject_names
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(
+    prefix="/admin", tags=["admin"],
+    dependencies=[Depends(module_enabled("hr"))],
+)
 admin_only = require_permission("hr.employee.read", school_wide=True)
 
 

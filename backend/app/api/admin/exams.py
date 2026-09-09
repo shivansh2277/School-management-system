@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from app.core.db import get_db
 from app.services.rbac import require_permission
+from app.services.school_settings import module_enabled
 from app.models import Exam, ExamSchedule, User, UserRole
 from app.schemas.common import (
     MarksRequest,
@@ -17,7 +18,10 @@ from app.schemas.common import (
 )
 from app.services import assessment, schemes
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(
+    prefix="/admin", tags=["admin"],
+    dependencies=[Depends(module_enabled("examinations"))],
+)
 admin_only = require_permission("exam.definition.read", school_wide=True)
 
 

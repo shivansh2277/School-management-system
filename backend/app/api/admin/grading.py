@@ -16,8 +16,12 @@ from app.core.db import get_db
 from app.models import GradingScale, User
 from app.services import grading as svc
 from app.services.rbac import require_permission
+from app.services.school_settings import module_enabled
 
-router = APIRouter(prefix="/admin/grading-scales", tags=["admin"])
+router = APIRouter(
+    prefix="/admin/grading-scales", tags=["admin"],
+    dependencies=[Depends(module_enabled("examinations"))],
+)
 reader = require_permission("exam.definition.read", school_wide=True)
 writer = require_permission("exam.definition.write", school_wide=True)
 

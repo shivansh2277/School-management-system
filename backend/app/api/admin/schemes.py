@@ -17,8 +17,12 @@ from app.models import AssessmentScheme, User
 from app.services import schemes as svc
 from app.services import tenancy
 from app.services.rbac import require_permission
+from app.services.school_settings import module_enabled
 
-router = APIRouter(prefix="/admin/assessment-schemes", tags=["admin"])
+router = APIRouter(
+    prefix="/admin/assessment-schemes", tags=["admin"],
+    dependencies=[Depends(module_enabled("examinations"))],
+)
 reader = require_permission("exam.definition.read", school_wide=True)
 writer = require_permission("exam.definition.write", school_wide=True)
 

@@ -18,8 +18,12 @@ from app.models import PayrollRun, Payslip, SalaryComponent, User
 from app.services import hr
 from app.services import payroll as svc
 from app.services.rbac import require_permission
+from app.services.school_settings import module_enabled
 
-router = APIRouter(prefix="/admin/payroll", tags=["admin"])
+router = APIRouter(
+    prefix="/admin/payroll", tags=["admin"],
+    dependencies=[Depends(module_enabled("hr"))],
+)
 reader = require_permission("payroll.run.read", school_wide=True)
 setup = require_permission("payroll.setup.manage", school_wide=True)
 runner = require_permission("payroll.run.manage", school_wide=True)

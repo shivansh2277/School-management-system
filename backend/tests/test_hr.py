@@ -23,6 +23,11 @@ from app.models import (
 )
 from app.services import hr
 
+# Staff records and departments sit behind module_enabled("hr"), which defaults to off for
+# every new school (core/modules.py). A test buys the module, exactly as a
+# school does; it does not reach around the gate.
+pytestmark = pytest.mark.usefixtures("hr_enabled")
+
 
 @pytest.fixture()
 def teacher_1(db, ids):

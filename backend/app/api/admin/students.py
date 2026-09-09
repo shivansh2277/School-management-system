@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.services.rbac import require_permission
+from app.services.school_settings import module_enabled
 from app.core.security import hash_password
 from app.models import (
     AuditAction,
@@ -29,7 +30,10 @@ from app.services import custom_fields as cf
 from app.services import scoping
 from app.services.common import current_enrolment
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(
+    prefix="/admin", tags=["admin"],
+    dependencies=[Depends(module_enabled("students"))],
+)
 admin_only = require_permission("students.profile.read", school_wide=True)
 
 

@@ -19,9 +19,13 @@ from app.services import hr
 from app.services import staff_leave as svc
 from app.services import tenancy
 from app.services.rbac import require_permission
+from app.services.school_settings import module_enabled
 from app.services.timetable import slot_out
 
-router = APIRouter(prefix="/admin/staff-leave", tags=["admin"])
+router = APIRouter(
+    prefix="/admin/staff-leave", tags=["admin"],
+    dependencies=[Depends(module_enabled("hr"))],
+)
 reader = require_permission("hr.leave.read", school_wide=True)
 applier = require_permission("hr.leave.apply", school_wide=True)
 approver = require_permission("hr.leave.approve", school_wide=True)

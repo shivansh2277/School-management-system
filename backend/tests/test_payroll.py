@@ -26,6 +26,11 @@ from app.models import (
 from app.services import payroll as svc
 from app.services import staff_attendance, staff_leave
 
+# Salary structures, runs and payslips sit behind module_enabled("hr"), which defaults to off for
+# every new school (core/modules.py). A test buys the module, exactly as a
+# school does; it does not reach around the gate.
+pytestmark = pytest.mark.usefixtures("hr_enabled")
+
 YEAR, MONTH = 2026, 8
 
 

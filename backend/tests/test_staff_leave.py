@@ -28,6 +28,11 @@ from app.models import (
 from app.services import staff_leave as svc
 from app.services import timetable
 
+# Leave and balances sit behind module_enabled("hr"), which defaults to off for
+# every new school (core/modules.py). A test buys the module, exactly as a
+# school does; it does not reach around the gate.
+pytestmark = pytest.mark.usefixtures("hr_enabled")
+
 
 def next_weekday(start: date, weekday: int) -> date:
     """The next date on or after `start` falling on `weekday` (Mon=0)."""

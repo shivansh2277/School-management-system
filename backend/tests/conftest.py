@@ -178,6 +178,23 @@ def admin_user(db):
 
 
 @pytest.fixture()
+def hr_enabled(db, admin_user):
+    """Switch the HR module on for the demo school.
+
+    `core/modules.py` ships `hr` (and `transport`) with
+    `default_enabled=False`, and every HR router is behind
+    `module_enabled("hr")`. So a test that exercises staff records, the staff
+    register, leave or payroll has to buy the module first — exactly as a
+    school does. Without this the endpoints 404, which is the gate working and
+    not something to route around.
+    """
+    from app.services import school_settings
+
+    school_settings.set_many(db, admin_user, {"feature.hr": True})
+    return True
+
+
+@pytest.fixture()
 def ids(db):
     """Handy primary keys used across the suite."""
     section_10a = db.scalar(select(ClassSection).where(ClassSection.class_name == "10"))

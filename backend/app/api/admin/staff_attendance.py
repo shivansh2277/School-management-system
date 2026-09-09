@@ -11,8 +11,12 @@ from app.models import AttendanceStatus, User
 from app.services import hr
 from app.services import staff_attendance as svc
 from app.services.rbac import require_permission
+from app.services.school_settings import module_enabled
 
-router = APIRouter(prefix="/admin/staff-attendance", tags=["admin"])
+router = APIRouter(
+    prefix="/admin/staff-attendance", tags=["admin"],
+    dependencies=[Depends(module_enabled("hr"))],
+)
 reader = require_permission("hr.attendance.read", school_wide=True)
 marker = require_permission("hr.attendance.mark", school_wide=True)
 

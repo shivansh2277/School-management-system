@@ -16,8 +16,12 @@ from app.core.db import get_db
 from app.models import Department, Employee, EmployeeStatus, User
 from app.services import hr as svc
 from app.services.rbac import require_permission
+from app.services.school_settings import module_enabled
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(
+    prefix="/admin", tags=["admin"],
+    dependencies=[Depends(module_enabled("hr"))],
+)
 reader = require_permission("hr.employee.read", school_wide=True)
 writer = require_permission("hr.employee.write", school_wide=True)
 dept_writer = require_permission("hr.department.write", school_wide=True)
