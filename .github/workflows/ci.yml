@@ -56,7 +56,11 @@ jobs:
           # ruff's default rule set has widened across releases - so the rules
           # this project is held to could change with no commit and no warning.
           # The first CI run met exactly that. Bump it deliberately.
-          pip install pytest ruff==0.16.6
+          # httpx2 is not optional: tests/conftest.py builds a TestClient, and
+          # starlette's test client needs an HTTP library that neither
+          # requirements.txt nor `pip install pytest` brings in. Without it
+          # conftest fails to import and pytest exits 4 before running a test.
+          pip install pytest ruff==0.16.6 httpx2
 
       - name: Lint
         run: ruff check app seed.py worker.py tests
