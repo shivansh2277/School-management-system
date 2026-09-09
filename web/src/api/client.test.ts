@@ -8,7 +8,11 @@ describe("money", () => {
   });
 
   it("keeps paise that a float would lose", () => {
-    expect(money("4453081.25")).toBe("₹44,53,081.25");
+    // 900719925474099.15 has 17 significant digits, past the ~15-17 a JS
+    // double can hold exactly: Number(v) rounds it to ...099.10. Verified by
+    // temporarily restoring `Number(v).toLocaleString(...)` in money() and
+    // rerunning this test - it produces ₹90,07,19,92,54,74,099.10 and fails.
+    expect(money("900719925474099.15")).toBe("₹90,07,19,92,54,74,099.15");
   });
 });
 

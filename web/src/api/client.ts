@@ -116,5 +116,16 @@ export const api = {
  * puts a concession a paisa away from the printed fee card. This formats for
  * display and nothing else ever converts.
  */
-export const money = (v: string | number) =>
-  `₹${Number(v).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+// Intl.NumberFormat#format uses ToIntlMathematicalValue on a string argument,
+// which parses it as an exact decimal rather than coercing through a 64-bit
+// float (ToNumber) the way Number(v) or template-literal interpolation would.
+// Passing the string straight through is what keeps the guarantee above true.
+const moneyFormat = new Intl.NumberFormat("en-IN", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+// TS's lib.d.ts types NumberFormat#format as number|bigint only (the string
+// overload lives in lib.es2023.intl, which this project's ES2022 lib target
+// doesn't pull in) even though the runtime accepts a numeric string and, per
+// the comment above, that's exactly the path that avoids the float.
+export const money = (v: string | number) => `₹${moneyFormat.format(v as number)}`;
