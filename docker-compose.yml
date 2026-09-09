@@ -1,25 +1,84 @@
+# The whole stack on one box, which is what an Oracle Cloud Always Free ARM
+# instance is (2 OCPU / 12 GB after the July 2026 halving). Everything the ERP
+# needs and nothing it does not: no Redis, no message broker — the job queue
+# lives in Postgres (ERP_BLUEPRINT §0.1).
+#
+#   docker compose up -d
+#   docker compose exec api alembic upgrade head
+#   docker compose exec api python seed.py
+
 services:
   db:
-    image: postgres:16
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: sunrise
-      POSTGRES_PASSWORD: sunrise
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sunrise}
       POSTGRES_DB: sunrise
-    ports:
-      - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sunrise"]
-      interval: 5s
-      retries: 10
-
-  adminer:
-    image: adminer
+      - db-data:/var/lib/postgresql/data
     ports:
-      - "8080:8080"
+      # 5433, not 5432: this machine runs PostgreSQL natively and the two would
+      # collide. Loopback only — the database is never exposed to the network.
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      # The API and worker wait for this rather than crash-looping on startup.
+      test: ["CMD-SHELL", "pg_isready -U sunrise -d sunrise"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # S3-compatible object storage for student and admission documents. Local so
+  # nothing leaves the box; swap the endpoint for real S3 without code changes.
+  storage:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:-sunrise}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-sunrise-dev-secret}
+    volumes:
+      - storage-data:/data
+    ports:
+      - "127.0.0.1:9001:9001"   # console, loopback only
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://sunrise:${POSTGRES_PASSWORD:-sunrise}@db:5432/sunrise
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env — the default is not safe outside tests}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      STORAGE_ENDPOINT: http://storage:9000
+      STORAGE_ACCESS_KEY: ${MINIO_USER:-sunrise}
+      STORAGE_SECRET_KEY: ${MINIO_PASSWORD:-sunrise-dev-secret}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  # Same image, different command. Jobs never run in the API process, so a slow
+  # report or a hung email provider cannot make a request time out.
+  worker:
+    build: ./backend
+    command: ["python", "worker.py"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://sunrise:${POSTGRES_PASSWORD:-sunrise}@db:5432/sunrise
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      STORAGE_ENDPOINT: http://storage:9000
+      STORAGE_ACCESS_KEY: ${MINIO_USER:-sunrise}
+      STORAGE_SECRET_KEY: ${MINIO_PASSWORD:-sunrise-dev-secret}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
-  pgdata:
+  db-data:
+  storage-data:

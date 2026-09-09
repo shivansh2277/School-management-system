@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
-from app.models import AttendanceStatus, InvoiceStatus, NoticeAudience
+from app.models import AttendanceStatus, NoticeAudience
 
 
 class Page(BaseModel):
@@ -31,6 +31,9 @@ class AttendanceMarkRequest(BaseModel):
     class_section_id: int
     date: date
     entries: list[AttendanceEntry]
+    # Required only when changing an earlier day's mark: that is a correction
+    # to a record, not a fix to an open register (§5.8.9).
+    reason: str | None = None
 
 
 class RollRow(BaseModel):
@@ -38,6 +41,7 @@ class RollRow(BaseModel):
     full_name: str
     roll_no: int
     status: AttendanceStatus | None = None
+    corrected: bool = False
     remarks: str | None = None
 
 
@@ -120,6 +124,9 @@ class ExamCreate(BaseModel):
     term: str
     start_date: date
     end_date: date
+    # Which report-card column this exam fills. None is an ordinary class test:
+    # marked and readable, and not printed.
+    scheme_component_id: int | None = None
 
 
 class ExamOut(BaseModel):
@@ -128,6 +135,7 @@ class ExamOut(BaseModel):
     term: str
     start_date: date
     end_date: date
+    scheme_component_id: int | None = None
 
 
 class ExamScheduleCreate(BaseModel):
@@ -140,6 +148,7 @@ class ExamScheduleCreate(BaseModel):
 
 class ExamScheduleOut(BaseModel):
     id: int
+    marks_locked: bool = False
     exam_id: int
     exam_name: str
     class_section_id: int
@@ -154,12 +163,20 @@ class ExamScheduleOut(BaseModel):
 
 class MarkEntry(BaseModel):
     student_id: int
-    marks_obtained: Decimal
+    # None with neither flag set means "not entered"; the row is left alone
+    # rather than written as a zero.
+    marks_obtained: Decimal | None = None
+    is_absent: bool = False
+    is_exempted: bool = False
+    remarks: str | None = None
 
 
 class MarksRequest(BaseModel):
     exam_schedule_id: int
     entries: list[MarkEntry]
+    # Required only to change a mark on a locked paper (§5.4.9). Every such
+    # change is audited, without exception.
+    reason: str | None = None
 
 
 class MarksRosterRow(BaseModel):
@@ -167,14 +184,19 @@ class MarksRosterRow(BaseModel):
     full_name: str
     roll_no: int
     marks_obtained: Decimal | None
+    is_absent: bool = False
+    is_exempted: bool = False
+    remarks: str | None = None
 
 
 class ReportCardRow(BaseModel):
     subject: str
-    marks_obtained: Decimal | None  # None = absent; excluded from the totals
+    marks_obtained: Decimal | None  # None = not sat; excluded from the totals
     max_marks: Decimal
     percent: float | None
     grade: str | None
+    is_absent: bool = False
+    is_exempted: bool = False
 
 
 class ReportCard(BaseModel):
@@ -198,6 +220,9 @@ class NoticeCreate(BaseModel):
     body: str
     audience: NoticeAudience
     class_section_id: int | None = None
+    # Off by default: publishing to the board and mailing four hundred families
+    # are different acts, and the second should be asked for.
+    notify: bool = False
 
 
 class AnnouncementCreate(BaseModel):
@@ -216,6 +241,9 @@ class NoticeOut(BaseModel):
     class_label: str | None
     published_by: str
     published_at: datetime
+    # None when nothing was sent — either it was not asked for, or this
+    # audience has no email route. Saying so beats letting the office assume.
+    message_id: int | None = None
 
 
 # --- timetable --------------------------------------------------------------
@@ -234,50 +262,3 @@ class SlotOut(BaseModel):
 
 
 # --- fees -------------------------------------------------------------------
-
-
-class InvoiceOut(BaseModel):
-    id: int
-    student_id: int
-    student_name: str
-    admission_no: str
-    class_label: str
-    month: int
-    year: int
-    amount: Decimal
-    due_date: date
-    status: InvoiceStatus
-    receipt_no: str | None
-    paid_at: datetime | None
-
-
-class GenerateInvoicesRequest(BaseModel):
-    month: int
-    year: int
-
-
-class GenerateInvoicesResult(BaseModel):
-    created: int
-    skipped: int
-
-
-class PaymentResult(BaseModel):
-    invoice_id: int
-    receipt_no: str
-    txn_ref: str
-    amount: Decimal
-    paid_at: datetime
-
-
-class CollectionMonth(BaseModel):
-    month: int
-    billed: Decimal
-    collected: Decimal
-
-
-class CollectionSummary(BaseModel):
-    year: int
-    billed: Decimal
-    collected: Decimal
-    outstanding: Decimal
-    months: list[CollectionMonth]

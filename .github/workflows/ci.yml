@@ -1,0 +1,129 @@
+# Nothing blocked a broken push before this: the 68 (now 100+) backend tests
+# were run by hand before deploying (ERP_BLUEPRINT §2.5(11)). That stops being
+# acceptable the moment a real school's data is in the database.
+name: CI
+
+on:
+  push:
+    branches: [main, "part-*"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      # The suite also runs on SQLite, but production is PostgreSQL and CI is
+      # the place to find the differences — foreign keys are enforced here and
+      # silently ignored there.
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: sunrise
+          POSTGRES_PASSWORD: sunrise
+          POSTGRES_DB: sunrise_test
+        options: >-
+          --health-cmd "pg_isready -U sunrise"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgresql+psycopg://sunrise:sunrise@localhost:5432/sunrise_test
+      TEST_DATABASE_URL: postgresql+psycopg://sunrise:sunrise@localhost:5432/sunrise_test
+      JWT_SECRET: ci-only-not-a-real-secret
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          # ruff pinned: unpinned, CI installs whatever is latest that day, and
+          # ruff's default rule set has widened across releases - so the rules
+          # this project is held to could change with no commit and no warning.
+          # The first CI run met exactly that. Bump it deliberately.
+          # httpx2 is not optional: tests/conftest.py builds a TestClient, and
+          # starlette's test client needs an HTTP library that neither
+          # requirements.txt nor `pip install pytest` brings in. Without it
+          # conftest fails to import and pytest exits 4 before running a test.
+          pip install pytest ruff==0.16.6 httpx2
+
+      - name: Lint
+        run: ruff check app seed.py worker.py tests
+
+      - name: Tests
+        run: pytest -q
+
+      - name: Empty the database again
+        # pytest leaves behind a schema built by create_all, with no
+        # alembic_version row. Without this the next step is not "from empty"
+        # at all — it is alembic trying to create tables that already exist.
+        run: |
+          python - <<'PY'
+          import os
+          from sqlalchemy import create_engine, text
+          with create_engine(os.environ["DATABASE_URL"]).begin() as conn:
+              conn.execute(text("DROP SCHEMA public CASCADE; CREATE SCHEMA public"))
+          PY
+
+      - name: Migrations apply from empty
+        # Catches a migration that only works against a database the author
+        # already had — or against SQLite, where the migration test runs and
+        # where Postgres's stricter typing and enforced foreign keys are both
+        # absent. Two defects reached this branch through exactly that gap.
+        run: alembic upgrade head
+
+      - name: Seed the migrated schema
+        # The suite builds its schema with create_all, straight from the models,
+        # so it never exercises what the migrations actually produce. That gap
+        # hid a NOT NULL column whose server_default a batch alter had dropped:
+        # every insert into it failed, and no test could see it.
+        run: python seed.py
+
+      - name: Worker drains a queue
+        # Proves the scheduler and worker actually run without a request, which
+        # is a Checkpoint 1 criterion and not something the API tests can show.
+        run: python worker.py --once
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Backend deps for schema generation
+        working-directory: backend
+        run: pip install -r requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: API types are up to date
+        run: npm run api:check
+      - name: Tests
+        run: npm test
+      - name: Build
+        run: npm run build

@@ -7,29 +7,69 @@ from decimal import Decimal
 
 
 def test_totals_match_direct_counts(client, admin, db):
-    from app.models import ClassSection, Student, Teacher
+    """Each headline number is the count it claims to be.
+
+    Two things narrow the teacher count, and the test needs both or it proves
+    nothing.
+
+    The *user account* must be active, not merely the employee row. Those were
+    the same number until the demo gained drivers, who are staff records
+    without a working login — §5.6.8 gives a driver app access "later".
+
+    And the employee must be **teaching staff**. This assertion previously
+    counted every active employee and called the result `teachers`, which is
+    how the Transport Manager came to be one: the demo school reported 13
+    against its 12, and §5.10.10's student:teacher ratio inherited the error
+    from the field it is built on. A test that mirrors the implementation
+    rather than the intent will agree with a bug forever, which is what this
+    one did.
+    """
+    from sqlalchemy import func, select
+
+    from app.models import ClassSection, Employee, EmployeeType, Student, User
 
     stats = client.get("/admin/dashboard/stats", headers=admin).json()
     assert stats["totals"]["students"] == db.query(Student).count()
-    assert stats["totals"]["teachers"] == db.query(Teacher).count()
     assert stats["totals"]["classes"] == db.query(ClassSection).count()
 
+    active_staff = db.scalar(
+        select(func.count())
+        .select_from(Employee)
+        .join(User, User.id == Employee.user_id)
+        .where(User.is_active)
+    )
+    active_teaching = db.scalar(
+        select(func.count())
+        .select_from(Employee)
+        .join(User, User.id == Employee.user_id)
+        .where(User.is_active, Employee.employee_type == EmployeeType.teaching)
+    )
+    assert stats["totals"]["teachers"] == active_teaching
+    assert active_teaching < active_staff, (
+        "the demo has non-teaching staff, or this assertion proves nothing"
+    )
+    assert active_staff < db.query(Employee).count(), (
+        "the demo has staff without a login, or this assertion proves nothing"
+    )
 
-def test_fees_collected_matches_the_sum_of_payments(client, admin, db):
-    from app.models import FeeInvoice, FeePayment, SchoolSettings
+
+def test_fees_collected_matches_the_allocated_payments(client, admin, db):
+    from sqlalchemy import func, select
+
+    from app.models import AcademicYear, FeeInvoice, FeeInvoiceLine, PaymentAllocation
 
     stats = client.get("/admin/dashboard/stats", headers=admin).json()
-    year = int(db.get(SchoolSettings, 1).academic_year.split("-")[0])
-    expected = sum(
-        (
-            p.amount
-            for p in db.query(FeePayment)
-            .join(FeeInvoice, FeeInvoice.id == FeePayment.invoice_id)
-            .filter(FeeInvoice.year.in_([year, year + 1]))
-        ),
-        Decimal(0),
+    current = db.query(AcademicYear).filter_by(is_current=True).one()
+    year = current.start_date.year
+    # Collection is what was allocated to invoices of those years, not the sum
+    # of payments: an advance is money held, not revenue for a month unbilled.
+    expected = db.scalar(
+        select(func.coalesce(func.sum(PaymentAllocation.amount), 0))
+        .join(FeeInvoiceLine, FeeInvoiceLine.id == PaymentAllocation.invoice_line_id)
+        .join(FeeInvoice, FeeInvoice.id == FeeInvoiceLine.invoice_id)
+        .where(FeeInvoice.period_year.in_([year, year + 1]))
     )
-    assert Decimal(stats["totals"]["fees_collected"]) == expected
+    assert Decimal(stats["totals"]["fees_collected"]) == Decimal(expected)
 
 
 def test_performance_buckets_cover_every_scored_student(client, admin, db):

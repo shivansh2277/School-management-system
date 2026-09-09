@@ -5,8 +5,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import require_role
-from app.models import Exam, ExamSchedule, Mark, User, UserRole
+from app.services.rbac import require_permission
+from app.models import Exam, ExamSchedule, Mark, User
 from app.schemas.common import (
     AttendanceMonth,
     ExamScheduleOut,
@@ -15,9 +15,11 @@ from app.schemas.common import (
     SubmitRequest,
 )
 from app.services import assessment, attendance, homework, scoping
+from app.services.common import require_current_enrolment
+from app.services.school_settings import module_enabled
 
 router = APIRouter(prefix="/student", tags=["student"])
-student_only = require_role(UserRole.student)
+student_only = require_permission("homework.item.read")
 
 
 @router.get("/attendance", response_model=AttendanceMonth)
@@ -32,14 +34,14 @@ def my_attendance(
     return attendance.student_month(db, s.id, month or today.month, year or today.year)
 
 
-@router.get("/homework", response_model=list[StudentHomeworkOut])
+@router.get("/homework", response_model=list[StudentHomeworkOut], dependencies=[Depends(module_enabled("homework"))])
 def my_homework(
     status: str = "all", user: User = Depends(student_only), db: Session = Depends(get_db)
 ) -> list[StudentHomeworkOut]:
     return homework.for_student(db, scoping.student_id_for(db, user), status)
 
 
-@router.post("/homework/{homework_id}/submit", response_model=StudentHomeworkOut)
+@router.post("/homework/{homework_id}/submit", response_model=StudentHomeworkOut, dependencies=[Depends(require_permission("homework.submission.submit")), Depends(module_enabled("homework"))])
 def submit(
     homework_id: int,
     body: SubmitRequest,
@@ -54,11 +56,12 @@ def upcoming_exams(
     user: User = Depends(student_only), db: Session = Depends(get_db)
 ) -> list[ExamScheduleOut]:
     s = scoping.student_for(db, user)
+    enrolment = require_current_enrolment(db, s.id)
     rows = list(
         db.scalars(
             select(ExamSchedule)
             .where(
-                ExamSchedule.class_section_id == s.class_section_id,
+                ExamSchedule.class_section_id == enrolment.class_section_id,
                 ExamSchedule.exam_date >= Date.today(),
             )
             .order_by(ExamSchedule.exam_date)

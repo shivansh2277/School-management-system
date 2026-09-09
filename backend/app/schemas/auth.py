@@ -7,6 +7,11 @@ class LoginRequest(BaseModel):
     role: UserRole
     login_id: str
     password: str
+    # Logins are unique per school, not globally: two schools both have an
+    # "admin" and both may issue admission no 2026000001. The web app supplies
+    # this from its subdomain or configured school; it stays optional so a
+    # single-school deployment need not ask for it.
+    school_code: str | None = None
 
 
 class UserOut(BaseModel):
@@ -49,6 +54,20 @@ class ChildRef(BaseModel):
 
 class MeOut(BaseModel):
     user: UserOut
+    # The clients render their navigation from these rather than from the role
+    # name, so adding a role never requires a web deploy or an app release
+    # (ERP_BLUEPRINT §14).
+    permissions: list[str] = []
+    roles: list[str] = []
+    school_code: str | None = None
+    school_name: str | None = None
+    academic_year: str | None = None
+    # Which modules this school has switched on. It travels here rather than
+    # being fetched from /admin/configuration because that route needs
+    # `admin.settings.read`, which the fee collector, accountant, exam
+    # controller and transport manager do not hold — exactly the staff whose
+    # navigation has to hide a module the school does not use.
+    modules: list[str] = []
     # exactly one of these is populated, by role
     admission_no: str | None = None
     class_label: str | None = None

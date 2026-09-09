@@ -5,50 +5,44 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import require_role
-from app.models import ExamSchedule, Student, TimetableSlot, User, UserRole
+from app.services import timetable as timetable_svc
+from app.services.rbac import require_permission
+from app.models import ExamSchedule, Student, User
 from app.schemas.common import SlotOut
 from app.services import assessment, attendance, homework, notices, scoping
-from app.services.common import section_labels, subject_names
+from app.services.common import (
+    current_enrolment,
+    require_current_enrolment,
+    subject_names,
+)
 from app.services.stats import DAY_KEYS
 
 router = APIRouter(prefix="/student", tags=["student"])
-student_only = require_role(UserRole.student)
+student_only = require_permission("attendance.record.read")
 
 
 def _slots(db: Session, student: Student, day_key: str | None) -> list[SlotOut]:
-    q = select(TimetableSlot).where(TimetableSlot.class_section_id == student.class_section_id)
-    if day_key is not None:
-        q = q.where(TimetableSlot.day_of_week == day_key)
-    labels = section_labels(db)
-    subjects = subject_names(db)
-    from app.models import Teacher
-
-    teachers = {t.id: t.user.full_name for t in db.scalars(select(Teacher))}
-    return [
-        SlotOut(
-            period=s.period_no,
-            day_of_week=s.day_of_week,
-            start_time=s.start_time,
-            end_time=s.end_time,
-            class_section_id=s.class_section_id,
-            class_label=labels.get(s.class_section_id, ""),
-            subject=subjects.get(s.subject_id, ""),
-            teacher=teachers.get(s.teacher_id, ""),
-            room=s.room,
-        )
-        for s in db.scalars(q.order_by(TimetableSlot.day_of_week, TimetableSlot.period_no))
-    ]
+    enrolment = require_current_enrolment(db, student.id)
+    return timetable_svc.grid(
+        db,
+        student.school_id,
+        class_section_id=enrolment.class_section_id,
+        day_of_week=day_key,
+    )
 
 
 @router.get("/dashboard")
 def dashboard(user: User = Depends(student_only), db: Session = Depends(get_db)) -> dict:
     s = scoping.student_for(db, user)
-    exam = assessment.latest_exam_with_marks(db, s.class_section_id)
+    exam = assessment.latest_exam_with_marks(
+        db, s.school_id, require_current_enrolment(db, s.id).class_section_id
+    )
     next_paper = db.scalars(
         select(ExamSchedule)
         .where(
-            ExamSchedule.class_section_id == s.class_section_id,
+            ExamSchedule.class_section_id == require_current_enrolment(
+                db, s.id
+            ).class_section_id,
             ExamSchedule.exam_date >= Date.today(),
         )
         .order_by(ExamSchedule.exam_date)
@@ -60,7 +54,7 @@ def dashboard(user: User = Depends(student_only), db: Session = Depends(get_db))
         "next_exam": (
             {
                 "exam_schedule_id": next_paper.id,
-                "subject": subject_names(db).get(next_paper.subject_id, ""),
+                "subject": subject_names(db, user.school_id).get(next_paper.subject_id, ""),
                 "exam_date": next_paper.exam_date,
             }
             if next_paper
@@ -81,20 +75,24 @@ def timetable(user: User = Depends(student_only), db: Session = Depends(get_db))
 
 @router.get("/profile")
 def profile(user: User = Depends(student_only), db: Session = Depends(get_db)) -> dict:
-    from app.models import Parent, ParentStudent
+    from app.models import Guardian, StudentGuardian
 
     s = scoping.student_for(db, user)
+    # `enrolment` was used below and never defined, so this endpoint raised a
+    # NameError for every student who called it. The class and roll number are
+    # facts about the year, so they come from the enrolment.
+    enrolment = current_enrolment(db, s.id)
     guardians = db.scalars(
-        select(Parent).join(ParentStudent, ParentStudent.parent_id == Parent.id).where(
-            ParentStudent.student_id == s.id
+        select(Guardian).join(StudentGuardian, StudentGuardian.guardian_id == Guardian.id).where(
+            StudentGuardian.student_id == s.id
         )
     ).all()
     return {
         "id": s.id,
         "full_name": s.user.full_name,
         "admission_no": s.admission_no,
-        "class_label": s.class_section.label,
-        "roll_no": s.roll_no,
+        "class_label": enrolment.class_section.label if enrolment else "",
+        "roll_no": enrolment.roll_no if enrolment else None,
         "dob": s.dob,
         "gender": s.gender,
         "address": s.address,

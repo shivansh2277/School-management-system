@@ -3,21 +3,26 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import require_role
-from app.models import ClassSection, ClassSubjectTeacher, Student, TimetableSlot, User, UserRole
+from app.services import timetable as timetable_svc
+from app.services.rbac import require_permission
+from app.models import (
+    ClassSection,
+    ClassSubjectTeacher,
+    User,
+)
 from app.schemas.common import SlotOut
 from app.services import scoping
 from app.services.common import roster, section_labels, subject_names
 
 router = APIRouter(prefix="/teacher", tags=["teacher"])
-teacher_only = require_role(UserRole.teacher)
+teacher_only = require_permission("academics.class.read")
 
 
 @router.get("/classes")
 def my_classes(user: User = Depends(teacher_only), db: Session = Depends(get_db)) -> list[dict]:
-    me = scoping.teacher_for(db, user)
-    labels = section_labels(db)
-    subjects = subject_names(db)
+    me = scoping.employee_for(db, user)
+    labels = section_labels(db, user.school_id)
+    subjects = subject_names(db, user.school_id)
     owned: dict[int, list[str]] = {}
     for row in db.scalars(
         select(ClassSubjectTeacher).where(ClassSubjectTeacher.teacher_id == me.id)
@@ -32,9 +37,11 @@ def my_classes(user: User = Depends(teacher_only), db: Session = Depends(get_db)
                 "class_label": labels.get(section_id, ""),
                 "is_class_teacher": section.class_teacher_id == me.id,
                 "subjects": sorted(owned.get(section_id, [])),
-                "student_count": db.query(Student)
-                .filter(Student.class_section_id == section_id)
-                .count(),
+                # `db.query(Student).filter(Enrolment...)` named two tables
+                # and joined neither, so SQLAlchemy built a cartesian product
+                # and this counted 100 students x 10 enrolments = 1000 for a
+                # class of ten. Count the enrolments, which is what a roll is.
+                "student_count": len(roster(db, section_id)),
             }
         )
     return out
@@ -47,14 +54,18 @@ def class_roster(
     db: Session = Depends(get_db),
 ) -> list[dict]:
     scoping.assert_teaches_section(db, user, class_section_id)
+    # `roster()` returns Enrolments, not Students - deliberately, because a
+    # roll number belongs to the year rather than to the child. This bound the
+    # loop variable as if they were students, so every attribute was wrong and
+    # the endpoint raised on the first row.
     return [
         {
-            "id": s.id,
-            "full_name": s.user.full_name,
-            "roll_no": s.roll_no,
-            "admission_no": s.admission_no,
+            "id": e.student_id,
+            "full_name": e.student.user.full_name,
+            "roll_no": e.roll_no,
+            "admission_no": e.student.admission_no,
         }
-        for s in roster(db, class_section_id)
+        for e in roster(db, class_section_id)
     ]
 
 
@@ -62,35 +73,16 @@ def class_roster(
 def my_timetable(
     user: User = Depends(teacher_only), db: Session = Depends(get_db)
 ) -> list[SlotOut]:
-    me = scoping.teacher_for(db, user)
-    labels = section_labels(db)
-    subjects = subject_names(db)
-    slots = db.scalars(
-        select(TimetableSlot)
-        .where(TimetableSlot.teacher_id == me.id)
-        .order_by(TimetableSlot.day_of_week, TimetableSlot.period_no)
-    )
-    return [
-        SlotOut(
-            period=s.period_no,
-            day_of_week=s.day_of_week,
-            start_time=s.start_time,
-            end_time=s.end_time,
-            class_section_id=s.class_section_id,
-            class_label=labels.get(s.class_section_id, ""),
-            subject=subjects.get(s.subject_id, ""),
-            teacher=user.full_name,
-            room=s.room,
-        )
-        for s in slots
-    ]
+    me = scoping.employee_for(db, user)
+    return timetable_svc.grid(db, user.school_id, teacher_id=me.id)
+
 
 
 @router.get("/profile")
 def my_profile(user: User = Depends(teacher_only), db: Session = Depends(get_db)) -> dict:
-    me = scoping.teacher_for(db, user)
-    subjects = subject_names(db)
-    labels = section_labels(db)
+    me = scoping.employee_for(db, user)
+    subjects = subject_names(db, user.school_id)
+    labels = section_labels(db, user.school_id)
     owned = db.scalars(
         select(ClassSubjectTeacher).where(ClassSubjectTeacher.teacher_id == me.id)
     ).all()
@@ -98,7 +90,7 @@ def my_profile(user: User = Depends(teacher_only), db: Session = Depends(get_db)
     return {
         "id": me.id,
         "full_name": user.full_name,
-        "employee_id": me.employee_id,
+        "employee_code": me.employee_code,
         "qualification": me.qualification,
         "joining_date": me.joining_date,
         "email": user.email,
@@ -116,8 +108,8 @@ def my_subjects(
     db: Session = Depends(get_db),
 ) -> list[dict]:
     """Subjects this teacher owns, optionally within one section."""
-    me = scoping.teacher_for(db, user)
-    subjects = subject_names(db)
+    me = scoping.employee_for(db, user)
+    subjects = subject_names(db, user.school_id)
     q = select(ClassSubjectTeacher).where(ClassSubjectTeacher.teacher_id == me.id)
     if class_section_id is not None:
         scoping.assert_teaches_section(db, user, class_section_id)

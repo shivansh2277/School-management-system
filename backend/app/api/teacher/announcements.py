@@ -3,16 +3,16 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import require_role
-from app.models import Notice, NoticeAudience, User, UserRole
+from app.services.rbac import require_permission
+from app.models import Notice, NoticeAudience, User
 from app.schemas.common import AnnouncementCreate, NoticeCreate, NoticeOut
 from app.services import notices as svc
 
 router = APIRouter(prefix="/teacher", tags=["teacher"])
-teacher_only = require_role(UserRole.teacher)
+teacher_only = require_permission("comms.notice.read")
 
 
-@router.post("/announcements", response_model=NoticeOut, status_code=status.HTTP_201_CREATED)
+@router.post("/announcements", response_model=NoticeOut, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_permission("comms.notice.publish"))])
 def publish(
     body: AnnouncementCreate, user: User = Depends(teacher_only), db: Session = Depends(get_db)
 ) -> NoticeOut:

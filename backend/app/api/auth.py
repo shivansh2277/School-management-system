@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.deps import get_current_user
+from app.core.modules import MODULES
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -11,7 +12,17 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
-from app.models import ClassSection, Student, User, UserRole
+from app.models import (
+    AcademicYear,
+    ClassSection,
+    Role,
+    School,
+    SchoolStatus,
+    Student,
+    User,
+    UserRole,
+    UserRoleAssignment,
+)
 from app.schemas.auth import (
     AccessToken,
     ChangePasswordRequest,
@@ -22,7 +33,8 @@ from app.schemas.auth import (
     TokenPair,
     UserOut,
 )
-from app.services import scoping
+from app.services import rbac, school_settings, scoping
+from app.services.common import class_label_map, current_enrolment
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -31,11 +43,28 @@ _BAD_CREDS = HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid credentials fo
 
 @router.post("/login", response_model=TokenPair)
 def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenPair:
-    user = db.scalar(select(User).where(User.login_id == body.login_id))
+    q = select(User).where(User.login_id == body.login_id)
+    if body.school_code is not None:
+        q = q.join(School, School.id == User.school_id).where(
+            School.code == body.school_code
+        )
+    matches = list(db.scalars(q))
+    if len(matches) > 1:
+        # Never guess which tenant the caller meant.
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "This login exists at more than one school; supply school_code",
+        )
+    user = matches[0] if matches else None
     # The role tab must match users.role: correct credentials through the wrong
     # tab are rejected (BLUEPRINT §9).
     if user is None or user.role != body.role or not user.is_active:
         raise _BAD_CREDS
+    school = db.get(School, user.school_id)
+    if school is None or school.status is not SchoolStatus.active:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "This school is not active"
+        )
     if not verify_password(body.password, user.password_hash):
         raise _BAD_CREDS
     return TokenPair(
@@ -58,26 +87,55 @@ def refresh(body: RefreshRequest, db: Session = Depends(get_db)) -> AccessToken:
 
 @router.get("/me", response_model=MeOut)
 def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> MeOut:
-    out = MeOut(user=UserOut.model_validate(user, from_attributes=True))
+    authz = rbac.authz_for(db, user)
+    school = db.get(School, user.school_id)
+    year = db.scalar(
+        select(AcademicYear).where(
+            AcademicYear.school_id == user.school_id,
+            AcademicYear.is_current.is_(True),
+        )
+    )
+    out = MeOut(
+        user=UserOut.model_validate(user, from_attributes=True),
+        permissions=authz.codes,
+        roles=sorted(
+            db.scalars(
+                select(Role.code)
+                .join(UserRoleAssignment, UserRoleAssignment.role_id == Role.id)
+                .where(UserRoleAssignment.user_id == user.id)
+            )
+        ),
+        school_code=school.code if school else None,
+        school_name=school.name if school else None,
+        academic_year=year.code if year else None,
+        modules=[
+            m.code
+            for m in MODULES
+            if school_settings.enabled(db, user.school_id, m.code)
+        ],
+    )
     if user.role == UserRole.student:
         s = scoping.student_for(db, user)
         out.admission_no = s.admission_no
-        out.class_label = s.class_section.label
-        out.roll_no = s.roll_no
+        enrolment = current_enrolment(db, s.id)
+        if enrolment is not None:
+            out.class_label = enrolment.class_section.label
+            out.roll_no = enrolment.roll_no
     elif user.role == UserRole.teacher:
-        t = scoping.teacher_for(db, user)
-        out.employee_id = t.employee_id
+        t = scoping.employee_for(db, user)
+        out.employee_id = t.employee_code
         ids = scoping.class_section_ids_for(db, user)
         out.sections = [
             cs.label for cs in db.scalars(select(ClassSection).where(ClassSection.id.in_(ids)))
         ]
     elif user.role == UserRole.parent:
         ids = scoping.child_ids_for(db, user)
+        labels = class_label_map(db, ids)
         out.children = [
             ChildRef(
                 id=s.id,
                 name=s.user.full_name,
-                class_label=s.class_section.label,
+                class_label=labels.get(s.id, ""),
                 admission_no=s.admission_no,
             )
             for s in db.scalars(select(Student).where(Student.id.in_(ids)))

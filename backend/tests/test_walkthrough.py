@@ -5,19 +5,24 @@ If this test passes, the demo works; if any link were mocked, it would fail.
 """
 
 from datetime import date, timedelta
+from decimal import Decimal
 
 
 def test_cross_role_walkthrough(client, admin, teacher, student, parent, db, ids):
-    from app.models import Student
+    from app.models import Enrolment, Student
 
     section = ids["section_10a"]
     today = date.today().isoformat()
     roster = (
-        db.query(Student).filter(Student.class_section_id == section).order_by(Student.roll_no).all()
+        db.query(Student)
+        .join(Enrolment, Enrolment.student_id == Student.id)
+        .filter(Enrolment.class_section_id == section)
+        .order_by(Enrolment.roll_no)
+        .all()
     )
     absent_two = {roster[0].id, roster[1].id}
 
-    # 1. Teacher marks two students absent for 10-A today.
+    # 1. Employee marks two students absent for 10-A today.
     entries = [
         {"student_id": s.id, "status": "absent" if s.id in absent_two else "present"}
         for s in roster
@@ -45,7 +50,7 @@ def test_cross_role_walkthrough(client, admin, teacher, student, parent, db, ids
     ).json()
     assert {"date": today, "status": "absent"} in theirs["days"]
 
-    # 5. Teacher creates homework for 10-A / Mathematics, due tomorrow.
+    # 5. Employee creates homework for 10-A / Mathematics, due tomorrow.
     hw = client.post(
         "/teacher/homework",
         json={
@@ -70,12 +75,12 @@ def test_cross_role_walkthrough(client, admin, teacher, student, parent, db, ids
     )
     assert submitted.status_code == 200 and submitted.json()["submitted"] is True
 
-    # 7. Teacher's submission list shows that student as Submitted.
+    # 7. Employee's submission list shows that student as Submitted.
     rows = client.get(f"/teacher/homework/{hw_id}/submissions", headers=teacher).json()
     theirs_row = next(r for r in rows if r["student_id"] == ids["student_1"])
     assert theirs_row["submitted"] is True and theirs_row["late"] is False
 
-    # 8. Parent's submitted count includes it.
+    # 8. Guardian's submitted count includes it.
     child_hw = client.get(
         f"/parent/children/{ids['student_1']}/homework", headers=parent
     ).json()
@@ -105,7 +110,7 @@ def test_cross_role_walkthrough(client, admin, teacher, student, parent, db, ids
     assert paper.status_code == 201
     paper_id = paper.json()["id"]
 
-    # 10. Teacher enters marks; above max is rejected.
+    # 10. Employee enters marks; above max is rejected.
     too_high = client.post(
         "/teacher/marks",
         json={
@@ -131,7 +136,7 @@ def test_cross_role_walkthrough(client, admin, teacher, student, parent, db, ids
     assert float(row["marks_obtained"]) == 44.0
     assert row["percent"] == 88.0 and row["grade"] == "A2"
 
-    # 12. Parent sees the same report card.
+    # 12. Guardian sees the same report card.
     assert (
         client.get(
             f"/parent/children/{ids['student_1']}/results/{exam['id']}", headers=parent
@@ -143,29 +148,33 @@ def test_cross_role_walkthrough(client, admin, teacher, student, parent, db, ids
     generated = client.post(
         "/admin/fees/invoices/generate", json={"month": 12, "year": 2026}, headers=admin
     ).json()
-    assert generated["created"] == 24
+    assert generated["created"] == db.query(Student).count()
 
-    # 14. Parent pays one and downloads the PDF receipt.
+    # 14. Guardian pays their December bill and downloads the PDF receipt.
     before = client.get("/admin/fees/collection?year=2026", headers=admin).json()
     invoice = next(
         i
         for i in client.get("/parent/fees", headers=parent).json()
         if i["status"] != "paid" and i["year"] == 2026 and i["month"] == 12
     )
-    payment = client.post(f"/parent/fees/{invoice['id']}/pay", headers=parent)
-    assert payment.status_code == 200
-    assert (
-        next(
-            i for i in client.get("/parent/fees", headers=parent).json() if i["id"] == invoice["id"]
-        )["status"]
-        == "paid"
+    due_now = Decimal(invoice["balance"])
+    payment = client.post(
+        "/parent/fees/pay",
+        json={
+            "student_id": invoice["student_id"],
+            "amount": str(due_now),
+            "idempotency_key": "walkthrough-fee",
+        },
+        headers=parent,
     )
-    pdf = client.get(f"/parent/fees/{invoice['id']}/receipt.pdf", headers=parent)
+    assert payment.status_code == 201, payment.text
+    pdf = client.get(f"/parent/fees/receipts/{payment.json()['id']}.pdf", headers=parent)
     assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF")
 
-    # 15. The admin collection total rose by exactly that amount.
+    # 15. The admin collection total rose by exactly what was allocated. The
+    # money settles the oldest dues first, so it need not land on December.
     after = client.get("/admin/fees/collection?year=2026", headers=admin).json()
-    assert float(after["collected"]) - float(before["collected"]) == float(invoice["amount"])
+    assert Decimal(after["collected"]) - Decimal(before["collected"]) == due_now
 
     # 16. An admin notice to "parents" reaches the parent and not the student.
     notice = client.post(

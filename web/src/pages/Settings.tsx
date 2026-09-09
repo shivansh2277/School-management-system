@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { api, money } from "../api/client";
+import { useAuth } from "../auth/AuthContext";
 import { Card, DataTable, FormField, inputClass } from "../components/ui";
 
 type School = {
@@ -26,20 +27,40 @@ const FIELDS: [keyof School, string][] = [
   ["academic_year", "Academic year"],
 ];
 
+type Band = { id: number; min_percent: string; grade: string };
+// `/admin/fees/plans` was rebuilt in Part 3 around heads/plans/items and the
+// backend route returns a plain dict, so the generated schema can't type its
+// shape further than `{[key: string]: unknown}` - this local type documents
+// the fields the screen actually reads.
+type Plan = { id: number; name: string; class_name: string; monthly_total: string };
+
 export function Settings() {
   const qc = useQueryClient();
-  const school = useQuery({ queryKey: ["settings"], queryFn: () => api.get<School>("/admin/settings") });
+  const school = useQuery({
+    queryKey: ["settings"],
+    queryFn: () => api.get("/admin/settings") as Promise<School>,
+  });
+  // `/admin/fees/structures` was deleted when Part 3 rebuilt fees, and this
+  // call has been a silent 404 ever since - the reason this slice generates
+  // types. The replacement is the fee plan, which carries its own monthly
+  // total summed from the items that recur monthly.
+  //
+  // This is the one panel on this screen that crosses a module boundary:
+  // `/admin/fees/plans` sits behind `module_enabled("fees")`, while the rest of
+  // Settings is a school's own profile and is always available. So the panel
+  // gates itself rather than the screen declaring the fees module - a school
+  // with fees switched off must still be able to edit its own name.
+  const { hasModule } = useAuth();
+  const feesOn = hasModule("fees");
   const structures = useQuery({
-    queryKey: ["fee-structures"],
-    queryFn: () => api.get<{ id: number; class_name: string; monthly_amount: string }[]>(
-      "/admin/fees/structures",
-    ),
+    queryKey: ["fee-plans"],
+    queryFn: () => api.get("/admin/fees/plans") as Promise<Plan[]>,
+    enabled: feesOn,
   });
 
   const bands = useQuery({
     queryKey: ["grade-bands"],
-    queryFn: () =>
-      api.get<{ id: number; min_percent: string; grade: string }[]>("/admin/grade-bands"),
+    queryFn: () => api.get("/admin/grade-bands") as Promise<Band[]>,
   });
 
   const [form, setForm] = useState<School | null>(null);
@@ -87,6 +108,8 @@ export function Settings() {
         </p>
         <DataTable
           rows={bands.data ?? []}
+          loading={bands.isLoading}
+          error={bands.error}
           empty="No grade bands configured."
           columns={[
             { key: "grade", header: "Grade", render: (r) => r.grade },
@@ -100,9 +123,12 @@ export function Settings() {
         />
       </Card>
 
+      {feesOn && (
       <Card title="Fee structure">
         <DataTable
           rows={structures.data ?? []}
+          loading={structures.isLoading}
+          error={structures.error}
           empty="No fee structure configured."
           columns={[
             { key: "class", header: "Class", render: (r) => r.class_name },
@@ -110,11 +136,12 @@ export function Settings() {
               key: "amt",
               header: "Monthly amount",
               align: "right",
-              render: (r) => money(r.monthly_amount),
+              render: (r) => money(r.monthly_total),
             },
           ]}
         />
       </Card>
+      )}
     </>
   );
 }

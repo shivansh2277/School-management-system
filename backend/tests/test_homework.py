@@ -1,5 +1,7 @@
 from datetime import date, timedelta
 
+from app.services.common import roster
+
 
 def create(client, teacher, ids, due_offset=3, title="New assignment"):
     return client.post(
@@ -19,10 +21,11 @@ def test_due_date_before_assigned_date_is_rejected(client, teacher, ids):
     assert create(client, teacher, ids, due_offset=-1).status_code == 400
 
 
-def test_pending_count_is_roster_minus_submissions(client, teacher, student, ids):
+def test_pending_count_is_roster_minus_submissions(client, teacher, student, ids, db):
     hw = create(client, teacher, ids).json()
     assert hw["submitted_count"] == 0
-    assert hw["total_students"] == 8
+    # The section roster, whatever the demo size is.
+    assert hw["total_students"] == len(roster(db, ids["section_10a"]))
 
     client.post(
         f"/student/homework/{hw['id']}/submit",
@@ -31,7 +34,7 @@ def test_pending_count_is_roster_minus_submissions(client, teacher, student, ids
     )
     rows = client.get(f"/teacher/homework/{hw['id']}/submissions", headers=teacher).json()
     assert sum(1 for r in rows if r["submitted"]) == 1
-    assert sum(1 for r in rows if not r["submitted"]) == 7
+    assert sum(1 for r in rows if not r["submitted"]) == len(rows) - 1
 
 
 def test_empty_answer_is_rejected(client, teacher, student, ids):

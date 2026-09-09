@@ -5,16 +5,6 @@ import { api } from "../api/client";
 import { Card, DataTable, Empty, Pill, inputClass } from "../components/ui";
 import { useClasses } from "./useClasses";
 
-type Roll = {
-  student_id: number;
-  full_name: string;
-  roll_no: number;
-  status: string | null;
-  remarks: string | null;
-};
-
-type Summary = { present: number; absent: number; leave: number; percent: number | null };
-
 const today = () => new Date().toISOString().slice(0, 10);
 
 export function Attendance() {
@@ -27,18 +17,16 @@ export function Attendance() {
   const roll = useQuery({
     queryKey: ["admin-roll", activeClass, date],
     queryFn: () =>
-      api.get<Roll[]>(`/admin/attendance?class_section_id=${activeClass}&date=${date}`),
+      api.get("/admin/attendance", `?class_section_id=${activeClass}&date=${date}`),
     enabled: Boolean(activeClass),
   });
 
   const summary = useQuery({
     queryKey: ["admin-att-summary", activeClass],
     queryFn: () =>
-      api.get<Summary>(`/admin/attendance/summary?class_section_id=${activeClass}`),
+      api.get("/admin/attendance/summary", `?class_section_id=${activeClass}`),
     enabled: Boolean(activeClass),
   });
-
-  const marked = (roll.data ?? []).filter((r) => r.status !== null);
 
   return (
     <>
@@ -67,25 +55,23 @@ export function Attendance() {
           Read only. Attendance is marked by the class teacher in the mobile app.
         </p>
 
-        {marked.length === 0 ? (
-          <Empty>No attendance marked for this date yet.</Empty>
-        ) : (
-          <DataTable<Roll>
-            rows={roll.data ?? []}
-            empty="No students in this section."
-            columns={[
-              { key: "roll", header: "Roll", render: (r) => r.roll_no },
-              { key: "name", header: "Name", render: (r) => r.full_name },
-              {
-                key: "status",
-                header: "Status",
-                render: (r) =>
-                  r.status ? <Pill status={r.status}>{r.status}</Pill> : <span className="text-ink-faint">-</span>,
-              },
-              { key: "rem", header: "Remarks", render: (r) => r.remarks ?? "-" },
-            ]}
-          />
-        )}
+        <DataTable
+          rows={roll.data ?? []} // Roster deliberately includes unmarked students so unmarked children are visible
+          loading={roll.isLoading}
+          error={roll.error}
+          empty="No attendance marked for this date yet."
+          columns={[
+            { key: "roll", header: "Roll", render: (r) => r.roll_no },
+            { key: "name", header: "Name", render: (r) => r.full_name },
+            {
+              key: "status",
+              header: "Status",
+              render: (r) =>
+                r.status ? <Pill status={r.status}>{r.status}</Pill> : <span className="text-ink-faint">-</span>,
+            },
+            { key: "rem", header: "Remarks", render: (r) => r.remarks ?? "-" },
+          ]}
+        />
       </Card>
 
       <Card title="Section summary (all recorded days)">

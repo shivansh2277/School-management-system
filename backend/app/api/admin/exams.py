@@ -1,40 +1,56 @@
-from datetime import date as Date
-
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from pydantic import BaseModel, Field
+
 from app.core.db import get_db
-from app.core.deps import require_role
-from app.models import Exam, ExamSchedule, User, UserRole
+from app.services.rbac import require_permission
+from app.services import tenancy
+from app.services.school_settings import module_enabled
+from app.models import Exam, ExamSchedule, User
 from app.schemas.common import (
-    AttendanceSummary,
+    MarksRequest,
+    MarksRosterRow,
     ExamCreate,
     ExamScheduleCreate,
     ExamScheduleOut,
     ExamOut,
-    RollRow,
 )
-from app.services import assessment
-from app.services import attendance as attendance_svc
+from app.services import assessment, schemes
 
-router = APIRouter(prefix="/admin", tags=["admin"])
-admin_only = require_role(UserRole.admin)
+router = APIRouter(
+    prefix="/admin", tags=["admin"],
+    dependencies=[Depends(module_enabled("examinations"))],
+)
+admin_only = require_permission("exam.definition.read", school_wide=True)
 
 
 @router.get("/exams", response_model=list[ExamOut])
 def list_exams(user: User = Depends(admin_only), db: Session = Depends(get_db)) -> list[Exam]:
-    return list(db.scalars(select(Exam).order_by(Exam.start_date.desc())))
+    return list(
+        db.scalars(
+            select(Exam)
+            .where(Exam.school_id == user.school_id)
+            .order_by(Exam.start_date.desc())
+        )
+    )
 
 
-@router.post("/exams", response_model=ExamOut, status_code=status.HTTP_201_CREATED)
+@router.post("/exams", response_model=ExamOut, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_permission("exam.definition.write"))])
 def create_exam(
     body: ExamCreate, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> Exam:
     if body.end_date < body.start_date:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "end_date must not precede start_date")
-    exam = Exam(**body.model_dump())
+    fields = body.model_dump()
+    component_id = fields.pop("scheme_component_id")
+    exam = Exam(school_id=user.school_id, **fields)
     db.add(exam)
+    db.flush()
+    # Takes the term from the component when there is one: two places naming
+    # the term is two places to disagree, and the report card groups by it.
+    schemes.attach_component(db, exam, component_id)
     db.commit()
     return exam
 
@@ -63,7 +79,9 @@ def add_paper(
         raise HTTPException(status.HTTP_409_CONFLICT, "This paper is already scheduled")
     if body.max_marks <= 0:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "max_marks must be positive")
-    sched = ExamSchedule(exam_id=exam_id, **body.model_dump())
+    sched = ExamSchedule(
+        school_id=user.school_id, exam_id=exam_id, **body.model_dump()
+    )
     db.add(sched)
     db.commit()
     return assessment.schedule_out(db, [sched])[0]
@@ -73,33 +91,81 @@ def add_paper(
 def exam_schedule(
     exam_id: int, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> list[ExamScheduleOut]:
+    # The parent exam establishes the tenant; without this, any exam id read
+    # back another school's paper dates and max marks.
+    exam = tenancy.get_owned(db, Exam, exam_id, user, what="Exam")
     rows = list(
         db.scalars(
             select(ExamSchedule)
-            .where(ExamSchedule.exam_id == exam_id)
+            .where(ExamSchedule.exam_id == exam.id)
             .order_by(ExamSchedule.exam_date)
         )
     )
     return assessment.schedule_out(db, rows)
 
 
-@router.get("/attendance", response_model=list[RollRow])
-def attendance_roll(
-    class_section_id: int,
-    date: Date,
-    user: User = Depends(admin_only),
-    db: Session = Depends(get_db),
-) -> list[RollRow]:
-    """Read-only: admins do not mark attendance (BLUEPRINT §9 matrix)."""
-    return attendance_svc.roll_sheet(db, class_section_id, date)
+class UnlockRequest(BaseModel):
+    reason: str = Field(min_length=3, max_length=500)
 
 
-@router.get("/attendance/summary", response_model=AttendanceSummary)
-def attendance_summary(
-    date_from: Date | None = Query(None, alias="from"),
-    date_to: Date | None = Query(None, alias="to"),
-    class_section_id: int | None = None,
+@router.post(
+    "/exams/papers/{exam_schedule_id}/lock",
+    response_model=ExamScheduleOut,
+    dependencies=[Depends(require_permission("exam.marks.lock"))],
+)
+def lock_paper(
+    exam_schedule_id: int,
     user: User = Depends(admin_only),
     db: Session = Depends(get_db),
-) -> AttendanceSummary:
-    return attendance_svc.section_summary(db, class_section_id, date_from, date_to)
+) -> ExamScheduleOut:
+    """Close marks entry. After this a change needs an override and a reason."""
+    sched = assessment.lock_marks(db, user, exam_schedule_id)
+    return assessment.schedule_out(db, [sched])[0]
+
+
+@router.post(
+    "/exams/papers/{exam_schedule_id}/unlock",
+    response_model=ExamScheduleOut,
+    dependencies=[Depends(require_permission("exam.marks.lock"))],
+)
+def unlock_paper(
+    exam_schedule_id: int,
+    body: UnlockRequest,
+    user: User = Depends(admin_only),
+    db: Session = Depends(get_db),
+) -> ExamScheduleOut:
+    sched = assessment.unlock_marks(db, user, exam_schedule_id, body.reason)
+    return assessment.schedule_out(db, [sched])[0]
+
+
+@router.get("/exams/papers/{exam_schedule_id}/marks", response_model=list[MarksRosterRow])
+def paper_marks(
+    exam_schedule_id: int,
+    user: User = Depends(require_permission("exam.marks.manage_any", school_wide=True)),
+    db: Session = Depends(get_db),
+) -> list[MarksRosterRow]:
+    return assessment.marks_roster(db, user, exam_schedule_id, school_wide=True)
+
+
+@router.post("/exams/papers/{exam_schedule_id}/marks", response_model=list[MarksRosterRow])
+def enter_paper_marks(
+    exam_schedule_id: int,
+    body: MarksRequest,
+    user: User = Depends(require_permission("exam.marks.manage_any", school_wide=True)),
+    db: Session = Depends(get_db),
+) -> list[MarksRosterRow]:
+    """The exam controller's way in.
+
+    `/teacher/marks` reaches only the papers a teacher owns, which is right for
+    a subject teacher and wrong for the person §5.4.8 puts in charge of
+    moderation: an override on a locked paper is exactly the case where the
+    actor does not teach the subject. The lock and the audit rules are the same
+    either way — they live in the service, not in the route.
+
+    Gated on its own permission rather than on `exam.marks.enter`, because a
+    teacher holds that one *unscoped* — the "own subjects only" restriction is
+    enforced in the service, not by the grant. Reusing it here would have let
+    any teacher mark any section in the school.
+    """
+    body.exam_schedule_id = exam_schedule_id
+    return assessment.enter_marks(db, user, body, school_wide=True)

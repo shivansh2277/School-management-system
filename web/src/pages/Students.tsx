@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { api } from "../api/client";
+import { errorText } from "../api/errors";
 import { Card, DataTable, FormField, Modal, inputClass } from "../components/ui";
 import { useClasses } from "./useClasses";
 
@@ -11,8 +12,8 @@ type Row = {
   admission_no: string;
   class_label: string;
   roll_no: number;
-  parent_name: string | null;
-  parent_phone: string | null;
+  guardian_name: string | null;
+  guardian_phone: string | null;
 };
 
 type Detail = Row & {
@@ -36,14 +37,19 @@ export function Students() {
   if (q) params.set("q", q);
   if (classId) params.set("class_section_id", classId);
 
-  const { data } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["students", q, classId],
-    queryFn: () => api.get<{ items: Row[]; total: number }>(`/admin/students?${params}`),
+    // Page.items is untyped in the schema (a generic pagination envelope), so
+    // the real item shape is asserted here rather than re-declared.
+    queryFn: () =>
+      api.get("/admin/students", `?${params}`) as Promise<{ items: Row[]; total: number }>,
   });
 
   const detail = useQuery({
     queryKey: ["student", openId],
-    queryFn: () => api.get<Detail>(`/admin/students/${openId}`),
+    // /admin/students/{student_id} has no response_model; Detail documents it.
+    queryFn: () =>
+      api.get(`/admin/students/${openId}` as "/admin/students/{student_id}") as Promise<Detail>,
     enabled: openId !== null,
   });
 
@@ -79,6 +85,8 @@ export function Students() {
 
         <DataTable<Row>
           rows={data?.items ?? []}
+          loading={isLoading}
+          error={error}
           onRowClick={(r) => setOpenId(r.id)}
           empty="No students match this filter."
           columns={[
@@ -97,8 +105,8 @@ export function Students() {
             { key: "adm", header: "Admission No.", render: (r) => r.admission_no },
             { key: "class", header: "Class", render: (r) => r.class_label },
             { key: "roll", header: "Roll", render: (r) => r.roll_no, align: "right" },
-            { key: "parent", header: "Parent", render: (r) => r.parent_name ?? "-" },
-            { key: "phone", header: "Phone", render: (r) => r.parent_phone ?? "-" },
+            { key: "guardian", header: "Guardian", render: (r) => r.guardian_name ?? "-" },
+            { key: "phone", header: "Phone", render: (r) => r.guardian_phone ?? "-" },
           ]}
         />
       </Card>
@@ -115,7 +123,7 @@ export function Students() {
                 ["Date of birth", detail.data.dob ?? "-"],
                 ["Gender", detail.data.gender ?? "-"],
                 ["Address", detail.data.address ?? "-"],
-                ["Parent", detail.data.parent_name ?? "-"],
+                ["Guardian", detail.data.guardian_name ?? "-"],
                 [
                   "Attendance",
                   detail.data.attendance_percent === null
@@ -162,22 +170,22 @@ function AddStudent({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
     admission_no: "",
     class_section_id: "",
     roll_no: "",
-    parent_name: "",
-    parent_phone: "",
+    guardian_name: "",
+    guardian_phone: "",
   });
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm({ ...form, [k]: e.target.value });
 
   const save = useMutation({
     mutationFn: () =>
-      // One transaction creates the student login and the parent login together.
+      // One transaction creates the student login and the guardian login together.
       api.post("/admin/students", {
         full_name: form.full_name,
         admission_no: form.admission_no,
         class_section_id: Number(form.class_section_id),
         roll_no: Number(form.roll_no),
-        parent: form.parent_phone
-          ? { full_name: form.parent_name, phone: form.parent_phone, relation: "father" }
+        guardian: form.guardian_phone
+          ? { full_name: form.guardian_name, phone: form.guardian_phone, relation: "father" }
           : null,
       }),
     onSuccess: onSaved,
@@ -212,19 +220,19 @@ function AddStudent({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
           </FormField>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <FormField label="Parent name">
-            <input className={inputClass} value={form.parent_name} onChange={set("parent_name")} />
+          <FormField label="Guardian name">
+            <input className={inputClass} value={form.guardian_name} onChange={set("guardian_name")} />
           </FormField>
-          <FormField label="Parent mobile (their login)">
-            <input className={inputClass} value={form.parent_phone} onChange={set("parent_phone")} />
+          <FormField label="Guardian mobile (their login)">
+            <input className={inputClass} value={form.guardian_phone} onChange={set("guardian_phone")} />
           </FormField>
         </div>
 
         {save.isError && (
-          <p className="text-sm text-danger">{(save.error as Error).message}</p>
+          <p className="text-sm text-danger">{errorText(save.error)}</p>
         )}
         <p className="text-xs text-ink-faint">
-          The student signs in with their admission number, the parent with their mobile number.
+          The student signs in with their admission number, the guardian with their mobile number.
           Default passwords are Student@123 and Parent@123.
         </p>
 

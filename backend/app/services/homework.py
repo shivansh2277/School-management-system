@@ -4,7 +4,15 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import ClassSection, Homework, HomeworkSubmission, Student, Subject, Teacher, User
+from app.models import (
+    ClassSection,
+    Enrolment,
+    Homework,
+    HomeworkSubmission,
+    Subject,
+    Employee,
+    User,
+)
 from app.schemas.common import (
     HomeworkCreate,
     HomeworkOut,
@@ -13,7 +21,7 @@ from app.schemas.common import (
     SubmissionRow,
 )
 from app.services import scoping
-from app.services.common import roster
+from app.services.common import require_current_enrolment, roster
 
 
 def _counts(db: Session, homework_ids: list[int]) -> dict[int, int]:
@@ -30,7 +38,9 @@ def _counts(db: Session, homework_ids: list[int]) -> dict[int, int]:
 def _roster_sizes(db: Session) -> dict[int, int]:
     return dict(
         db.execute(
-            select(Student.class_section_id, func.count()).group_by(Student.class_section_id)
+            select(Enrolment.class_section_id, func.count()).group_by(
+                Enrolment.class_section_id
+            )
         ).all()
     )
 
@@ -40,7 +50,7 @@ def to_out(db: Session, items: list[Homework]) -> list[HomeworkOut]:
     sizes = _roster_sizes(db)
     labels = {c.id: c.label for c in db.scalars(select(ClassSection))}
     subjects = {s.id: s.name for s in db.scalars(select(Subject))}
-    teachers = {t.id: t.user.full_name for t in db.scalars(select(Teacher))}
+    teachers = {t.id: t.user.full_name for t in db.scalars(select(Employee))}
     return [
         HomeworkOut(
             id=h.id,
@@ -69,8 +79,9 @@ def create(db: Session, user: User, body: HomeworkCreate) -> HomeworkOut:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "due_date must not precede assigned_date")
     hw = Homework(
         class_section_id=body.class_section_id,
+        school_id=user.school_id,
         subject_id=body.subject_id,
-        teacher_id=scoping.teacher_for(db, user).id,
+        teacher_id=scoping.employee_for(db, user).id,
         title=body.title,
         description=body.description,
         assigned_date=assigned,
@@ -121,13 +132,13 @@ def submissions(db: Session, user: User, homework_id: int) -> list[SubmissionRow
         )
     }
     out = []
-    for s in roster(db, hw.class_section_id):
-        sub = rows.get(s.id)
+    for e in roster(db, hw.class_section_id):
+        sub = rows.get(e.student_id)
         out.append(
             SubmissionRow(
-                student_id=s.id,
-                full_name=s.user.full_name,
-                roll_no=s.roll_no,
+                student_id=e.student_id,
+                full_name=e.student.user.full_name,
+                roll_no=e.roll_no,
                 submitted=sub is not None,
                 submitted_at=sub.submitted_at if sub else None,
                 late=bool(sub and sub.submitted_at.date() > hw.due_date),
@@ -138,11 +149,11 @@ def submissions(db: Session, user: User, homework_id: int) -> list[SubmissionRow
 
 
 def for_student(db: Session, student_id: int, only: str = "all") -> list[StudentHomeworkOut]:
-    student = db.get(Student, student_id)
+    enrolment = require_current_enrolment(db, student_id)
     items = list(
         db.scalars(
             select(Homework)
-            .where(Homework.class_section_id == student.class_section_id)
+            .where(Homework.class_section_id == enrolment.class_section_id)
             .order_by(Homework.due_date.desc())
         )
     )
@@ -176,7 +187,7 @@ def submit(db: Session, user: User, homework_id: int, answer_text: str) -> Stude
     hw = db.get(Homework, homework_id)
     if hw is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Homework not found")
-    if hw.class_section_id != student.class_section_id:
+    if hw.class_section_id != require_current_enrolment(db, student.id).class_section_id:
         raise scoping.forbidden("This homework is not assigned to your class")
     answer = answer_text.strip()
     if not answer:
@@ -192,6 +203,7 @@ def submit(db: Session, user: User, homework_id: int, answer_text: str) -> Stude
     if existing is None:
         db.add(
             HomeworkSubmission(
+                school_id=student.school_id,
                 homework_id=hw.id,
                 student_id=student.id,
                 answer_text=answer,

@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, Enum, Integer, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import BigInteger, DateTime, Enum, ForeignKey, Integer, func
+from sqlalchemy.orm import Mapped, declared_attr, mapped_column
 
 from app.core.db import Base
 
@@ -23,6 +23,26 @@ class TimestampedBase(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
-    updated_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, onupdate=func.now()
+    # server_default as well as onupdate: without it the column stays NULL until
+    # the row is first updated, which made "never touched" and "touched at an
+    # unknown time" indistinguishable.
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
+
+
+class TenantBase(TimestampedBase):
+    """Every table except `schools` carries the tenant key.
+
+    The column is declared here rather than on each model so that a new table
+    cannot silently be created without one — a missing `school_id` is a data
+    leak between customers, not a style problem (ERP_BLUEPRINT §3.15).
+    """
+
+    __abstract__ = True
+
+    @declared_attr
+    def school_id(cls) -> Mapped[int]:  # noqa: N805
+        return mapped_column(
+            BigInteger, ForeignKey("schools.id"), nullable=False, index=True
+        )

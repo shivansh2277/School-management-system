@@ -55,16 +55,23 @@ EXPO_PUBLIC_API_URL=http://192.168.1.7:8000
 
 ## Demo accounts
 
-Printed on both login screens, so a reviewer can get in unaided.
+The login ids are printed on both login screens. The passwords are in
+`PASSWORDS.md`, which is not committed.
 
-| Role | Login id | Password | Where |
-|---|---|---|---|
-| Admin | `admin@sunrisepublic.edu` | `Admin@123` | Web dashboard |
-| Teacher | `TCH001` | `Teacher@123` | Mobile app |
-| Student | `SPS2024001` | `Student@123` | Mobile app |
-| Parent | `9876500001` | `Parent@123` | Mobile app |
+| Role | Login id | Where |
+|---|---|---|
+| Admin | `admin@sunrisepublic.edu` | Web dashboard |
+| Teacher | `TCH001` | Mobile app |
+| Student | `2024000001` | Mobile app |
+| Parent | `9876500001` | Mobile app |
 
-`TCH001` class-teaches 10-A and teaches it Mathematics; `SPS2024001` is in 10-A;
+The passwords are not listed here. `backend/seed.py` sets one per role and is
+the source of truth; `PASSWORDS.md` writes them out for whoever is running this
+locally and is gitignored, because a credential in a public repository is a
+credential in a search index. Override the seeded value with
+`SUNRISE_DEMO_PASSWORD`.
+
+`TCH001` class-teaches 10-A and teaches it Mathematics; `2024000001` is in 10-A;
 `9876500001` has two children, so the parent child-switcher is visible on the
 default demo account. The API rejects a correct password sent through the wrong
 role tab, so an admin cannot sign in on the app and a student cannot sign in on

@@ -2,18 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { api } from "../api/client";
+import { errorText } from "../api/errors";
 import { Card, DataTable, FormField, inputClass } from "../components/ui";
 import { useClasses } from "./useClasses";
-
-type Notice = {
-  id: number;
-  title: string;
-  body: string;
-  audience: string;
-  class_label: string | null;
-  published_by: string;
-  published_at: string;
-};
 
 const AUDIENCES = ["all", "students", "parents", "teachers", "class"];
 
@@ -26,7 +17,7 @@ export function Notices() {
 
   const list = useQuery({
     queryKey: ["notices"],
-    queryFn: () => api.get<Notice[]>("/admin/notices"),
+    queryFn: () => api.get("/admin/notices"),
   });
 
   const publish = useMutation({
@@ -44,7 +35,7 @@ export function Notices() {
   });
 
   const remove = useMutation({
-    mutationFn: (id: number) => api.del(`/admin/notices/${id}`),
+    mutationFn: (id: number) => api.del(`/admin/notices/${id}` as "/admin/notices/{notice_id}"),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notices"] }),
   });
 
@@ -86,7 +77,7 @@ export function Notices() {
             )}
           </div>
           {publish.isError && (
-            <p className="text-sm text-danger">{(publish.error as Error).message}</p>
+            <p className="text-sm text-danger">{errorText(publish.error)}</p>
           )}
           <button
             onClick={() => publish.mutate()}
@@ -99,8 +90,10 @@ export function Notices() {
       </Card>
 
       <Card title="Published notices">
-        <DataTable<Notice>
+        <DataTable
           rows={list.data ?? []}
+          loading={list.isLoading}
+          error={list.error}
           empty="Nothing published yet."
           columns={[
             { key: "title", header: "Title", render: (n) => n.title },

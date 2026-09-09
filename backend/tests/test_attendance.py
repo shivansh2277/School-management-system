@@ -4,13 +4,14 @@ from app.services.attendance import summarise
 
 
 def roster_ids(db, class_section_id):
-    from app.models import Student
+    from app.models import Enrolment, Student
 
     return [
         s.id
         for s in db.query(Student)
-        .filter(Student.class_section_id == class_section_id)
-        .order_by(Student.roll_no)
+        .join(Enrolment, Enrolment.student_id == Student.id)
+        .filter(Enrolment.class_section_id == class_section_id)
+        .order_by(Enrolment.roll_no)
     ]
 
 
@@ -42,11 +43,15 @@ def test_marking_twice_upserts_rather_than_duplicating(client, teacher, db, ids)
     assert second.status_code == 200
     assert all(row["status"] == "absent" for row in second.json())
 
-    from app.models import Attendance
+    from app.models import Attendance, Enrolment
 
     rows = (
         db.query(Attendance)
-        .filter(Attendance.student_id.in_(students), Attendance.date == date.today())
+        .join(Enrolment, Enrolment.id == Attendance.enrolment_id)
+        # `day`, not a second `date.today()`: the rows were written for the
+        # date posted above, and a run crossing midnight between the two counts
+        # zero of them.
+        .filter(Enrolment.student_id.in_(students), Attendance.date == date.fromisoformat(day))
         .count()
     )
     assert rows == len(students)  # one row per student per day, not two

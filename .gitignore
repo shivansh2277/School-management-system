@@ -2,9 +2,23 @@ __pycache__/
 *.py[cod]
 .venv/
 *.db
+# Compose reads the root .env, which holds JWT_SECRET and the database
+# password. .env.example is the committed template.
+.env
+!.env.example
 backend/.env
 web/.env
 mobile/.env
 node_modules/
 dist/
 .expo/
+
+# Object storage when running without a bucket: LocalStorage writes uploaded
+# documents here. Test and demo artefacts, never source.
+backend/var/
+
+# The demo and test credentials, written out in one place for whoever is
+# running this locally. Never committed: a credential file in a public repo is
+# a credential file in a search index. `backend/seed.py` remains the source of
+# truth, and PASSWORDS.md explains how to override it.
+PASSWORDS.md

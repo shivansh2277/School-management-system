@@ -11,28 +11,29 @@ from sqlalchemy.orm import Session
 from app.models import (
     ClassSection,
     ClassSubjectTeacher,
-    Parent,
-    ParentStudent,
+    Guardian,
+    StudentGuardian,
     Student,
-    Teacher,
+    Employee,
     User,
     UserRole,
 )
+from app.services.common import current_enrolment
 
 
 def forbidden(msg: str = "Out of scope") -> HTTPException:
     return HTTPException(status.HTTP_403_FORBIDDEN, msg)
 
 
-def teacher_for(db: Session, user: User) -> Teacher:
-    t = db.scalar(select(Teacher).where(Teacher.user_id == user.id))
+def employee_for(db: Session, user: User) -> Employee:
+    t = db.scalar(select(Employee).where(Employee.user_id == user.id))
     if t is None:
         raise forbidden("Not a teacher")
     return t
 
 
-def parent_for(db: Session, user: User) -> Parent:
-    p = db.scalar(select(Parent).where(Parent.user_id == user.id))
+def guardian_for(db: Session, user: User) -> Guardian:
+    p = db.scalar(select(Guardian).where(Guardian.user_id == user.id))
     if p is None:
         raise forbidden("Not a parent")
     return p
@@ -50,15 +51,15 @@ def student_id_for(db: Session, user: User) -> int:
 
 
 def child_ids_for(db: Session, user: User) -> list[int]:
-    parent = parent_for(db, user)
+    parent = guardian_for(db, user)
     return list(
-        db.scalars(select(ParentStudent.student_id).where(ParentStudent.parent_id == parent.id))
+        db.scalars(select(StudentGuardian.student_id).where(StudentGuardian.guardian_id == parent.id))
     )
 
 
 def class_section_ids_for(db: Session, user: User) -> list[int]:
     """Sections a teacher class-teaches OR teaches a subject in."""
-    teacher = teacher_for(db, user)
+    teacher = employee_for(db, user)
     own = select(ClassSection.id).where(ClassSection.class_teacher_id == teacher.id)
     taught = select(ClassSubjectTeacher.class_section_id).where(
         ClassSubjectTeacher.teacher_id == teacher.id
@@ -71,10 +72,62 @@ def assert_teaches_section(db: Session, user: User, class_section_id: int) -> No
         raise forbidden("You do not teach this class section")
 
 
+def readable_section_ids(db: Session, user: User) -> list[int] | None:
+    """Sections this caller may read children in, or None for the whole school.
+
+    None means unrestricted, not "none" - the same distinction
+    `Authz.scope_ids` makes, and for the same reason: a caller that treated an
+    empty list and None alike would silently widen a scoped read into a
+    school-wide one.
+
+    A teacher gets the sections they class-teach or teach a subject in. Every
+    other role reads the school, which is what an office clerk, a principal and
+    an auditor are for.
+
+    This is the list form of `narrow_to_own_sections`, for the screens that
+    answer across sections rather than about one.
+    """
+    if user.role is not UserRole.teacher:
+        return None
+    return class_section_ids_for(db, user)
+
+
+def narrow_to_own_sections(
+    db: Session, user: User, class_section_id: int | None, what: str = "This list"
+) -> int | None:
+    """Hold a whole-school read down to one section the caller actually teaches.
+
+    The single definition of ERP_BLUEPRINT section 5.10.8's "Class Teacher (own
+    section)", used by the admin attendance screens and by the report gate, so
+    a report and the screen beside it cannot answer the same question
+    differently.
+
+    It exists because the permission layer cannot do this job. A teacher holds
+    `attendance.record.read` school-wide - their permissions are unscoped by
+    design and the restriction has always lived here (HANDOFF section 4) - so
+    `require_permission(..., school_wide=True)` passes for them. It stops a
+    guardian, whose grant is scoped to their own children, and nobody else.
+
+    Omitting the section is refused rather than quietly widened. Returning
+    every section a teacher teaches would be defensible, but "no filter" is
+    exactly how this leaked in the first place: a missing parameter must not
+    mean the whole school.
+
+    Anyone who is not a teacher is unchanged: an office clerk, a principal and
+    an auditor read the school, which is what their roles are for.
+    """
+    if user.role is not UserRole.teacher:
+        return class_section_id
+    if class_section_id is None:
+        raise forbidden(f"{what} must name one of your class sections")
+    assert_teaches_section(db, user, class_section_id)
+    return class_section_id
+
+
 def assert_teaches_subject_in_section(
     db: Session, user: User, class_section_id: int, subject_id: int
 ) -> None:
-    teacher = teacher_for(db, user)
+    teacher = employee_for(db, user)
     owned = db.scalar(
         select(ClassSubjectTeacher.id).where(
             ClassSubjectTeacher.class_section_id == class_section_id,
@@ -88,7 +141,13 @@ def assert_teaches_subject_in_section(
 
 def assert_can_read_student(db: Session, user: User, student_id: int) -> Student:
     student = db.get(Student, student_id)
-    if student is None:
+    # The tenant boundary comes before every role rule, and answers 404 rather
+    # than 403: whether another customer has a student with this id is itself
+    # not this school's business. The role branches below happen to bind a
+    # teacher, guardian and student to their own school through the sections
+    # and links they check; the admin branch checked nothing at all, which left
+    # this chokepoint's thirteen callers cross-tenant readable.
+    if student is None or student.school_id != user.school_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Student not found")
     if user.role == UserRole.admin:
         return student
@@ -101,7 +160,11 @@ def assert_can_read_student(db: Session, user: User, student_id: int) -> Student
             raise forbidden("Not your child")
         return student
     if user.role == UserRole.teacher:
-        if student.class_section_id not in class_section_ids_for(db, user):
+        enrolment = current_enrolment(db, student.id)
+        if (
+            enrolment is None
+            or enrolment.class_section_id not in class_section_ids_for(db, user)
+        ):
             raise forbidden("Student is outside your sections")
         return student
     raise forbidden()

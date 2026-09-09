@@ -5,16 +5,6 @@ import { api } from "../api/client";
 import { Card, DataTable, Empty, Modal } from "../components/ui";
 import { useClasses, type ClassRow } from "./useClasses";
 
-type Slot = {
-  period: number;
-  day_of_week: string;
-  start_time: string;
-  end_time: string;
-  subject: string;
-  teacher: string;
-  room: string | null;
-};
-
 export function Classes() {
   const { data } = useClasses();
   const [open, setOpen] = useState<ClassRow | null>(null);
@@ -54,14 +44,16 @@ export function Classes() {
 function ClassDetail({ row, onClose }: { row: ClassRow; onClose: () => void }) {
   const roster = useQuery({
     queryKey: ["class-roster", row.id],
+    // /admin/classes/{class_id}/students has no response_model; the item
+    // shape below is what the screen reads from it.
     queryFn: () =>
-      api.get<{ id: number; full_name: string; roll_no: number; admission_no: string }[]>(
-        `/admin/classes/${row.id}/students`,
-      ),
+      api.get(`/admin/classes/${row.id}/students` as "/admin/classes/{class_id}/students") as Promise<
+        { id: number; full_name: string; roll_no: number; admission_no: string }[]
+      >,
   });
   const timetable = useQuery({
     queryKey: ["class-timetable", row.id],
-    queryFn: () => api.get<Slot[]>(`/admin/timetable?class_section_id=${row.id}`),
+    queryFn: () => api.get("/admin/timetable", `?class_section_id=${row.id}`),
   });
 
   return (
@@ -69,6 +61,8 @@ function ClassDetail({ row, onClose }: { row: ClassRow; onClose: () => void }) {
       <h3 className="text-sm font-medium mb-2">Roster</h3>
       <DataTable
         rows={roster.data ?? []}
+          loading={roster.isLoading}
+          error={roster.error}
         empty="No students in this section."
         columns={[
           { key: "roll", header: "Roll", render: (r) => r.roll_no },
@@ -80,6 +74,8 @@ function ClassDetail({ row, onClose }: { row: ClassRow; onClose: () => void }) {
       <h3 className="text-sm font-medium mt-6 mb-2">Timetable (read only)</h3>
       <DataTable
         rows={timetable.data ?? []}
+          loading={timetable.isLoading}
+          error={timetable.error}
         empty="No timetable seeded for this section."
         columns={[
           { key: "day", header: "Day", render: (s) => s.day_of_week.toUpperCase() },

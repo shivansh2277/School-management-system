@@ -8,10 +8,18 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import FeeInvoice, FeePayment, SchoolSettings, Student
+from app.models import (
+    Enrolment,
+    FeeInvoice,
+    FeeInvoiceLine,
+    FeePayment,
+    PaymentAllocation,
+    School,
+    Student,
+)
 
 MONTHS = [
     "January", "February", "March", "April", "May", "June",
@@ -57,11 +65,30 @@ def amount_in_words(amount: Decimal) -> str:
     return out + " Only"
 
 
-def build_receipt(db: Session, invoice_id: int) -> bytes:
-    invoice = db.get(FeeInvoice, invoice_id)
-    payment = db.scalar(select(FeePayment).where(FeePayment.invoice_id == invoice_id))
-    student = db.get(Student, invoice.student_id)
-    school = db.get(SchoolSettings, 1)
+def build_receipt(db: Session, payment_id: int) -> bytes:
+    """A receipt for one payment, showing which months it settled.
+
+    Payment-shaped rather than invoice-shaped because that is what the ledger
+    is: one payment can clear September and part of October, and a receipt that
+    could only name one invoice was why v0 could not take a part payment.
+    """
+    payment = db.get(FeePayment, payment_id)
+    enrolment = db.get(Enrolment, payment.enrolment_id)
+    student = db.get(Student, enrolment.student_id)
+    # The receipt belongs to the payment's school, not to a global row.
+    school = db.get(School, payment.school_id)
+    class_label = enrolment.class_section.label
+
+    settled = db.execute(
+        select(FeeInvoice.period_month, FeeInvoice.period_year, func.sum(PaymentAllocation.amount))
+        .join(FeeInvoiceLine, FeeInvoiceLine.invoice_id == FeeInvoice.id)
+        .join(PaymentAllocation, PaymentAllocation.invoice_line_id == FeeInvoiceLine.id)
+        .where(PaymentAllocation.payment_id == payment.id)
+        .group_by(FeeInvoice.period_year, FeeInvoice.period_month)
+        .order_by(FeeInvoice.period_year, FeeInvoice.period_month)
+    ).all()
+    allocated = sum((Decimal(a) for _, _, a in settled), Decimal(0))
+    credit = payment.amount - allocated
 
     buf = BytesIO()
     doc = SimpleDocTemplate(
@@ -72,18 +99,24 @@ def build_receipt(db: Session, invoice_id: int) -> bytes:
     head = styles["Title"]
     head.textColor = colors.HexColor(school.primary_color or "#5B4BE0")
 
+    applied = ", ".join(f"{MONTHS[m - 1]} {y}" for m, y, _ in settled) or "Advance"
     rows = [
         ["Receipt No.", payment.receipt_no],
-        ["Date", f"{payment.paid_at:%d %b %Y}"],
+        ["Date", f"{payment.received_at:%d %b %Y}"],
         ["Student", student.user.full_name],
         ["Admission No.", student.admission_no],
-        ["Class", student.class_section.label],
-        ["Billing Month", f"{MONTHS[invoice.month - 1]} {invoice.year}"],
-        ["Amount", f"Rs. {invoice.amount:,.2f}"],
-        ["Amount in words", amount_in_words(invoice.amount)],
+        ["Class", class_label],
+        ["Applied To", applied],
+        ["Amount", f"Rs. {payment.amount:,.2f}"],
+        ["Amount in words", amount_in_words(payment.amount)],
         ["Payment Mode", payment.method.title()],
-        ["Transaction Ref.", payment.txn_ref],
     ]
+    if payment.instrument_ref:
+        rows.append(["Instrument Ref.", payment.instrument_ref])
+    if credit > 0:
+        # Shown rather than silently held: a parent who paid ahead should see
+        # the balance on the receipt, not discover it next month.
+        rows.append(["Credit Carried", f"Rs. {credit:,.2f}"])
     table = Table(rows, colWidths=[45 * mm, 105 * mm])
     table.setStyle(
         TableStyle(
@@ -99,12 +132,13 @@ def build_receipt(db: Session, invoice_id: int) -> bytes:
     )
 
     address = ", ".join(x for x in [school.address, school.city] if x)
+    title = "FEE RECEIPT" if payment.amount > 0 else "PAYMENT REVERSAL"
     doc.build(
         [
             Paragraph(school.name, head),
             Paragraph(address, styles["Normal"]),
             Spacer(1, 8 * mm),
-            Paragraph("<b>FEE RECEIPT</b>", styles["Heading2"]),
+            Paragraph(f"<b>{title}</b>", styles["Heading2"]),
             Spacer(1, 4 * mm),
             table,
             Spacer(1, 10 * mm),

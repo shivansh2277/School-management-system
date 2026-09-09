@@ -6,6 +6,10 @@ ever runs this.
 
 from datetime import date, timedelta
 
+from sqlalchemy import select
+
+from app.models import ClassSection
+
 
 def test_no_token_is_401(client):
     assert client.get("/student/dashboard").status_code == 401
@@ -70,9 +74,14 @@ def test_parent_cannot_submit_homework(client, parent):
 def test_teacher_cannot_mark_attendance_for_a_section_they_do_not_teach(
     client, other_teacher, ids, db
 ):
-    from app.models import Student
+    from app.models import Enrolment, Student
 
-    roster = db.query(Student).filter(Student.class_section_id == ids["section_10a"]).all()
+    roster = (
+        db.query(Student)
+        .join(Enrolment, Enrolment.student_id == Student.id)
+        .filter(Enrolment.class_section_id == ids["section_10a"])
+        .all()
+    )
     body = {
         "class_section_id": ids["section_10a"],
         "date": date.today().isoformat(),
@@ -148,6 +157,47 @@ def test_teacher_cannot_reach_admin_routes(client, teacher):
     assert client.get("/admin/fees/invoices", headers=teacher).status_code == 403
 
 
-def test_admin_cannot_mark_attendance(client, admin):
-    # There is no admin write endpoint at all — read only (BLUEPRINT §9 matrix).
-    assert client.post("/teacher/attendance", json={}, headers=admin).status_code == 403
+def test_admin_cannot_mark_attendance(client, admin, ids):
+    """A super_admin holds every *permission*, including attendance.record.mark.
+    What stops them here is scope, not permission: they are not a teacher of any
+    section, so services/scoping refuses. The body has to be valid to reach that
+    check — an empty one fails validation first and would pass this test for the
+    wrong reason."""
+    r = client.post(
+        "/teacher/attendance",
+        json={
+            "class_section_id": ids["section_10a"],
+            "date": "2026-09-01",
+            "entries": [],
+        },
+        headers=admin,
+    )
+    assert r.status_code == 403
+
+
+def test_parent_sees_only_their_own_childrens_class_notices(client, admin, parent, db):
+    """notices.visible_to() once selected enrolment sections without joining
+    Student, so the parent branch matched every section in the school."""
+    from app.models import User
+    from app.services.common import enrolment_sections
+    from app.services import scoping
+
+    parent_user = db.scalar(select(User).where(User.login_id == "9876500001"))
+    own = set(enrolment_sections(db, scoping.child_ids_for(db, parent_user)).values())
+    outsider = db.scalar(select(ClassSection.id).where(ClassSection.id.not_in(own)))
+    assert outsider is not None
+
+    r = client.post(
+        "/admin/notices",
+        json={
+            "title": "Someone else's class",
+            "body": "Not for this parent.",
+            "audience": "class",
+            "class_section_id": outsider,
+        },
+        headers=admin,
+    )
+    assert r.status_code == 201, r.text
+
+    seen = client.get("/parent/notices", headers=parent).json()
+    assert outsider not in [n["class_section_id"] for n in seen]
