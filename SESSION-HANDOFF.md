@@ -1,8 +1,8 @@
 # Session handoff — next session's brief
 
 **Written 9 September 2026.** The previous session ran 8–9 September and
-produced 41 commits (`040c189..a4a0bdf`). The branch carries **110 commits and
-has never been pushed.**
+produced 41 commits (`040c189..a4a0bdf`). The branch carries **112 commits**;
+the repo exists on GitHub but **this branch has never been pushed**.
 
 `HANDOFF.md` stays canonical for architecture, the commit history and the
 traps. `CLAUDE.md` has the house rules. **This file is your brief: three fixes,
@@ -156,6 +156,8 @@ npm run build
 
 # Live — start the backend on 8077 against the seeded DB first, then:
 node smoke.mjs http://127.0.0.1:8077
+# To start that backend (note the env var — the default DB is the stale dev one):
+#   cd backend && DATABASE_URL=postgresql+psycopg://sunrise:sunrise@localhost:5432/sunrise_test #     ../.venv/Scripts/python.exe -m uvicorn app.main:app --port 8077
 ```
 
 **Fix 2 changes the OpenAPI schema** (gated routes gain a 404 response). Run
@@ -171,25 +173,39 @@ hand proves the test is testing the right thing.
 
 # PART THREE — then push to GitHub
 
-**This is the first push in the project's life.** 110 commits, and CI has never
-executed once.
+**Read this carefully — the framing matters.** The *repository* already exists
+on GitHub and `origin/main` is there; it holds the v0 school management system.
+What has never been pushed is **this branch**, `part-1-foundation`, which is
+**112 commits ahead of `main`** and contains the entire ERP. So this is not the
+project's first push, but it is the first time any of this work leaves the
+laptop, and **CI has genuinely never executed** — `.github/workflows/ci.yml`
+triggers on `push: branches: [main, "part-*"]`, so pushing this branch will fire
+it for the first time.
 
-**Before pushing, show the exact file list and wait for the owner's go-ahead.**
-That is a standing rule in `CLAUDE.md` and in the owner's stated preferences —
-it is not optional and not satisfied by a summary.
+**Before pushing, show the owner the exact file list and wait for an explicit
+go-ahead.** That is a standing rule in `CLAUDE.md` and in the owner's stated
+preferences. It is not optional and a summary does not satisfy it.
 
 ```bash
-git log --oneline main..HEAD | wc -l      # how many commits
-git diff --stat main..HEAD                # what they touch
 git status --short                        # must be empty
-git remote -v                             # https://github.com/shivansh2277/School-management-system
+git log --oneline main..HEAD | wc -l      # 112 at handoff, plus your fixes
+git diff --stat main..HEAD                # the exact file list to show
+git remote -v                             # origin = shivansh2277/School-management-system
 ```
 
-**Expect the first CI run to fail.** It has never run, it now has both a backend
-and a web job, and it runs in UTC — five and a half hours from the office, which
-is where four clock-dependent tests were already found. Budget time for a round
-of CI fixes after the push, and do not treat a red first run as a sign something
-is broken locally.
+**There is a decision here that is the owner's, not yours.** Ask which:
+- push `part-1-foundation` as a branch (CI runs, `main` untouched, nothing is
+  merged) — the lowest-risk option and the natural first move;
+- open a pull request from it into `main`;
+- merge into `main` locally and push that.
+Do not pick one on the owner's behalf. Pushing a branch is reversible; merging
+112 commits into `main` is the kind of step that should be asked about.
+
+**Expect the first CI run to fail, and say so before it does.** It has never
+executed, it now has a backend job and a web job, and it runs in UTC — five and
+a half hours from the office, which is exactly where four clock-dependent tests
+were already found. A red first run is information, not a sign that something
+broke locally. Budget a round of CI fixes after the push.
 
 **Check before pushing:** `backend/var/` is gitignored (it once staged 302
 uploaded PDFs), no `.env` or credential is staged, and `web/smoke.mjs` contains
@@ -210,7 +226,7 @@ Re-measure before trusting; these go stale on the next commit.
 | Web tests | **24** in 7 files (there were none before this workstream) |
 | `tsc --noEmit` | **0 errors** |
 | API surface | 214 paths, 263 operations |
-| Branch | `part-1-foundation`, **110 commits, never pushed, CI never run** |
+| Branch | `part-1-foundation`, **112 commits ahead of `main`, branch never pushed, CI never run** |
 
 ## Traps — read before touching these areas
 
