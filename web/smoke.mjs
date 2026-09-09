@@ -16,17 +16,27 @@ const STAFF = [
   { who: "transport manager", login_id: "TRM001", password: "Admin@123" },
 ];
 
-/** Endpoints the current screens depend on. Extend as slices add screens. */
+/**
+ * Endpoints the current screens depend on, with the module each sits behind.
+ * Mirrors src/screens.ts. Extend as slices add screens.
+ *
+ * The module matters because a 404 now has two meanings. It used to have one -
+ * the endpoint is gone - which is the failure this script was written to catch.
+ * Since every router that declares a module actually enforces it, a school that
+ * has not bought a module gets 404 from its endpoints by design, and the demo
+ * school has HR switched off. So the check below is two-sided: with the module
+ * off the endpoint MUST 404, and with it on it must not.
+ */
 const SCREEN_ENDPOINTS = {
-  Dashboard: "/admin/dashboard/stats",
-  Students: "/admin/students",
-  Staff: "/admin/teachers",
-  Classes: "/admin/classes",
-  Attendance: "/admin/attendance/summary",
-  Exams: "/admin/exams",
-  Fees: "/admin/fees/invoices",
-  Notices: "/admin/notices",
-  Settings: "/admin/settings",
+  Dashboard: { path: "/admin/dashboard/stats" },
+  Students: { path: "/admin/students", module: "students" },
+  Staff: { path: "/admin/teachers", module: "hr" },
+  Classes: { path: "/admin/classes" },
+  Attendance: { path: "/admin/attendance/summary", module: "attendance" },
+  Exams: { path: "/admin/exams", module: "examinations" },
+  Fees: { path: "/admin/fees/invoices", module: "fees" },
+  Notices: { path: "/admin/notices", module: "communication" },
+  Settings: { path: "/admin/settings" },
 };
 
 let failures = 0;
@@ -57,11 +67,18 @@ for (const staff of STAFF) {
   check(Array.isArray(me.modules), "me carries modules", (me.modules ?? []).join(", "));
   check(Boolean(me.academic_year), "me carries the academic year", me.academic_year);
 
-  for (const [label, path] of Object.entries(SCREEN_ENDPOINTS)) {
+  const modulesOn = new Set(me.modules ?? []);
+  for (const [label, { path, module }] of Object.entries(SCREEN_ENDPOINTS)) {
     const res = await fetch(`${BASE}${path}`, { headers: auth });
-    // 200 or 403 are both correct answers; 404 means the endpoint is gone,
-    // which is the failure this script exists to catch.
-    check(res.status !== 404, `${label} -> ${path}`, String(res.status));
+    const off = module !== undefined && !modulesOn.has(module);
+    if (off) {
+      // The gate, seen from outside: this school did not buy the module.
+      check(res.status === 404, `${label} -> ${path} (${module} off)`, String(res.status));
+    } else {
+      // 200 or 403 are both correct answers; 404 means the endpoint is gone,
+      // which is the failure this script exists to catch.
+      check(res.status !== 404, `${label} -> ${path}`, String(res.status));
+    }
   }
 
   const refreshed = await fetch(`${BASE}/auth/refresh`, {
