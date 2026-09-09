@@ -24,3 +24,13 @@ export class ApiError extends Error {
     }
   }
 }
+
+/**
+ * The text to show a user for a caught mutation error. `Error.message` on an
+ * ApiError is a generic "Request failed with 422" (kept stable for logging);
+ * `.detail` carries the actual reason - the field message, or the string the
+ * API sent. Falls back to `.message` for anything that isn't an ApiError.
+ */
+export function errorText(e: unknown): string {
+  return e instanceof ApiError ? e.detail : e instanceof Error ? e.message : String(e);
+}

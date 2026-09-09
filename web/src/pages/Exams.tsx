@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { api } from "../api/client";
+import { errorText } from "../api/errors";
 import { Card, DataTable, FormField, Modal, Pill, inputClass } from "../components/ui";
 import { useClasses } from "./useClasses";
 
@@ -81,7 +82,7 @@ function CreateExam({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
             <input type="date" className={inputClass} value={form.end_date} onChange={set("end_date")} />
           </FormField>
         </div>
-        {save.isError && <p className="text-sm text-danger">{(save.error as Error).message}</p>}
+        {save.isError && <p className="text-sm text-danger">{errorText(save.error)}</p>}
         <button
           onClick={() => save.mutate()}
           disabled={save.isPending}
@@ -177,7 +178,7 @@ function ExamDetail({ exam, onClose }: { exam: Exam; onClose: () => void }) {
           <input className={inputClass} value={form.max_marks} onChange={set("max_marks")} />
         </FormField>
       </div>
-      {add.isError && <p className="text-sm text-danger mt-2">{(add.error as Error).message}</p>}
+      {add.isError && <p className="text-sm text-danger mt-2">{errorText(add.error)}</p>}
       <button
         onClick={() => add.mutate()}
         disabled={add.isPending}

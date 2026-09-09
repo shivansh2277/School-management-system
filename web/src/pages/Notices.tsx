@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { api } from "../api/client";
+import { errorText } from "../api/errors";
 import { Card, DataTable, FormField, inputClass } from "../components/ui";
 import { useClasses } from "./useClasses";
 
@@ -76,7 +77,7 @@ export function Notices() {
             )}
           </div>
           {publish.isError && (
-            <p className="text-sm text-danger">{(publish.error as Error).message}</p>
+            <p className="text-sm text-danger">{errorText(publish.error)}</p>
           )}
           <button
             onClick={() => publish.mutate()}

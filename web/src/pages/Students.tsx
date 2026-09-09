@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { api } from "../api/client";
+import { errorText } from "../api/errors";
 import { Card, DataTable, FormField, Modal, inputClass } from "../components/ui";
 import { useClasses } from "./useClasses";
 
@@ -227,7 +228,7 @@ function AddStudent({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
         </div>
 
         {save.isError && (
-          <p className="text-sm text-danger">{(save.error as Error).message}</p>
+          <p className="text-sm text-danger">{errorText(save.error)}</p>
         )}
         <p className="text-xs text-ink-faint">
           The student signs in with their admission number, the guardian with their mobile number.
