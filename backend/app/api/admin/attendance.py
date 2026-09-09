@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.models import (
     AcademicYear,
+    ClassSection,
     Holiday,
     LeaveStatus,
     StudentLeaveRequest,
@@ -24,6 +25,7 @@ from app.schemas.common import AttendanceSummary, RollRow
 from app.services import attendance as svc
 from app.services import leave as leave_svc
 from app.services import scoping
+from app.services import tenancy
 from app.services.rbac import require_permission
 from app.services.school_settings import module_enabled
 
@@ -55,7 +57,12 @@ def attendance_roll(
     alone open that screen and get a 403 from both of its fetches. The route
     now lives on the router whose permission it actually needs.
     """
-    return svc.roll_sheet(db, class_section_id, date)
+    # `roll_sheet()` takes a bare section id, so the section is proved to be
+    # this school's first — otherwise any section number read back a roll.
+    section = tenancy.get_owned(
+        db, ClassSection, class_section_id, user, what="Class section"
+    )
+    return svc.roll_sheet(db, section.id, date)
 
 
 @router.get("/summary", response_model=AttendanceSummary)

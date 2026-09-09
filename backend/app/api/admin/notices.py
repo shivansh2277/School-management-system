@@ -20,7 +20,13 @@ admin_only = require_permission("comms.notice.read", school_wide=True)
 def list_notices(
     user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> list[NoticeOut]:
-    items = list(db.scalars(select(Notice).order_by(Notice.published_at.desc())))
+    items = list(
+        db.scalars(
+            select(Notice)
+            .where(Notice.school_id == user.school_id)
+            .order_by(Notice.published_at.desc())
+        )
+    )
     return svc.to_out(db, items)
 
 
@@ -35,5 +41,5 @@ def publish(
 def delete(
     notice_id: int, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> Response:
-    svc.delete(db, notice_id)
+    svc.delete(db, notice_id, user.school_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

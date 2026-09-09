@@ -109,9 +109,7 @@ def update_class(
     user: User = Depends(admin_only),
     db: Session = Depends(get_db),
 ) -> dict:
-    c = db.get(ClassSection, class_id)
-    if c is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Class section not found")
+    c = tenancy.get_owned(db, ClassSection, class_id, user, what="Class section")
     if body.class_teacher_id is not None:
         c.class_teacher_id = body.class_teacher_id
     db.commit()
@@ -122,6 +120,10 @@ def update_class(
 def class_roster(
     class_id: int, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> list[dict]:
+    # The section is proved to be this school's before its children are
+    # listed. `roster()` takes a bare section id, so without this the roll of
+    # any section in any school came back to anyone who guessed the number.
+    section = tenancy.get_owned(db, ClassSection, class_id, user, what="Class section")
     return [
         {
             "id": e.student_id,
@@ -129,7 +131,7 @@ def class_roster(
             "roll_no": e.roll_no,
             "admission_no": e.student.admission_no,
         }
-        for e in roster(db, class_id)
+        for e in roster(db, section.id)
     ]
 
 
@@ -147,4 +149,7 @@ def list_subjects(user: User = Depends(admin_only), db: Session = Depends(get_db
 def timetable(
     class_section_id: int, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> list[SlotOut]:
-    return timetable_svc.grid(db, user.school_id, class_section_id=class_section_id)
+    section = tenancy.get_owned(
+        db, ClassSection, class_section_id, user, what="Class section"
+    )
+    return timetable_svc.grid(db, user.school_id, class_section_id=section.id)

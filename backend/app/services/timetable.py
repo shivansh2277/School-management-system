@@ -180,7 +180,16 @@ def save_slot(
             {"conflicts": overridable, "needs": "override_reason"},
         )
 
-    slot = db.get(TimetableSlot, slot_id) if slot_id else None
+    # An existing slot must belong to the actor's school before any field on
+    # it is rewritten. Without this, `PUT /admin/timetable/slots/{id}` moved
+    # another school's lesson: db.get() answers "does this row exist", which is
+    # not the same question as "may this customer touch it". `delete_slot`
+    # next door has always checked; this path did not.
+    slot = None
+    if slot_id:
+        slot = db.get(TimetableSlot, slot_id)
+        if slot is None or slot.school_id != school_id:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Timetable slot not found")
     if slot is None:
         slot = TimetableSlot(school_id=school_id)
         db.add(slot)

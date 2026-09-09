@@ -146,8 +146,7 @@ def create_slot(
 def update_slot(
     slot_id: int, body: SlotIn, user: User = Depends(reader), db: Session = Depends(get_db)
 ) -> dict:
-    if db.get(TimetableSlot, slot_id) is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Timetable slot not found")
+    # Ownership is proved inside save_slot(), which is where the write is.
     slot = svc.save_slot(db, user, slot_id=slot_id, **body.model_dump())
     return svc.slot_out(db, slot)
 

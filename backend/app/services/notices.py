@@ -158,9 +158,14 @@ def visible_to(db: Session, user: User) -> list[NoticeOut]:
     return to_out(db, items)
 
 
-def delete(db: Session, notice_id: int) -> None:
+def delete(db: Session, notice_id: int, school_id: int) -> None:
+    """`school_id` is required, not optional, so a caller cannot forget it.
+
+    Deleting by a bare id let one school delete another school's notices; the
+    same fix `section_labels`, `subject_names` and `grade_for` already carry.
+    """
     notice = db.get(Notice, notice_id)
-    if notice is None:
+    if notice is None or notice.school_id != school_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Notice not found")
     db.delete(notice)
     db.commit()

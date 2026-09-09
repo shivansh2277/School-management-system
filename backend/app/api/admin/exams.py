@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from app.core.db import get_db
 from app.services.rbac import require_permission
+from app.services import tenancy
 from app.services.school_settings import module_enabled
 from app.models import Exam, ExamSchedule, User
 from app.schemas.common import (
@@ -90,10 +91,13 @@ def add_paper(
 def exam_schedule(
     exam_id: int, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> list[ExamScheduleOut]:
+    # The parent exam establishes the tenant; without this, any exam id read
+    # back another school's paper dates and max marks.
+    exam = tenancy.get_owned(db, Exam, exam_id, user, what="Exam")
     rows = list(
         db.scalars(
             select(ExamSchedule)
-            .where(ExamSchedule.exam_id == exam_id)
+            .where(ExamSchedule.exam_id == exam.id)
             .order_by(ExamSchedule.exam_date)
         )
     )

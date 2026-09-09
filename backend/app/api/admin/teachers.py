@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.services.rbac import require_permission
+from app.services import tenancy
 from app.services.school_settings import module_enabled
 from app.core.security import hash_password
 from app.models import (
@@ -72,7 +73,12 @@ def _row(db: Session, t: Employee) -> dict:
 @router.get("/teachers")
 def list_teachers(user: User = Depends(admin_only), db: Session = Depends(get_db)) -> list[dict]:
     return [
-        _row(db, t) for t in db.scalars(select(Employee).order_by(Employee.employee_code))
+        _row(db, t)
+        for t in db.scalars(
+            select(Employee)
+            .where(Employee.school_id == user.school_id)
+            .order_by(Employee.employee_code)
+        )
     ]
 
 
@@ -113,9 +119,7 @@ def update_teacher(
     user: User = Depends(admin_only),
     db: Session = Depends(get_db),
 ) -> dict:
-    t = db.get(Employee, teacher_id)
-    if t is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Employee not found")
+    t = tenancy.get_owned(db, Employee, teacher_id, user, what="Employee")
     if body.qualification is not None:
         t.qualification = body.qualification
     for field in ("full_name", "email", "phone"):
@@ -130,9 +134,7 @@ def update_teacher(
 def deactivate_teacher(
     teacher_id: int, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> Response:
-    t = db.get(Employee, teacher_id)
-    if t is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Employee not found")
+    t = tenancy.get_owned(db, Employee, teacher_id, user, what="Employee")
     t.user.is_active = False
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
