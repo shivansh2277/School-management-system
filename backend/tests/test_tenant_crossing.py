@@ -247,7 +247,10 @@ def test_no_delete_or_disable_reaches_another_schools_row(client, admin, estate,
     service: their people simply stop being able to log in."""
     deletes = [
         ("employee (deactivate)", f"/admin/teachers/{estate['employee']}"),
-        ("notice", f"/admin/notices/{estate['notice']}"),
+        # The reason is supplied so this still exercises the tenant check.
+        # Without it the route 422s on the missing parameter, which is also
+        # "not 204" - the assertion would pass while proving nothing.
+        ("notice", f"/admin/notices/{estate['notice']}?reason=cross-tenant probe"),
     ]
     for what, url in deletes:
         r = client.delete(url, headers=admin)

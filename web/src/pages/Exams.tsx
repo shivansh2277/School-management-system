@@ -3,8 +3,23 @@ import { useState } from "react";
 
 import { api } from "../api/client";
 import { errorText } from "../api/errors";
+import { ActionButton } from "../components/Can";
 import { Card, DataTable, FormField, Modal, Pill, inputClass } from "../components/ui";
 import { useClasses } from "./useClasses";
+
+/**
+ * Both writes on this screen are gated on this, read off api/admin/exams.py.
+ *
+ * `POST /admin/exams` declares it. `POST /admin/exams/{id}/schedule` declares
+ * nothing and so inherits the router's `admin_only`, which is
+ * `exam.definition.read` - adding a paper to an exam is a write gated on a
+ * read, and a teacher who may only look at the calendar can currently schedule
+ * papers into it. That is a backend defect, reported rather than fixed here.
+ * The button is gated on the permission the write should require, not on the
+ * weaker one the route happens to accept: gating on the read would build the
+ * bug into the UI and make it harder to see once the route is fixed.
+ */
+const WRITE = "exam.definition.write";
 
 type Exam = { id: number; name: string; term: string; start_date: string; end_date: string };
 
@@ -20,12 +35,13 @@ export function Exams() {
       <Card
         title="Exams"
         action={
-          <button
+          <ActionButton
+            permission={WRITE}
             onClick={() => setCreating(true)}
-            className="rounded-input bg-primary px-3 py-1.5 text-sm text-white hover:bg-primary-dark"
+            className="!px-3 !py-1.5"
           >
             Create Exam
-          </button>
+          </ActionButton>
         }
       >
         <DataTable
@@ -84,13 +100,14 @@ function CreateExam({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
           </FormField>
         </div>
         {save.isError && <p className="text-sm text-danger">{errorText(save.error)}</p>}
-        <button
+        <ActionButton
+          permission={WRITE}
           onClick={() => save.mutate()}
           disabled={save.isPending}
-          className="w-full rounded-input bg-primary py-2 text-white text-sm font-medium hover:bg-primary-dark disabled:opacity-60"
+          className="w-full"
         >
           Create
-        </button>
+        </ActionButton>
       </div>
     </Modal>
   );
@@ -181,13 +198,14 @@ function ExamDetail({ exam, onClose }: { exam: Exam; onClose: () => void }) {
         </FormField>
       </div>
       {add.isError && <p className="text-sm text-danger mt-2">{errorText(add.error)}</p>}
-      <button
+      <ActionButton
+        permission={WRITE}
         onClick={() => add.mutate()}
         disabled={add.isPending}
-        className="mt-3 w-full rounded-input bg-primary py-2 text-white text-sm font-medium hover:bg-primary-dark disabled:opacity-60"
+        className="mt-3 w-full"
       >
         Add paper
-      </button>
+      </ActionButton>
     </Modal>
   );
 }

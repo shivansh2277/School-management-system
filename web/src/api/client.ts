@@ -134,8 +134,11 @@ export const api = {
   // switches on /admin/configuration.
   put: <P extends PutPaths>(path: P, ...args: BodyArg<paths[P]["put"]>) =>
     request<Ok<paths[P]["put"]>>(path, { method: "PUT", body: JSON.stringify(args[0] ?? {}) }),
-  del: <P extends DeletePaths>(path: P) =>
-    request<Ok<paths[P]["delete"]>>(path, { method: "DELETE" }),
+  // Takes a query string for the same reason `get` does: DELETE
+  // /admin/notices/{id} needs the audit reason, and a DELETE body is accepted
+  // by FastAPI but not by every proxy in front of it.
+  del: <P extends DeletePaths>(path: P, query?: string) =>
+    request<Ok<paths[P]["delete"]>>(`${path}${query ?? ""}` as P, { method: "DELETE" }),
 };
 
 /**

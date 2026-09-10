@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.services.common import enrolment_sections, require_current_enrolment
 from app.models import (
+    AuditAction,
     ClassSection,
     Notice,
     NoticeAudience,
@@ -14,7 +15,7 @@ from app.models import (
     UserRole,
 )
 from app.schemas.common import NoticeCreate, NoticeOut
-from app.services import scoping
+from app.services import audit, scoping
 
 log = logging.getLogger("notices")
 
@@ -158,14 +159,33 @@ def visible_to(db: Session, user: User) -> list[NoticeOut]:
     return to_out(db, items)
 
 
-def delete(db: Session, notice_id: int, school_id: int) -> None:
-    """`school_id` is required, not optional, so a caller cannot forget it.
+def delete(db: Session, notice_id: int, user: User, reason: str) -> None:
+    """`school_id` is taken from the actor, not passed, so a caller cannot forget it.
 
     Deleting by a bare id let one school delete another school's notices; the
     same fix `section_labels`, `subject_names` and `grade_for` already carry.
+
+    The reason is required because this is the only destructive path in the
+    product that used to commit silently: every other void, status change and
+    delete is audited with the reason the person typed, and a notice removed
+    off the board with no record of who or why is exactly the event somebody
+    asks about later. `audit.record` refuses `AuditAction.delete` without one,
+    so the requirement is enforced there rather than restated here.
     """
     notice = db.get(Notice, notice_id)
-    if notice is None or notice.school_id != school_id:
+    if notice is None or notice.school_id != user.school_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Notice not found")
+    audit.record(
+        db,
+        actor=user,
+        school_id=user.school_id,
+        entity_type="notice",
+        entity_id=notice.id,
+        action=AuditAction.delete,
+        # Snapshotted before the row goes: the audit entry is the only place
+        # the title survives, and "deleted notice 41" answers nothing.
+        before=audit.snapshot(notice, ["title", "audience", "published_at"]),
+        reason=reason,
+    )
     db.delete(notice)
     db.commit()

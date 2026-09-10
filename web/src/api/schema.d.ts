@@ -8992,7 +8992,9 @@ export interface operations {
     };
     delete_admin_notices__notice_id__delete: {
         parameters: {
-            query?: never;
+            query: {
+                reason: string;
+            };
             header?: never;
             path: {
                 notice_id: number;

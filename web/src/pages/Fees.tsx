@@ -3,7 +3,8 @@ import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { api, money } from "../api/client";
-import { Card, DataTable, Empty, Pill, StatCard, inputClass } from "../components/ui";
+import { ActionButton } from "../components/Can";
+import { Card, DataTable, Empty, FormError, Pill, StatCard, inputClass } from "../components/ui";
 import { theme } from "../theme";
 
 type Invoice = {
@@ -65,13 +66,17 @@ export function Fees() {
       <Card
         title="Fees"
         action={
-          <button
+          // fees.invoice.generate, read off api/admin/fees.py - a separate
+          // permission from the fees.invoice.read the screen itself needs, so
+          // the counter clerk sees this list and cannot raise a month's bills.
+          <ActionButton
+            permission="fees.invoice.generate"
             onClick={() => generate.mutate()}
             disabled={generate.isPending}
-            className="rounded-input bg-primary px-3 py-1.5 text-sm text-white hover:bg-primary-dark disabled:opacity-60"
+            className="!px-3 !py-1.5"
           >
             Generate invoices
-          </button>
+          </ActionButton>
         }
       >
         <div className="flex gap-3 mb-4">
@@ -93,6 +98,9 @@ export function Fees() {
           />
         </div>
         {note && <p className="text-sm text-ink-soft mb-3">{note}</p>}
+        <div className="mb-3">
+          <FormError error={generate.error} />
+        </div>
 
         <DataTable
           rows={invoices.data ?? []}

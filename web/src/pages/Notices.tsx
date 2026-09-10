@@ -1,10 +1,18 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { api } from "../api/client";
-import { errorText } from "../api/errors";
-import { Card, DataTable, FormField, inputClass } from "../components/ui";
+import { useWrite } from "../api/useWrite";
+import { ActionButton } from "../components/Can";
+import { Card, ConfirmDialog, DataTable, FormError, FormField, inputClass } from "../components/ui";
 import { useClasses } from "./useClasses";
+
+// Both writes on this screen need the same permission: publishing a notice and
+// taking one off the board are the same authority, read off
+// api/admin/notices.py, where POST and DELETE both depend on it.
+const PUBLISH = "comms.notice.publish";
+
+type Notice = { id: number; title: string };
 
 // `as const` so the state below is the union the API accepts rather than
 // `string`: the typed request body catches a value this list does not hold.
@@ -12,8 +20,8 @@ const AUDIENCES = ["all", "students", "parents", "teachers", "class"] as const;
 type Audience = (typeof AUDIENCES)[number];
 
 export function Notices() {
-  const qc = useQueryClient();
   const classes = useClasses();
+  const [deleting, setDeleting] = useState<Notice | null>(null);
   const [form, setForm] = useState({
     title: "",
     body: "",
@@ -28,33 +36,36 @@ export function Notices() {
     queryFn: () => api.get("/admin/notices"),
   });
 
-  const publish = useMutation({
-    mutationFn: () =>
+  const publish = useWrite({
+    write: () =>
       api.post("/admin/notices", {
         title: form.title,
         body: form.body,
         audience: form.audience,
         class_section_id: form.audience === "class" ? Number(form.class_section_id) : null,
       }),
-    onSuccess: () => {
-      setForm({ title: "", body: "", audience: "all", class_section_id: "" });
-      qc.invalidateQueries({ queryKey: ["notices"] });
-    },
+    invalidates: [["notices"]],
+    onDone: () => setForm({ title: "", body: "", audience: "all", class_section_id: "" }),
   });
 
-  const remove = useMutation({
-    mutationFn: (id: number) => api.del(`/admin/notices/${id}` as "/admin/notices/{notice_id}"),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notices"] }),
+  const remove = useWrite<string>({
+    write: (reason: string) =>
+      api.del(
+        `/admin/notices/${deleting!.id}` as "/admin/notices/{notice_id}",
+        `?reason=${encodeURIComponent(reason)}`,
+      ),
+    invalidates: [["notices"]],
+    onDone: () => setDeleting(null),
   });
 
   return (
     <>
       <Card title="Compose notice">
         <div className="space-y-3">
-          <FormField label="Title">
+          <FormField label="Title" error={publish.fields.title}>
             <input className={inputClass} value={form.title} onChange={set("title")} />
           </FormField>
-          <FormField label="Body">
+          <FormField label="Body" error={publish.fields.body}>
             <textarea className={inputClass} rows={3} value={form.body} onChange={set("body")} />
           </FormField>
           <div className="grid grid-cols-2 gap-3">
@@ -84,16 +95,14 @@ export function Notices() {
               </FormField>
             )}
           </div>
-          {publish.isError && (
-            <p className="text-sm text-danger">{errorText(publish.error)}</p>
-          )}
-          <button
-            onClick={() => publish.mutate()}
-            disabled={publish.isPending || !form.title || !form.body}
-            className="rounded-input bg-primary px-4 py-2 text-white text-sm font-medium hover:bg-primary-dark disabled:opacity-60"
+          <FormError error={publish.error} />
+          <ActionButton
+            permission={PUBLISH}
+            onClick={() => publish.run()}
+            disabled={publish.busy || !form.title || !form.body}
           >
             Publish
-          </button>
+          </ActionButton>
         </div>
       </Card>
 
@@ -125,17 +134,39 @@ export function Notices() {
               key: "del",
               header: "",
               render: (n) => (
-                <button
-                  onClick={() => remove.mutate(n.id)}
-                  className="text-danger text-xs hover:underline"
+                <ActionButton
+                  permission={PUBLISH}
+                  variant="danger"
+                  className="!px-3 !py-1 text-xs"
+                  onClick={() => setDeleting(n)}
                 >
                   Delete
-                </button>
+                </ActionButton>
               ),
             },
           ]}
         />
       </Card>
+
+      {deleting && (
+        <ConfirmDialog
+          title={`Delete "${deleting.title}"`}
+          confirmLabel="Delete notice"
+          busy={remove.busy}
+          error={remove.error}
+          intent={
+            <p>
+              The notice comes off the board for everyone it was published to. The reason is
+              recorded in the audit log against your name; the notice itself is not recoverable.
+            </p>
+          }
+          onConfirm={(reason) => remove.run(reason)}
+          onClose={() => {
+            remove.reset();
+            setDeleting(null);
+          }}
+        />
+      )}
     </>
   );
 }

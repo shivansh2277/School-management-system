@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -39,7 +39,14 @@ def publish(
 
 @router.delete("/notices/{notice_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_permission("comms.notice.publish"))])
 def delete(
-    notice_id: int, user: User = Depends(admin_only), db: Session = Depends(get_db)
+    notice_id: int,
+    # A query parameter rather than a body: DELETE with a body is accepted by
+    # FastAPI but not by every proxy in front of it, and the reason is one short
+    # string. `min_length=3` matches `ReasonIn` on the fee routes so the two
+    # destructive paths refuse the same empty reason the same way.
+    reason: str = Query(min_length=3),
+    user: User = Depends(admin_only),
+    db: Session = Depends(get_db),
 ) -> Response:
-    svc.delete(db, notice_id, user.school_id)
+    svc.delete(db, notice_id, user, reason)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

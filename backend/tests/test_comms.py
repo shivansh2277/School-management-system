@@ -18,6 +18,8 @@ import pytest
 from sqlalchemy import func, select
 
 from app.models import (
+    AuditAction,
+    AuditLog,
     Channel,
     DeliveryStatus,
     Guardian,
@@ -27,6 +29,7 @@ from app.models import (
     MessageCategory,
     MessageStatus,
     MessageTemplate,
+    Notice,
     StudentGuardian,
     User,
 )
@@ -839,3 +842,41 @@ def test_a_notice_goes_on_the_board_whether_or_not_it_is_mailed(
     )
     assert r.status_code == 201
     assert r.json()["message_id"] is None
+
+
+def test_taking_a_notice_off_the_board_is_audited_with_a_reason(db, client, admin, ids):
+    """The one destructive path in the product that used to commit silently.
+
+    Every other void, status change and delete records who did it and why;
+    `DELETE /admin/notices/{id}` deleted the row and wrote nothing, so a notice
+    vanishing off the board left no answer to "who removed it". The reason is
+    the person's own words, not a string the UI invented.
+    """
+    r = client.post(
+        "/admin/notices",
+        headers=admin,
+        json={"title": "Fete postponed", "body": "Postponed.", "audience": "all"},
+    )
+    assert r.status_code == 201, r.text
+    notice_id = r.json()["id"]
+
+    # No reason: refused before anything is deleted.
+    r = client.delete(f"/admin/notices/{notice_id}", headers=admin)
+    assert r.status_code == 422, r.text
+    assert db.get(Notice, notice_id) is not None, "refused, but deleted anyway"
+
+    r = client.delete(f"/admin/notices/{notice_id}?reason=Published in error", headers=admin)
+    assert r.status_code == 204, r.text
+    assert db.get(Notice, notice_id) is None
+
+    entry = db.scalar(
+        select(AuditLog).where(
+            AuditLog.entity_type == "notice",
+            AuditLog.entity_id == notice_id,
+            AuditLog.action == AuditAction.delete,
+        )
+    )
+    assert entry is not None, "the notice was deleted with no audit row"
+    assert entry.reason == "Published in error"
+    # The title survives only here, so the log can answer what was removed.
+    assert entry.before["title"] == "Fete postponed"
