@@ -24,6 +24,7 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     Date,
+    Float,
     ForeignKey,
     Index,
     Numeric,
@@ -139,6 +140,14 @@ class RouteStop(TenantBase):
     __table_args__ = (
         UniqueConstraint("route_id", "sequence", name="uq_route_stop_sequence"),
         CheckConstraint("sequence > 0", name="ck_route_stop_sequence"),
+        CheckConstraint(
+            "latitude IS NULL OR (latitude >= -90 AND latitude <= 90)",
+            name="ck_route_stop_latitude",
+        ),
+        CheckConstraint(
+            "longitude IS NULL OR (longitude >= -180 AND longitude <= 180)",
+            name="ck_route_stop_longitude",
+        ),
     )
 
     route_id: Mapped[int] = mapped_column(
@@ -152,6 +161,17 @@ class RouteStop(TenantBase):
     fee_slab_id: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("transport_fee_slabs.id")
     )
+    # Where the halt actually is, for the route map. Nullable because every
+    # stop that already exists was entered without one and a school is not
+    # blocked from running buses until someone has pinned all of them; the map
+    # says which stops are still unplaced rather than guessing at them.
+    #
+    # Float rather than Numeric: this is a measurement, not money, and it
+    # crosses the wire as a JSON number the map can use directly. The ranges
+    # are CheckConstraints because "latitude 200" is wrong everywhere, not just
+    # in the one service that happens to validate it.
+    latitude: Mapped[float | None] = mapped_column(Float)
+    longitude: Mapped[float | None] = mapped_column(Float)
 
     route = relationship("Route", back_populates="stops")
     fee_slab = relationship("TransportFeeSlab", lazy="joined")

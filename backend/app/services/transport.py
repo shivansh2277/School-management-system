@@ -318,6 +318,8 @@ def set_stops(db: Session, route: Route, stops: list[dict], actor: User) -> Rout
             pickup_time=spec["pickup_time"],
             drop_time=spec.get("drop_time"),
             fee_slab_id=spec.get("fee_slab_id"),
+            latitude=spec.get("latitude"),
+            longitude=spec.get("longitude"),
         )
         for spec in ordered
     ]

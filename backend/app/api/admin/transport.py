@@ -101,6 +101,8 @@ class StopIn(BaseModel):
     pickup_time: Time
     drop_time: Time | None = None
     fee_slab_id: int | None = None
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
 
 
 class AssignmentIn(BaseModel):
@@ -162,6 +164,8 @@ def _route_out(db: Session, r: Route) -> dict:
                 "drop_time": s.drop_time,
                 "fee_slab_id": s.fee_slab_id,
                 "monthly_amount": s.fee_slab.monthly_amount if s.fee_slab else None,
+                "latitude": s.latitude,
+                "longitude": s.longitude,
             }
             for s in r.stops
         ],
@@ -333,6 +337,45 @@ def put_stops(
     svc.set_stops(db, r, [s.model_dump() for s in body], user)
     db.commit()
     return _route_out(db, r)
+
+
+class StopLocationIn(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+
+
+@router.patch("/stops/{stop_id}/location")
+def stop_location(
+    stop_id: int,
+    body: StopLocationIn,
+    user: User = Depends(setup),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Pin one stop, in place.
+
+    Deliberately not folded into `PUT /routes/{id}/stops`. That route replaces
+    the whole list and `set_stops` rebuilds every RouteStop as a new row, so it
+    cannot preserve a stop id - and because `StopIn` carries no `id`, its
+    "children are assigned here" guard sees an empty keep-set and refuses
+    outright on any route with riders. Pinning a stop on a running route is the
+    ordinary case, so it gets a route that updates one row and leaves the
+    assignments pointing where they already point.
+    """
+    stop = db.get(RouteStop, stop_id)
+    if stop is None or stop.school_id != user.school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Stop not found")
+    stop.latitude = body.latitude
+    stop.longitude = body.longitude
+    db.commit()
+    return {
+        "id": stop.id,
+        "name": stop.name,
+        "sequence": stop.sequence,
+        "latitude": stop.latitude,
+        "longitude": stop.longitude,
+    }
 
 
 @router.patch("/routes/{route_id}/crew")

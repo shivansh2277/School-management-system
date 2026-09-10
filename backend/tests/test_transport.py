@@ -1160,3 +1160,86 @@ def test_suspending_a_route_records_the_reason_a_person_gave(client, admin, db):
     assert entry.reason == "Driver off sick, no cover", (
         f"the log recorded the code's words, not the clerk's: {entry.reason!r}"
     )
+
+
+def test_pinning_a_stop_keeps_the_children_who_ride_from_it(client, admin, db):
+    """Coordinates go on one row, not through the whole-list stop replace.
+
+    `PUT /routes/{id}/stops` rebuilds every RouteStop as a new row, and its
+    "children are assigned here" guard reads `id` off the incoming spec - which
+    `StopIn` does not carry, so the keep-set is always empty and the route
+    refuses outright once anyone rides it. Pinning a stop on a running route is
+    the ordinary case, so it has its own route that updates in place.
+    """
+    from app.models import Route, RouteStop, TransportAssignment
+
+    route = db.scalars(select(Route)).first()
+    stop = sorted(route.stops, key=lambda s: s.sequence)[0]
+    stop_id, before = stop.id, _live_on_stops_count(db, stop.id)
+
+    r = client.patch(
+        f"/admin/transport/stops/{stop_id}/location",
+        headers=admin,
+        json={"latitude": 26.8467, "longitude": 80.9462},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["latitude"] == 26.8467
+
+    db.expire_all()
+    again = db.get(RouteStop, stop_id)
+    assert again is not None, "the stop was replaced rather than updated"
+    assert again.latitude == 26.8467 and again.longitude == 80.9462
+    assert _live_on_stops_count(db, stop_id) == before, (
+        "riders lost their stop when it was pinned"
+    )
+
+    # And the coordinates reach the screen that draws the map.
+    listed = client.get("/admin/transport/routes", headers=admin)
+    assert listed.status_code == 200
+    row = next(x for x in listed.json() if x["id"] == route.id)
+    pinned = next(s for s in row["stops"] if s["id"] == stop_id)
+    assert pinned["latitude"] == 26.8467
+
+
+def _live_on_stops_count(db, stop_id: int) -> int:
+    from app.models import TransportAssignment
+
+    return len(
+        list(db.scalars(select(TransportAssignment).where(
+            TransportAssignment.route_stop_id == stop_id
+        )))
+    )
+
+
+def test_a_stop_cannot_be_pinned_off_the_planet(client, admin, db):
+    """The range lives in a CheckConstraint as well, because a latitude of 200
+    is wrong for every caller and not only this route."""
+    from app.models import Route
+
+    route = db.scalars(select(Route)).first()
+    stop = route.stops[0]
+
+    for bad in ({"latitude": 200, "longitude": 80.9}, {"latitude": 26.8, "longitude": -900}):
+        r = client.patch(
+            f"/admin/transport/stops/{stop.id}/location", headers=admin, json=bad
+        )
+        assert r.status_code == 422, f"{bad} was accepted: {r.status_code}"
+
+
+def test_one_school_cannot_pin_another_schools_stop(client, admin, db):
+    """`db.get` by a bare id is the cross-tenant hole this project keeps
+    finding; the route filters on the actor's school."""
+    from app.models import RouteStop
+
+    other = db.scalars(
+        select(RouteStop).where(RouteStop.school_id != 1)
+    ).first()
+    if other is None:
+        pytest.skip("no second school's stop in this fixture")
+
+    r = client.patch(
+        f"/admin/transport/stops/{other.id}/location",
+        headers=admin,
+        json={"latitude": 26.8, "longitude": 80.9},
+    )
+    assert r.status_code == 404, r.text

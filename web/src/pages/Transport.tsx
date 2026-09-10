@@ -17,7 +17,19 @@ import { useState } from "react";
 import { api } from "../api/client";
 import { useWrite } from "../api/useWrite";
 import { ActionButton, Can } from "../components/Can";
-import { Card, ConfirmDialog, DataTable, Empty, Modal, Pill, StatCard } from "../components/ui";
+import {
+  Card,
+  ConfirmDialog,
+  DataTable,
+  Empty,
+  FormError,
+  FormField,
+  Modal,
+  Pill,
+  StatCard,
+  inputClass,
+} from "../components/ui";
+import { RouteMap, type MapStop } from "./RouteMap";
 
 /** api/admin/transport.py::_route_out, plus services/transport.py::seats. */
 type Route = {
@@ -30,7 +42,7 @@ type Route = {
   capacity: number | null;
   taken: number;
   free: number | null;
-  stops: { id: number; sequence: number; name: string; pickup_time: string | null }[];
+  stops: MapStop[];
 };
 
 /** api/admin/transport.py::_vehicle_out. */
@@ -71,7 +83,13 @@ const asDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB");
 const SETUP_WRITE = "transport.setup.write";
 
 export function Transport() {
-  const [openRoute, setOpenRoute] = useState<Route | null>(null);
+  // Ids, not the row objects. Holding a Route in state freezes it: pinning a
+  // stop invalidates the routes query, the table refetches, and a modal built
+  // from a captured snapshot goes on showing "Not placed" for a stop that is
+  // now in the database. Deriving from the query data means one source of
+  // truth and no stale copy to keep in step.
+  const [openRouteId, setOpenRouteId] = useState<number | null>(null);
+  const [mapRouteId, setMapRouteId] = useState<number | null>(null);
   // `to` is the union the PATCH body accepts, not `string`: the typed request
   // body rejects anything else at compile time, which is the whole point of it.
   const [routeStatus, setRouteStatus] = useState<{ route: Route; to: "active" | "suspended" } | null>(
@@ -112,6 +130,9 @@ export function Transport() {
     onDone: () => setGrounding(null),
   });
 
+  const openRoute = (routes.data ?? []).find((r) => r.id === openRouteId) ?? null;
+  const mapRoute = (routes.data ?? []).find((r) => r.id === mapRouteId) ?? null;
+
   // Already lapsed, not merely lapsing. The service returns both and sorts by
   // expiry, so a negative days_left is a bus on the road without valid papers
   // - which is the one number on this screen worth putting above the fold.
@@ -136,7 +157,7 @@ export function Transport() {
           rows={routes.data ?? []}
           loading={routes.isLoading}
           error={routes.error}
-          onRowClick={setOpenRoute}
+          onRowClick={(r) => setOpenRouteId(r.id)}
           empty="No routes set up yet. Add one in the transport office."
           columns={[
             { key: "code", header: "Code", render: (r) => r.code },
@@ -155,6 +176,25 @@ export function Transport() {
               key: "status",
               header: "Status",
               render: (r) => <Pill status={r.status}>{r.status}</Pill>,
+            },
+            {
+              key: "map",
+              header: "",
+              render: (r) => (
+                <button
+                  type="button"
+                  // No permission: drawing the route you can already read is a
+                  // read, and gating it on a write would hide the map from the
+                  // setup reader this screen exists for.
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMapRouteId(r.id);
+                  }}
+                  className="rounded-input border border-rule px-3 py-1 text-xs hover:bg-canvas"
+                >
+                  Route map
+                </button>
+              ),
             },
             {
               key: "act",
@@ -238,7 +278,26 @@ export function Transport() {
         />
       </Card>
 
-      {openRoute && <Riders route={openRoute} onClose={() => setOpenRoute(null)} />}
+      {openRoute && (
+        <Riders
+          route={openRoute}
+          onClose={() => setOpenRouteId(null)}
+          onShowMap={() => {
+            setMapRouteId(openRoute.id);
+            setOpenRouteId(null);
+          }}
+        />
+      )}
+
+      {mapRoute && (
+        <RouteMap
+          code={mapRoute.code}
+          name={mapRoute.name}
+          routeId={mapRoute.id}
+          stops={mapRoute.stops}
+          onClose={() => setMapRouteId(null)}
+        />
+      )}
 
       {routeStatus && (
         <ConfirmDialog
@@ -305,7 +364,15 @@ export function Transport() {
  * and hiding the whole screen over one drill-down costs that role more than
  * the missing list does.
  */
-function Riders({ route, onClose }: { route: Route; onClose: () => void }) {
+function Riders({
+  route,
+  onClose,
+  onShowMap,
+}: {
+  route: Route;
+  onClose: () => void;
+  onShowMap: () => void;
+}) {
   const riders = useQuery({
     queryKey: ["transport-riders", route.id],
     queryFn: () =>
@@ -314,8 +381,26 @@ function Riders({ route, onClose }: { route: Route; onClose: () => void }) {
       ) as Promise<Rider[]>,
   });
 
+  const placed = route.stops.filter((s) => s.latitude !== null).length;
+
   return (
     <Modal title={`${route.code} — ${route.name}`} onClose={onClose}>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <p className="text-xs text-ink-faint">
+          {placed} of {route.stops.length} stop(s) placed on the map
+        </p>
+        <button
+          type="button"
+          onClick={onShowMap}
+          className="rounded-input border border-rule px-3 py-1.5 text-sm hover:bg-canvas"
+        >
+          View map
+        </button>
+      </div>
+
+      <Stops route={route} />
+
+      <h3 className="text-sm font-medium mt-6 mb-2">Who rides this route</h3>
       <Can
         permission="transport.assignment.read"
         fallback={<Empty>Your role can see the route but not who rides it.</Empty>}
@@ -336,5 +421,123 @@ function Riders({ route, onClose }: { route: Route; onClose: () => void }) {
         />
       </Can>
     </Modal>
+  );
+}
+
+/**
+ * The stops, and where each one is.
+ *
+ * Coordinates are entered here because there is nowhere else yet: route setup
+ * has no UI, and `PUT /routes/{id}/stops` cannot be used to add them to a route
+ * anyone rides (see the note on the backend route). This writes one stop at a
+ * time through `PATCH /admin/transport/stops/{id}/location`, which leaves the
+ * stop row - and every assignment pointing at it - exactly where it was.
+ */
+function Stops({ route }: { route: Route }) {
+  const [editing, setEditing] = useState<number | null>(null);
+  const [form, setForm] = useState({ latitude: "", longitude: "" });
+
+  const pin = useWrite({
+    write: () =>
+      api.patch(
+        `/admin/transport/stops/${editing}/location` as "/admin/transport/stops/{stop_id}/location",
+        { latitude: Number(form.latitude), longitude: Number(form.longitude) },
+      ),
+    invalidates: [["transport-routes"]],
+    onDone: () => setEditing(null),
+  });
+
+  const ordered = [...route.stops].sort((a, b) => a.sequence - b.sequence);
+
+  return (
+    <>
+      <h3 className="text-sm font-medium mb-2">Stops</h3>
+      <DataTable<MapStop>
+        rows={ordered}
+        empty="This route has no stops yet."
+        columns={[
+          { key: "seq", header: "#", align: "right", render: (s) => s.sequence },
+          { key: "name", header: "Stop", render: (s) => s.name },
+          {
+            key: "at",
+            header: "Location",
+            render: (s) =>
+              s.latitude === null || s.longitude === null ? (
+                <span className="text-ink-faint">Not placed</span>
+              ) : (
+                `${s.latitude.toFixed(5)}, ${s.longitude.toFixed(5)}`
+              ),
+          },
+          {
+            key: "act",
+            header: "",
+            render: (s) => (
+              <ActionButton
+                permission={SETUP_WRITE}
+                className="!px-3 !py-1 text-xs"
+                onClick={() => {
+                  pin.reset();
+                  setEditing(s.id);
+                  setForm({
+                    latitude: s.latitude?.toString() ?? "",
+                    longitude: s.longitude?.toString() ?? "",
+                  });
+                }}
+              >
+                {s.latitude === null ? "Set location" : "Move"}
+              </ActionButton>
+            ),
+          },
+        ]}
+      />
+
+      {editing !== null && (
+        <div className="mt-3 rounded-input border border-rule p-3">
+          <p className="text-xs text-ink-soft mb-2">
+            Latitude and longitude for{" "}
+            <strong>{ordered.find((s) => s.id === editing)?.name}</strong>. Read them off a map
+            rather than estimating — a pin in the wrong street sends a parent to the wrong kerb.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Latitude" error={pin.fields.latitude}>
+              <input
+                className={inputClass}
+                value={form.latitude}
+                inputMode="decimal"
+                placeholder="26.84670"
+                onChange={(e) => setForm({ ...form, latitude: e.target.value })}
+              />
+            </FormField>
+            <FormField label="Longitude" error={pin.fields.longitude}>
+              <input
+                className={inputClass}
+                value={form.longitude}
+                inputMode="decimal"
+                placeholder="80.94620"
+                onChange={(e) => setForm({ ...form, longitude: e.target.value })}
+              />
+            </FormField>
+          </div>
+          <FormError error={pin.error} />
+          <div className="mt-3 flex gap-2">
+            <ActionButton
+              permission={SETUP_WRITE}
+              onClick={() => pin.run()}
+              disabled={pin.busy || form.latitude.trim() === "" || form.longitude.trim() === ""}
+              className="!px-3 !py-1.5 text-xs"
+            >
+              Save location
+            </ActionButton>
+            <button
+              type="button"
+              onClick={() => setEditing(null)}
+              className="rounded-input border border-rule px-3 py-1.5 text-xs hover:bg-canvas"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

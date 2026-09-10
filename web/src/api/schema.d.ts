@@ -2220,6 +2220,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/transport/stops/{stop_id}/location": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Stop Location
+         * @description Pin one stop, in place.
+         *
+         *     Deliberately not folded into `PUT /routes/{id}/stops`. That route replaces
+         *     the whole list and `set_stops` rebuilds every RouteStop as a new row, so it
+         *     cannot preserve a stop id - and because `StopIn` carries no `id`, its
+         *     "children are assigned here" guard sees an empty keep-set and refuses
+         *     outright on any route with riders. Pinning a stop on a running route is the
+         *     ordinary case, so it gets a route that updates one row and leaves the
+         *     assignments pointing where they already point.
+         */
+        patch: operations["stop_location_admin_transport_stops__stop_id__location_patch"];
+        trace?: never;
+    };
     "/admin/transport/routes/{route_id}/crew": {
         parameters: {
             query?: never;
@@ -5747,6 +5775,17 @@ export interface components {
             drop_time?: string | null;
             /** Fee Slab Id */
             fee_slab_id?: number | null;
+            /** Latitude */
+            latitude?: number | null;
+            /** Longitude */
+            longitude?: number | null;
+        };
+        /** StopLocationIn */
+        StopLocationIn: {
+            /** Latitude */
+            latitude: number;
+            /** Longitude */
+            longitude: number;
         };
         /** StructureIn */
         StructureIn: {
@@ -11028,6 +11067,43 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["StopIn"][];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stop_location_admin_transport_stops__stop_id__location_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                stop_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StopLocationIn"];
             };
         };
         responses: {

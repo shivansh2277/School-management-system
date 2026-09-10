@@ -113,16 +113,21 @@ export function DataTable<T>({
 export function Modal({
   title,
   onClose,
+  wide = false,
   children,
 }: {
   title: string;
   onClose: () => void;
+  /** A map needs room a form does not. Default is unchanged for every caller. */
+  wide?: boolean;
   children: ReactNode;
 }) {
   return (
     <div className="fixed inset-0 z-50 bg-ink/40 grid place-items-center p-4" onClick={onClose}>
       <div
-        className="bg-surface rounded-card shadow-card w-full max-w-lg p-6 max-h-[85vh] overflow-y-auto"
+        className={`bg-surface rounded-card shadow-card w-full ${
+          wide ? "max-w-4xl" : "max-w-lg"
+        } p-6 max-h-[85vh] overflow-y-auto`}
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-center justify-between mb-4">
