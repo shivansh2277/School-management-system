@@ -4083,7 +4083,7 @@ export interface components {
              * Token Type
              * @default bearer
              */
-            token_type: string;
+            token_type?: string;
         };
         /**
          * AdmissionCategory
@@ -4106,7 +4106,7 @@ export interface components {
             /** Class Section Id */
             class_section_id: number;
             /** @default class */
-            audience: components["schemas"]["NoticeAudience"];
+            audience?: components["schemas"]["NoticeAudience"];
         };
         /**
          * ApplicantDetails
@@ -4146,7 +4146,7 @@ export interface components {
              * Is Single Child
              * @default false
              */
-            is_single_child: boolean;
+            is_single_child?: boolean;
             /** Aadhaar Last4 */
             aadhaar_last4?: string | null;
             /** Stream */
@@ -4158,14 +4158,14 @@ export interface components {
             /** Preferred Section */
             preferred_section?: string | null;
             /** @default general */
-            admission_category: components["schemas"]["AdmissionCategory"];
+            admission_category?: components["schemas"]["AdmissionCategory"];
             /**
              * Transport Required
              * @default false
              */
-            transport_required: boolean;
+            transport_required?: boolean;
             /** @default walk_in */
-            source: components["schemas"]["EnquirySource"];
+            source?: components["schemas"]["EnquirySource"];
             /** Enquiry Id */
             enquiry_id?: number | null;
             /** Previous Application Id */
@@ -4268,7 +4268,7 @@ export interface components {
              * Is Half Day
              * @default false
              */
-            is_half_day: boolean;
+            is_half_day?: boolean;
         };
         /** AssessmentSchedule */
         AssessmentSchedule: {
@@ -4286,7 +4286,7 @@ export interface components {
              * Subjects
              * @default []
              */
-            subjects: components["schemas"]["SubjectInput"][];
+            subjects?: components["schemas"]["SubjectInput"][];
         };
         /**
          * AssessmentType
@@ -4434,7 +4434,7 @@ export interface components {
              *       "kind": "all_guardians"
              *     }
              */
-            audience: components["schemas"]["AudienceIn"];
+            audience?: components["schemas"]["AudienceIn"];
             /** Confirm */
             confirm: boolean;
         };
@@ -4487,12 +4487,12 @@ export interface components {
              * Requires Test
              * @default false
              */
-            requires_test: boolean;
+            requires_test?: boolean;
             /**
              * Requires Interview
              * @default false
              */
-            requires_interview: boolean;
+            requires_interview?: boolean;
             /** Required Document Codes */
             required_document_codes?: string[] | null;
         };
@@ -4528,7 +4528,7 @@ export interface components {
              * Method
              * @default cash
              */
-            method: string;
+            method?: string;
             /** Instrument Ref */
             instrument_ref?: string | null;
             /** Idempotency Key */
@@ -4538,7 +4538,7 @@ export interface components {
         ComposeIn: {
             audience: components["schemas"]["AudienceIn"];
             /** @default general */
-            category: components["schemas"]["MessageCategory"];
+            category?: components["schemas"]["MessageCategory"];
             /** Subject */
             subject?: string | null;
             /** Body */
@@ -4546,12 +4546,12 @@ export interface components {
             /** Template Code */
             template_code?: string | null;
             /** @default email */
-            channel: components["schemas"]["Channel"];
+            channel?: components["schemas"]["Channel"];
             /**
              * Send Now
              * @default true
              */
-            send_now: boolean;
+            send_now?: boolean;
         };
         /** ConcessionIn */
         ConcessionIn: {
@@ -4613,12 +4613,12 @@ export interface components {
              * Is Required
              * @default false
              */
-            is_required: boolean;
+            is_required?: boolean;
             /**
              * Sort Order
              * @default 100
              */
-            sort_order: number;
+            sort_order?: number;
         };
         /**
          * CustomFieldType
@@ -4641,17 +4641,17 @@ export interface components {
              * Application Fee
              * @default 0
              */
-            application_fee: number | string;
+            application_fee?: number | string;
             /**
              * Late Fee
              * @default 0
              */
-            late_fee: number | string;
+            late_fee?: number | string;
             /**
              * Allow Online Applications
              * @default true
              */
-            allow_online_applications: boolean;
+            allow_online_applications?: boolean;
             /** Admission Fee Refund Policy */
             admission_fee_refund_policy?: string | null;
         };
@@ -4693,7 +4693,7 @@ export interface components {
              * Allow Exception
              * @default false
              */
-            allow_exception: boolean;
+            allow_exception?: boolean;
         };
         /** DecisionInput */
         DecisionInput: {
@@ -4708,7 +4708,7 @@ export interface components {
              * Over Allocation Approved
              * @default false
              */
-            over_allocation_approved: boolean;
+            over_allocation_approved?: boolean;
         };
         /**
          * DecisionOutcome
@@ -4729,7 +4729,7 @@ export interface components {
             /** Employee Code */
             employee_code: string;
             /** @default teaching */
-            employee_type: components["schemas"]["EmployeeType"];
+            employee_type?: components["schemas"]["EmployeeType"];
             /** Qualification */
             qualification?: string | null;
             /** Joining Date */
@@ -4742,7 +4742,7 @@ export interface components {
              * Password
              * @default Teacher@123
              */
-            password: string;
+            password?: string;
         };
         /**
          * EmployeeType
@@ -4787,7 +4787,7 @@ export interface components {
             /** Class Of Interest */
             class_of_interest?: string | null;
             /** @default walk_in */
-            source: components["schemas"]["EnquirySource"];
+            source?: components["schemas"]["EnquirySource"];
             /** Assigned To */
             assigned_to?: number | null;
             /** Next Follow Up On */
@@ -4870,7 +4870,7 @@ export interface components {
              * Marks Locked
              * @default false
              */
-            marks_locked: boolean;
+            marks_locked?: boolean;
             /** Exam Id */
             exam_id: number;
             /** Exam Name */
@@ -5041,7 +5041,7 @@ export interface components {
              * Panel Member Ids
              * @default []
              */
-            panel_member_ids: number[];
+            panel_member_ids?: number[];
         };
         /**
          * InvoiceStatus
@@ -5073,7 +5073,7 @@ export interface components {
              */
             to_date: string;
             /** @default sick */
-            type: components["schemas"]["LeaveType"];
+            type?: components["schemas"]["LeaveType"];
             /** Reason */
             reason: string;
         };
@@ -5099,7 +5099,7 @@ export interface components {
              * Is Paid
              * @default true
              */
-            is_paid: boolean;
+            is_paid?: boolean;
         };
         /** LoginRequest */
         LoginRequest: {
@@ -5133,14 +5133,14 @@ export interface components {
              * Is Absent
              * @default false
              */
-            is_absent: boolean;
+            is_absent?: boolean;
             /** Remarks */
             remarks?: string | null;
             /**
              * Subject Marks
              * @default {}
              */
-            subject_marks: {
+            subject_marks?: {
                 [key: string]: number | string;
             };
             /** Reason */
@@ -5169,12 +5169,12 @@ export interface components {
              * Is Absent
              * @default false
              */
-            is_absent: boolean;
+            is_absent?: boolean;
             /**
              * Is Exempted
              * @default false
              */
-            is_exempted: boolean;
+            is_exempted?: boolean;
             /** Remarks */
             remarks?: string | null;
         };
@@ -5185,12 +5185,12 @@ export interface components {
              * Permissions
              * @default []
              */
-            permissions: string[];
+            permissions?: string[];
             /**
              * Roles
              * @default []
              */
-            roles: string[];
+            roles?: string[];
             /** School Code */
             school_code?: string | null;
             /** School Name */
@@ -5201,7 +5201,7 @@ export interface components {
              * Modules
              * @default []
              */
-            modules: string[];
+            modules?: string[];
             /** Admission No */
             admission_no?: string | null;
             /** Class Label */
@@ -5239,7 +5239,7 @@ export interface components {
              * Consent For Emergency Treatment
              * @default false
              */
-            consent_for_emergency_treatment: boolean;
+            consent_for_emergency_treatment?: boolean;
         };
         /**
          * MessageCategory
@@ -5281,7 +5281,7 @@ export interface components {
              * Notify
              * @default false
              */
-            notify: boolean;
+            notify?: boolean;
         };
         /** NoticeOut */
         NoticeOut: {
@@ -5371,7 +5371,7 @@ export interface components {
              * Method
              * @default cash
              */
-            method: string;
+            method?: string;
             /** Reference */
             reference?: string | null;
             /** Idempotency Key */
@@ -5397,7 +5397,7 @@ export interface components {
              * Is Break
              * @default false
              */
-            is_break: boolean;
+            is_break?: boolean;
         };
         /** PlanIn */
         PlanIn: {
@@ -5411,7 +5411,7 @@ export interface components {
              * Items
              * @default []
              */
-            items: components["schemas"]["PlanItemIn"][];
+            items?: components["schemas"]["PlanItemIn"][];
         };
         /** PlanItemIn */
         PlanItemIn: {
@@ -5420,18 +5420,18 @@ export interface components {
             /** Amount */
             amount: number | string;
             /** @default monthly */
-            frequency: components["schemas"]["FeeFrequency"];
+            frequency?: components["schemas"]["FeeFrequency"];
         };
         /** PreferenceIn */
         PreferenceIn: {
             category: components["schemas"]["MessageCategory"];
             /** @default email */
-            channel: components["schemas"]["Channel"];
+            channel?: components["schemas"]["Channel"];
             /**
              * Opted Out
              * @default true
              */
-            opted_out: boolean;
+            opted_out?: boolean;
         };
         /** PublicApplication */
         PublicApplication: {
@@ -5457,12 +5457,12 @@ export interface components {
             /** Caste Category */
             caste_category?: string | null;
             /** @default general */
-            admission_category: components["schemas"]["AdmissionCategory"];
+            admission_category?: components["schemas"]["AdmissionCategory"];
             /**
              * Transport Required
              * @default false
              */
-            transport_required: boolean;
+            transport_required?: boolean;
             /** Address */
             address?: {
                 [key: string]: unknown;
@@ -5474,22 +5474,22 @@ export interface components {
             /** Guardians */
             guardians: components["schemas"]["PublicGuardian"][];
             /** @default website */
-            heard_about_us: components["schemas"]["EnquirySource"];
+            heard_about_us?: components["schemas"]["EnquirySource"];
             /**
              * Information Accuracy
              * @default false
              */
-            information_accuracy: boolean;
+            information_accuracy?: boolean;
             /**
              * School Rules Accepted
              * @default false
              */
-            school_rules_accepted: boolean;
+            school_rules_accepted?: boolean;
             /**
              * Data Processing Consent
              * @default false
              */
-            data_processing_consent: boolean;
+            data_processing_consent?: boolean;
             /** Photo Media Consent */
             photo_media_consent?: boolean | null;
             /** Website */
@@ -5510,7 +5510,7 @@ export interface components {
              * Is Primary
              * @default false
              */
-            is_primary: boolean;
+            is_primary?: boolean;
         };
         /** RefreshRequest */
         RefreshRequest: {
@@ -5561,12 +5561,12 @@ export interface components {
              * Is Absent
              * @default false
              */
-            is_absent: boolean;
+            is_absent?: boolean;
             /**
              * Is Exempted
              * @default false
              */
-            is_exempted: boolean;
+            is_exempted?: boolean;
         };
         /** RollRow */
         RollRow: {
@@ -5581,7 +5581,7 @@ export interface components {
              * Corrected
              * @default false
              */
-            corrected: boolean;
+            corrected?: boolean;
             /** Remarks */
             remarks?: string | null;
         };
@@ -5613,7 +5613,7 @@ export interface components {
              * Supplementary
              * @default false
              */
-            supplementary: boolean;
+            supplementary?: boolean;
         };
         /** ScaleIn */
         ScaleIn: {
@@ -5625,7 +5625,7 @@ export interface components {
              * Activate
              * @default false
              */
-            activate: boolean;
+            activate?: boolean;
         };
         /** SchemeIn */
         SchemeIn: {
@@ -5639,7 +5639,7 @@ export interface components {
              * Activate
              * @default false
              */
-            activate: boolean;
+            activate?: boolean;
         };
         /** SiblingInput */
         SiblingInput: {
@@ -5662,7 +5662,7 @@ export interface components {
              * Is Active
              * @default true
              */
-            is_active: boolean;
+            is_active?: boolean;
         };
         /** SlotIn */
         SlotIn: {
@@ -5789,7 +5789,7 @@ export interface components {
              * Password
              * @default Student@123
              */
-            password: string;
+            password?: string;
             guardian?: components["schemas"]["app__api__admin__students__GuardianInput"] | null;
             /** Guardian Id */
             guardian_id?: number | null;
@@ -5918,7 +5918,7 @@ export interface components {
             /** Body */
             body: string;
             /** @default email */
-            channel: components["schemas"]["Channel"];
+            channel?: components["schemas"]["Channel"];
         };
         /** TokenPair */
         TokenPair: {
@@ -5930,7 +5930,7 @@ export interface components {
              * Token Type
              * @default bearer
              */
-            token_type: string;
+            token_type?: string;
             user: components["schemas"]["UserOut"];
         };
         /**
@@ -5994,7 +5994,7 @@ export interface components {
             /** Capacity */
             capacity: number;
             /** @default owned */
-            ownership: components["schemas"]["VehicleOwnership"];
+            ownership?: components["schemas"]["VehicleOwnership"];
             /** Gps Device Id */
             gps_device_id?: string | null;
         };
@@ -6027,7 +6027,7 @@ export interface components {
              * Original Seen
              * @default false
              */
-            original_seen: boolean;
+            original_seen?: boolean;
         };
         /** GuardianInput */
         app__api__admin__applications__GuardianInput: {
@@ -6058,27 +6058,27 @@ export interface components {
              * Is Primary
              * @default false
              */
-            is_primary: boolean;
+            is_primary?: boolean;
             /**
              * Is Emergency Contact
              * @default false
              */
-            is_emergency_contact: boolean;
+            is_emergency_contact?: boolean;
             /**
              * Is Authorised For Pickup
              * @default false
              */
-            is_authorised_for_pickup: boolean;
+            is_authorised_for_pickup?: boolean;
             /**
              * Is School Alumnus
              * @default false
              */
-            is_school_alumnus: boolean;
+            is_school_alumnus?: boolean;
             /**
              * Is School Staff
              * @default false
              */
-            is_school_staff: boolean;
+            is_school_staff?: boolean;
             /** Employee Id */
             employee_id?: number | null;
         };
@@ -6089,19 +6089,19 @@ export interface components {
             /** Code */
             code: string;
             /** @default recurring */
-            type: components["schemas"]["FeeHeadType"];
+            type?: components["schemas"]["FeeHeadType"];
             /**
              * Is Refundable
              * @default false
              */
-            is_refundable: boolean;
+            is_refundable?: boolean;
             /** Gl Code */
             gl_code?: string | null;
             /**
              * Is Active
              * @default true
              */
-            is_active: boolean;
+            is_active?: boolean;
         };
         /** ReasonIn */
         app__api__admin__fees__ReasonIn: {
@@ -6212,14 +6212,14 @@ export interface components {
             /** Phone */
             phone: string;
             /** @default father */
-            relation: components["schemas"]["GuardianRelation"];
+            relation?: components["schemas"]["GuardianRelation"];
             /** Occupation */
             occupation?: string | null;
             /**
              * Password
              * @default Parent@123
              */
-            password: string;
+            password?: string;
         };
         /** AssignmentIn */
         app__api__admin__transport__AssignmentIn: {
@@ -6228,7 +6228,7 @@ export interface components {
             /** Route Stop Id */
             route_stop_id: number;
             /** @default both */
-            direction: components["schemas"]["TransportDirection"];
+            direction?: components["schemas"]["TransportDirection"];
             /**
              * Start Date
              * Format: date
@@ -6245,12 +6245,12 @@ export interface components {
              * Is Absent
              * @default false
              */
-            is_absent: boolean;
+            is_absent?: boolean;
             /**
              * Is Exempted
              * @default false
              */
-            is_exempted: boolean;
+            is_exempted?: boolean;
             /** Remarks */
             remarks?: string | null;
         };

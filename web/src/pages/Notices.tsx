@@ -6,12 +6,20 @@ import { errorText } from "../api/errors";
 import { Card, DataTable, FormField, inputClass } from "../components/ui";
 import { useClasses } from "./useClasses";
 
-const AUDIENCES = ["all", "students", "parents", "teachers", "class"];
+// `as const` so the state below is the union the API accepts rather than
+// `string`: the typed request body catches a value this list does not hold.
+const AUDIENCES = ["all", "students", "parents", "teachers", "class"] as const;
+type Audience = (typeof AUDIENCES)[number];
 
 export function Notices() {
   const qc = useQueryClient();
   const classes = useClasses();
-  const [form, setForm] = useState({ title: "", body: "", audience: "all", class_section_id: "" });
+  const [form, setForm] = useState({
+    title: "",
+    body: "",
+    audience: "all" as Audience,
+    class_section_id: "",
+  });
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm({ ...form, [k]: e.target.value });
 

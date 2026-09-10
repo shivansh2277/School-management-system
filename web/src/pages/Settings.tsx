@@ -69,7 +69,12 @@ export function Settings() {
   }, [school.data]);
 
   const save = useMutation({
-    mutationFn: () => api.patch("/admin/settings", form),
+    // Guarded because `form` is null until the school query resolves, and the
+    // typed body showed Save would post that null straight to the API.
+    mutationFn: () => {
+      if (!form) throw new Error("School settings have not loaded yet");
+      return api.patch("/admin/settings", form);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["settings"] }),
   });
 

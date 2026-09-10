@@ -34,7 +34,18 @@ const banner =
   "/**\n * GENERATED FILE — do not edit by hand.\n" +
   " * Regenerate with `npm run api:types`. See docs/superpowers/specs/\n" +
   " * 2026-09-08-web-erp-slice-0-foundation-design.md section 4.4.\n */\n";
-const generated = banner + astToString(await openapiTS(JSON.parse(schema)));
+// defaultNonNullable:false because a field with a server-side default is NOT
+// required in a request body - the server fills it. Left on (the library's
+// default) it emitted `password: string` as mandatory on GuardianInput, which
+// would force every caller to hardcode the backend's own "Parent@123" into the
+// client: a policy constant duplicated into the UI, and the account-issuing
+// decision CLAUDE.md records as deliberately unmade.
+//
+// The cost is that a defaulted field is optional on RESPONSES too, where the
+// server does always send it. That was measured at 152 properties and zero new
+// tsc errors, and `T | undefined` on a read is a check you can add; a wrong
+// mandatory field on a write is a 422 you cannot.
+const generated = banner + astToString(await openapiTS(JSON.parse(schema), { defaultNonNullable: false }));
 
 if (check) {
   const current = readFileSync(out, "utf8");

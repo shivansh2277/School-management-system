@@ -27,6 +27,28 @@ type PostPaths = { [P in keyof paths]: paths[P] extends { post: unknown } ? P : 
 type PatchPaths = { [P in keyof paths]: paths[P] extends { patch: unknown } ? P : never }[keyof paths];
 type DeletePaths = { [P in keyof paths]: paths[P] extends { delete: unknown } ? P : never }[keyof paths];
 
+/**
+ * The JSON request body of one operation, or `undefined` where it takes none.
+ *
+ * `Ok<>` below has typed responses since Slice 0; bodies stayed `unknown`, so a
+ * write with a misspelled or wrongly shaped field compiled cleanly and failed
+ * at runtime - the exact defect the generated schema exists to prevent. The
+ * generator already emits `requestBody` for routes that take one and
+ * `requestBody?: never` for routes that do not, which is what separates the
+ * two branches here.
+ */
+type Body<T> = T extends { requestBody: { content: { "application/json": infer B } } }
+  ? B
+  : undefined;
+
+/**
+ * The body argument, present only when the route actually takes one.
+ *
+ * A plain `body?: Body<...>` would catch a wrong shape but still let a required
+ * body be omitted entirely, which is the same runtime 422 by a shorter route.
+ */
+type BodyArg<T> = Body<T> extends undefined ? [] : [body: Body<T>];
+
 /** The 200 body of one operation. `unknown` where the route is untyped. */
 type Ok<T> = T extends { responses: { 200: { content: { "application/json": infer R } } } }
   ? R
@@ -101,10 +123,10 @@ export function newIdempotencyKey(): string {
 export const api = {
   get: <P extends GetPaths>(path: P, query?: string) =>
     request<Ok<paths[P]["get"]>>(`${path}${query ?? ""}`),
-  post: <P extends PostPaths>(path: P, body?: unknown) =>
-    request<Ok<paths[P]["post"]>>(path, { method: "POST", body: JSON.stringify(body ?? {}) }),
-  patch: <P extends PatchPaths>(path: P, body: unknown) =>
-    request<Ok<paths[P]["patch"]>>(path, { method: "PATCH", body: JSON.stringify(body) }),
+  post: <P extends PostPaths>(path: P, ...args: BodyArg<paths[P]["post"]>) =>
+    request<Ok<paths[P]["post"]>>(path, { method: "POST", body: JSON.stringify(args[0] ?? {}) }),
+  patch: <P extends PatchPaths>(path: P, ...args: BodyArg<paths[P]["patch"]>) =>
+    request<Ok<paths[P]["patch"]>>(path, { method: "PATCH", body: JSON.stringify(args[0] ?? {}) }),
   del: <P extends DeletePaths>(path: P) =>
     request<Ok<paths[P]["delete"]>>(path, { method: "DELETE" }),
 };
