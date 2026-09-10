@@ -112,7 +112,7 @@ def test_teacher_cannot_enter_marks_for_a_paper_outside_their_subject(
 def test_teacher_cannot_publish_to_a_section_they_do_not_teach(client, teacher, ids):
     r = client.post(
         "/teacher/announcements",
-        json={"title": "x", "body": "y", "class_section_id": ids["section_9a"]},
+        json={"title": "x", "body": "y", "class_section_id": ids["section_not_tch1"]},
         headers=teacher,
     )
     assert r.status_code == 403

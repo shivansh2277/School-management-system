@@ -212,6 +212,29 @@ def ids(db):
             .where(ClassSection.class_name == class_name, Enrolment.roll_no == roll_no)
         )
 
+    # A section TCH001 does not teach, resolved from the actual assignments
+    # rather than assumed. Three tests used to reach for "the first section
+    # that is not 10-A", which was 9-A and stopped being foreign the moment the
+    # subject allocation changed - they passed for a reason that had quietly
+    # expired.
+    from app.models import ClassSubjectTeacher
+
+    tch1_employee = db.scalar(select(Employee).join(User).where(User.login_id == "TCH001"))
+    taught_by_tch1 = set(
+        db.scalars(
+            select(ClassSubjectTeacher.class_section_id).where(
+                ClassSubjectTeacher.teacher_id == tch1_employee.id
+            )
+        )
+    )
+    not_tch1 = db.scalar(
+        select(ClassSection).where(
+            ClassSection.school_id == section_10a.school_id,
+            ClassSection.id.not_in(taught_by_tch1),
+        )
+    )
+    assert not_tch1 is not None, "TCH001 teaches every section; the scope tests need one it does not"
+
     s1 = student_in("10")
     s17 = student_in("8")
     tch1 = db.scalar(select(Employee).join(User).where(User.login_id == "TCH001"))
@@ -219,6 +242,8 @@ def ids(db):
         "section_10a": section_10a.id,
         "section_9a": section_9a.id,
         "section_8a": section_8a.id,
+        # A section TCH001 does not teach - for the "not yours" scope tests.
+        "section_not_tch1": not_tch1.id,
         "maths": maths.id,
         "hindi": hindi.id,
         "student_1": s1.id,

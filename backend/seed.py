@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import random
+from collections import Counter
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 
@@ -124,7 +125,40 @@ SUBJECTS = [
     ("Science", "SCI"),
     ("Social Science", "SST"),
     ("Computer", "CMP"),
+    ("Environmental Studies", "EVS"),
+    ("Art & Craft", "ART"),
+    ("Sanskrit", "SAN"),
 ]
+
+# What each stage is actually taught, following the CBSE pattern a Lucknow
+# private school runs on.
+#
+# Every section used to hold the same six subjects, so class 1 was timetabled
+# for Social Science and class 10 for none of the primary work - a curriculum
+# that exists in no school. The two stages now differ the way they really do:
+#
+#   Primary (1-5)  Environmental Studies is the combined science-and-social
+#                  subject at this stage, Computer is an introduction, and Art
+#                  & Craft is timetabled rather than a free period.
+#   Senior (6-10)  EVS splits into Science and Social Science, and Sanskrit
+#                  comes in as the third language.
+#
+# Six per stage, and that number is load-bearing. Thirty teaching periods a
+# week over six subjects is five each, and twelve teachers over two stages is
+# exactly one specialist per stage per subject - which is what lets every
+# section be taught in every period with nobody double-booked. A seventh
+# subject (CBSE schools commonly also run Computer through 6-8) would divide
+# 30 by 7 and leave the week ragged, so it is deliberately left out of the
+# demo school rather than faked.
+STAGE_SUBJECTS = {
+    "primary": ["ENG", "HIN", "MAT", "EVS", "CMP", "ART"],
+    "senior": ["ENG", "HIN", "MAT", "SCI", "SST", "SAN"],
+}
+
+
+def stage_of(class_name: str) -> str:
+    """Which stage a class belongs to. Numeric names only, as CLASS_NAMES has."""
+    return "primary" if int(class_name) <= 5 else "senior"
 
 # One class teacher per section, plus subject teachers. TCH001 is first
 # because the walkthrough in BLUEPRINT section 13 depends on them
@@ -252,10 +286,10 @@ ROOMS = ["R-101", "R-102", "R-201", "R-202", "Lab-1", "Lab-2"]
 HOMEWORK_TITLES = [
     ("Chapter 4 exercise questions", "MAT"),
     ("Write a paragraph on your favourite festival", "ENG"),
-    ("Solve the quadratic equations worksheet", "MAT"),
+    ("Solve the linear equations worksheet", "MAT"),
     ("Draw and label the human digestive system", "SCI"),
     ("Answer the map-work questions", "SST"),
-    ("Write a Python program to reverse a string", "CMP"),
+    ("Label the parts of a computer", "CMP"),
     ("Summarise the poem in your own words", "HIN"),
     ("Revision problems from last week", "SCI"),
 ]
@@ -626,29 +660,77 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
     # Scoping stays a real boundary: each teacher is in five of the ten
     # sections, not all of them. The alternating split is what keeps TCH004 out
     # of 10-A, which `other_teacher` depends on.
-    SUBJECT_TEACHERS = {
-        "ENG": (1, 10),   # M.A. English, and the primary teacher
-        "HIN": (2, 9),    # M.A. Hindi, and the Sanskrit teacher
-        "MAT": (0, 11),   # M.Sc. Mathematics, and the M.Com.
-        "SCI": (3, 6),    # Physics takes the even sections, Chemistry the odd
-                          # (this way round keeps TCH004 out of 10-A, which the
-                          # `other_teacher` fixture depends on)
-        "SST": (4, 7),    # History and Political Science
-        "CMP": (5, 8),    # MCA, and the Biology teacher — a small school does
-    }                     # exactly this
-    for si, sec in enumerate(sections):
-        for qi, sub in enumerate(subjects):
-            first, second = SUBJECT_TEACHERS[sub.code]
-            # Alternating by (section + subject) gives each of the pair five
-            # sections whichever way the parity falls.
-            chosen = first if (si + qi) % 2 == 0 else second
+    # Written out rather than derived, because the stages no longer share a
+    # subject list and a parity trick over uneven sets balances nothing. Each
+    # row is (subject, teacher index, the section indices they take it in), and
+    # CLASS_NAMES is ["10","9","8","7","6","5","4","3","2","1"] — so 0-1 are
+    # secondary, 2-4 middle, 5-9 primary.
+    #
+    # Every teacher appears exactly five times, which is what holds the load
+    # chart at 25 periods each and spread 0. Verified below rather than
+    # trusted: an assignment table is easy to edit into imbalance.
+    #
+    # Two facts the test fixtures depend on and this table must keep:
+    #   TCH001 (index 0) teaches 10-A Mathematics - section 0 is in its row.
+    #   TCH004 (index 3) teaches neither 10-A nor Mathematics at all.
+    # One specialist per stage per subject: two stages of six subjects is
+    # twelve teachers, which is exactly the staff. Each of them takes their
+    # subject in all five sections of their stage, so everybody carries five
+    # (section, subject) pairs and twenty-five periods a week.
+    #
+    # The symmetry is not tidiness, it is what makes the timetable solvable.
+    # Ten sections must each be taught in all thirty periods of the week, so
+    # ten of the twelve teachers are busy in every single period - there is
+    # almost no slack. An earlier cut of this table spread subjects across
+    # teachers unevenly and the placer simply could not fill the last few
+    # periods, whatever algorithm it used.
+    #
+    # Two facts the fixtures depend on, both kept:
+    #   TCH001 (index 0) teaches 10-A Mathematics - it holds senior Maths.
+    #   TCH004 (index 3) teaches neither 10-A nor Maths - it holds primary Art.
+    SENIOR, PRIMARY = (0, 1, 2, 3, 4), (5, 6, 7, 8, 9)
+    TEACHING_PLAN = [
+        # subject, teacher, sections
+        ("MAT", 0, SENIOR),    # M.Sc. Mathematics
+        ("ENG", 1, SENIOR),    # M.A. English
+        ("HIN", 2, SENIOR),    # M.A. Hindi
+        ("SCI", 6, SENIOR),    # M.Sc. Chemistry
+        ("SST", 4, SENIOR),    # M.A. History
+        ("SAN", 9, SENIOR),    # M.A. Sanskrit
+        ("MAT", 11, PRIMARY),  # M.Com. takes primary arithmetic
+        ("ENG", 10, PRIMARY),  # the primary teacher
+        ("HIN", 7, PRIMARY),   # M.A. Political Science
+        ("EVS", 8, PRIMARY),   # M.Sc. Biology - the natural fit for EVS
+        ("CMP", 5, PRIMARY),   # MCA
+        ("ART", 3, PRIMARY),   # M.Sc. Physics - art goes to whoever has the
+    ]                          # periods, which is what a small school does
+
+    by_code = {sub.code: sub for sub in subjects}
+    load = Counter()
+    for code, teacher_index, section_indices in TEACHING_PLAN:
+        for si in section_indices:
+            expected = STAGE_SUBJECTS[stage_of(sections[si].class_name)]
+            assert code in expected, (
+                f"{code} is not taught in class {sections[si].class_name}"
+            )
             db.add(
                 ClassSubjectTeacher(
-                    class_section_id=sec.id,
-                    subject_id=sub.id,
-                    teacher_id=teachers[chosen].id,
+                    class_section_id=sections[si].id,
+                    subject_id=by_code[code].id,
+                    teacher_id=teachers[teacher_index].id,
                 )
             )
+            load[teacher_index] += 1
+
+    # Every section fully staffed, and nobody carrying more or less than five.
+    for si, sec in enumerate(sections):
+        planned = {c for c, _, idxs in TEACHING_PLAN if si in idxs}
+        assert planned == set(STAGE_SUBJECTS[stage_of(sec.class_name)]), (
+            f"class {sec.class_name} is short of {set(STAGE_SUBJECTS[stage_of(sec.class_name)]) - planned}"
+        )
+    assert set(load.values()) == {5}, f"uneven teaching load: {dict(load)}"
+    assert len(load) == len(teachers), "a teacher was left with nothing to teach"
+
     db.flush()
 
     students: list[Student] = []
@@ -775,17 +857,28 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
     busy_room: set[tuple] = set()      # (day, period, room)
     placed = skipped = 0
 
-    # Each section gets each subject the same number of times a week — thirty
-    # teaching slots over six subjects is five each. Tracking what each section
-    # still owes, and always placing whichever subject is furthest behind,
-    # keeps the periods even without a scheduling algorithm: a greedy "first
-    # subject whose teacher is free" drifts, and that drift is what put two
-    # teachers on 30 periods while ten sat on 24.
-    per_subject = (len(periods) - sum(1 for p in periods if p.is_break)) * len(
+    # Each section gets each of ITS subjects the same number of times a week —
+    # thirty teaching slots over the stage's six subjects is five each.
+    # Tracking what each section still owes, and always placing whichever
+    # subject is furthest behind, keeps the periods even without a scheduling
+    # algorithm: a greedy "first subject whose teacher is free" drifts, and
+    # that drift is what put two teachers on 30 periods while ten sat on 24.
+    #
+    # Per section, not global: the stages take different subjects now, so
+    # dividing the week by len(subjects) would budget each section three
+    # periods of each of the ten subjects in the school and leave half the
+    # grid empty.
+    teaching_slots = (len(periods) - sum(1 for p in periods if p.is_break)) * len(
         DayOfWeek
-    ) // len(subjects)
+    )
+    subjects_of = {
+        sec.id: [by_code[c] for c in STAGE_SUBJECTS[stage_of(sec.class_name)]]
+        for sec in sections
+    }
     owed = {
-        (sec.id, sub.id): per_subject for sec in sections for sub in subjects
+        (sec.id, sub.id): teaching_slots // len(subjects_of[sec.id])
+        for sec in sections
+        for sub in subjects_of[sec.id]
     }
 
     for period in periods:
@@ -796,11 +889,12 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
                 # Furthest behind first; the offset breaks ties differently in
                 # each section so they do not all chase the same subject at the
                 # same hour and collide on its teacher.
+                mine = subjects_of[sec.id]
                 candidates = sorted(
-                    subjects,
-                    key=lambda sub, sec=sec, si=si, p=period: (
+                    mine,
+                    key=lambda sub, sec=sec, si=si, p=period, mine=mine: (
                         -owed[(sec.id, sub.id)],
-                        (subjects.index(sub) + si + p.period_no) % len(subjects),
+                        (mine.index(sub) + si + p.period_no) % len(mine),
                     ),
                 )
                 for sub in candidates:
@@ -911,7 +1005,9 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
 
     for exam, component in exams:
         for sec in sections:
-            for qi, sub in enumerate(subjects):
+            # The section's own subjects, not every subject in the school: a
+            # class 1 paper in Social Science is not an exam anybody sits.
+            for qi, sub in enumerate(subjects_of[sec.id]):
                 sched = ExamSchedule(
                     exam_id=exam.id,
                     class_section_id=sec.id,
@@ -942,7 +1038,15 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
     # --- homework ---------------------------------------------------------
     by_code = {s.code: s for s in subjects}
     for i, (title, code) in enumerate(HOMEWORK_TITLES):
-        sec = sections[i % len(sections)]
+        # A section that actually takes the subject. Round-robin over every
+        # section set homework in Social Science to class 3, which no longer
+        # has a teacher for it - and used to be silently wrong rather than a
+        # KeyError only because every class held every subject.
+        eligible = [
+            sec for sec in sections
+            if code in STAGE_SUBJECTS[stage_of(sec.class_name)]
+        ]
+        sec = eligible[i % len(eligible)]
         sub = by_code[code]
         assigned = TODAY - timedelta(days=14 - i)
         hw = Homework(

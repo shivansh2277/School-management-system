@@ -58,16 +58,38 @@ def _row(db: Session, c: ClassSection) -> dict:
     }
 
 
+def class_order(section: ClassSection) -> tuple[int, int, str, str]:
+    """Sort key that puts class 10 after class 9, not after class 1.
+
+    `class_name` is a String(8) holding "1".."12", so ordering by the column
+    is lexicographic: "1", "10", "11", "2". Every class dropdown in the web app
+    reads this one endpoint, so the office saw 10-A wedged between 1-A and 2-A
+    on Classes, Students, Settings and the fee screens alike.
+
+    Sorted in Python rather than in SQL because the fix has to hold on both
+    engines: the test suite runs on SQLite and a Postgres `::int` cast would
+    not survive there, while a CASE that works on both is longer than this and
+    says less. Ten sections is not a query worth optimising.
+
+    Pre-primary names sort before the numbered classes, alphabetically among
+    themselves.
+    # ponytail: alphabetical is wrong for LKG/UKG/Nursery, which belong in
+    # Nursery -> LKG -> UKG order. No seeded school has them, so this stays a
+    # comment rather than a hardcoded ladder; give ClassSection an explicit
+    # ordinal column if a real school ever needs it.
+    """
+    name = section.class_name.strip()
+    if name.isdigit():
+        return (1, int(name), "", section.section)
+    return (0, 0, name.lower(), section.section)
+
+
 @router.get("/classes")
 def list_classes(user: User = Depends(admin_only), db: Session = Depends(get_db)) -> list[dict]:
-    return [
-        _row(db, c)
-        for c in db.scalars(
-            select(ClassSection)
-            .where(ClassSection.school_id == user.school_id)
-            .order_by(ClassSection.class_name, ClassSection.section)
-        )
-    ]
+    rows = db.scalars(
+        select(ClassSection).where(ClassSection.school_id == user.school_id)
+    )
+    return [_row(db, c) for c in sorted(rows, key=class_order)]
 
 
 @router.post("/classes", status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_permission("academics.class.write"))])

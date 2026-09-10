@@ -61,12 +61,7 @@ def test_a_teacher_cannot_read_another_teachers_section(client, teacher, ids, db
 
     from app.models import ClassSection
 
-    foreign = db.scalar(
-        select(ClassSection).where(
-            ClassSection.school_id == ids["school"],
-            ClassSection.id != ids["section_10a"],
-        )
-    )
+    foreign = db.get(ClassSection, ids["section_not_tch1"])
     r = client.get(
         "/admin/attendance/shortage",
         headers=teacher,

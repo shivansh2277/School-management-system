@@ -155,10 +155,7 @@ def test_a_teacher_must_name_a_section_and_it_must_be_theirs(
     )
     assert own.status_code == 200, own.text
     # Somebody else's: refused.
-    others = db.scalars(
-        select(ClassSection).where(ClassSection.school_id == ids["school"])
-    ).all()
-    foreign = next(s for s in others if s.id != ids["section_10a"])
+    foreign = db.get(ClassSection, ids["section_not_tch1"])
     r = client.get(
         "/admin/reports/attendance.shortage",
         headers=teacher,
