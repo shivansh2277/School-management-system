@@ -6180,6 +6180,8 @@ export interface components {
          *     and branding for a whole tenant.
          */
         app__api__admin__stats__SettingsUpdate: {
+            /** Academic Year */
+            academic_year?: string | null;
             /** Name */
             name?: string | null;
             /** Address */

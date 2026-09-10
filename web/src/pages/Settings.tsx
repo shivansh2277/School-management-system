@@ -99,9 +99,24 @@ export function Settings() {
           <div className="grid gap-3 sm:grid-cols-2">
             {FIELDS.map(([key, label]) => (
               <FormField key={key} label={label}>
+                {/*
+                  The academic year is shown because the office looks for it
+                  here, but it is an AcademicYear row rather than a column on
+                  the school, and PATCH /admin/settings accepts it only to
+                  ignore it. An input that looks editable and silently is not is
+                  the same lie as the 422 this replaced, so it is disabled.
+                  There is no endpoint that changes the current year at all -
+                  see reports/packet-3-configuration.md.
+                */}
                 <input
-                  className={inputClass}
+                  className={`${inputClass} ${key === "academic_year" ? "bg-canvas text-ink-faint" : ""}`}
                   value={form[key] ?? ""}
+                  disabled={key === "academic_year"}
+                  title={
+                    key === "academic_year"
+                      ? "The current academic year is set on the year record, not here"
+                      : undefined
+                  }
                   onChange={(e) => setForm({ ...form, [key]: e.target.value })}
                 />
               </FormField>

@@ -45,6 +45,14 @@ class SettingsUpdate(BaseModel):
 
     model_config = {"extra": "forbid"}
 
+    # Read-only, and accepted only so that posting the GET's own body back
+    # works. The GET returns the school's current academic year because the
+    # screen shows it; `extra="forbid"` then rejected the whole PATCH, so Save
+    # on /settings had never once succeeded. The year is an AcademicYear row
+    # (services/tenancy.py) and is not a school column, so it is excluded from
+    # the write below rather than assigned.
+    academic_year: str | None = None
+
     name: str | None = None
     address: str | None = None
     city: str | None = None
@@ -82,7 +90,9 @@ def update_settings(
     body: SettingsUpdate, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> dict:
     school = tenancy.school_for(db, user)
-    for field, value in body.model_dump(exclude_unset=True).items():
+    for field, value in body.model_dump(
+        exclude_unset=True, exclude={"academic_year"}
+    ).items():
         setattr(school, field, value)
     db.commit()
     return get_settings(user, db)

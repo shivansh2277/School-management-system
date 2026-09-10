@@ -81,6 +81,7 @@ const SCREEN_ENDPOINTS = {
   "Period close": { path: "/admin/fees/periods", module: "fees" },
   Notices: { path: "/admin/notices", module: "communication" },
   Settings: { path: "/admin/settings" },
+  Configuration: { path: "/admin/configuration" },
 };
 
 let failures = 0;

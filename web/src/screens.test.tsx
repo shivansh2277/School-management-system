@@ -168,3 +168,22 @@ describe("the registry itself", () => {
     }
   });
 });
+
+/**
+ * The screen that turns modules on must not itself be behind a module.
+ *
+ * A school with every module switched off - which is what a fresh tenant
+ * looks like before it is configured, and what one accidental "turn off"
+ * away from - would otherwise have no way back except a curl, which is the
+ * exact state Packet 3 exists to end.
+ */
+describe("Configuration is reachable when everything is switched off", () => {
+  it("shows on admin.settings.read alone, with no modules enabled", () => {
+    expect(labelsFor(["admin.settings.read"], [])).toContain("Configuration");
+  });
+
+  it("stays hidden from a fee collector, who does not hold admin.settings.read", () => {
+    expect(FEE_COLLECTOR).not.toContain("admin.settings.read");
+    expect(labelsFor(FEE_COLLECTOR, ALL_MODULES)).not.toContain("Configuration");
+  });
+});

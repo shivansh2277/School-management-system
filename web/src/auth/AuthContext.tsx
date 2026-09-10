@@ -24,6 +24,15 @@ type AuthValue = {
   loading: boolean;
   login: (loginId: string, password: string) => Promise<void>;
   logout: () => void;
+  /**
+   * Re-read /auth/me.
+   *
+   * The module switches on /configuration change what `modules` contains, and
+   * the sidebar is derived from it - so without this the clerk turns a module
+   * off, watches nothing happen, and reasonably concludes the switch is
+   * broken. The API honours it immediately; only this cached copy is stale.
+   */
+  refresh: () => Promise<void>;
   can: (permission: string) => boolean;
   hasModule: (code: string) => boolean;
 };
@@ -63,6 +72,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setMe((await api.get("/auth/me")) as Me);
   };
 
+  const refresh = async () => {
+    setMe((await api.get("/auth/me")) as Me);
+  };
+
   const logout = () => {
     tokenStore.clear();
     setMe(null);
@@ -91,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       login,
       logout,
+      refresh,
       can: (permission) => held.has(permission),
       hasModule: (code) => on.has(code),
     };

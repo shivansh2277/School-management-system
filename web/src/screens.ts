@@ -222,6 +222,27 @@ export const SCREENS: Screen[] = [
     element: lazy(() => import("./pages/Notices").then((m) => ({ default: m.Notices }))),
   },
   {
+    path: "/configuration",
+    label: "Configuration",
+    group: "Administration",
+    // GET /admin/configuration and GET /admin/custom-fields - both
+    // api/admin/settings.py, both on the module-level `reader` =
+    // require_permission("admin.settings.read", school_wide=True), neither
+    // behind a module gate. The writes (PUT /admin/configuration, POST and
+    // DELETE /admin/custom-fields) need admin.settings.write and are excluded
+    // per the note above: they gate themselves on their own controls, and
+    // declaring the write permission here would hide the module switches from
+    // a read-only auditor who is meant to be able to see them.
+    //
+    // No module is declared on purpose. This is the screen that turns modules
+    // on, so gating it on one is how a school locks itself out of its own
+    // configuration.
+    permissions: ["admin.settings.read"],
+    element: lazy(() =>
+      import("./pages/Configuration").then((m) => ({ default: m.Configuration })),
+    ),
+  },
+  {
     path: "/settings",
     label: "Settings",
     group: "Administration",

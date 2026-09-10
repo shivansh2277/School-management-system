@@ -118,3 +118,34 @@ def test_today_schedule_is_todays_periods(client, admin, db):
         0 if key is None else db.query(TimetableSlot).filter(TimetableSlot.day_of_week == key).count()
     )
     assert len(rows) == expected
+
+
+def test_settings_accepts_its_own_get_body_back(client, admin, db):
+    """Save on /settings posts the whole GET response back, and must work.
+
+    `academic_year` is returned by the GET (the screen shows it) and used to be
+    rejected by the PATCH's `extra="forbid"`, so every Save 422'd and the
+    screen had never saved anything. It stays read-only — the year is an
+    AcademicYear row, not a school column — but posting it back is not an
+    error.
+    """
+    from app.models import School
+
+    before = client.get("/admin/settings", headers=admin)
+    assert before.status_code == 200
+    body = {**before.json(), "city": "Kanpur"}
+
+    saved = client.patch("/admin/settings", json=body, headers=admin)
+    assert saved.status_code == 200, saved.json()
+    assert saved.json()["city"] == "Kanpur"
+    # The year is unchanged and was not written onto the school row.
+    assert saved.json()["academic_year"] == before.json()["academic_year"]
+    school = db.get(School, 1)
+    db.refresh(school)
+    assert not hasattr(school, "academic_year") or getattr(school, "academic_year") is None
+
+
+def test_settings_still_refuses_an_unknown_field(client, admin):
+    """The accept-and-ignore above is one named field, not a hole in the model."""
+    bad = client.patch("/admin/settings", json={"nonsense": "x"}, headers=admin)
+    assert bad.status_code == 422
