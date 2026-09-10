@@ -222,6 +222,28 @@ export const SCREENS: Screen[] = [
     element: lazy(() => import("./pages/Notices").then((m) => ({ default: m.Notices }))),
   },
   {
+    path: "/transport",
+    label: "Transport",
+    group: "Operations",
+    // GET /admin/transport/{routes,vehicles,expiring} - all api/admin/transport.py,
+    // all on the module-level `reader` = require_permission("transport.setup.read",
+    // school_wide=True), and the whole router is behind
+    // Depends(module_enabled("transport")).
+    //
+    // transport.assignment.read is deliberately NOT declared. It gates only
+    // GET /admin/transport/routes/{id}/students, which is the drill-down of
+    // who rides a route; it is gated at that widget with <Can> instead.
+    // Declaring it here would hide the routes, buses and the expiring-papers
+    // list from a setup reader who holds none of the assignment permissions.
+    //
+    // The writes (PATCH .../routes/{id}/status and .../vehicles/{id}/status)
+    // need transport.setup.write and are excluded per the note above: they
+    // gate themselves on their own controls.
+    permissions: ["transport.setup.read"],
+    modules: ["transport"],
+    element: lazy(() => import("./pages/Transport").then((m) => ({ default: m.Transport }))),
+  },
+  {
     path: "/configuration",
     label: "Configuration",
     group: "Administration",

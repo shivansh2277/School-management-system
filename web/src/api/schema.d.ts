@@ -5602,6 +5602,8 @@ export interface components {
         /** RouteStatusIn */
         RouteStatusIn: {
             status: components["schemas"]["RouteStatus"];
+            /** Reason */
+            reason: string;
         };
         /** RunIn */
         RunIn: {

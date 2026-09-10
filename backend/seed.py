@@ -1438,7 +1438,7 @@ def _seed_transport(db: Session, school, departments: dict, enrolment_of: dict, 
             ],
             admin_user,
         )
-        transport_svc.set_status(db, r, RouteStatus.active, admin_user)
+        transport_svc.set_status(db, r, RouteStatus.active, admin_user, reason="seeded demo route")
         routes.append(r)
 
     # --- riders. Every fourth child by roll number, spread across both routes

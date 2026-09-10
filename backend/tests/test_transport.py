@@ -162,7 +162,7 @@ def route(db, admin_user, bus, driver, slab):
         ],
         admin_user,
     )
-    svc.set_status(db, r, RouteStatus.active, admin_user)
+    svc.set_status(db, r, RouteStatus.active, admin_user, reason="test fixture")
     return r
 
 
@@ -298,7 +298,7 @@ def test_a_route_with_no_vehicle_refuses_rather_than_waving_children_through(
     and treating "unknown" as "unlimited" is how the block would be bypassed
     without anybody deciding to bypass it.
     """
-    svc.set_status(db, route, RouteStatus.planned, admin_user)
+    svc.set_status(db, route, RouteStatus.planned, admin_user, reason="test fixture")
     svc.set_crew(db, route, admin_user, vehicle_id=None)
     with pytest.raises(Exception) as e:
         _assign(db, admin_user, route, riders[0])
@@ -359,7 +359,7 @@ def test_a_bus_with_expired_insurance_cannot_be_put_on_the_road(
         db, r, [{"sequence": 1, "name": "A", "pickup_time": Time(7, 0)}], admin_user
     )
     with pytest.raises(Exception) as e:
-        svc.set_status(db, r, RouteStatus.active, admin_user)
+        svc.set_status(db, r, RouteStatus.active, admin_user, reason="test fixture")
     assert e.value.status_code == 409
     assert "Insurance expired" in e.value.detail
 
@@ -389,7 +389,7 @@ def test_a_paper_nobody_uploaded_is_a_refusal_not_a_pass(db, admin_user, driver)
         db, r, [{"sequence": 1, "name": "A", "pickup_time": Time(7, 0)}], admin_user
     )
     with pytest.raises(Exception) as e:
-        svc.set_status(db, r, RouteStatus.active, admin_user)
+        svc.set_status(db, r, RouteStatus.active, admin_user, reason="test fixture")
     gaps = svc.roadworthiness(db, r)
     assert len(gaps) == 4
     assert all("no " in g for g in gaps)
@@ -442,7 +442,7 @@ def test_a_driver_without_a_police_verification_cannot_crew_a_route(
         db, r, [{"sequence": 1, "name": "A", "pickup_time": Time(7, 0)}], admin_user
     )
     with pytest.raises(Exception) as e:
-        svc.set_status(db, r, RouteStatus.active, admin_user)
+        svc.set_status(db, r, RouteStatus.active, admin_user, reason="test fixture")
     assert "no Police Verification on file" in e.value.detail
 
 
@@ -593,7 +593,7 @@ def test_a_stop_children_are_standing_at_cannot_be_deleted(
 def test_a_route_with_children_on_it_cannot_be_closed(db, admin_user, route, riders):
     _assign(db, admin_user, route, riders[0])
     with pytest.raises(Exception) as e:
-        svc.set_status(db, route, RouteStatus.closed, admin_user)
+        svc.set_status(db, route, RouteStatus.closed, admin_user, reason="test fixture")
     assert "still has children assigned" in e.value.detail
 
 
@@ -1119,3 +1119,44 @@ def test_a_family_who_asked_for_the_bus_at_admission_reaches_a_queue(
 def test_a_family_who_did_not_ask_is_not_in_the_queue(db, admin_user, riders):
     waiting = svc.awaiting_assignment(db, admin_user.school_id)
     assert {w["enrolment_id"] for w in waiting} & {e.id for e in riders} == set()
+
+
+def test_suspending_a_route_records_the_reason_a_person_gave(client, admin, db):
+    """The audit trail must be the person's words, not the code's.
+
+    `set_status` used to pass `f"route set to {new_status.value}"` as the
+    reason, which restates `after` and answers nothing. Suspending a route
+    stops children getting to school and the log is the only record of why.
+    """
+    from app.models import AuditAction, AuditLog, Route
+
+    route = db.scalars(select(Route)).first()
+    assert route is not None
+
+    refused = client.patch(
+        f"/admin/transport/routes/{route.id}/status",
+        headers=admin,
+        json={"status": "suspended"},
+    )
+    assert refused.status_code == 422, refused.text
+
+    ok = client.patch(
+        f"/admin/transport/routes/{route.id}/status",
+        headers=admin,
+        json={"status": "suspended", "reason": "Driver off sick, no cover"},
+    )
+    assert ok.status_code == 200, ok.text
+
+    entry = db.scalars(
+        select(AuditLog)
+        .where(
+            AuditLog.entity_type == "route",
+            AuditLog.entity_id == route.id,
+            AuditLog.action == AuditAction.status_change,
+        )
+        .order_by(AuditLog.id.desc())
+    ).first()
+    assert entry is not None
+    assert entry.reason == "Driver off sick, no cover", (
+        f"the log recorded the code's words, not the clerk's: {entry.reason!r}"
+    )

@@ -89,6 +89,9 @@ class CrewIn(BaseModel):
 
 class RouteStatusIn(BaseModel):
     status: RouteStatus
+    # Same floor as VehicleStatusIn's. Grounding a bus already demanded a
+    # reason; suspending the route those children ride did not.
+    reason: str = Field(min_length=3, max_length=500)
 
 
 class StopIn(BaseModel):
@@ -359,7 +362,7 @@ def route_status(
     db: Session = Depends(get_db),
 ) -> dict:
     r = _route(db, user, route_id)
-    svc.set_status(db, r, body.status, user)
+    svc.set_status(db, r, body.status, user, reason=body.reason)
     db.commit()
     return _route_out(db, r)
 

@@ -187,3 +187,34 @@ describe("Configuration is reachable when everything is switched off", () => {
     expect(labelsFor(FEE_COLLECTOR, ALL_MODULES)).not.toContain("Configuration");
   });
 });
+
+/**
+ * Transport is the transport manager's screen, and it must not need the
+ * assignment permissions to open.
+ *
+ * The routes, buses and expiring-papers lists are all `transport.setup.read`.
+ * Only the who-rides-this-route drill-down needs `transport.assignment.read`,
+ * and that is gated at the widget with <Can>. Declaring it on the screen would
+ * hide all three lists from a setup reader, which is the failure Contract 1's
+ * note about over-declaring is about - and it is the kind of thing a later
+ * session "tidies up" into the entry without noticing what it costs.
+ */
+describe("Transport", () => {
+  it("shows for the transport manager", () => {
+    expect(labelsFor(TRANSPORT_MANAGER, ALL_MODULES)).toContain("Transport");
+  });
+
+  it("opens on transport.setup.read alone, without either assignment permission", () => {
+    const setupOnly = ["transport.setup.read"];
+    expect(labelsFor(setupOnly, ALL_MODULES)).toContain("Transport");
+  });
+
+  it("disappears with the transport module, which is off for most schools", () => {
+    const withoutTransport = ALL_MODULES.filter((m) => m !== "transport");
+    expect(labelsFor(TRANSPORT_MANAGER, withoutTransport)).not.toContain("Transport");
+  });
+
+  it("stays hidden from a fee collector", () => {
+    expect(labelsFor(FEE_COLLECTOR, ALL_MODULES)).not.toContain("Transport");
+  });
+});

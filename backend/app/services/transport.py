@@ -340,11 +340,21 @@ def set_stops(db: Session, route: Route, stops: list[dict], actor: User) -> Rout
     return route
 
 
-def set_status(db: Session, route: Route, new_status: RouteStatus, actor: User) -> Route:
+def set_status(
+    db: Session, route: Route, new_status: RouteStatus, actor: User, *, reason: str
+) -> Route:
     """Move a route between planned, active, suspended and closed.
 
     Going `active` is where the compliance refusal bites, because that is the
     moment the route means "children ride this".
+
+    `reason` is required and keyword-only. It used to be a string this function
+    made up - `f"route set to {new_status.value}"` - which is not a reason, it
+    is a restatement of `after`. Suspending a route stops children getting to
+    school, and the audit log is the only record of why anyone did it; filling
+    it in from the code turns the trail into the software's opinion rather than
+    a person's. Keyword-only and unconditional so that a caller who has no
+    reason to give has to notice, rather than inheriting a plausible one.
     """
     before = route.status.value
     if new_status is RouteStatus.active:
@@ -370,7 +380,7 @@ def set_status(db: Session, route: Route, new_status: RouteStatus, actor: User) 
         action=AuditAction.status_change,
         before={"status": before},
         after={"status": new_status.value},
-        reason=f"route set to {new_status.value}",
+        reason=reason,
     )
     db.flush()
     return route
