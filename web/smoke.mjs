@@ -68,6 +68,14 @@ const SCREEN_ENDPOINTS = {
   Attendance: { path: "/admin/attendance/summary", module: "attendance" },
   Exams: { path: "/admin/exams", module: "examinations" },
   Fees: { path: "/admin/fees/invoices", module: "fees" },
+  // Path is a function because this route 404s for an unknown student as well
+  // as for a missing endpoint, and those must not be confused - that confusion
+  // is the exact thing this script exists to catch. Resolved from the roster,
+  // and skipped honestly when the role cannot read it.
+  "Collect fees": {
+    path: (ctx) => (ctx.studentId === null ? null : `/admin/fees/ledger/${ctx.studentId}`),
+    module: "fees",
+  },
   Notices: { path: "/admin/notices", module: "communication" },
   Settings: { path: "/admin/settings" },
 };
@@ -101,7 +109,21 @@ for (const staff of STAFF) {
   check(Boolean(me.academic_year), "me carries the academic year", me.academic_year);
 
   const modulesOn = new Set(me.modules ?? []);
-  for (const [label, { path, module }] of Object.entries(SCREEN_ENDPOINTS)) {
+
+  // One real student id, for the routes that take one. A role that cannot read
+  // the roster gets null and those checks are skipped rather than counted as
+  // passes they did not earn.
+  let studentId = null;
+  const roster = await fetch(`${BASE}/admin/students?page_size=1`, { headers: auth });
+  if (roster.ok) studentId = (await roster.json()).items?.[0]?.id ?? null;
+  const ctx = { studentId };
+
+  for (const [label, { path: spec, module }] of Object.entries(SCREEN_ENDPOINTS)) {
+    const path = typeof spec === "function" ? spec(ctx) : spec;
+    if (path === null) {
+      console.log(`  [SKIP] ${label} — no student id readable by this role`);
+      continue;
+    }
     const res = await fetch(`${BASE}${path}`, { headers: auth });
     const off = module !== undefined && !modulesOn.has(module);
     if (off) {

@@ -149,6 +149,25 @@ export const SCREENS: Screen[] = [
     element: lazy(() => import("./pages/Fees").then((m) => ({ default: m.Fees }))),
   },
   {
+    path: "/fees/collect",
+    label: "Collect fees",
+    group: "Money",
+    // GET /admin/students (the search that is this screen's entry point) -
+    // students.py, students.profile.read. GET /admin/fees/ledger/{student_id} -
+    // fees.py, fees.invoice.read. Module fees.
+    //
+    // Both are required to load, not one: without the search there is no way
+    // to reach a ledger at all, so the roster read is the primary control here
+    // rather than a secondary widget. POST /admin/fees/payments
+    // (fees.payment.collect) is a write and excluded per the note above; the
+    // Take button gates itself on it.
+    permissions: ["fees.invoice.read", "students.profile.read"],
+    modules: ["fees"],
+    element: lazy(() =>
+      import("./pages/CollectFees").then((m) => ({ default: m.CollectFees })),
+    ),
+  },
+  {
     path: "/notices",
     label: "Notices",
     group: "Communication",

@@ -68,6 +68,12 @@ export function ActionButton({
 
   return (
     <button
+      // Explicitly "button": a <button> with no type defaults to "submit", so
+      // inside a <form> one click fires onClick AND submits, running the write
+      // twice. On the fee counter only the idempotency key stood between that
+      // and taking a payment twice - which is a guard, not a licence. Set here
+      // rather than at each call site so no later packet has to remember.
+      type="button"
       onClick={onClick}
       disabled={!allowed || disabled}
       aria-disabled={!allowed || disabled}

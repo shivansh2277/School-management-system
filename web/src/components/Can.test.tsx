@@ -49,6 +49,23 @@ describe("ActionButton", () => {
     expect(onClick).toHaveBeenCalledOnce();
   });
 
+  it("never submits the form it sits in, so a write cannot fire twice on one click", () => {
+    const onSubmit = vi.fn((e: { preventDefault: () => void }) => e.preventDefault());
+    const onClick = vi.fn();
+    render(
+      <form onSubmit={onSubmit}>
+        <ActionButton permission="fees.payment.collect" onClick={onClick}>
+          Take
+        </ActionButton>
+      </form>,
+    );
+    const button = screen.getByRole("button", { name: "Take" });
+    expect(button).toHaveAttribute("type", "button");
+    button.click();
+    expect(onClick).toHaveBeenCalledOnce();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
   it("disables itself and names the missing permission, rather than 403ing on click", () => {
     const onClick = vi.fn();
     render(
