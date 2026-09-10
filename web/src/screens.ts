@@ -183,6 +183,32 @@ export const SCREENS: Screen[] = [
     ),
   },
   {
+    path: "/fees/setup",
+    label: "Fee setup",
+    group: "Money",
+    // GET /admin/fees/plans, /admin/fees/concessions and /admin/fees/invoices
+    // (to put a name against a concession's enrolment) - fee_setup.py and
+    // fees.py, all on fees.invoice.read. Module fees.
+    //
+    // Also GET /admin/fees/heads and /admin/classes, both inside the Add plan
+    // form and gated there rather than here.
+    permissions: ["fees.invoice.read"],
+    modules: ["fees"],
+    element: lazy(() => import("./pages/FeeSetup").then((m) => ({ default: m.FeeSetup }))),
+  },
+  {
+    path: "/fees/periods",
+    label: "Period close",
+    group: "Money",
+    // GET /admin/fees/periods - fees.py, fees.invoice.read, module fees.
+    // Closing and reopening need fees.payment.void, which is a write and so
+    // gates itself on the button rather than hiding the screen from the clerk
+    // who needs to see whether a month is shut.
+    permissions: ["fees.invoice.read"],
+    modules: ["fees"],
+    element: lazy(() => import("./pages/FeePeriods").then((m) => ({ default: m.FeePeriods }))),
+  },
+  {
     path: "/notices",
     label: "Notices",
     group: "Communication",

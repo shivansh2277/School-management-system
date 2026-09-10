@@ -77,6 +77,8 @@ const SCREEN_ENDPOINTS = {
     module: "fees",
   },
   Defaulters: { path: "/admin/fees/defaulters", module: "fees" },
+  "Fee setup": { path: "/admin/fees/plans", module: "fees" },
+  "Period close": { path: "/admin/fees/periods", module: "fees" },
   Notices: { path: "/admin/notices", module: "communication" },
   Settings: { path: "/admin/settings" },
 };
