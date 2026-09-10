@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { api, tokenStore } from "../api/client";
@@ -32,6 +33,9 @@ const Ctx = createContext<AuthValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
+  // AuthProvider sits inside QueryClientProvider (main.tsx), so this is the
+  // cache every screen reads through.
+  const qc = useQueryClient();
 
   useEffect(() => {
     if (!tokenStore.get()) {
@@ -62,6 +66,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     tokenStore.clear();
     setMe(null);
+    /**
+     * Drop every cached response, not just the token.
+     *
+     * The query cache outlived the session, so the next person to sign in on
+     * the same browser was served the previous one's data before their own
+     * request returned - and for a query their role is not allowed to make at
+     * all, it never returned, so the stale answer simply stood. A fee counter
+     * was shown the admin's class list this way, which is the permission gate
+     * being bypassed by cache rather than by the API.
+     *
+     * That is not hypothetical here: the counter PC in a school office is
+     * shared, and signing out so a colleague can sign in is the normal way it
+     * is used.
+     */
+    qc.clear();
   };
 
   const value = useMemo<AuthValue>(() => {

@@ -76,6 +76,7 @@ const SCREEN_ENDPOINTS = {
     path: (ctx) => (ctx.studentId === null ? null : `/admin/fees/ledger/${ctx.studentId}`),
     module: "fees",
   },
+  Defaulters: { path: "/admin/fees/defaulters", module: "fees" },
   Notices: { path: "/admin/notices", module: "communication" },
   Settings: { path: "/admin/settings" },
 };

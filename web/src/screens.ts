@@ -168,6 +168,21 @@ export const SCREENS: Screen[] = [
     ),
   },
   {
+    path: "/fees/defaulters",
+    label: "Defaulters",
+    group: "Money",
+    // GET /admin/fees/defaulters - fees.py, fees.invoice.read, module fees.
+    //
+    // Also GET /admin/classes (useClasses), undeclared on purpose and gated at
+    // the widget: it is only the class filter, and a fee collector holds
+    // fees.invoice.read without academics.class.read.
+    permissions: ["fees.invoice.read"],
+    modules: ["fees"],
+    element: lazy(() =>
+      import("./pages/Defaulters").then((m) => ({ default: m.Defaulters })),
+    ),
+  },
+  {
     path: "/notices",
     label: "Notices",
     group: "Communication",
