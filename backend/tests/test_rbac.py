@@ -170,3 +170,35 @@ def test_permission_catalogue_is_shared_but_roles_are_per_school(db):
     assert db.scalar(
         select(Role).where(Role.school_id == other.id, Role.code == "auditor")
     ) is not None
+
+
+def test_scheduling_an_exam_paper_needs_the_write_permission(client, teacher, ids):
+    """A write must not be gated on a read.
+
+    `POST /admin/exams/{id}/schedule` declared no permission of its own and so
+    inherited the router's `admin_only`, which is `exam.definition.read`.
+    Anyone who could look at the exam calendar could add papers to it: a
+    teacher holding read and not write got 403 from `POST /admin/exams` and
+    201 from this route, which is the whole bug in two status codes.
+
+    Pinned here rather than in test_assessment.py because the defect is about
+    the permission model, not about exams - the same omission on any router
+    with a read-scoped `admin_only` would be the same class of hole.
+    """
+    exam = client.get("/admin/exams", headers=teacher)
+    assert exam.status_code == 200, exam.text
+    exam_id = exam.json()[0]["id"]
+
+    r = client.post(
+        f"/admin/exams/{exam_id}/schedule",
+        headers=teacher,
+        json={
+            "class_section_id": ids["section_10a"],
+            "subject_id": ids["maths"],
+            "exam_date": "2026-11-02",
+            "max_marks": "100",
+        },
+    )
+    assert r.status_code == 403, (
+        f"a teacher without exam.definition.write scheduled a paper: {r.status_code} {r.text}"
+    )

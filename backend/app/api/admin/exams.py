@@ -59,6 +59,12 @@ def create_exam(
     "/exams/{exam_id}/schedule",
     response_model=ExamScheduleOut,
     status_code=status.HTTP_201_CREATED,
+    # Declared, rather than inherited. Without this the route fell through to
+    # the router's `admin_only`, which is exam.definition.READ - so scheduling
+    # a paper was a write gated on a read, and a teacher who may only look at
+    # the exam calendar could add papers to it. Every other write in this file
+    # declares exam.definition.write; this one was simply missed.
+    dependencies=[Depends(require_permission("exam.definition.write"))],
 )
 def add_paper(
     exam_id: int,
