@@ -86,3 +86,38 @@ def test_the_first_guardian_recorded_is_the_one_the_school_rings(client, admin, 
         raise AssertionError("a second primary guardian was accepted")
     except IntegrityError:
         db.rollback()
+
+
+def test_the_student_row_carries_the_enrolment_the_money_routes_need(client, admin, ids):
+    """Without this a student with no invoices could not be paid for at all.
+
+    Fees hang off the enrolment, not the student - a fee is a child's year in a
+    class - so every money route is keyed on `enrolment_id`. Nothing exposed
+    the mapping: `/admin/students` and `/admin/students/{id}` both omitted it,
+    and only rows that already carried money (invoices, defaulters, ledger
+    lines) had it. The collect screen could therefore only take a payment from
+    a child who already had an invoice, and plan assignment and concession
+    requests could not be built.
+
+    Both endpoints are pinned because the list and the detail are separate
+    payloads, and the detail only happens to inherit it by spreading `_row`.
+    """
+    listed = client.get("/admin/students", headers=admin)
+    assert listed.status_code == 200, listed.text
+    row = next(r for r in listed.json()["items"] if r["id"] == ids["student_1"])
+    assert row["enrolment_id"] is not None, "the list omits enrolment_id"
+
+    detail = client.get(f"/admin/students/{ids['student_1']}", headers=admin)
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["enrolment_id"] == row["enrolment_id"], (
+        "the list and the detail disagree about which enrolment this is"
+    )
+
+    # It must be the enrolment the money is actually on, not merely non-null.
+    invoices = client.get("/admin/fees/invoices", headers=admin)
+    assert invoices.status_code == 200, invoices.text
+    mine = [i for i in invoices.json() if i["student_id"] == ids["student_1"]]
+    if mine:
+        assert mine[0]["enrolment_id"] == row["enrolment_id"], (
+            "the student row points at a different enrolment than their invoice"
+        )

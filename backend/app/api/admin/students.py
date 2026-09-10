@@ -112,6 +112,16 @@ def _row(db: Session, s: Student) -> dict:
         "id": s.id,
         "full_name": s.user.full_name,
         "admission_no": s.admission_no,
+        # The current year's enrolment id, which nothing else exposed.
+        # Every money route is keyed on the enrolment rather than the student -
+        # a fee belongs to a child's year in a class, not to the child - so
+        # without this the client could only reach it by finding a row that
+        # already carried money (an invoice, a defaulter, a ledger line). A
+        # student with no invoices was therefore unpayable-for, and assigning a
+        # fee plan or requesting a concession could not be built at all.
+        # `current_enrolment` was already being called here for the class and
+        # roll number; only the id was being dropped.
+        "enrolment_id": enrolment.id if enrolment else None,
         "class_section_id": enrolment.class_section_id if enrolment else None,
         "class_label": enrolment.class_section.label if enrolment else "",
         "roll_no": enrolment.roll_no if enrolment else None,
