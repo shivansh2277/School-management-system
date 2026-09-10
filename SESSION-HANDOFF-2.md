@@ -18,22 +18,37 @@ and you should follow it exactly:
 - **Part Six — traps.** Still true, plus the new ones in Part Five below.
 - **Part Zero — cold start.** Partly wrong. Use Part Zero *here* instead.
 
-`CLAUDE.md` still says 615 backend tests and 31 web tests. Both numbers moved
-(623 and 43). Its "read these first" list points at `FRONTEND-HANDOFF.md`;
-adding this file at position 0 would be a one-line change and nobody has made
-it, because `CLAUDE.md` has uncommitted edits from the session before this one.
+`CLAUDE.md` now points at this file first, and `FRONTEND-HANDOFF.md` carries a
+banner saying which of its parts are stale. Both were changed at the end of the
+session, after checking what a fresh session would actually read: without them
+it would have gone CLAUDE.md → FRONTEND-HANDOFF Part One, been told the app
+cannot take a payment and that Packet 0 is blocking and undone, branched off
+`main` as its git protocol says, and rebuilt work that already exists.
+
+`CLAUDE.md`'s 615/31 figures are `main`'s and are still correct for `main`; the
+branch figures are noted beside them.
 
 ---
 
 # PART ZERO — cold start that actually works
 
-Branch is **`slice/office-feedback`**, 8 commits ahead of `main`, working tree
-clean apart from four files that were already modified/untracked before this
-session began (`CLAUDE.md`, `SESSION-HANDOFF.md`, `FRONTEND-HANDOFF.md`,
-`reports/README.md`) plus `.claude/launch.json`, which this session added so the
-in-editor preview can start the dev server.
+Branch is **`slice/office-feedback`**, 10 commits ahead of `main`, working tree
+clean apart from `SESSION-HANDOFF.md` and `reports/README.md`, which were
+already modified/untracked before this session began, plus
+`.claude/launch.json`, which this session added so the in-editor preview can
+start the dev server.
 
 **Nothing has been pushed.** No PR. That is deliberate and waiting on the owner.
+
+> **Branch off `slice/office-feedback`, not off `main`.** `FRONTEND-HANDOFF.md`
+> Part Zero and Part Four both say "branch off `main`" — that was right when
+> they were written and is wrong now: `main` is at `232a791` and has none of
+> these commits. A session that follows it literally rebuilds Packet 0.
+>
+> Two intermediate branches still exist and are **not** where the work is:
+> `slice/packet-0` (`61a01f6`) and `slice/packet-2` (`e8d2aef`). They are
+> ancestors of `slice/office-feedback`, kept only so the packet boundaries stay
+> legible. Delete them once this is merged.
 
 ```bash
 cd "C:/Users/SHIVANSH/OneDrive/Documents/AGENTS/school-management-system"
@@ -202,7 +217,12 @@ Found while building, deliberately left for the packet that owns the file:
 3. **`money()` renders `₹NaN`** for an absent value instead of failing. It hid a
    wrong field name on a live fee screen with `tsc` perfectly green. A money
    helper that can print NaN on a fee screen deserves a decision.
-4. **Dates render US-style** on any screen using bare `toLocaleDateString()` —
+4. **A write gated on a read permission.** `POST /admin/exams/{id}/schedule`
+   declares no permission dependency and inherits `admin_only` =
+   `exam.definition.read`. Anyone who can look at the exam calendar can add a
+   paper to it. Every sibling route in that file declares
+   `exam.definition.write`.
+5. **Dates render US-style** on any screen using bare `toLocaleDateString()` —
    Notices shows `9/10/2026` for 10 September. Part Three rule 6 wants
    `dd/mm/yyyy`. The screens this session touched use `"en-GB"`.
 
@@ -231,7 +251,29 @@ opening the parent route.
 # PART FOUR — what to do next, in order
 
 1. **Wire Contract 3 into Notices, Fees and Exams.** Small, uses what Packet 0
-   already built, and closes the contract. Half a session.
+   already built, and closes the contract. Half a session. The five controls
+   and the permission each needs, read off the routers so you do not have to:
+
+   | Page | Control | Route | Permission |
+   |---|---|---|---|
+   | Notices | Publish | `POST /admin/notices` | `comms.notice.publish` |
+   | Notices | Delete | `DELETE /admin/notices/{id}` | `comms.notice.publish` |
+   | Fees | Generate invoices | `POST /admin/fees/invoices/generate` | `fees.invoice.generate` |
+   | Exams | Create exam | `POST /admin/exams` | `exam.definition.write` |
+   | Exams | Add paper | `POST /admin/exams/{id}/schedule` | **see below** |
+
+   The Notices delete is destructive and currently has no confirmation — give
+   it `ConfirmDialog`. Note that `services/notices.py::delete` writes no audit
+   row, so it will not demand the reason the dialog collects; that asymmetry is
+   defect 2 in Part Three and is worth fixing at the same time.
+
+   **`POST /admin/exams/{exam_id}/schedule` declares no write permission at
+   all** — it falls through to `admin_only`, which is
+   `exam.definition.read` (`api/admin/exams.py:26`). So adding a paper to an
+   exam is a write gated on a read. Every other write in that router declares
+   `exam.definition.write`. Gate the button on `exam.definition.write` and
+   report the route as a backend defect; do not gate it on the read permission
+   just because that is what the route currently accepts.
 2. **Packet 3 — Configuration.** `/admin/configuration` has no UI at all;
    enabling a module still needs a `curl`. `api.put` now exists, which was the
    missing piece. Fix the Settings 422 while you are in that file.

@@ -2,14 +2,23 @@
 
 ## Read these first, in this order
 
-0. **`SESSION-HANDOFF.md`** — start here if you are picking up cold. What the
-   last session did, what is verified, and what to do next in order.
-1. **`HANDOFF.md`** (this directory) — current state, the commits and why each
+0. **`SESSION-HANDOFF-2.md`** — **start here.** Written at the end of the
+   session that built Packet 0 and Packet 2. Says which branch the work is on
+   (`slice/office-feedback`, 10 commits, unpushed), a cold start that actually
+   works on this machine, what is verified and what is not, and what to do
+   next in order. It supersedes `FRONTEND-HANDOFF.md` **Part Zero and Part
+   One** only.
+1. **`FRONTEND-HANDOFF.md`** — still the brief for **Parts Two to Six**: the
+   three contracts, what "clean and easy for a school office" means, the
+   remaining packets, the report format every packet owes, and the traps list.
+   Its Part Zero and Part One are stale; use `SESSION-HANDOFF-2.md` for those.
+   `SESSION-HANDOFF.md` is an older predecessor and is **fully superseded**.
+2. **`HANDOFF.md`** (this directory) — current state, the commits and why each
    exists, and what is explicitly *not* verified.
-2. **`docs/ERP_BLUEPRINT.md` §0** — the 21 locked product decisions. **§0 wins
+3. **`docs/ERP_BLUEPRINT.md` §0** — the 21 locked product decisions. **§0 wins
    over anything else in that document**; the rest was written before those
    answers and is corrected only where it would mislead.
-3. **`docs/ERP_BLUEPRINT.md` §12** — the four-part delivery plan.
+4. **`docs/ERP_BLUEPRINT.md` §12** — the four-part delivery plan.
 
 `docs/BLUEPRINT.md` is the original v0 build contract. Still useful for the
 reasoning behind the original design, but superseded wherever the ERP blueprint
@@ -18,15 +27,29 @@ disagrees.
 ## What this is
 
 A multi-tenant school ERP being sold to **separate, independent schools** — not
-branches of one school. A tenant is a customer. Work is on branch
-`part-1-foundation`, 112 commits ahead of `main`. The repo is on GitHub but
-**this branch has never been pushed and CI has never run**.
+branches of one school. A tenant is a customer.
+
+**`main` IS the ERP** as of 10 September 2026: PR #1 merged the
+`part-1-foundation` branch (126 commits) with a merge commit, and **CI is green
+on both jobs** — backend lint, 615 tests, migrations from an empty schema, seed
+and worker; web typecheck, schema drift, 31 tests and build. CI runs on every
+push to `main` or `part-*`.
+
+Those two figures are `main`'s. On `slice/office-feedback` they are **623
+backend** and **43 web tests in 11 files**; CI has never run on that branch
+because it has never been pushed.
+
+**Nothing is deployed**, and one thing blocks that regardless of frontend work:
+every account the ERP creates gets a fixed default password with no forced
+change on first login (`students.py`, `teachers.py`, `services/conversion.py`;
+recorded as a gap in `ERP_BLUEPRINT` §§5 and 11). That is a product decision
+about how accounts are issued and has deliberately not been made.
 
 ## Commands
 
 ```bash
 cd backend
-../.venv/Scripts/python.exe -m pytest -q          # 603 tests, ~125s
+../.venv/Scripts/python.exe -m pytest -q          # 615 on main, 623 on slice/office-feedback
 ../.venv/Scripts/python.exe -m pytest tests/test_rbac.py -q       # one file
 ../.venv/Scripts/python.exe -m alembic upgrade head
 ../.venv/Scripts/python.exe seed.py               # idempotent
