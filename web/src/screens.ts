@@ -149,8 +149,8 @@ export const SCREENS: Screen[] = [
     element: lazy(() => import("./pages/Fees").then((m) => ({ default: m.Fees }))),
   },
   {
-    path: "/fees/collect",
-    label: "Collect fees",
+    path: "/fees/ledger",
+    label: "Student fees",
     group: "Money",
     // GET /admin/students (the search that is this screen's entry point) -
     // students.py, students.profile.read. GET /admin/fees/ledger/{student_id} -
@@ -158,13 +158,17 @@ export const SCREENS: Screen[] = [
     //
     // Both are required to load, not one: without the search there is no way
     // to reach a ledger at all, so the roster read is the primary control here
-    // rather than a secondary widget. POST /admin/fees/payments
-    // (fees.payment.collect) is a write and excluded per the note above; the
-    // Take button gates itself on it.
+    // rather than a secondary widget.
+    //
+    // Named for what it does. It was "/fees/collect — Collect fees" while it
+    // carried a payment form; collection moved to the mobile app, and a menu
+    // item that says Collect on a screen that cannot is worse than no menu
+    // item. The only write left is reversing a payment, which gates itself on
+    // fees.payment.void.
     permissions: ["fees.invoice.read", "students.profile.read"],
     modules: ["fees"],
     element: lazy(() =>
-      import("./pages/CollectFees").then((m) => ({ default: m.CollectFees })),
+      import("./pages/FeeLedger").then((m) => ({ default: m.FeeLedger })),
     ),
   },
   {

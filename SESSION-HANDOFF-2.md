@@ -140,13 +140,20 @@ Expected, and true at the last commit:
 
 | Route | Label | State |
 |---|---|---|
-| `/fees/collect` | Collect fees | New. Search → ledger → take payment → receipt → reverse |
+| `/fees/ledger` | Student fees | New. Search a child, read their fee account, reverse a payment. **Does not take payments** — see below |
 | `/fees/defaulters` | Defaulters | New. Chase list with a number to ring |
 | `/fees/setup` | Fee setup | New. Fee plans, concessions, the approval step |
 | `/fees/periods` | Period close | New. Close/reopen a month |
 
-**The app can now take a payment**, which is the sentence Packet 2 existed to
-make true.
+**Fee collection is NOT on the web app.** It was built here — Packet 2 existed
+to make "the app can take a payment" true — and then removed on the owner's
+decision: collection is handled in the mobile app, in the hands of whoever is
+facing the parent. The web keeps the ledger.
+
+The backend never changed. `POST /admin/fees/payments` is live, idempotent and
+allocates oldest-invoice-line-first; the mobile app calls it. Do not rebuild a
+payment form on the web without asking the owner first — it was removed
+deliberately, not overlooked.
 
 ## Packet 0's write layer — what exists to build on
 
@@ -173,7 +180,7 @@ That is now true of **five** pages and false of **three**:
 
 | Wired | Not wired, but has write controls |
 |---|---|
-| CollectFees, FeePeriods, FeeSetup, Settings, Students | **Notices** (2 writes), **Fees** (1 write), **Exams** (2 writes) |
+| FeeLedger, FeePeriods, FeeSetup, Settings, Students | **Notices** (2 writes), **Fees** (1 write), **Exams** (2 writes) |
 
 Dashboard, Classes, Attendance, Teachers and Defaulters have no write calls at
 all, so there is nothing to gate on them.
@@ -196,7 +203,7 @@ codes recorded — see `reports/packet-2-fees.md` for the full table.
 2. **Enter-to-submit anywhere.** The browser automation's synthetic Return does
    not trigger form submission — proven on the *pre-existing* login form too,
    so it is the harness, not the app. Every click path is verified. A human
-   should press Enter on the Collect fees search box and the amount field;
+   should press Enter on the Student fees search box;
    keyboard-first is Part Three rule 3 and it is currently unproven.
 3. **Anything on the seven screens this session did not touch.**
 
@@ -232,8 +239,8 @@ Found while building, deliberately left for the packet that owns the file:
 `/admin/students/{id}` both omit it; only rows that already carry money
 (`invoices`, `defaulters`, `ledger.invoices`) have it. Live consequences:
 
-- A student with **no invoices cannot be paid for at all**. The collect screen
-  says so rather than showing a dead form.
+- A student with **no invoices** shows an empty ledger, and the screen says
+  so rather than leaving the reader guessing.
 - Concession rows are named by joining through `/admin/fees/invoices`, which
   works only because every seeded student has one.
 - **Plan assignment and concession *requests* are not built** because of it.
@@ -243,8 +250,8 @@ The fix is backend: `enrolment_id` on the student row, or a small
 
 **Also still true:** there is **no admin-side receipt PDF**. The only PDF route
 is `/parent/fees/receipts/{payment_id}.pdf`. A counter clerk cannot print. The
-collect screen shows the receipt number and offers no print button rather than
-opening the parent route.
+ledger screen offers no print button rather than opening the parent route.
+Printing a receipt is the mobile app's problem now, not the web's.
 
 ---
 

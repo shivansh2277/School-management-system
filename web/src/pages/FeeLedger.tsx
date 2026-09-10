@@ -1,26 +1,33 @@
 /**
- * The counter. Find a child, see what they owe, take the money, hand over a
- * receipt number.
+ * A student's fee account, read-only.
  *
- * This is the screen a clerk has open all morning with a queue in front of
- * them, so it is built around one action and the keyboard: type into the search
- * box that already has focus, Enter to search, Enter again on the amount to
- * take the payment. Nothing on the primary path needs a mouse.
+ * Find a child, see what they owe and what they have paid. **Money is not
+ * taken here.** Collection happens in the mobile app, at the counter, in the
+ * hands of whoever is facing the parent — this screen is the office's view of
+ * the same ledger, not a second till.
  *
- * Two rules from the money design it would be easy to break here:
+ * It used to carry a payment form. That was built to the brief
+ * (FRONTEND-HANDOFF Packet 2, "collect payment ... take amount") and removed
+ * on the owner's decision once collection moved to the app. The backend route
+ * is untouched and still live: `POST /admin/fees/payments` is what the app
+ * calls. Nothing about the money rules changed, only who has the till.
  *
- *  - **The balance is never cached.** Every figure on screen comes from the
- *    ledger query and the ledger is refetched after a write. A balance held in
- *    component state and decremented locally is how a counter starts telling
- *    two people different numbers.
+ * What is still here, and why:
+ *
+ *  - **Reversing a payment.** A correction, not a collection. The API refuses
+ *    a reversal by whoever took the money, so it has to be done by someone
+ *    else — which on a phone-collected payment means the office. Writes a
+ *    contra entry; the original receipt stays.
+ *  - **The balance is never cached.** Every figure comes from the ledger query
+ *    and is refetched after a write, so this screen cannot start disagreeing
+ *    with the app.
  *  - **Amounts stay strings end to end.** `Numeric` is serialised as a string
- *    on purpose; the amount the clerk types goes to the API as typed and comes
- *    back as typed. Nothing here calls Number() on money.
+ *    on purpose; nothing here calls Number() on money.
  */
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { api, money, newIdempotencyKey } from "../api/client";
+import { api, money } from "../api/client";
 import { useWrite } from "../api/useWrite";
 import { ActionButton } from "../components/Can";
 import {
@@ -34,6 +41,7 @@ import {
   StatCard,
   inputClass,
 } from "../components/ui";
+
 
 /** /admin/students has no response_model; this documents the roster row. */
 type StudentRow = {
@@ -86,15 +94,12 @@ type Ledger = {
   credit: string;
 };
 
-/** Free text at a counter becomes a reporting problem, so this is a fixed list. */
-const METHODS = ["cash", "upi", "cheque", "card", "bank_transfer"];
-
 /** dd/mm/yyyy, the way the office writes a date. */
 const asDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB");
 
 const monthName = (m: number) => new Date(2000, m - 1).toLocaleString("en", { month: "short" });
 
-export function CollectFees() {
+export function FeeLedger() {
   const [term, setTerm] = useState("");
   const [searched, setSearched] = useState("");
   const [student, setStudent] = useState<StudentRow | null>(null);
@@ -123,7 +128,7 @@ export function CollectFees() {
 
   return (
     <>
-      <Card title="Collect fees">
+      <Card title="Student fees">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -198,9 +203,6 @@ function StudentAccount({
   onClear: () => void;
 }) {
   const data = ledger.data;
-  // The API takes an enrolment, not a student, and only the invoice rows carry
-  // one - see the report's blocked-dependency note. No invoice, no way to post.
-  const enrolmentId = data?.invoices[0]?.enrolment_id;
 
   return (
     <>
@@ -222,17 +224,11 @@ function StudentAccount({
               <StatCard label="Receipts" value={data.payments.length} />
             </div>
 
-            {enrolmentId === undefined ? (
+            {data.invoices.length === 0 && (
               <Empty>
                 No invoices have been raised for this student yet — generate them on the Fees
-                screen before taking a payment.
+                screen.
               </Empty>
-            ) : (
-              <TakePayment
-                enrolmentId={enrolmentId}
-                studentId={student.id}
-                outstanding={data.outstanding}
-              />
             )}
           </>
         )}
@@ -262,104 +258,6 @@ function StudentAccount({
         </>
       )}
     </>
-  );
-}
-
-function TakePayment({
-  enrolmentId,
-  studentId,
-  outstanding,
-}: {
-  enrolmentId: number;
-  studentId: number;
-  outstanding: string;
-}) {
-  const [amount, setAmount] = useState(outstanding);
-  const [method, setMethod] = useState("cash");
-  const [ref, setRef] = useState("");
-  const [receipt, setReceipt] = useState<{ receipt_no: string; amount: string } | null>(null);
-
-  /**
-   * One key per logical transaction, not per click.
-   *
-   * That is the whole mechanism: a double-tap or a retry after a dropped
-   * connection returns the original receipt instead of taking the money twice.
-   * A fresh key per click would defeat it, so this is regenerated only once the
-   * previous payment has actually succeeded.
-   */
-  const [txKey, setTxKey] = useState(newIdempotencyKey);
-
-  const collect = useWrite<void, { receipt_no: string; amount: string }>({
-    write: () =>
-      api.post("/admin/fees/payments", {
-        enrolment_id: enrolmentId,
-        amount,
-        method,
-        instrument_ref: ref || null,
-        idempotency_key: txKey,
-      }) as Promise<{ receipt_no: string; amount: string }>,
-    invalidates: [["ledger", studentId], ["invoices"], ["collection"], ["defaulters"]],
-    onDone: (r) => {
-      setReceipt({ receipt_no: r.receipt_no, amount: r.amount });
-      setTxKey(newIdempotencyKey());
-      setRef("");
-      setAmount("0");
-    },
-  });
-
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        collect.run();
-      }}
-      className="space-y-3"
-    >
-      <div className="grid gap-3 sm:grid-cols-3">
-        <FormField label="Amount" error={collect.fields.amount}>
-          <input
-            className={inputClass}
-            value={amount}
-            inputMode="decimal"
-            onChange={(e) => setAmount(e.target.value)}
-          />
-        </FormField>
-        <FormField label="Method" error={collect.fields.method}>
-          <select className={inputClass} value={method} onChange={(e) => setMethod(e.target.value)}>
-            {METHODS.map((m) => (
-              <option key={m} value={m}>
-                {m.replace("_", " ")}
-              </option>
-            ))}
-          </select>
-        </FormField>
-        <FormField label="Reference" error={collect.fields.instrument_ref}>
-          <input
-            className={inputClass}
-            value={ref}
-            placeholder={method === "cash" ? "not needed for cash" : "cheque or txn number"}
-            onChange={(e) => setRef(e.target.value)}
-          />
-        </FormField>
-      </div>
-
-      <FormError error={collect.error} />
-
-      <div className="flex items-center gap-3">
-        <ActionButton
-          permission="fees.payment.collect"
-          onClick={() => collect.run()}
-          disabled={collect.busy}
-        >
-          {collect.busy ? "Taking…" : `Take ${money(amount || "0")}`}
-        </ActionButton>
-        {receipt && (
-          <p className="text-sm text-ink-soft">
-            Received {money(receipt.amount)} — receipt <strong>{receipt.receipt_no}</strong>.
-          </p>
-        )}
-      </div>
-    </form>
   );
 }
 

@@ -1,5 +1,16 @@
 # Packet 2 — Fees at the counter
 
+> **Later change, recorded rather than edited into the text below.** The
+> payment form on `/fees/collect` was removed on the owner's decision after
+> this report was written: fee collection is handled in the mobile app, not on
+> the admin website. That screen is now `/fees/ledger` ("Student fees"),
+> read-only apart from reversing a payment.
+>
+> Everything below describes what was built and verified at the time, and is
+> left as written — a report is a record of what happened, not a description of
+> the current tree. The backend was not changed then and has not been changed
+> since.
+
 Branch `slice/office-feedback`, off `slice/packet-0`, off `main` at `232a791`.
 Nothing pushed, nothing merged. The branch also carries the office's own change
 requests, which arrived mid-packet; they are listed at the end.

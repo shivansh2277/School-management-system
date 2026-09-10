@@ -346,12 +346,24 @@ admission_assessment,selection,conversion,admission_reports}.py` and
 
 ## Packet 2 — Fees at the counter *(the money path)*
 
-**Today the app cannot take a payment.** It lists invoices and shows a
-collection total. That is the single most-used screen in a real school office
-and it does not exist.
+> **SUPERSEDED, owner's decision.** This packet was written around the web app
+> taking payments, and that was built and then removed. **Fee collection is
+> handled in the mobile app**, not on the admin website. The backend is
+> untouched — `POST /admin/fees/payments` is live and is what the app calls —
+> and every money rule below still applies to it. What the office gets on the
+> web is the ledger: `/fees/ledger` (Student fees), read-only apart from
+> reversing a payment, which is a correction and must be done by someone other
+> than whoever took the money.
+>
+> The paragraph below is kept as written so the reasoning is legible; do not
+> rebuild a payment form from it.
 
-**Screens:** collect payment (search child → show ledger → take amount →
-allocate → print receipt), the student fee ledger, defaulters with the chase
+~~**Today the app cannot take a payment.** It lists invoices and shows a
+collection total. That is the single most-used screen in a real school office
+and it does not exist.~~
+
+**Screens:** ~~collect payment (search child → show ledger → take amount →
+allocate → print receipt)~~ the student fee ledger, defaulters with the chase
 list, fee setup (heads, plans, assignments), concessions with the approval
 step, and period close.
 

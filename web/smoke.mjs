@@ -72,7 +72,7 @@ const SCREEN_ENDPOINTS = {
   // as for a missing endpoint, and those must not be confused - that confusion
   // is the exact thing this script exists to catch. Resolved from the roster,
   // and skipped honestly when the role cannot read it.
-  "Collect fees": {
+  "Student fees": {
     path: (ctx) => (ctx.studentId === null ? null : `/admin/fees/ledger/${ctx.studentId}`),
     module: "fees",
   },
