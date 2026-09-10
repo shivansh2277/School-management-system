@@ -11,6 +11,7 @@ from sqlalchemy import select
 
 from app.api.admin.classes import class_order
 from app.models import ClassSection
+from app.services.common import class_sort_key
 
 
 class FakeSection:
@@ -86,3 +87,22 @@ def test_every_section_is_taught_something(client, admin, db):
     assert len(rows) == len(db.scalars(select(ClassSection)).all())
     for row in rows:
         assert row["subjects"], f"{row['class_label']} has no subjects"
+
+
+def test_the_shared_key_orders_every_listing_that_uses_it():
+    """Five listings ordered by the class_name String independently - classes,
+    fee plans, the admission cycle's classes, seat usage and the public portal.
+    They share one key now so the next one cannot get it wrong on its own."""
+    assert sorted(["10", "1", "2", "9", "11", "12", "3"], key=class_sort_key) == [
+        "1", "2", "3", "9", "10", "11", "12",
+    ]
+    assert class_sort_key("LKG") < class_sort_key("1")
+    assert class_sort_key(None) < class_sort_key("1")
+
+
+def test_the_settings_fee_structure_lists_classes_in_order(client, admin):
+    """The Settings screen reads /admin/fees/plans, which had the same bug as
+    /admin/classes and was fixed separately from it."""
+    plans = client.get("/admin/fees/plans", headers=admin).json()
+    numbered = [int(p["class_name"]) for p in plans if (p["class_name"] or "").isdigit()]
+    assert numbered == sorted(numbered), [p["class_name"] for p in plans]

@@ -23,6 +23,7 @@ from app.models import (
     User,
 )
 from app.services import admission as svc
+from app.services.common import class_sort_key
 from app.services.rbac import require_permission
 from app.services.school_settings import module_enabled
 
@@ -205,14 +206,15 @@ def list_class_config(
     cycle_id: int, user: User = Depends(cycle_reader), db: Session = Depends(get_db)
 ) -> list[dict]:
     svc.cycle_for(db, user.school_id, cycle_id)
-    return [
-        _config_out(c)
-        for c in db.scalars(
-            select(CycleClassConfig)
-            .where(CycleClassConfig.cycle_id == cycle_id)
-            .order_by(CycleClassConfig.class_name, CycleClassConfig.stream)
-        )
-    ]
+    # Python, not SQL: class_name is a String, so the database orders class 10
+    # straight after class 1 (see services/common.py::class_sort_key).
+    rows = sorted(
+        db.scalars(
+            select(CycleClassConfig).where(CycleClassConfig.cycle_id == cycle_id)
+        ),
+        key=lambda c: (*class_sort_key(c.class_name), c.stream or ""),
+    )
+    return [_config_out(c) for c in rows]
 
 
 @router.put("/cycles/{cycle_id}/classes", dependencies=[cycle_writer])

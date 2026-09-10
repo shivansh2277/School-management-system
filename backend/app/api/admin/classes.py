@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.services import timetable as timetable_svc
+from app.services.common import class_sort_key
 from app.services.rbac import require_permission
 from app.models import (
     AcademicYear,
@@ -58,30 +59,14 @@ def _row(db: Session, c: ClassSection) -> dict:
     }
 
 
-def class_order(section: ClassSection) -> tuple[int, int, str, str]:
-    """Sort key that puts class 10 after class 9, not after class 1.
+def class_order(section: ClassSection) -> tuple:
+    """Sort key for a section: the class ladder, then the section letter.
 
-    `class_name` is a String(8) holding "1".."12", so ordering by the column
-    is lexicographic: "1", "10", "11", "2". Every class dropdown in the web app
-    reads this one endpoint, so the office saw 10-A wedged between 1-A and 2-A
-    on Classes, Students, Settings and the fee screens alike.
-
-    Sorted in Python rather than in SQL because the fix has to hold on both
-    engines: the test suite runs on SQLite and a Postgres `::int` cast would
-    not survive there, while a CASE that works on both is longer than this and
-    says less. Ten sections is not a query worth optimising.
-
-    Pre-primary names sort before the numbered classes, alphabetically among
-    themselves.
-    # ponytail: alphabetical is wrong for LKG/UKG/Nursery, which belong in
-    # Nursery -> LKG -> UKG order. No seeded school has them, so this stays a
-    # comment rather than a hardcoded ladder; give ClassSection an explicit
-    # ordinal column if a real school ever needs it.
+    `/admin/classes` is the one endpoint behind every class dropdown in the web
+    app, so the lexicographic order it used to return - 1-A, 10-A, 2-A - showed
+    up on Classes, Students, Settings and the fee screens at once.
     """
-    name = section.class_name.strip()
-    if name.isdigit():
-        return (1, int(name), "", section.section)
-    return (0, 0, name.lower(), section.section)
+    return (*class_sort_key(section.class_name), section.section)
 
 
 @router.get("/classes")

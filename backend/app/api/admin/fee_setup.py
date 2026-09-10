@@ -24,6 +24,7 @@ from app.models import (
     User,
 )
 from app.services import fee_setup as svc
+from app.services.common import class_sort_key
 from app.services.rbac import require_permission
 from app.services.school_settings import module_enabled
 
@@ -177,7 +178,12 @@ def plans(
     q = select(FeePlan).where(FeePlan.school_id == user.school_id)
     if academic_year_id is not None:
         q = q.where(FeePlan.academic_year_id == academic_year_id)
-    return [_plan_out(p) for p in db.scalars(q.order_by(FeePlan.class_name, FeePlan.name))]
+    # Sorted here, not in SQL: class_name is a String, so the database orders
+    # "1", "10", "2" and the fee structure on Settings listed class 10 second.
+    rows = sorted(
+        db.scalars(q), key=lambda p: (*class_sort_key(p.class_name), p.name)
+    )
+    return [_plan_out(p) for p in rows]
 
 
 @router.post("/plans", status_code=201, dependencies=[setup])

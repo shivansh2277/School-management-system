@@ -944,6 +944,20 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
                 name=["Founder's Day", "Local Festival"][i],
             )
         )
+
+    # Closures still ahead, so the dashboard's upcoming list has something true
+    # to show. Offsets rather than fixed dates because TODAY moves with
+    # whoever runs the seed, and names that describe a school's own calendar
+    # rather than naming a festival the arithmetic cannot actually guarantee
+    # falls on that day.
+    for offset, name in ((22, "Mid-term Break"), (54, "Founder's Week"), (106, "Winter Break")):
+        db.add(
+            Holiday(
+                academic_year_id=academic_year_id,
+                date=TODAY + timedelta(days=offset),
+                name=name,
+            )
+        )
     db.flush()
 
     # --- attendance: 60 school days, ~92/5/3 with per-student variation ----

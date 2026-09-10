@@ -13,7 +13,8 @@ import {
 } from "recharts";
 
 import { api, money } from "../api/client";
-import { Card, Empty, StatCard } from "../components/ui";
+import { useAuth } from "../auth/AuthContext";
+import { Card, Empty, Pill, StatCard } from "../components/ui";
 import { theme } from "../theme";
 
 type Stats = {
@@ -22,9 +23,13 @@ type Stats = {
   performance: { excellent: number; good: number; average: number; needs_improvement: number };
   top_performers: { student_id: number; name: string; class_label: string; average_percent: number }[];
   recent_notices: { id: number; title: string; audience: string; published_at: string }[];
-  today_schedule: { period: number; time: string; class_label: string; subject: string; teacher: string; room: string | null }[];
   fee_trend: { month: string; collected: string }[];
 };
+
+/** /admin/exams is response_model'd; these are the fields this card reads. */
+type ExamRow = { id: number; name: string; term: string; start_date: string; end_date: string };
+/** /admin/holidays has no response_model; read off api/admin/attendance.py. */
+type HolidayRow = { id: number; date: string; name: string };
 
 const PERF_COLORS = [theme.success, theme.info, theme.warning, theme.danger];
 const PERF_LABELS: [keyof Stats["performance"], string][] = [
@@ -190,28 +195,7 @@ export function Dashboard() {
           )}
         </Card>
 
-        <Card title="Today's Schedule">
-          {data.today_schedule.length === 0 ? (
-            <Empty>No periods scheduled for today.</Empty>
-          ) : (
-            <ul className="space-y-3 text-sm max-h-64 overflow-y-auto">
-              {data.today_schedule.map((s, i) => (
-                <li key={i} className="flex gap-3">
-                  <span className="tabular text-xs text-ink-faint w-24 shrink-0">{s.time}</span>
-                  <span>
-                    <span className="block">
-                      {s.subject} - {s.class_label}
-                    </span>
-                    <span className="text-xs text-ink-faint">
-                      {s.teacher}
-                      {s.room ? ` - ${s.room}` : ""}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+        <UpcomingEvents />
       </div>
 
       <Card title="Fee Collection">
@@ -230,5 +214,99 @@ export function Dashboard() {
         )}
       </Card>
     </>
+  );
+}
+
+/**
+ * What the school has coming, drawn from what the backend actually holds.
+ *
+ * Two sources, both real: exams from /admin/exams and closures from
+ * /admin/holidays. There is no table for parent-teacher meetings or staff
+ * meetings anywhere in this system, so none are shown - inventing a PTM row to
+ * fill the card would be a fabricated entry on a screen a principal reads, and
+ * an empty state beats a made-up one.
+ *
+ * Both queries gate themselves on permission and module rather than being
+ * declared on the screen, so the Dashboard does not disappear from a role that
+ * cannot read exams. That does mean the list can be partial, so the card says
+ * which sources it actually read instead of implying it covers everything.
+ */
+function UpcomingEvents() {
+  const { can, hasModule } = useAuth();
+
+  const canExams = can("exam.definition.read") && hasModule("examinations");
+  const canHolidays = can("attendance.record.read") && hasModule("attendance");
+
+  const exams = useQuery({
+    queryKey: ["exams"],
+    queryFn: () => api.get("/admin/exams") as Promise<ExamRow[]>,
+    enabled: canExams,
+  });
+  const holidays = useQuery({
+    queryKey: ["holidays"],
+    queryFn: () => api.get("/admin/attendance/holidays") as Promise<HolidayRow[]>,
+    enabled: canHolidays,
+  });
+
+  // Midnight today, so an exam starting later today still counts as upcoming.
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const events = [
+    ...(exams.data ?? []).map((e) => ({
+      key: `exam-${e.id}`,
+      date: e.start_date,
+      kind: "Exam",
+      title: e.name,
+      note: e.term,
+    })),
+    ...(holidays.data ?? []).map((h) => ({
+      key: `holiday-${h.id}`,
+      date: h.date,
+      kind: "Holiday",
+      title: h.name,
+      note: "School closed",
+    })),
+  ]
+    .filter((e) => new Date(e.date) >= today)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 8);
+
+  const sources = [canExams ? "exams" : null, canHolidays ? "closures" : null].filter(Boolean);
+  const loading = (canExams && exams.isLoading) || (canHolidays && holidays.isLoading);
+
+  return (
+    <Card title="Upcoming Events">
+      {sources.length === 0 ? (
+        <Empty>Your role cannot read the exam calendar or the holiday list.</Empty>
+      ) : loading ? (
+        <Empty>Loading…</Empty>
+      ) : events.length === 0 ? (
+        <Empty>Nothing scheduled ahead — no exams and no closures on the calendar.</Empty>
+      ) : (
+        <>
+          <ul className="space-y-3 text-sm max-h-64 overflow-y-auto">
+            {events.map((e) => (
+              <li key={e.key} className="flex gap-3">
+                <span className="tabular text-xs text-ink-faint w-24 shrink-0">
+                  {new Date(e.date).toLocaleDateString("en-GB")}
+                </span>
+                <span>
+                  <span className="block">
+                    <Pill status={e.kind === "Exam" ? "pending" : "paid"}>{e.kind}</Pill>{" "}
+                    {e.title}
+                  </span>
+                  <span className="text-xs text-ink-faint">{e.note}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs text-ink-faint">
+            From {sources.join(" and ")}. Meetings and PTMs are not recorded anywhere in the
+            system yet, so none are listed.
+          </p>
+        </>
+      )}
+    </Card>
   );
 }

@@ -2,8 +2,18 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { api, money } from "../api/client";
+import { useWrite } from "../api/useWrite";
 import { useAuth } from "../auth/AuthContext";
-import { Card, DataTable, FormField, inputClass } from "../components/ui";
+import { ActionButton } from "../components/Can";
+import {
+  Card,
+  DataTable,
+  FormError,
+  FormField,
+  Modal,
+  Pill,
+  inputClass,
+} from "../components/ui";
 
 type School = {
   name: string;
@@ -128,6 +138,10 @@ export function Settings() {
         />
       </Card>
 
+      <GradingSystem />
+
+      {feesOn && <FeeCatalogue />}
+
       {feesOn && (
       <Card title="Fee structure">
         <DataTable
@@ -148,5 +162,315 @@ export function Settings() {
       </Card>
       )}
     </>
+  );
+}
+
+/** /admin/grading-scales returns a plain dict; these are the fields read here. */
+type Scale = {
+  id: number;
+  name: string;
+  version: number;
+  is_active: boolean;
+  frozen_at: string | null;
+  bands: { min_percent: string; grade: string; description: string | null }[];
+};
+
+type Head = { id: number; name: string; code: string; type: string; is_active: boolean };
+
+/**
+ * Changing the grading system.
+ *
+ * The read-only card above shows `/admin/grade-bands`, which is the active
+ * scale flattened for display. This is the scale store itself: a school runs
+ * one active scale, and switching to another is an explicit activation rather
+ * than an edit, so a report card printed last term still means what it said.
+ *
+ * A frozen scale cannot have its bands rewritten - the API refuses it, and so
+ * does the button, because results already published against it would silently
+ * change grade. Publish a new scale and activate that instead.
+ */
+function GradingSystem() {
+  const { can } = useAuth();
+  const [editing, setEditing] = useState<Scale | null>(null);
+
+  const scales = useQuery({
+    queryKey: ["grading-scales"],
+    queryFn: () => api.get("/admin/grading-scales") as Promise<Scale[]>,
+    enabled: can("exam.definition.read"),
+  });
+
+  const activate = useWrite<number>({
+    write: (id: number) =>
+      api.post(`/admin/grading-scales/${id}/activate` as "/admin/grading-scales/{scale_id}/activate"),
+    invalidates: [["grading-scales"], ["grade-bands"]],
+  });
+
+  if (!can("exam.definition.read")) return null;
+
+  return (
+    <Card title="Grading system">
+      <p className="text-xs text-ink-faint mb-3">
+        One scale is active at a time. Grades are computed from its bands at read time and never
+        stored, so activating a different scale changes how every percentage reads from now on.
+      </p>
+      <DataTable
+        rows={scales.data ?? []}
+        loading={scales.isLoading}
+        error={scales.error}
+        empty="No grading scale configured yet."
+        columns={[
+          { key: "name", header: "Scale", render: (s) => s.name },
+          { key: "ver", header: "Version", render: (s) => `v${s.version}`, align: "right" },
+          {
+            key: "bands",
+            header: "Bands",
+            render: (s) =>
+              s.bands
+                .map((b) => `${b.grade} ${Number(b.min_percent)}%+`)
+                .join(", ") || "none",
+          },
+          {
+            key: "state",
+            header: "Status",
+            render: (s) => (
+              <Pill status={s.is_active ? "paid" : "pending"}>
+                {s.is_active ? "active" : s.frozen_at ? "frozen" : "draft"}
+              </Pill>
+            ),
+          },
+          {
+            key: "act",
+            header: "",
+            render: (s) => (
+              <span className="flex gap-2 justify-end">
+                <ActionButton
+                  permission="exam.definition.write"
+                  onClick={() => setEditing(s)}
+                  className="!px-3 !py-1 text-xs"
+                  disabled={s.frozen_at !== null}
+                >
+                  Edit bands
+                </ActionButton>
+                {!s.is_active && (
+                  <ActionButton
+                    permission="exam.definition.write"
+                    onClick={() => activate.run(s.id)}
+                    className="!px-3 !py-1 text-xs"
+                    disabled={activate.busy}
+                  >
+                    Make active
+                  </ActionButton>
+                )}
+              </span>
+            ),
+          },
+        ]}
+      />
+      <FormError error={activate.error} />
+      {editing && <EditBands scale={editing} onClose={() => setEditing(null)} />}
+    </Card>
+  );
+}
+
+/**
+ * Rewriting one scale's bands.
+ *
+ * Sent as a whole list because the API replaces them wholesale - bands are a
+ * ladder and editing one rung in isolation is how you end up with a gap at 79%
+ * that quietly grades nobody.
+ */
+function EditBands({ scale, onClose }: { scale: Scale; onClose: () => void }) {
+  const [rows, setRows] = useState(
+    scale.bands.map((b) => ({
+      grade: b.grade,
+      min_percent: String(Number(b.min_percent)),
+      description: b.description ?? "",
+    })),
+  );
+
+  const set = (i: number, k: "grade" | "min_percent" | "description", v: string) =>
+    setRows(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
+
+  const save = useWrite({
+    write: () =>
+      api.put(
+        `/admin/grading-scales/${scale.id}/bands` as "/admin/grading-scales/{scale_id}/bands",
+        rows.map((r) => ({
+          grade: r.grade,
+          min_percent: r.min_percent,
+          description: r.description || null,
+        })) as never,
+      ),
+    invalidates: [["grading-scales"], ["grade-bands"]],
+    onDone: onClose,
+  });
+
+  return (
+    <Modal title={`Bands — ${scale.name}`} onClose={onClose}>
+      <div className="space-y-3">
+        <p className="text-xs text-ink-faint">
+          Every band, in one go: the API replaces the whole ladder rather than patching a rung,
+          so what is listed here is what the scale becomes.
+        </p>
+        {rows.map((r, i) => (
+          <div key={i} className="grid grid-cols-3 gap-2">
+            <FormField label={i === 0 ? "Grade" : ""}>
+              <input className={inputClass} value={r.grade} onChange={(e) => set(i, "grade", e.target.value)} />
+            </FormField>
+            <FormField label={i === 0 ? "Minimum %" : ""}>
+              <input
+                className={inputClass}
+                inputMode="decimal"
+                value={r.min_percent}
+                onChange={(e) => set(i, "min_percent", e.target.value)}
+              />
+            </FormField>
+            <FormField label={i === 0 ? "Description" : ""}>
+              <input
+                className={inputClass}
+                value={r.description}
+                onChange={(e) => set(i, "description", e.target.value)}
+              />
+            </FormField>
+          </div>
+        ))}
+        <button
+          onClick={() => setRows([...rows, { grade: "", min_percent: "", description: "" }])}
+          className="text-sm text-primary hover:underline"
+        >
+          + Add a band
+        </button>
+        <FormError error={save.error} />
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="rounded-input border border-rule px-4 py-2 text-sm hover:bg-canvas"
+          >
+            Cancel
+          </button>
+          <ActionButton
+            permission="exam.definition.write"
+            onClick={() => save.run()}
+            disabled={save.busy}
+          >
+            {save.busy ? "Saving…" : "Replace bands"}
+          </ActionButton>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/**
+ * Adding to the fee catalogue.
+ *
+ * A head is what a charge is called - Tuition, Transport, Late Fee. A plan is
+ * a class's set of heads and amounts. Nothing here edits money that has
+ * already been invoiced: changing a plan changes what future invoices are
+ * generated from, which is why there is no edit control on an existing one.
+ */
+function FeeCatalogue() {
+  const { can } = useAuth();
+  const [adding, setAdding] = useState(false);
+
+  const heads = useQuery({
+    queryKey: ["fee-heads"],
+    queryFn: () => api.get("/admin/fees/heads") as Promise<Head[]>,
+    enabled: can("fees.invoice.read"),
+  });
+
+  if (!can("fees.invoice.read")) return null;
+
+  return (
+    <Card
+      title="Fee heads"
+      action={
+        <ActionButton
+          permission="fees.setup.manage"
+          onClick={() => setAdding(true)}
+          className="!px-3 !py-1.5"
+        >
+          Add fee head
+        </ActionButton>
+      }
+    >
+      <p className="text-xs text-ink-faint mb-3">
+        What a charge is called. Plans below draw their lines from these, and an invoice that has
+        already been raised keeps the head it was raised with.
+      </p>
+      <DataTable
+        rows={heads.data ?? []}
+        loading={heads.isLoading}
+        error={heads.error}
+        empty="No fee heads configured — add one before building a plan."
+        columns={[
+          { key: "code", header: "Code", render: (h) => h.code },
+          { key: "name", header: "Name", render: (h) => h.name },
+          { key: "type", header: "Type", render: (h) => h.type },
+          {
+            key: "state",
+            header: "Status",
+            render: (h) => (
+              <Pill status={h.is_active ? "paid" : "pending"}>
+                {h.is_active ? "active" : "retired"}
+              </Pill>
+            ),
+          },
+        ]}
+      />
+      {adding && <AddFeeHead onClose={() => setAdding(false)} />}
+    </Card>
+  );
+}
+
+function AddFeeHead({ onClose }: { onClose: () => void }) {
+  const [form, setForm] = useState({ name: "", code: "", type: "recurring" });
+  const set = (k: keyof typeof form) => (e: { target: { value: string } }) =>
+    setForm({ ...form, [k]: e.target.value });
+
+  const save = useWrite({
+    write: () =>
+      api.post("/admin/fees/heads", {
+        name: form.name,
+        code: form.code.toUpperCase(),
+        type: form.type,
+      } as never),
+    invalidates: [["fee-heads"]],
+    onDone: onClose,
+  });
+
+  return (
+    <Modal title="Add fee head" onClose={onClose}>
+      <div className="space-y-3">
+        <FormField label="Name" error={save.fields.name}>
+          <input className={inputClass} value={form.name} onChange={set("name")} placeholder="Tuition Fee" />
+        </FormField>
+        <FormField label="Code" error={save.fields.code}>
+          <input className={inputClass} value={form.code} onChange={set("code")} placeholder="TUI" />
+        </FormField>
+        <FormField label="Type" error={save.fields.type}>
+          <select className={inputClass} value={form.type} onChange={set("type")}>
+            <option value="recurring">recurring — charged every cycle</option>
+            <option value="one_time">one_time — charged once</option>
+          </select>
+        </FormField>
+        <FormError error={save.error} />
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="rounded-input border border-rule px-4 py-2 text-sm hover:bg-canvas"
+          >
+            Cancel
+          </button>
+          <ActionButton
+            permission="fees.setup.manage"
+            onClick={() => save.run()}
+            disabled={save.busy || !form.name.trim() || !form.code.trim()}
+          >
+            {save.busy ? "Saving…" : "Add head"}
+          </ActionButton>
+        </div>
+      </div>
+    </Modal>
   );
 }

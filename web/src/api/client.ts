@@ -25,6 +25,7 @@ export const tokenStore = {
 type GetPaths = { [P in keyof paths]: paths[P] extends { get: unknown } ? P : never }[keyof paths];
 type PostPaths = { [P in keyof paths]: paths[P] extends { post: unknown } ? P : never }[keyof paths];
 type PatchPaths = { [P in keyof paths]: paths[P] extends { patch: unknown } ? P : never }[keyof paths];
+type PutPaths = { [P in keyof paths]: paths[P] extends { put: unknown } ? P : never }[keyof paths];
 type DeletePaths = { [P in keyof paths]: paths[P] extends { delete: unknown } ? P : never }[keyof paths];
 
 /**
@@ -127,6 +128,12 @@ export const api = {
     request<Ok<paths[P]["post"]>>(path, { method: "POST", body: JSON.stringify(args[0] ?? {}) }),
   patch: <P extends PatchPaths>(path: P, ...args: BodyArg<paths[P]["patch"]>) =>
     request<Ok<paths[P]["patch"]>>(path, { method: "PATCH", body: JSON.stringify(args[0] ?? {}) }),
+  // Fourteen routes are PUT rather than PATCH, and they are the ones that
+  // replace a whole list wherever a partial update would be meaningless: a
+  // grading ladder, a route's stops, an application's guardians, the module
+  // switches on /admin/configuration.
+  put: <P extends PutPaths>(path: P, ...args: BodyArg<paths[P]["put"]>) =>
+    request<Ok<paths[P]["put"]>>(path, { method: "PUT", body: JSON.stringify(args[0] ?? {}) }),
   del: <P extends DeletePaths>(path: P) =>
     request<Ok<paths[P]["delete"]>>(path, { method: "DELETE" }),
 };

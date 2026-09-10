@@ -27,6 +27,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
+from app.services.common import class_sort_key
 from app.models import (
     AdmissionCategory,
     Application,
@@ -139,10 +140,11 @@ def open_cycle(school_code: str, db: Session = Depends(get_db)) -> dict:
             status.HTTP_409_CONFLICT,
             "This school is not accepting online applications. Please contact the office.",
         )
-    classes = db.scalars(
-        select(CycleClassConfig)
-        .where(CycleClassConfig.cycle_id == cycle.id)
-        .order_by(CycleClassConfig.class_name)
+    classes = sorted(
+        db.scalars(
+            select(CycleClassConfig).where(CycleClassConfig.cycle_id == cycle.id)
+        ),
+        key=lambda c: class_sort_key(c.class_name),
     )
     return {
         "school": {"code": school.code, "name": school.name, "city": school.city},

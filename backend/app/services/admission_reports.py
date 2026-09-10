@@ -26,6 +26,7 @@ from app.models import (
     Interview,
 )
 from app.services import selection
+from app.services.common import class_sort_key
 
 # The stages the funnel actually reports, in order. Statuses beyond a stage
 # count towards it: an enrolled child was, at some point, tested.
@@ -175,10 +176,11 @@ def by_source(db: Session, school_id: int, cycle_id: int) -> list[dict]:
 
 def seat_utilisation(db: Session, school_id: int, cycle_id: int) -> list[dict]:
     out = []
-    for config in db.scalars(
-        select(CycleClassConfig)
-        .where(CycleClassConfig.cycle_id == cycle_id)
-        .order_by(CycleClassConfig.class_name)
+    for config in sorted(
+        db.scalars(
+            select(CycleClassConfig).where(CycleClassConfig.cycle_id == cycle_id)
+        ),
+        key=lambda c: class_sort_key(c.class_name),
     ):
         usage = selection.seat_usage(db, cycle_id, config.class_name, config.stream)
         waiting = db.scalar(

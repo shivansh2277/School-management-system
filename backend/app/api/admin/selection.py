@@ -20,6 +20,7 @@ from app.models import (
 from app.services import admission
 from app.services import applications as app_svc
 from app.services import selection as svc
+from app.services.common import class_sort_key
 from app.services.rbac import require_permission, authz_for
 from app.services.school_settings import module_enabled
 
@@ -92,10 +93,8 @@ def seats(
     stmt = select(CycleClassConfig).where(CycleClassConfig.cycle_id == cycle_id)
     if class_name is not None:
         stmt = stmt.where(CycleClassConfig.class_name == class_name)
-    return [
-        svc.seat_usage(db, cycle_id, c.class_name, c.stream)
-        for c in db.scalars(stmt.order_by(CycleClassConfig.class_name))
-    ]
+    rows = sorted(db.scalars(stmt), key=lambda c: class_sort_key(c.class_name))
+    return [svc.seat_usage(db, cycle_id, c.class_name, c.stream) for c in rows]
 
 
 @router.get("/cycles/{cycle_id}/merit")
