@@ -57,7 +57,13 @@ export type ModuleCode =
 export type Screen = {
   path: string;
   label: string;
-  group: string;
+  /**
+   * The sidebar heading this screen sits under. Optional: a screen that is its
+   * own category gets no heading rather than a heading that only repeats its
+   * label - "OVERVIEW" above a lone "Dashboard" told the reader nothing.
+   * Ungrouped screens keep their declaration order and render at the top.
+   */
+  group?: string;
   /**
    * Every permission the screen's read path needs. Must all be codes in
    * backend app/core/permissions.py. Pinned by a test.
@@ -72,7 +78,9 @@ export const SCREENS: Screen[] = [
   {
     path: "/dashboard",
     label: "Dashboard",
-    group: "Overview",
+    // No group on purpose: the heading read "OVERVIEW" above a single item
+    // called "Dashboard", which is a label repeating itself.
+
     // GET /admin/dashboard/stats - stats.py, admin.settings.read, ungated.
     permissions: ["admin.settings.read"],
     element: lazy(() => import("./pages/Dashboard").then((m) => ({ default: m.Dashboard }))),
@@ -98,7 +106,14 @@ export const SCREENS: Screen[] = [
     path: "/teachers",
     label: "Staff",
     group: "People",
-    // GET /admin/teachers - teachers.py, hr.employee.read, module hr.
+    // GET /admin/employees and /admin/employees/{id} - api/admin/hr.py, both
+    // on `reader` = require_permission("hr.employee.read", school_wide=True),
+    // with the whole router behind Depends(module_enabled("hr")).
+    //
+    // It used to read /admin/teachers, which is teaching staff only. Same
+    // permission and same module, so the entry is unchanged - but the screen
+    // now covers the drivers, the bus attendant and the office administrator,
+    // who were in the database and in no screen.
     permissions: ["hr.employee.read"],
     modules: ["hr"],
     element: lazy(() => import("./pages/Teachers").then((m) => ({ default: m.Teachers }))),
@@ -311,8 +326,8 @@ export function visibleScreens(can: Can, hasModule: HasModule): Screen[] {
 export function groupedNav(
   can: Can,
   hasModule: HasModule,
-): { group: string; screens: Screen[] }[] {
-  const out: { group: string; screens: Screen[] }[] = [];
+): { group?: string; screens: Screen[] }[] {
+  const out: { group?: string; screens: Screen[] }[] = [];
   for (const screen of visibleScreens(can, hasModule)) {
     const existing = out.find((g) => g.group === screen.group);
     if (existing) existing.screens.push(screen);

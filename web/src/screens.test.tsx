@@ -150,11 +150,14 @@ describe("every declared permission and module is required, not just the first",
 });
 
 describe("the registry itself", () => {
-  it("gives every screen a path, label, group and at least one permission", () => {
+  it("gives every screen a path, label and at least one permission", () => {
     for (const s of SCREENS) {
       expect(s.path, `${s.label} path`).toBeTruthy();
       expect(s.label, `${s.path} label`).toBeTruthy();
-      expect(s.group, `${s.path} group`).toBeTruthy();
+      // `group` is optional - a screen that is its own category gets no
+      // sidebar heading rather than one repeating its own label. What is not
+      // allowed is an empty string, which would render a blank heading.
+      if (s.group !== undefined) expect(s.group, `${s.path} group`).not.toBe("");
       expect(s.permissions.length, `${s.path} permissions`).toBeGreaterThan(0);
     }
   });
@@ -216,5 +219,31 @@ describe("Transport", () => {
 
   it("stays hidden from a fee collector", () => {
     expect(labelsFor(FEE_COLLECTOR, ALL_MODULES)).not.toContain("Transport");
+  });
+});
+
+/**
+ * Dashboard has no sidebar heading.
+ *
+ * It used to sit under "OVERVIEW", which is a heading that only repeated the
+ * one item beneath it. The registry now allows a screen to be its own
+ * category; the shell renders no heading for those, and they keep declaration
+ * order so Dashboard stays at the top.
+ */
+describe("ungrouped screens", () => {
+  it("leaves Dashboard without a group", () => {
+    const dashboard = SCREENS.find((s) => s.path === "/dashboard");
+    expect(dashboard?.group).toBeUndefined();
+  });
+
+  it("still gives it a bucket of its own, first, so the shell can render it", () => {
+    const groups = groupedNav(
+      () => true,
+      () => true,
+    );
+    expect(groups[0].group).toBeUndefined();
+    expect(groups[0].screens.map((s) => s.label)).toContain("Dashboard");
+    // And no other bucket is headingless, so nothing else lost its heading.
+    expect(groups.filter((g) => g.group === undefined)).toHaveLength(1);
   });
 });

@@ -28,8 +28,14 @@ export function Shell() {
         </div>
         <nav className="space-y-4 flex-1">
           {groupedNav(can, hasModule).map(({ group, screens }) => (
-            <div key={group}>
-              <p className="px-3 pb-1 text-[11px] uppercase tracking-wide text-white/50">{group}</p>
+            <div key={group ?? "__ungrouped"}>
+              {/* No heading for an ungrouped screen: Dashboard under a heading
+                  reading "OVERVIEW" was a label repeating itself. */}
+              {group && (
+                <p className="px-3 pb-1 text-[11px] uppercase tracking-wide text-white/50">
+                  {group}
+                </p>
+              )}
               <div className="space-y-1">
                 {screens.map((screen) => (
                   <NavLink
