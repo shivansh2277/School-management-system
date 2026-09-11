@@ -20,11 +20,14 @@ docstring where it has one.
 Five rules explain why the tables look the way they do. Without them the list
 below is just nouns.
 
-**1. Every table carries `school_id`.** This is a multi-tenant product sold to
-separate, independent schools - a tenant is a customer, not a branch. The column
-is declared on a shared base class so a new table cannot quietly be created
-without one. A missing tenant key is a data leak between customers, not a style
-problem.
+**1. Almost every table carries `school_id`.** This is a multi-tenant product
+sold to separate, independent schools - a tenant is a customer, not a branch. The
+column is declared on `TenantBase` so a new table cannot quietly be created
+without one; a missing tenant key is a data leak between customers, not a style
+problem. Three tables derive from `TimestampedBase` instead and have none, each
+for a reason: `schools` *is* the tenant, and `permissions` and `scheduled_jobs`
+are vocabulary belonging to the software rather than to any one school.
+`alembic_version` is Alembic's own row and not part of the product at all.
 
 **2. Year-scoped facts hang off `enrolment_id`; lifetime facts hang off
 `student_id`.** A fee, an attendance mark, a bus seat and a set of marks all

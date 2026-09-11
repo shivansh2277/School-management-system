@@ -112,12 +112,17 @@
     <p class="lede">Every table the seeded school actually uses, what each one is for,
     the columns that carry meaning, and an entity diagram per area. The full reference
     covers all 86 tables and all 990 columns; this is the part you keep open.</p>
-    <p class="boiler"><b>Four columns are on every table and are left out below:</b>
-    <code>id</code>, <code>school_id</code>, <code>created_at</code> and
-    <code>updated_at</code>. Stating them once rather than 58 times removes 225
-    of 611 rows. <code>school_id</code> is the tenant key — the product is sold to
-    separate schools, and a row without it would leak between customers — so its edge is
-    also left off the diagrams, which would otherwise draw it 58 times.</p>
+    <p class="boiler"><b>Four columns are left out below</b> because they repeat on
+    almost every table: <code>id</code>, <code>school_id</code>, <code>created_at</code>
+    and <code>updated_at</code>. Stating them once rather than 58 times removes 225
+    of 611 rows. <code>school_id</code> is the tenant key, so its edge is left off the
+    diagrams too, which would otherwise draw it on nearly every table.</p>
+    <p class="boiler"><b>Four tables are exceptions, deliberately.</b> <code>permissions</code>, <code>scheduled_jobs</code>, <code>schools</code> carry
+    no <code>school_id</code>: they derive from <code>TimestampedBase</code> rather than
+    <code>TenantBase</code>, because <code>schools</code> <em>is</em> the tenant, and the
+    permission vocabulary and the job schedule belong to the software rather than to any
+    one school. <code>alembic_version</code> has none of the four &mdash; it is Alembic's
+    own bookkeeping and not part of the product.</p>
   </div>
 </header>
 

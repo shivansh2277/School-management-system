@@ -40,10 +40,13 @@ TOTAL_COLS = sum(len(t["columns"]) for t in g.schema.values())
 TOTAL_FKS = sum(len(t["fk"]) for t in g.schema.values())
 
 RULES = [
-    ("Every table carries <code>school_id</code>",
+    ("Almost every table carries <code>school_id</code>",
      "The product is sold to separate, independent schools; a tenant is a customer, not a branch. "
-     "The column is declared on a shared base class so a new table cannot quietly be created without "
-     "one. A missing tenant key is a data leak between customers, not a style problem."),
+     "The column is declared on <code>TenantBase</code> so a new table cannot quietly be created "
+     "without one, and a missing tenant key is a data leak between customers. Three tables derive "
+     "from <code>TimestampedBase</code> instead and carry none: <code>schools</code> is the tenant, "
+     "and <code>permissions</code> and <code>scheduled_jobs</code> belong to the software rather "
+     "than to any one school."),
     ("Year-scoped facts hang off <code>enrolment_id</code>",
      "A fee, an attendance mark, a bus seat and a set of marks all belong to a child's <em>year in a "
      "class</em>, so they point at <code>enrolments</code>. A name and a date of birth belong to the "

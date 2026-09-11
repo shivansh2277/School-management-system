@@ -33,6 +33,15 @@ used = {t for t in g.schema if g.schema[t]["rows"] > 0}
 DOMAINS = [(d, [t for t in ts if t in used]) for d, ts in g.DOMAINS]
 DOMAINS = [(d, ts) for d, ts in DOMAINS if ts]
 
+# Which of the four a table actually lacks. Computed, not asserted: the first
+# draft of this page claimed all four sat on all 58, and three tables deriving
+# from TimestampedBase rather than TenantBase make that false.
+def _lacking(col):
+    return sorted(t for t in used if col not in {c["name"] for c in g.schema[t]["columns"]})
+
+
+NO_TENANT = [t for t in _lacking("school_id") if t != "alembic_version"]
+
 SHOWN = sum(len([c for c in g.schema[t]["columns"] if c["name"] not in BOILERPLATE])
             for t in used)
 FULL = sum(len(g.schema[t]["columns"]) for t in used)
@@ -243,12 +252,17 @@ BODY = """
     <p class="lede">Every table the seeded school actually uses, what each one is for,
     the columns that carry meaning, and an entity diagram per area. The full reference
     covers all 86 tables and all 990 columns; this is the part you keep open.</p>
-    <p class="boiler"><b>Four columns are on every table and are left out below:</b>
-    <code>id</code>, <code>school_id</code>, <code>created_at</code> and
-    <code>updated_at</code>. Stating them once rather than 58 times removes __SAVED__
-    of __FULL__ rows. <code>school_id</code> is the tenant key — the product is sold to
-    separate schools, and a row without it would leak between customers — so its edge is
-    also left off the diagrams, which would otherwise draw it 58 times.</p>
+    <p class="boiler"><b>Four columns are left out below</b> because they repeat on
+    almost every table: <code>id</code>, <code>school_id</code>, <code>created_at</code>
+    and <code>updated_at</code>. Stating them once rather than 58 times removes __SAVED__
+    of __FULL__ rows. <code>school_id</code> is the tenant key, so its edge is left off the
+    diagrams too, which would otherwise draw it on nearly every table.</p>
+    <p class="boiler"><b>Four tables are exceptions, deliberately.</b> __NO_TENANT__ carry
+    no <code>school_id</code>: they derive from <code>TimestampedBase</code> rather than
+    <code>TenantBase</code>, because <code>schools</code> <em>is</em> the tenant, and the
+    permission vocabulary and the job schedule belong to the software rather than to any
+    one school. <code>alembic_version</code> has none of the four &mdash; it is Alembic's
+    own bookkeeping and not part of the product.</p>
   </div>
 </header>
 
@@ -273,7 +287,9 @@ body = (BODY
         .replace("__NAV__", nav)
         .replace("__SECTIONS__", sections())
         .replace("__SAVED__", str(FULL - SHOWN))
-        .replace("__FULL__", str(FULL)))
+        .replace("__FULL__", str(FULL))
+        .replace("__NO_TENANT__", ", ".join(
+            "<code>%s</code>" % t for t in NO_TENANT)))
 
 FONTS = ('<link rel="preconnect" href="https://fonts.googleapis.com">\n'
          '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'

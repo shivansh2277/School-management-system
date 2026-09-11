@@ -100,10 +100,13 @@ for domain, tables in g.DOMAINS:
         % (esc(domain), len(live), len(empty)))
 
 RULES = [
-    ("Every table carries <code>school_id</code>",
+    ("Almost every table carries <code>school_id</code>",
      "The product is sold to separate, independent schools; a tenant is a customer, not a "
-     "branch. The column is declared on a shared base class so a new table cannot quietly "
-     "be created without one. A missing tenant key is a data leak between customers."),
+     "branch. The column is declared on <code>TenantBase</code> so a new table cannot "
+     "quietly be created without one. Three tables derive from <code>TimestampedBase</code> "
+     "instead and have none: <code>schools</code> is the tenant, and "
+     "<code>permissions</code> and <code>scheduled_jobs</code> belong to the software "
+     "rather than to any one school."),
     ("Year-scoped facts hang off <code>enrolment_id</code>",
      "A fee, an attendance mark, a bus seat and a set of marks belong to a child's year in "
      "a class, so they point at <code>enrolments</code>. A name and a date of birth belong "
