@@ -14,7 +14,7 @@ import {
 
 import { api, money } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import { Card, Empty, Pill, StatCard } from "../components/ui";
+import { Card, Empty, ErrorState, Pill, StatCard } from "../components/ui";
 import { theme } from "../theme";
 
 type Stats = {
@@ -40,13 +40,25 @@ const PERF_LABELS: [keyof Stats["performance"], string][] = [
 ];
 
 export function Dashboard() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["admin-stats"],
     // The backend route has no response_model, so the generated schema types
     // it only as `{[key: string]: unknown}` - Stats documents the real shape.
     queryFn: () => api.get("/admin/dashboard/stats") as Promise<Stats>,
   });
 
+  // A failed load used to fall through to "Loading..." and stay there: `error`
+  // was never read, so a 500 or a dropped connection was indistinguishable from
+  // a slow one. This is the screen a principal opens twice a day, and a
+  // permanent "Loading..." is how they conclude the system is hung rather than
+  // that one request failed. Part Three rule 8: if a query failed, say so.
+  if (error) {
+    return (
+      <Card title="Overview">
+        <ErrorState error={error} />
+      </Card>
+    );
+  }
   if (isLoading || !data) return <p className="text-ink-faint">Loading...</p>;
 
   const perf = PERF_LABELS.map(([key, label], i) => ({
@@ -135,7 +147,9 @@ export function Dashboard() {
                 </PieChart>
                 <div className="absolute inset-0 grid place-items-center pointer-events-none">
                   <span className="text-2xl font-semibold tabular">
-                    {data.attendance.percent}%
+                    {/* The backend returns null rather than a fake 0 when
+                        nothing is marked; rendering it raw printed a bare "%". */}
+                    {data.attendance.percent === null ? "—" : `${data.attendance.percent}%`}
                   </span>
                 </div>
               </div>
@@ -187,7 +201,10 @@ export function Dashboard() {
                 <li key={n.id}>
                   <p>{n.title}</p>
                   <p className="text-xs text-ink-faint">
-                    {n.audience} - {new Date(n.published_at).toLocaleDateString()}
+                    {/* en-GB: a bare toLocaleDateString() renders 9/10/2026 for
+                        10 September, and the office reads dd/mm/yyyy. The
+                        Upcoming Events card below already did this. */}
+                    {n.audience} - {new Date(n.published_at).toLocaleDateString("en-GB")}
                   </p>
                 </li>
               ))}

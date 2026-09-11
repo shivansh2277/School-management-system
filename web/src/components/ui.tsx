@@ -49,7 +49,7 @@ export function Empty({ children }: { children: ReactNode }) {
  * structure or an invoice list is a false statement about the school's
  * money, not a cosmetic gap.
  */
-function ErrorState({ error }: { error: unknown }) {
+export function ErrorState({ error }: { error: unknown }) {
   let message = "Could not load this. Try again.";
   if (error instanceof ApiError) {
     if (error.status === 403) message = "Refused: your role does not have permission to view this.";
