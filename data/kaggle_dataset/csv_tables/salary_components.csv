@@ -1,0 +1,12 @@
+code,name,type,calculation,value,applies_below_gross,taxable,statutory,active,sequence,school_id,id,created_at,updated_at
+BASIC,Basic,earning,percent_of_gross,50.00,,True,False,True,10,36,23,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+HRA,House Rent Allowance,earning,percent_of_basic,40.00,,True,False,True,20,36,24,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+CONV,Conveyance,earning,fixed,1600.00,,True,False,True,30,36,25,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+DA,Dearness Allowance,earning,percent_of_basic,0.00,,True,False,False,40,36,26,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+SPL,Special Allowance,earning,balance,0.00,,True,False,True,90,36,27,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+PF,Provident Fund,deduction,percent_of_basic,12.00,,False,True,True,110,36,28,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+ESI,Employee State Insurance,deduction,percent_of_gross,0.75,21000.00,False,True,True,120,36,29,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+PT,Professional Tax,deduction,fixed,0.00,,False,True,False,130,36,30,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+TDS,Income Tax Deducted at Source,deduction,fixed,0.00,,False,True,False,140,36,31,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+LOP,Loss of Pay,deduction,loss_of_pay,0.00,,False,False,True,150,36,32,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+PF_ER,Provident Fund (employer),employer_contribution,percent_of_basic,12.00,,False,True,True,210,36,33,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30

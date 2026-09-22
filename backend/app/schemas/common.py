@@ -22,7 +22,8 @@ class PersonRef(BaseModel):
 
 
 class AttendanceEntry(BaseModel):
-    student_id: int
+    student_id: int | None = None
+    enrolment_id: int | None = None
     status: AttendanceStatus
     remarks: str | None = None
 
@@ -38,6 +39,7 @@ class AttendanceMarkRequest(BaseModel):
 
 class RollRow(BaseModel):
     student_id: int
+    enrolment_id: int | None = None
     full_name: str
     roll_no: int
     status: AttendanceStatus | None = None
@@ -71,12 +73,14 @@ class HomeworkCreate(BaseModel):
     title: str
     description: str | None = None
     due_date: date
+    attachment_url: str | None = None
 
 
 class HomeworkUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
     due_date: date | None = None
+    attachment_url: str | None = None
 
 
 class HomeworkOut(BaseModel):
@@ -93,6 +97,7 @@ class HomeworkOut(BaseModel):
     due_date: date
     submitted_count: int
     total_students: int
+    attachment_url: str | None = None
 
 
 class StudentHomeworkOut(HomeworkOut):
@@ -100,20 +105,36 @@ class StudentHomeworkOut(HomeworkOut):
     submitted_at: datetime | None
     late: bool
     answer_text: str | None
+    marks: Decimal | None = None
+    remarks: str | None = None
+    graded_at: datetime | None = None
 
 
 class SubmissionRow(BaseModel):
+    id: int | None = None
+    submission_id: int | None = None
     student_id: int
+    enrolment_id: int | None = None
     full_name: str
     roll_no: int
     submitted: bool
     submitted_at: datetime | None
     late: bool
     answer_text: str | None
+    marks: Decimal | None = None
+    remarks: str | None = None
+    graded_at: datetime | None = None
+    attachment_url: str | None = None
 
 
 class SubmitRequest(BaseModel):
     answer_text: str
+    attachment_url: str | None = None
+
+
+class GradeSubmissionRequest(BaseModel):
+    marks: Decimal
+    remarks: str | None = None
 
 
 # --- assessment -------------------------------------------------------------
@@ -162,7 +183,8 @@ class ExamScheduleOut(BaseModel):
 
 
 class MarkEntry(BaseModel):
-    student_id: int
+    student_id: int | None = None
+    enrolment_id: int | None = None
     # None with neither flag set means "not entered"; the row is left alone
     # rather than written as a zero.
     marks_obtained: Decimal | None = None
@@ -181,6 +203,7 @@ class MarksRequest(BaseModel):
 
 class MarksRosterRow(BaseModel):
     student_id: int
+    enrolment_id: int | None = None
     full_name: str
     roll_no: int
     marks_obtained: Decimal | None

@@ -248,13 +248,13 @@ BODY = """
 <header class="top">
   <div class="wrap">
     <p class="eyebrow">Sunrise School ERP &middot; the working set</p>
-    <h1>The 58 tables that hold data</h1>
+    <h1>The __USED_COUNT__ tables that hold data</h1>
     <p class="lede">Every table the seeded school actually uses, what each one is for,
     the columns that carry meaning, and an entity diagram per area. The full reference
-    covers all 86 tables and all 990 columns; this is the part you keep open.</p>
+    covers all __TOTAL_TABLES__ tables and all __TOTAL_ALL_COLS__ columns; this is the part you keep open.</p>
     <p class="boiler"><b>Four columns are left out below</b> because they repeat on
     almost every table: <code>id</code>, <code>school_id</code>, <code>created_at</code>
-    and <code>updated_at</code>. Stating them once rather than 58 times removes __SAVED__
+    and <code>updated_at</code>. Stating them once rather than __USED_COUNT__ times removes __SAVED__
     of __FULL__ rows. <code>school_id</code> is the tenant key, so its edge is left off the
     diagrams too, which would otherwise draw it on nearly every table.</p>
     <p class="boiler"><b>Four tables are exceptions, deliberately.</b> __NO_TENANT__ carry
@@ -276,16 +276,23 @@ BODY = """
     carries the key. Edges leaving an area are drawn, because a key that crosses a
     boundary is the one that gets forgotten.</p>
     <p>Columns, types, keys and row counts are read from the running database, not
-    written by hand. Generated against migration <code>c3f61e0a77d2</code> on branch
+    written by hand. Generated against migration <code>a1b2c3d4e5f6</code> on branch
     <code>slice/office-feedback</code>; row counts are the seeded demo school's.
     Regenerate with <code>python scripts/gen_db_essentials.py</code>.</p>
   </div>
 </footer>
 """
 
+TOTAL_TABLES = len(g.schema)
+TOTAL_ALL_COLS = sum(len(t["columns"]) for t in g.schema.values())
+USED_COUNT = len(used)
+
 body = (BODY
         .replace("__NAV__", nav)
         .replace("__SECTIONS__", sections())
+        .replace("__USED_COUNT__", str(USED_COUNT))
+        .replace("__TOTAL_TABLES__", str(TOTAL_TABLES))
+        .replace("__TOTAL_ALL_COLS__", str(TOTAL_ALL_COLS))
         .replace("__SAVED__", str(FULL - SHOWN))
         .replace("__FULL__", str(FULL))
         .replace("__NO_TENANT__", ", ".join(

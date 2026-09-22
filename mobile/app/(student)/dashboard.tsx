@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Text, View } from "react-native";
 
-import { api } from "../../src/api/client";
+import { api, formatDate } from "../../src/api/client";
 import { useAuth } from "../../src/auth/AuthContext";
 import { Card, Empty, Loading, Row, Screen, Stat, s } from "../../src/components/ui";
 import { theme } from "../../src/theme";
@@ -60,52 +60,10 @@ export default function StudentDashboard() {
         {data.next_exam ? (
           <Row
             left={<Text style={s.title}>{data.next_exam.subject}</Text>}
-            right={<Text style={s.meta}>{data.next_exam.exam_date}</Text>}
+            right={<Text style={s.meta}>{formatDate(data.next_exam.exam_date)}</Text>}
           />
         ) : (
           <Empty text="No exams scheduled." />
-        )}
-      </Card>
-
-      <Card title="Today">
-        {data.today_schedule.length === 0 ? (
-          <Empty text="No periods today." />
-        ) : (
-          data.today_schedule.map((slot) => (
-            <Row
-              key={slot.period}
-              left={
-                <>
-                  <Text style={s.title}>{slot.subject}</Text>
-                  <Text style={s.meta}>
-                    {slot.teacher}
-                    {slot.room ? ` - ${slot.room}` : ""}
-                  </Text>
-                </>
-              }
-              right={
-                <Text style={s.meta}>
-                  {slot.start_time.slice(0, 5)}-{slot.end_time.slice(0, 5)}
-                </Text>
-              }
-            />
-          ))
-        )}
-      </Card>
-
-      <Card title="Latest notices">
-        {data.recent_notices.length === 0 ? (
-          <Empty text="Nothing new." />
-        ) : (
-          data.recent_notices.map((n) => (
-            <Row
-              key={n.id}
-              left={<Text style={s.title}>{n.title}</Text>}
-              right={
-                <Text style={s.meta}>{new Date(n.published_at).toLocaleDateString()}</Text>
-              }
-            />
-          ))
         )}
       </Card>
     </Screen>

@@ -1,0 +1,4 @@
+cycle_id,class_name,stream,total_seats,reserved_seats,age_on,min_age_years,max_age_years,requires_test,requires_interview,required_document_codes,school_id,id,created_at,updated_at
+2,1,,40,"{""EWS"": 4}",2025-03-31,5.50,7.00,False,True,"[""birth_certificate"", ""photo"", ""address_proof""]",36,14,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+2,6,,20,"{""EWS"": 2}",2025-03-31,10.00,12.00,True,True,"[""birth_certificate"", ""photo"", ""address_proof""]",36,15,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+2,9,,15,"{""EWS"": 1}",2025-03-31,13.00,15.00,True,False,"[""birth_certificate"", ""photo"", ""address_proof""]",36,16,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30

@@ -1,0 +1,8 @@
+cycle_id,enquirer_name,mobile,email,child_name,child_dob,class_of_interest,source,status,assigned_to,next_follow_up_on,converted_application_id,school_id,id,created_at,updated_at
+2,Ramesh Gupta,9811100001,,Aarav Gupta,,1,walk_in,new,,2026-09-01,,36,15,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+2,Neha Saxena,9811100002,,Ira Saxena,,1,website,contacted,,2026-09-02,,36,16,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+2,Imran Qureshi,9811100003,,Zoya Qureshi,,6,referral,interested,,2026-09-03,,36,17,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+2,Deepak Rawat,9811100004,,Kabir Rawat,,6,hoarding,application_form_issued,,2026-09-04,,36,18,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+2,Sunita Pandey,9811100005,,Myra Pandey,,9,phone,not_interested,,,,36,19,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+2,Alok Tiwari,9811100006,,Vivaan Tiwari,,9,digital_ad,lost_to_competitor,,,,36,20,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+2,SAKSHAM,23456788,,,,Class 1,walk_in,converted,,,93,36,21,2026-09-21 13:49:35.241521+05:30,2026-09-21 13:49:38.539949+05:30

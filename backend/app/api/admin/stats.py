@@ -29,7 +29,7 @@ def dashboard_stats(user: User = Depends(admin_only), db: Session = Depends(get_
     )
     return {
         "totals": svc.totals(db, year),
-        "attendance": svc.month_attendance(db, school_id),
+        "attendance": svc.today_attendance(db, school_id),
         "performance": svc.performance(db, school_id),
         "top_performers": svc.top_performers(db, school_id),
         "recent_notices": notice_svc.to_out(db, recent),

@@ -101,15 +101,53 @@ describe("Dashboard", () => {
     expect(await screen.findByText(/31\/08\/2026/)).toBeInTheDocument();
   });
 
-  it("shows a dash, not a bare percent sign, when nothing is marked", async () => {
-    stats.mockResolvedValue({
-      ...ok,
-      // The backend returns null rather than a fake 0; present/absent are
-      // non-zero here only so the donut renders at all.
-      attendance: { present: 1, absent: 0, leave: 0, percent: null },
+  it("renders Fees Overview and Grievances & Feedback cards", async () => {
+    stats.mockImplementation(async (path: string) => {
+      if (path === "/admin/dashboard/stats") return ok;
+      if (path === "/admin/grievances/stats") {
+        return {
+          total_count: 5,
+          open_count: 2,
+          in_progress_count: 2,
+          resolved_count: 1,
+          teacher_count: 3,
+          parent_count: 2,
+        };
+      }
+      if (path === "/admin/grievances") return [];
+      return {};
     });
     renderDashboard();
 
-    expect(await screen.findByText("—")).toBeInTheDocument();
+    expect(await screen.findByText("Fees Overview")).toBeInTheDocument();
+    expect(await screen.findByText("Grievances & Feedback")).toBeInTheDocument();
+  });
+
+  it("renders Attendance Overview with Total Students, Present Today, Absent Today, and Percentage", async () => {
+    stats.mockImplementation(async (path: string) => {
+      if (path === "/admin/dashboard/stats") return ok;
+      if (path === "/admin/grievances/stats") {
+        return {
+          total_count: 0,
+          open_count: 0,
+          in_progress_count: 0,
+          resolved_count: 0,
+          teacher_count: 0,
+          parent_count: 0,
+        };
+      }
+      if (path === "/admin/grievances") return [];
+      return {};
+    });
+    renderDashboard();
+
+    expect(await screen.findByText("Attendance Overview")).toBeInTheDocument();
+    expect(screen.getByText("Total Students")).toBeInTheDocument();
+    expect(screen.getByText("Present Today")).toBeInTheDocument();
+    expect(screen.getByText("Absent Today")).toBeInTheDocument();
+    expect(screen.getByText("Attendance Percentage")).toBeInTheDocument();
+    expect(screen.getByText("90%")).toBeInTheDocument();
+    expect(screen.getByText("View Register")).toBeInTheDocument();
   });
 });
+

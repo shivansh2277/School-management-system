@@ -1,0 +1,3 @@
+registration_no,make_model,capacity,ownership,status,gps_device_id,school_id,id,created_at,updated_at
+UP32AB1234,Tata Starbus 40,40,owned,active,,36,36,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+UP32CD5678,Eicher Skyline 32,32,owned,active,,36,37,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30

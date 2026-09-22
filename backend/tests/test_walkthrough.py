@@ -6,6 +6,13 @@ If this test passes, the demo works; if any link were mocked, it would fail.
 
 from datetime import date, timedelta
 from decimal import Decimal
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def allow_marking_today(monkeypatch):
+    import app.services.attendance
+    monkeypatch.setattr(app.services.attendance, "is_working_day", lambda day, holidays: True)
 
 
 def test_cross_role_walkthrough(client, admin, teacher, student, parent, db, ids):

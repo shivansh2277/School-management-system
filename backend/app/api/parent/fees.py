@@ -4,9 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
 from app.core.db import get_db
-from app.models import Enrolment, FeeInvoice, FeePayment, User
+from app.models import Enrolment, FeeInvoice, FeeInvoiceLine, FeePayment, PaymentAllocation, User
 from app.pdf.receipt import build_receipt
 from app.services import fees as svc
 from app.services import scoping
@@ -100,6 +99,8 @@ def pay(body: PayIn, user: User = Depends(parent_only), db: Session = Depends(ge
     }
 
 
+@router.get("/fees/receipt/{payment_id}")
+@router.get("/fees/receipts/{payment_id}")
 @router.get("/fees/receipts/{payment_id}.pdf")
 def receipt(
     payment_id: int, user: User = Depends(parent_only), db: Session = Depends(get_db)
@@ -116,3 +117,21 @@ def receipt(
             "Content-Disposition": f"inline; filename=receipt-{payment.receipt_no.replace('/', '-')}.pdf"
         },
     )
+
+
+@router.get("/fees/{invoice_id}/receipt.pdf")
+@router.get("/fees/invoices/{invoice_id}/receipt.pdf")
+def invoice_receipt(
+    invoice_id: int, user: User = Depends(parent_only), db: Session = Depends(get_db)
+) -> Response:
+    payment = db.scalar(
+        select(FeePayment)
+        .join(PaymentAllocation, PaymentAllocation.payment_id == FeePayment.id)
+        .join(FeeInvoiceLine, FeeInvoiceLine.id == PaymentAllocation.invoice_line_id)
+        .where(FeeInvoiceLine.invoice_id == invoice_id)
+        .order_by(FeePayment.id.desc())
+    )
+    if not payment:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No payment found for this invoice")
+    return receipt(payment.id, user, db)
+

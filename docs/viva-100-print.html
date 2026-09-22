@@ -1,0 +1,1848 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Sunrise School ERP — 100 Database & Backend Viva Questions</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    @page {
+      size: A4 portrait;
+      margin: 11mm 12mm 13mm 12mm;
+      @bottom-right {
+        content: "Page " counter(page);
+        font-family: 'Inter', sans-serif;
+        font-size: 8pt;
+        font-weight: 500;
+        color: #94a3b8;
+      }
+      @bottom-left {
+        content: "Sunrise School ERP — Database & Backend Viva Guide (100 Questions)";
+        font-family: 'Inter', sans-serif;
+        font-size: 7.5pt;
+        color: #94a3b8;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      font-size: 8.4pt;
+      line-height: 1.48;
+      color: #1e293b;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      margin: 0;
+    }
+
+    /* Header Banner */
+    .header-banner {
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 55%, #312e81 100%);
+      color: #ffffff;
+      padding: 18px 22px;
+      border-radius: 9px;
+      margin-bottom: 14px;
+      border-bottom: 3px solid #6366f1;
+    }
+
+    .banner-badge {
+      display: inline-block;
+      background: rgba(99, 102, 241, 0.35);
+      border: 1px solid rgba(165, 180, 252, 0.4);
+      color: #c7d2fe;
+      font-size: 7.5pt;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 2.5px 8px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+    }
+
+    .header-banner h1 {
+      font-size: 16pt;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+      color: #ffffff;
+    }
+
+    .header-subtitle {
+      font-size: 8.5pt;
+      color: #cbd5e1;
+      margin-bottom: 10px;
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .meta-pill {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      font-size: 7.5pt;
+      color: #e2e8f0;
+      padding: 2.5px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    /* Module Header */
+    .module-header {
+      background: #f8fafc;
+      border-left: 4px solid #4f46e5;
+      padding: 6px 12px;
+      margin: 14px 0 8px 0;
+      border-radius: 0 6px 6px 0;
+      break-after: avoid;
+      page-break-after: avoid;
+    }
+
+    .module-tag {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 9pt;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.01em;
+      text-transform: uppercase;
+    }
+
+    /* Question Card */
+    .q-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px 11px;
+      margin-bottom: 7px;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .q-header {
+      display: flex;
+      align-items: baseline;
+      gap: 7px;
+      margin-bottom: 5px;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 4px;
+    }
+
+    .q-badge {
+      background: #4f46e5;
+      color: #ffffff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.5pt;
+      font-weight: 700;
+      padding: 1.5px 6px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .q-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 8.8pt;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.35;
+    }
+
+    .ans-body {
+      font-size: 8.1pt;
+      color: #334155;
+      line-height: 1.45;
+    }
+
+    .ans-body p {
+      margin: 2px 0 4px 0;
+    }
+
+    .bullet-item {
+      margin: 2px 0 2px 8px;
+      color: #1e293b;
+    }
+
+    .numbered-item {
+      margin: 2px 0 2px 6px;
+      color: #1e293b;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.5pt;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 1px 3px;
+      border-radius: 3px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .code-block {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 6px 9px;
+      border-radius: 5px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7pt;
+      line-height: 1.35;
+      overflow-x: hidden;
+      margin: 4px 0;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .code-block code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+      border: none;
+    }
+
+    .formula-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 4px;
+      padding: 4px 8px;
+      margin: 4px 0;
+      font-size: 7.6pt;
+      color: #1e3a8a;
+    }
+
+    /* Top 20 Table */
+    .top20-section {
+      margin-top: 18px;
+      break-before: page;
+      page-break-before: always;
+    }
+
+    .top20-header {
+      background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%);
+      color: #ffffff;
+      padding: 12px 16px;
+      border-radius: 7px;
+      margin-bottom: 12px;
+    }
+
+    .top20-header h2 {
+      font-size: 13pt;
+      font-weight: 800;
+      margin-bottom: 3px;
+    }
+
+    .top20-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7.8pt;
+      margin-top: 6px;
+    }
+
+    .top20-table th {
+      background: #1e1b4b;
+      color: #ffffff;
+      padding: 6px 8px;
+      text-align: left;
+      font-weight: 700;
+      border: 1px solid #312e81;
+    }
+
+    .top20-table td {
+      padding: 5px 8px;
+      border: 1px solid #cbd5e1;
+      vertical-align: top;
+      line-height: 1.4;
+    }
+
+    .top20-table tr:nth-child(even) {
+      background: #f8fafc;
+    }
+
+    .top20-table td:nth-child(1) {
+      font-weight: 700;
+      text-align: center;
+      width: 5%;
+    }
+
+    .top20-table td:nth-child(2) {
+      font-weight: 600;
+      width: 25%;
+      color: #1e1b4b;
+    }
+
+    .top20-table td:nth-child(3) {
+      width: 70%;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Banner -->
+  <div class="header-banner">
+    <div class="banner-badge">Technical Defense & Viva Examination Guide</div>
+    <h1>Sunrise School ERP — 100 Database & Backend Viva Questions</h1>
+    <div class="header-subtitle">Comprehensive Project-Specific Verification &amp; Defense Guide for PostgreSQL 18 &amp; FastAPI Backend</div>
+    <div class="meta-pills">
+      <span class="meta-pill">🎯 100 Project-Specific Questions</span>
+      <span class="meta-pill">🗄️ 61 Active Populated Tables</span>
+      <span class="meta-pill">💰 28 In-Depth Fee &amp; Ledger Questions</span>
+      <span class="meta-pill">⚡ Data Flows, ER Rules &amp; Constraints</span>
+      <span class="meta-pill">⭐ Top 20 High-Yield Exam Questions</span>
+    </div>
+  </div>
+
+  <!-- All 100 Q&A Cards -->
+  <div class="cards-container">
+    
+            <div class="module-header" style="border-left-color: #3b82f6;">
+              <span class="module-tag">MODULE 1: Architecture, Multi-Tenancy &amp; Core Design Rules</span>
+            </div>
+            
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q1</span>
+            <span class="q-title">What multi-tenancy architecture does Sunrise ERP use, and how is it enforced at the database level?</span>
+          </div>
+          <div class="ans-body">
+            <p>Sunrise ERP uses a <strong>shared-database, shared-schema multi-tenant architecture with column-level discriminator (<code>school_id</code>)</strong>.</p>
+<div class="bullet-item">• Every school is an independent tenant (customer), not a branch of a single institution.</div>
+<div class="bullet-item">• Almost every model inherits from <code>TenantBase</code> (declared in <code>backend/app/models/base.py</code>), which automatically injects <code>school_id: Mapped[int] = mapped_column(BigInteger, ForeignKey(&quot;schools.id&quot;, ondelete=&quot;CASCADE&quot;), nullable=False, index=True)</code>.</div>
+<div class="bullet-item">• Compound unique constraints throughout the schema explicitly prefix with <code>school_id</code> (e.g., <code>UniqueConstraint(&quot;school_id&quot;, &quot;admission_no&quot;)</code> on <code>students</code>, <code>UniqueConstraint(&quot;school_id&quot;, &quot;invoice_no&quot;)</code> on <code>fee_invoices</code>).</div>
+<div class="bullet-item">• Only three operational tables in the system do not carry <code>school_id</code>:</div>
+<div class="numbered-item"><strong>1.</strong> <code>schools</code> (which represents the tenant itself),</div>
+<div class="numbered-item"><strong>2.</strong> <code>permissions</code> (global software authorization vocabulary belonging to the codebase, not custom to any school),</div>
+<div class="numbered-item"><strong>3.</strong> <code>scheduled_jobs</code> (global system worker registry).</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q2</span>
+            <span class="q-title">Why does the project separate `students` from `enrolments`, and what bug does this prevent?</span>
+          </div>
+          <div class="ans-body">
+            <p>The split separates <strong>lifetime facts</strong> from <strong>session/year-scoped facts</strong>:</p>
+<div class="bullet-item">• <strong><code>students</code></strong> stores facts that belong to the child for their entire schooling lifetime: <code>id</code>, <code>admission_no</code>, <code>full_name</code>, <code>dob</code>, <code>gender</code>, <code>blood_group</code>, <code>status</code>.</div>
+<div class="bullet-item">• <strong><code>enrolments</code></strong> stores facts that belong to a single academic year: <code>enrolment_id</code>, <code>student_id</code>, <code>class_section_id</code>, <code>academic_year_id</code>, <code>roll_no</code>, <code>status</code>.</div>
+<div class="bullet-item">• <strong>Why this exists:</strong> Academic marks, attendance records, fee invoices, bus seat assignments, and class teacher allocations point to <code>enrolment_id</code>, <strong>never</strong> directly to <code>student_id</code>.</div>
+<div class="bullet-item">• <strong>Bug prevented:</strong> If tables pointed to <code>student_id</code>, promoting a student from Class 9 to Class 10 at the start of a new academic year would silently overwrite or mix Class 9 attendance, fees, and marks with Class 10. By keying to <code>enrolment_id</code>, every session&#x27;s records are completely isolated and historical reports remain intact.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q3</span>
+            <span class="q-title">What is the financial immutability rule implemented in the database, and how does it work?</span>
+          </div>
+          <div class="ans-body">
+            <p><strong>Financial money rows are NEVER updated or deleted in place.</strong></p>
+<div class="numbered-item"><strong>1.</strong> <strong>Invoices:</strong> Once created in <code>fee_invoices</code>, an invoice amount is never edited. If billed incorrectly, the invoice <code>status</code> is changed to <code>&#x27;void&#x27;</code>, an audit reason is captured in <code>void_reason</code>, and a brand-new invoice is issued.</div>
+<div class="numbered-item"><strong>2.</strong> <strong>Payments:</strong> If an administrative error or bounced cheque occurs, the original <code>fee_payments</code> row is never deleted or altered. Instead, a <strong>contra payment entry</strong> is inserted into <code>fee_payments</code>:</div>
+<div class="bullet-item">• It carries a <strong>negative amount</strong> (<code>-amount</code>),</div>
+<div class="bullet-item">• It sets <code>reverses_payment_id = original_payment.id</code>,</div>
+<div class="bullet-item">• It records a mandatory audit <code>reason</code>,</div>
+<div class="bullet-item">• Corresponding negative rows are inserted into <code>payment_allocations</code> to un-settle the invoice lines.</div>
+<div class="bullet-item">• This guarantees that accounting ledgers can be audited chronologically without loss of financial history.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q4</span>
+            <span class="q-title">Why is there no `balance_due` or `outstanding_fees` column stored on the `students` or `enrolments` tables?</span>
+          </div>
+          <div class="ans-body">
+            <p>A balance is <strong>always a runtime <code>SUM()</code>, never a stored column</strong>.</p>
+<div class="bullet-item">• Storing a pre-computed balance introduces cache invalidation bugs (e.g., if a payment is reversed, a concession applied, or an invoice line voided, a denormalized balance column easily goes out of sync).</div>
+<div class="bullet-item">• In Sunrise ERP, a child&#x27;s outstanding fees are computed directly by SQL aggregating:</div>
+<div class="formula-box"><strong>Formula:</strong> <code>\text{Outstanding} = \sum(\text{fee\_invoice\_lines.amount} - \text{fee\_invoice\_lines.discount}) - \sum(\text{payment\_allocations.amount})</code></div>
+<div class="bullet-item">• When an administrator queries <code>/admin/fees/defaulters</code> or <code>/admin/students</code>, the database calculates the live net balance dynamically using grouped joins.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q5</span>
+            <span class="q-title">How does the system handle destructive database actions, and which table tracks them?</span>
+          </div>
+          <div class="ans-body">
+            <p>All destructive actions (voiding an invoice, reversing a fee payment, deleting a notice, deactivating a user, or changing academic year status) require an explicit user-typed justification.</p>
+<div class="bullet-item">• The backend enforces this via the <code>AuditAction</code> service (<code>backend/app/services/audit.py</code>).</div>
+<div class="bullet-item">• Every destructive event is written to the <strong><code>audit_log</code></strong> table with:</div>
+<div class="bullet-item">• <code>school_id</code>,</div>
+<div class="bullet-item">• <code>user_id</code> (the staff member executing the action),</div>
+<div class="bullet-item">• <code>action</code> (e.g. <code>&#x27;fee.invoice.void&#x27;</code>, <code>&#x27;fee.payment.reverse&#x27;</code>, <code>&#x27;comms.notice.delete&#x27;</code>),</div>
+<div class="bullet-item">• <code>entity_type</code> and <code>entity_id</code> (the affected target table and record ID),</div>
+<div class="bullet-item">• <code>reason</code> (the exact string entered by the user in the confirmation dialog),</div>
+<div class="bullet-item">• <code>before_state</code> and <code>after_state</code> (JSON snapshots of the modified row),</div>
+<div class="bullet-item">• <code>ip_address</code> and <code>created_at</code>.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q6</span>
+            <span class="q-title">How are sequential human-readable numbers (like Admission No, Invoice No, Receipt No) generated safely without race conditions?</span>
+          </div>
+          <div class="ans-body">
+            <p>They are managed by the <strong><code>number_sequences</code></strong> table using database row-level locking.</p>
+<div class="bullet-item">• Columns: <code>school_id</code>, <code>entity_type</code> (<code>&#x27;admission&#x27;</code>, <code>&#x27;invoice&#x27;</code>, <code>&#x27;receipt&#x27;</code>), <code>prefix</code> (e.g. <code>&#x27;INV-&#x27;</code>), <code>current_val</code>, <code>padding</code> (e.g. <code>6</code>).</div>
+<div class="bullet-item">• When a new number is generated, the backend executes <code>SELECT current_val FROM number_sequences WHERE school_id = :sid AND entity_type = :type FOR UPDATE</code>.</div>
+<div class="bullet-item">• <code>FOR UPDATE</code> places an exclusive lock on that specific sequence row until the transaction commits.</div>
+<div class="bullet-item">• The backend increments <code>current_val += 1</code>, formats the string (e.g. <code>INV-2025-000142</code>), updates the row, and returns it. This guarantees no duplicate numbers even under concurrent billing requests.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q7</span>
+            <span class="q-title">How does the `settings` table work, and why does an unset setting NOT fail?</span>
+          </div>
+          <div class="ans-body">
+            <p><code>settings</code> stores typed key-value pairs (<code>key</code>, <code>value</code> JSON, <code>school_id</code>).</p>
+<div class="bullet-item">• It follows <strong>Level 1 and Level 3 configuration</strong> (<code>backend/app/core/settings_registry.py</code>).</div>
+<div class="bullet-item">• The application defines hardcoded registry defaults in Python (<code>DEFAULTS</code> dictionary).</div>
+<div class="bullet-item">• When <code>school_settings.get(db, school_id, key)</code> is called:</div>
+<div class="bullet-item">• It checks if a row exists in <code>settings</code> for that <code>school_id</code> and <code>key</code>.</div>
+<div class="bullet-item">• If found, it returns the custom <code>Setting.value</code>.</div>
+<div class="bullet-item">• If <code>None</code> (unset), it returns the default defined in the Python registry without writing to the database.</div>
+<div class="bullet-item">• This prevents database bloat and ensures newly introduced configuration flags work across all tenant schools without running complex data migrations.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q8</span>
+            <span class="q-title">What tables power Role-Based Access Control (RBAC), and what is the relationship between them?</span>
+          </div>
+          <div class="ans-body">
+            <p>Five tables form the security foundation:</p>
+<div class="numbered-item"><strong>1.</strong> <strong><code>users</code></strong>: Authentication credentials (<code>email</code>, <code>hashed_password</code>, <code>role</code>).</div>
+<div class="numbered-item"><strong>2.</strong> <strong><code>roles</code></strong>: System roles (<code>Admin</code>, <code>Principal</code>, <code>Teacher</code>, <code>Accountant</code>) and custom roles created by schools.</div>
+<div class="numbered-item"><strong>3.</strong> <strong><code>permissions</code></strong>: 146 granular capability codes (e.g., <code>fees.invoice.read</code>, <code>students.profile.write</code>, <code>exam.marks.lock</code>).</div>
+<div class="numbered-item"><strong>4.</strong> <strong><code>role_permissions</code></strong>: Many-to-Many junction table linking <code>role_id</code> to <code>permission_code</code>.</div>
+<div class="numbered-item"><strong>5.</strong> <strong><code>user_roles</code></strong>: Many-to-Many junction table linking <code>user_id</code> to <code>role_id</code>.</div>
+<div class="bullet-item">• The database enforces referential integrity so deleting a role removes its associated <code>role_permissions</code> and <code>user_roles</code> entries automatically via foreign key cascading.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q9</span>
+            <span class="q-title">What data types are standard for Currency, Dates, and IDs across the schema?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <strong>Currency &amp; Amounts:</strong> Strictly <code>numeric(10, 2)</code> or <code>numeric(12, 2)</code> (e.g., on <code>fee_invoices</code>, <code>fee_payments</code>, <code>salary_structures</code>). <code>FLOAT</code> is strictly prohibited to prevent floating-point rounding errors.</div>
+<div class="bullet-item">• <strong>Timestamps:</strong> <code>timestamptz</code> (<code>timestamp with time zone</code>) throughout, storing UTC on the wire and rendered to Lucknow office local time (<code>Asia/Kolkata</code>) at the presentation layer.</div>
+<div class="bullet-item">• <strong>Dates:</strong> <code>date</code> without time zone for calendar events (<code>dob</code>, <code>issued_on</code>, <code>due_date</code>, <code>attendance.date</code>).</div>
+<div class="bullet-item">• <strong>Primary Keys:</strong> <code>bigint</code> (auto-incrementing 64-bit integer sequences via PostgreSQL <code>BIGSERIAL</code> / <code>IDENTITY</code>).</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q10</span>
+            <span class="q-title">How does `academic_years` handle overlapping sessions (e.g., in January when next year&#x27;s admissions start while the current year is still teaching)?</span>
+          </div>
+          <div class="ans-body">
+            <p>In <code>academic_years</code>, a session has lifecycle statuses: <code>draft</code>, <code>active</code>, <code>closing</code>, <code>closed</code>.</p>
+<div class="bullet-item">• Columns: <code>id</code>, <code>school_id</code>, <code>code</code> (e.g. <code>&#x27;2025-26&#x27;</code>), <code>start_date</code>, <code>end_date</code>, <code>status</code>, <code>is_current</code>.</div>
+<div class="bullet-item">• The schema does <strong>not</strong> restrict the database to only one open academic year.</div>
+<div class="bullet-item">• Multiple academic years can exist simultaneously in the database with <code>status = &#x27;active&#x27;</code>. For example, <code>2025-26</code> remains active for classes, attendance, and quarterly fees, while <code>2026-27</code> is active in <code>admission_cycles</code> to accept entrance applications and interview evaluations.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q11</span>
+            <span class="q-title">How are custom user-defined fields stored without modifying the PostgreSQL table schemas?</span>
+          </div>
+          <div class="ans-body">
+            <p>Via the <strong><code>custom_fields</code></strong> table.</p>
+<div class="bullet-item">• Columns: <code>id</code>, <code>school_id</code>, <code>entity_type</code> (<code>&#x27;student&#x27;</code>, <code>&#x27;employee&#x27;</code>, <code>&#x27;enquiry&#x27;</code>), <code>field_name</code>, <code>field_label</code>, <code>field_type</code> (<code>&#x27;text&#x27;</code>, <code>&#x27;number&#x27;</code>, <code>&#x27;date&#x27;</code>, <code>&#x27;dropdown&#x27;</code>), <code>options</code> (JSON array for dropdowns), <code>is_required</code>.</div>
+<div class="bullet-item">• Dynamic values entered by users are stored inside the <code>custom_data</code> JSONB column on the corresponding entity row (e.g., on <code>students.custom_data</code> or <code>employees.custom_data</code>).</div>
+<div class="bullet-item">• This allows schools to add attributes like &quot;Aadhaar Card No&quot; or &quot;Bus Route Stop Preference&quot; without executing <code>ALTER TABLE</code> DDL migrations.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q12</span>
+            <span class="q-title">What is `TenantBase` vs `TimestampedBase` in `backend/app/models/base.py`?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <strong><code>TimestampedBase</code></strong> provides the standard primary key <code>id: BigInteger</code> and audit timestamps: <code>created_at</code> (default <code>now()</code>) and <code>updated_at</code> (updated on modification).</div>
+<div class="bullet-item">• <strong><code>TenantBase</code></strong> inherits from <code>TimestampedBase</code> and adds the non-nullable foreign key <code>school_id: ForeignKey(&quot;schools.id&quot;, ondelete=&quot;CASCADE&quot;)</code>.</div>
+<div class="bullet-item">• Any table that holds data belonging to a school inherits from <code>TenantBase</code>. Tables that represent global system concepts inherit directly from <code>TimestampedBase</code>.</div>
+<p>---</p>
+          </div>
+        </div>
+        
+
+            <div class="module-header" style="border-left-color: #4f46e5;">
+              <span class="module-tag">MODULE 2: Students, Enrolments &amp; Guardians</span>
+            </div>
+            
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q13</span>
+            <span class="q-title">What is the exact relationship between `students`, `guardians`, and `student_guardian`?</span>
+          </div>
+          <div class="ans-body">
+            <p>It is a <strong>Many-to-Many relationship</strong> modeled via the junction table <strong><code>student_guardian</code></strong>:</p>
+<div class="bullet-item">• A student can have multiple guardians (Father, Mother, Local Guardian).</div>
+<div class="bullet-item">• A guardian can have multiple children enrolled in the same school (Siblings).</div>
+<div class="bullet-item">• <strong><code>student_guardian</code> junction columns:</strong></div>
+<div class="bullet-item">• <code>student_id</code> (FK <code>students.id</code>)</div>
+<div class="bullet-item">• <code>guardian_id</code> (FK <code>guardians.id</code>)</div>
+<div class="bullet-item">• <code>relation</code> (Enum: <code>father</code>, <code>mother</code>, <code>local_guardian</code>, <code>other</code>)</div>
+<div class="bullet-item">• <code>is_primary</code> (Boolean: indicates who receives official SMS/fee alerts)</div>
+<div class="bullet-item">• <code>is_emergency_contact</code> (Boolean)</div>
+<div class="bullet-item">• <code>pickup_authorized</code> (Boolean: verified at the school gate)</div>
+<div class="bullet-item">• <strong>Unique constraint:</strong> <code>UniqueConstraint(&quot;student_id&quot;, &quot;guardian_id&quot;)</code> prevents linking the same guardian twice to the same student.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q14</span>
+            <span class="q-title">How does the system enforce sibling discounts at the database level using `guardians`?</span>
+          </div>
+          <div class="ans-body">
+            <p>When an enquiry or application is checked for sibling concession:</p>
+<div class="numbered-item"><strong>1.</strong> The query joins <code>student_guardian</code> on <code>guardian_id</code> where <code>students.status = &#x27;active&#x27;</code>.</div>
+<div class="numbered-item"><strong>2.</strong> If another student row shares the same <code>guardian_id</code> (specifically where <code>relation IN (&#x27;father&#x27;, &#x27;mother&#x27;)</code>), the backend identifies an active sibling relationship.</div>
+<div class="numbered-item"><strong>3.</strong> The system checks <code>settings.key = &#x27;fees.sibling_concession_percent&#x27;</code> (default <code>10%</code>) and automatically proposes a <code>fee_concessions</code> record for the younger sibling.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q15</span>
+            <span class="q-title">What columns exist on `enrolments`, and how does it link a student to a physical classroom?</span>
+          </div>
+          <div class="ans-body">
+            <p><code>enrolments</code> bridges <code>students</code> to <code>class_sections</code>:</p>
+<div class="bullet-item">• <strong>Columns:</strong> <code>id</code>, <code>school_id</code>, <code>student_id</code> (FK), <code>class_section_id</code> (FK), <code>academic_year_id</code> (FK), <code>roll_no</code> (Integer), <code>enrolled_on</code> (Date), <code>status</code> (Enum: <code>active</code>, <code>promoted</code>, <code>transferred</code>, <code>withdrawn</code>), <code>exit_date</code>, <code>exit_reason</code>.</div>
+<div class="bullet-item">• <strong>Constraint:</strong> <code>UniqueConstraint(&quot;school_id&quot;, &quot;academic_year_id&quot;, &quot;student_id&quot;)</code> ensures a student can hold only <strong>one</strong> active enrolment per academic year.</div>
+<div class="bullet-item">• <strong>Constraint:</strong> <code>UniqueConstraint(&quot;school_id&quot;, &quot;class_section_id&quot;, &quot;academic_year_id&quot;, &quot;roll_no&quot;)</code> prevents two students in the same class section from holding the same roll number.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q16</span>
+            <span class="q-title">What happens in the database if a student leaves the school (transfers/withdraws)?</span>
+          </div>
+          <div class="ans-body">
+            <div class="numbered-item"><strong>1.</strong> The student is <strong>never deleted</strong> (<code>DELETE FROM students</code> is prohibited to preserve historical CBSE records and audit compliance).</div>
+<div class="numbered-item"><strong>2.</strong> The <code>enrolments.status</code> is updated to <code>&#x27;withdrawn&#x27;</code> or <code>&#x27;transferred&#x27;</code>.</div>
+<div class="numbered-item"><strong>3.</strong> <code>enrolments.exit_date</code> and <code>enrolments.exit_reason</code> are populated.</div>
+<div class="numbered-item"><strong>4.</strong> <code>students.status</code> is set to <code>&#x27;inactive&#x27;</code>.</div>
+<div class="numbered-item"><strong>5.</strong> An entry is written to <code>audit_log</code> with the transfer certificate reason.</div>
+<div class="numbered-item"><strong>6.</strong> The child automatically stops appearing on active daily attendance registers and future monthly fee invoice generation runs.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q17</span>
+            <span class="q-title">What indexes are placed on the `students` table to ensure fast search in the office directory?</span>
+          </div>
+          <div class="ans-body">
+            <p>The <code>students</code> table has indexes on:</p>
+<div class="numbered-item"><strong>1.</strong> <code>(school_id, admission_no)</code> — Unique B-tree index for instant lookup when typing admission numbers.</div>
+<div class="numbered-item"><strong>2.</strong> <code>(school_id, status)</code> — Index for filtering active rosters vs alumni.</div>
+<div class="numbered-item"><strong>3.</strong> <code>full_name</code> — Trigram or B-tree prefix index for rapid case-insensitive office name search (<code>LIKE &#x27;Sharma%&#x27;</code>).</div>
+<div class="numbered-item"><strong>4.</strong> <code>school_id</code> — Multi-tenant partition index injected by <code>TenantBase</code>.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q18</span>
+            <span class="q-title">What is the foreign key cascade behavior between `schools` and `students`?</span>
+          </div>
+          <div class="ans-body">
+            <p><code>ondelete=&quot;CASCADE&quot;</code>:</p>
+<div class="bullet-item">• If a tenant <code>School</code> row is deleted, all child records (<code>students</code>, <code>enrolments</code>, <code>fee_invoices</code>, etc.) are cascaded and deleted by PostgreSQL.</div>
+<div class="bullet-item">• However, between <code>students</code> and <code>enrolments</code>, the constraint is <code>RESTRICT</code> / default <code>NO ACTION</code> on critical transactional tables: you cannot delete a student row if an <code>enrolment</code> or <code>fee_payment</code> references it.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q19</span>
+            <span class="q-title">Where is a student&#x27;s medical and blood group information stored?</span>
+          </div>
+          <div class="ans-body">
+            <p>Directly in the <strong><code>students</code></strong> table:</p>
+<div class="bullet-item">• Columns: <code>blood_group</code> (<code>varchar(5)</code>), <code>medical_notes</code> (<code>text</code>), <code>emergency_contact_name</code> (<code>varchar(120)</code>), <code>emergency_contact_phone</code> (<code>varchar(20)</code>).</div>
+<div class="bullet-item">• This is stored on <code>students</code> because a child&#x27;s blood group and allergies are lifetime physiological facts that do not change from year to year.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q20</span>
+            <span class="q-title">Can a student exist without an enrolment in the database?</span>
+          </div>
+          <div class="ans-body">
+            <p><strong>Yes.</strong></p>
+<div class="bullet-item">• When a student is first admitted or their biodata is drafted, a row is created in <code>students</code>.</div>
+<div class="bullet-item">• Until they are assigned to a specific class section (e.g. Class 1-A) for the active academic year, no row exists in <code>enrolments</code>.</div>
+<div class="bullet-item">• Furthermore, an alumnus who graduated retains their <code>students</code> row indefinitely, but has no <code>enrolments</code> row for current or future academic years.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q21</span>
+            <span class="q-title">What table tracks student house allocations or second languages?</span>
+          </div>
+          <div class="ans-body">
+            <p><code>students</code> has optional columns <code>house</code> (<code>varchar(30)</code>) and <code>second_language</code> (<code>varchar(30)</code>). Additional institutional attributes are stored dynamically inside <code>students.custom_data</code> (JSONB) mapped to definitions in <code>custom_fields</code>.</p>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q22</span>
+            <span class="q-title">What happens if two students have the same roll number in the same section?</span>
+          </div>
+          <div class="ans-body">
+            <p>The database rejects the <code>INSERT</code> or <code>UPDATE</code> with a PostgreSQL integrity violation:</p>
+<p><code>psycopg.errors.UniqueViolation: duplicate key value violates unique constraint &quot;uq_enrolments_class_roll&quot;</code>.</p>
+<p>This is enforced by <code>UniqueConstraint(&quot;class_section_id&quot;, &quot;academic_year_id&quot;, &quot;roll_no&quot;)</code>.</p>
+<p>---</p>
+          </div>
+        </div>
+        
+
+            <div class="module-header" style="border-left-color: #059669;">
+              <span class="module-tag">MODULE 3: Deep-Dive on Fees, Invoicing, Payments &amp; Defaulters</span>
+            </div>
+            
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q23</span>
+            <span class="q-title">What are the 8 active tables involved in the Fees module, and what is the specific role of each?</span>
+          </div>
+          <div class="ans-body">
+            <div class="numbered-item"><strong>1.</strong> <strong><code>fee_heads</code></strong>: The master catalog of named billing components (e.g., Tuition Fee, Development Charge, Transport Fee, Examination Fee).</div>
+<div class="numbered-item"><strong>2.</strong> <strong><code>fee_plans</code></strong>: Represents the annual fee structure assigned to a class grade (e.g. &quot;Class 10 Fee Plan 2025-26&quot;).</div>
+<div class="numbered-item"><strong>3.</strong> <strong><code>fee_plan_items</code></strong>: The individual line items of a fee plan, defining which <code>fee_head</code> is charged, the monetary <code>amount</code>, and the billing <code>frequency</code> (monthly, quarterly, annual).</div>
+<div class="numbered-item"><strong>4.</strong> <strong><code>fee_concessions</code></strong>: Approved student discounts (scholarships, sibling concessions, staff child discounts) with percentage/amount and audit approval.</div>
+<div class="numbered-item"><strong>5.</strong> <strong><code>fee_invoices</code></strong>: The header bill issued to a student enrolment for a specific calendar month and academic year.</div>
+<div class="numbered-item"><strong>6.</strong> <strong><code>fee_invoice_lines</code></strong>: The itemized line charges of an invoice (Head, Base Amount, Discount Amount).</div>
+<div class="numbered-item"><strong>7.</strong> <strong><code>fee_payments</code></strong>: Represents physical money received at the counter or bank (Receipt No, Amount, Payment Method, Idempotency Key).</div>
+<div class="numbered-item"><strong>8.</strong> <strong><code>payment_allocations</code></strong>: The atomic ledger junction mapping exactly how many rupees of a <code>fee_payment</code> settled which specific <code>fee_invoice_line</code>.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q24</span>
+            <span class="q-title">What is the exact data flow and database operation when the admin generates monthly fee invoices for a class?</span>
+          </div>
+          <div class="ans-body">
+            <p>When <code>POST /admin/fees/generate</code> is triggered:</p>
+<div class="numbered-item"><strong>1.</strong> <strong>Enrolment Fetch:</strong> The backend queries <code>enrolments</code> WHERE <code>class_section_id = :id AND status = &#x27;active&#x27; AND academic_year_id = :year_id</code>.</div>
+<div class="numbered-item"><strong>2.</strong> <strong>Plan Lookup:</strong> It identifies the active <code>fee_plans</code> and its <code>fee_plan_items</code> for that class.</div>
+<div class="numbered-item"><strong>3.</strong> <strong>Existing Check:</strong> It queries <code>fee_invoices</code> to ensure no invoice already exists for each <code>(enrolment_id, period_month, period_year)</code> with <code>status != &#x27;void&#x27;</code>.</div>
+<div class="numbered-item"><strong>4.</strong> <strong>Concession Lookup:</strong> It queries active rows in <code>fee_concessions</code> WHERE <code>enrolment_id = :enrolment_id AND status = &#x27;approved&#x27;</code>.</div>
+<div class="numbered-item"><strong>5.</strong> <strong>Invoice Insertion:</strong> Inside a database transaction:</div>
+<div class="bullet-item">• Inserts a row into <code>fee_invoices</code>: <code>invoice_no</code> (via <code>number_sequences</code>), <code>enrolment_id</code>, <code>academic_year_id</code>, <code>period_month</code>, <code>period_year</code>, <code>issued_on</code>, <code>due_date</code>, <code>status = &#x27;issued&#x27;</code>.</div>
+<div class="numbered-item"><strong>6.</strong> <strong>Invoice Lines Insertion:</strong> For every applicable <code>fee_plan_item</code>:</div>
+<div class="bullet-item">• Calculates base <code>amount</code>.</div>
+<div class="bullet-item">• Computes <code>discount</code> if an approved concession matches the <code>fee_head_id</code>.</div>
+<div class="bullet-item">• Inserts a row into <code>fee_invoice_lines</code>: <code>invoice_id</code>, <code>fee_head_id</code>, <code>description</code>, <code>amount</code>, <code>discount</code>.</div>
+<div class="numbered-item"><strong>7.</strong> The transaction commits. No payment or allocation rows are created at this time.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q25</span>
+            <span class="q-title">What happens in the database when a student pays fees at the counter?</span>
+          </div>
+          <div class="ans-body">
+            <p>When <code>POST /admin/fees/payments</code> is submitted:</p>
+<div class="numbered-item"><strong>1.</strong> <strong>Validation:</strong> Checks that the paying <code>enrolment_id</code> exists and payment <code>amount &gt; 0</code>.</div>
+<div class="numbered-item"><strong>2.</strong> <strong>Idempotency Check:</strong> Verifies <code>idempotency_key</code> does not already exist in <code>fee_payments</code> for this <code>school_id</code>.</div>
+<div class="numbered-item"><strong>3.</strong> <strong>Insert Payment:</strong> Inserts into <code>fee_payments</code>:</div>
+<div class="bullet-item">• <code>id</code>, <code>school_id</code>, <code>enrolment_id</code>,</div>
+<div class="bullet-item">• <code>receipt_no</code> (retrieved from <code>number_sequences</code>),</div>
+<div class="bullet-item">• <code>amount</code>, <code>method</code> (<code>cash</code>, <code>cheque</code>, <code>upi</code>, <code>neft</code>),</div>
+<div class="bullet-item">• <code>instrument_ref</code> (e.g. Cheque/Transaction UTR No),</div>
+<div class="bullet-item">• <code>received_at = now()</code>, <code>received_by = user.id</code>, <code>status = &#x27;cleared&#x27;</code>.</div>
+<div class="numbered-item"><strong>4.</strong> <strong>FIFO Allocation Algorithm:</strong></div>
+<div class="bullet-item">• Queries all unsettled <code>fee_invoice_lines</code> for this enrolment, ordered by <code>fee_invoices.due_date ASC, fee_invoice_lines.id ASC</code>.</div>
+<div class="bullet-item">• For each line, calculates remaining balance: $\text{Line Due} = (\text{amount} - \text{discount}) - \sum(\text{existing allocations})$.</div>
+<div class="bullet-item">• Allocates the payment amount to lines oldest-first.</div>
+<div class="bullet-item">• For each covered line, inserts a row into <code>payment_allocations</code>:</div>
+<p><code>payment_id = payment.id</code>, <code>invoice_line_id = line.id</code>, <code>amount = allocated_amount</code>.</p>
+<div class="numbered-item"><strong>5.</strong> <strong>Invoice Status Update:</strong></div>
+<div class="bullet-item">• For each affected invoice, checks if all child lines are fully settled.</div>
+<div class="bullet-item">• If sum of allocations equals sum of lines net amounts: updates <code>fee_invoices.status = &#x27;paid&#x27;</code>, <code>settled_on = today</code>.</div>
+<div class="bullet-item">• If partially settled: updates <code>fee_invoices.status = &#x27;partially_paid&#x27;</code>.</div>
+<div class="numbered-item"><strong>6.</strong> Transaction commits atomically.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q26</span>
+            <span class="q-title">Explain the structure and purpose of the `payment_allocations` table.</span>
+          </div>
+          <div class="ans-body">
+            <p><code>payment_allocations</code> is the <strong>single source of truth for fee realization</strong>.</p>
+<div class="bullet-item">• <strong>Columns:</strong> <code>id</code>, <code>school_id</code>, <code>payment_id</code> (FK <code>fee_payments.id</code>), <code>invoice_line_id</code> (FK <code>fee_invoice_lines.id</code>), <code>amount</code> (<code>numeric(10,2)</code>), <code>created_at</code>, <code>updated_at</code>.</div>
+<div class="bullet-item">• <strong>Why it points to <code>fee_invoice_lines</code> instead of <code>fee_invoices</code>:</strong></div>
+<div class="bullet-item">• A school needs to know exactly which head was collected: did the family pay the Tuition Fee or the Transport Fee?</div>
+<div class="bullet-item">• Accounting ledgers and tax reports require head-wise revenue recognition.</div>
+<div class="bullet-item">• By allocating at the line level, partial payments are accurately split across specific heads.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q27</span>
+            <span class="q-title">How does the database calculate the fee defaulters list? Write the conceptual SQL logic.</span>
+          </div>
+          <div class="ans-body">
+            <p>The backend (<code>backend/app/services/fees.py::defaulters</code>) runs an aggregation query joining invoices, lines, and allocations:</p>
+<pre class="code-block"><code>SELECT 
+    e.id AS enrolment_id,
+    s.id AS student_id,
+    s.full_name AS student_name,
+    s.admission_no,
+    cs.name || &#x27; &#x27; || cs.section AS class_label,
+    emp.full_name AS class_teacher_name,
+    ay.code AS academic_year,
+    MIN(fi.due_date) AS earliest_due_date,
+    SUM(fil.amount - fil.discount) - COALESCE(SUM(pa.amount), 0) AS pending_amount
+FROM fee_invoices fi
+JOIN enrolments e ON fi.enrolment_id = e.id
+JOIN students s ON e.student_id = s.id
+JOIN class_sections cs ON e.class_section_id = cs.id
+LEFT JOIN employees emp ON cs.class_teacher_id = emp.id
+JOIN academic_years ay ON fi.academic_year_id = ay.id
+JOIN fee_invoice_lines fil ON fi.id = fil.invoice_id
+LEFT JOIN payment_allocations pa ON fil.id = pa.invoice_line_id
+WHERE fi.school_id = :school_id
+  AND fi.status IN (&#x27;issued&#x27;, &#x27;partially_paid&#x27;)
+  AND fi.due_date &lt; CURRENT_DATE
+GROUP BY e.id, s.id, s.full_name, s.admission_no, cs.name, cs.section, emp.full_name, ay.code
+HAVING (SUM(fil.amount - fil.discount) - COALESCE(SUM(pa.amount), 0)) &gt; 0
+ORDER BY pending_amount DESC;</code></pre>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q28</span>
+            <span class="q-title">What is an `idempotency_key` on `fee_payments`, and why is it critical?</span>
+          </div>
+          <div class="ans-body">
+            <p><code>idempotency_key</code> is a unique <code>varchar(64)</code> string generated by the frontend/client for each payment submission.</p>
+<div class="bullet-item">• <strong>Enforcement:</strong> <code>UniqueConstraint(&quot;school_id&quot;, &quot;idempotency_key&quot;)</code> on <code>fee_payments</code>.</div>
+<div class="bullet-item">• <strong>Why it is critical:</strong> If the fee counter clerk double-clicks the &quot;Collect Fee&quot; button, or if a network timeout causes a retry after the payment was already committed in the DB, PostgreSQL rejects the second insertion with a unique constraint violation. This physically prevents double-charging a parent or issuing two receipts for one payment.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q29</span>
+            <span class="q-title">How does payment reversal work, and what is a contra payment in the database?</span>
+          </div>
+          <div class="ans-body">
+            <p>When a payment is voided/bounced:</p>
+<div class="numbered-item"><strong>1.</strong> The original <code>fee_payments</code> record is <strong>never deleted</strong>.</div>
+<div class="numbered-item"><strong>2.</strong> A new <code>fee_payments</code> row is inserted with:</div>
+<div class="bullet-item">• <code>amount = -original_payment.amount</code> (negative value),</div>
+<div class="bullet-item">• <code>status = &#x27;reversed&#x27;</code>,</div>
+<div class="bullet-item">• <code>reverses_payment_id = original_payment.id</code>,</div>
+<div class="bullet-item">• <code>reason = user_typed_audit_reason</code>.</div>
+<div class="numbered-item"><strong>3.</strong> Negative rows are inserted into <code>payment_allocations</code> for each line originally paid.</div>
+<div class="numbered-item"><strong>4.</strong> The related <code>fee_invoices.status</code> transitions from <code>&#x27;paid&#x27;</code> back to <code>&#x27;issued&#x27;</code> or <code>&#x27;partially_paid&#x27;</code>, and <code>settled_on</code> is cleared to <code>NULL</code>.</div>
+<div class="numbered-item"><strong>5.</strong> An audit row is logged in <code>audit_log</code>.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q30</span>
+            <span class="q-title">What are the columns and foreign keys of `fee_heads`?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <strong>Columns:</strong> <code>id</code>, <code>school_id</code> (FK <code>schools.id</code>), <code>name</code> (<code>varchar(60)</code>), <code>code</code> (<code>varchar(16)</code>), <code>type</code> (Enum: <code>tuition</code>, <code>transport</code>, <code>exam</code>, <code>facility</code>, <code>other</code>), <code>is_refundable</code> (<code>boolean</code>), <code>gl_code</code> (<code>varchar(20)</code>, General Ledger accounting code), <code>is_active</code> (<code>boolean</code>), <code>created_at</code>, <code>updated_at</code>.</div>
+<div class="bullet-item">• <strong>Unique Constraint:</strong> <code>UniqueConstraint(&quot;school_id&quot;, &quot;code&quot;)</code> prevents duplicate head codes (e.g. <code>&#x27;TUIT&#x27;</code>) within the same school.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q31</span>
+            <span class="q-title">What are the foreign keys on `fee_plan_items`, and what constraint prevents duplicate heads on the same plan?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <code>fee_plan_id</code> points to <code>fee_plans.id</code> (<code>ondelete=&quot;CASCADE&quot;</code>).</div>
+<div class="bullet-item">• <code>fee_head_id</code> points to <code>fee_heads.id</code> (<code>ondelete=&quot;RESTRICT&quot;</code>).</div>
+<div class="bullet-item">• <code>school_id</code> points to <code>schools.id</code>.</div>
+<div class="bullet-item">• <strong>Constraint:</strong> <code>UniqueConstraint(&quot;fee_plan_id&quot;, &quot;fee_head_id&quot;)</code>. A single fee plan cannot list &quot;Tuition Fee&quot; twice; its amount and frequency must be specified in a single plan item.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q32</span>
+            <span class="q-title">How is frequency represented in `fee_plan_items`, and what values are allowed?</span>
+          </div>
+          <div class="ans-body">
+            <p>Stored in the <code>frequency</code> column as a <code>varchar(8)</code> string corresponding to the <code>FeeFrequency</code> enum:</p>
+<div class="bullet-item">• <code>&#x27;monthly&#x27;</code>: Billed every calendar month.</div>
+<div class="bullet-item">• <code>&#x27;term&#x27;</code>: Billed once per school term (e.g., Term 1, Term 2).</div>
+<div class="bullet-item">• <code>&#x27;annual&#x27;</code>: Billed once at the beginning of the academic year.</div>
+<div class="bullet-item">• <code>&#x27;one_time&#x27;</code>: Billed once upon initial enrolment (e.g., Admission Registration Fee).</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q33</span>
+            <span class="q-title">How does the database record an approved student fee discount in `fee_concessions`?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <strong>Columns:</strong> <code>id</code>, <code>school_id</code>, <code>enrolment_id</code> (FK <code>enrolments.id</code>), <code>fee_head_id</code> (FK <code>fee_heads.id</code>, optional—if NULL, applies school-wide), <code>type</code> (Enum: <code>sibling</code>, <code>merit</code>, <code>staff_child</code>, <code>hardship</code>, <code>special</code>), <code>percent</code> (<code>numeric(5,2)</code>), <code>amount</code> (<code>numeric(10,2)</code>), <code>reason</code> (<code>text</code>), <code>status</code> (Enum: <code>pending</code>, <code>approved</code>, <code>rejected</code>), <code>requested_by</code> (FK <code>users.id</code>), <code>approved_by</code> (FK <code>users.id</code>), <code>decided_at</code> (<code>timestamptz</code>), <code>valid_from</code>, <code>valid_to</code>.</div>
+<div class="bullet-item">• Only concessions where <code>status = &#x27;approved&#x27;</code> and current date falls between <code>valid_from</code> and <code>valid_to</code> are deducted during monthly invoice line generation.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q34</span>
+            <span class="q-title">What are the allowed values for `fee_invoices.status`?</span>
+          </div>
+          <div class="ans-body">
+            <p>Managed by the <code>InvoiceStatus</code> enum:</p>
+<div class="numbered-item"><strong>1.</strong> <code>&#x27;issued&#x27;</code>: Invoice generated and sent to the parent; no payments applied yet.</div>
+<div class="numbered-item"><strong>2.</strong> <code>&#x27;partially_paid&#x27;</code>: One or more payments allocated, but remaining balance $&gt; 0$.</div>
+<div class="numbered-item"><strong>3.</strong> <code>&#x27;paid&#x27;</code>: Total allocations equal the full net amount of all invoice lines.</div>
+<div class="numbered-item"><strong>4.</strong> <code>&#x27;void&#x27;</code>: Cancelled by administration with an audited <code>void_reason</code>. No further payments can be allocated to this invoice.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q35</span>
+            <span class="q-title">What is the relationship between `fee_invoices` and `fee_invoice_lines`?</span>
+          </div>
+          <div class="ans-body">
+            <p>A <strong>One-to-Many</strong> relationship:</p>
+<div class="bullet-item">• <code>fee_invoices.id</code> is the primary key.</div>
+<div class="bullet-item">• <code>fee_invoice_lines.invoice_id</code> is a non-nullable foreign key pointing to <code>fee_invoices.id</code> with <code>ondelete=&quot;CASCADE&quot;</code>.</div>
+<div class="bullet-item">• When an invoice is deleted in test environments, its lines are removed automatically. In production, invoices are voided rather than deleted.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q36</span>
+            <span class="q-title">How does the system handle late fee calculations in the database?</span>
+          </div>
+          <div class="ans-body">
+            <p>Late fees are governed by policy settings in <code>settings</code>:</p>
+<div class="bullet-item">• <code>fees.late_fee.grace_days</code> (default <code>5</code> days after <code>due_date</code>),</div>
+<div class="bullet-item">• <code>fees.late_fee.initial</code> (default <code>₹300.00</code> flat charge once grace period expires),</div>
+<div class="bullet-item">• <code>fees.late_fee.per_day</code> (default <code>₹100.00</code> added per additional overdue day),</div>
+<div class="bullet-item">• <code>fees.late_fee.cap_percent</code> (ceiling cap, default <code>50%</code> of invoice amount).</div>
+<div class="bullet-item">• If overdue, an additional line item is dynamically appended to <code>fee_invoice_lines</code> referencing the <code>&#x27;LATE&#x27;</code> fee head code before payment calculation.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q37</span>
+            <span class="q-title">If an invoice has a gross amount of ₹5,000 and a concession discount of ₹500, what is stored in `fee_invoice_lines`?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <code>fee_invoice_lines.amount</code> = <code>5000.00</code></div>
+<div class="bullet-item">• <code>fee_invoice_lines.discount</code> = <code>500.00</code></div>
+<div class="bullet-item">• Net payable = <code>amount - discount</code> = <code>4500.00</code>.</div>
+<div class="bullet-item">• Storing both <code>amount</code> and <code>discount</code> explicitly preserves financial visibility into the gross fee demand versus the scholarship awarded.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q38</span>
+            <span class="q-title">What happens if a parent pays ₹6,000 against an invoice of ₹4,500?</span>
+          </div>
+          <div class="ans-body">
+            <div class="numbered-item"><strong>1.</strong> <code>fee_payments</code> records the full received amount: <code>amount = 6000.00</code>.</div>
+<div class="numbered-item"><strong>2.</strong> <code>payment_allocations</code> allocates <code>4500.00</code> across the lines of the current invoice, marking it <code>&#x27;paid&#x27;</code>.</div>
+<div class="numbered-item"><strong>3.</strong> The remaining <code>₹1,500.00</code> is either allocated to the student&#x27;s next unpaid invoice (FIFO) or left unallocated on <code>fee_payments</code> as an advance payment credit balance for future billing.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q39</span>
+            <span class="q-title">Why does `fee_payments.enrolment_id` point to `enrolments` rather than `students`?</span>
+          </div>
+          <div class="ans-body">
+            <p>Because fee payments are recognized within an <strong>accounting session / academic year</strong>.</p>
+<div class="bullet-item">• Linking to <code>enrolments</code> ensures that payments made in 2025-26 are audited strictly against 2025-26 enrolments, even if the student pays off previous years&#x27; arrears in a separate transaction.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q40</span>
+            <span class="q-title">What happens if an administrator tries to delete a `fee_heads` row that already has invoice lines?</span>
+          </div>
+          <div class="ans-body">
+            <p>PostgreSQL rejects the operation with a Foreign Key Violation error:</p>
+<p><code>psycopg.errors.ForeignKeyViolation: update or delete on table &quot;fee_heads&quot; violates foreign key constraint &quot;fk_fee_invoice_lines_fee_head_id&quot; on table &quot;fee_invoice_lines&quot;</code>.</p>
+<p>This is because <code>fee_invoice_lines.fee_head_id</code> uses <code>ondelete=&quot;RESTRICT&quot;</code>. To retire a fee head, the administrator must set <code>fee_heads.is_active = FALSE</code>.</p>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q41</span>
+            <span class="q-title">Can an invoice be re-opened once marked `paid`?</span>
+          </div>
+          <div class="ans-body">
+            <p><strong>Not directly.</strong> If a payment was attributed in error, the administrator executes a <strong>contra payment reversal</strong>. Once the contra allocation negates the previous allocation, the backend re-evaluates the invoice lines and automatically changes <code>status</code> from <code>&#x27;paid&#x27;</code> back to <code>&#x27;issued&#x27;</code> or <code>&#x27;partially_paid&#x27;</code>.</p>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q42</span>
+            <span class="q-title">What index on `fee_invoices` ensures fast loading of the student fee ledger?</span>
+          </div>
+          <div class="ans-body">
+            <p>Index on <code>(school_id, enrolment_id, period_year, period_month)</code>. This enables immediate lookup of all monthly invoices for a given student within a session.</p>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q43</span>
+            <span class="q-title">How does the system prevent generating two invoices for the same student for the same month?</span>
+          </div>
+          <div class="ans-body">
+            <p>By database query validation and unique indexing:</p>
+<p>The generation service runs <code>SELECT id FROM fee_invoices WHERE enrolment_id = :e_id AND period_month = :m AND period_year = :y AND status != &#x27;void&#x27;</code>. If an invoice exists, the student is skipped.</p>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q44</span>
+            <span class="q-title">What columns exist on `payment_allocations`?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <code>id</code> (bigint, PK)</div>
+<div class="bullet-item">• <code>school_id</code> (bigint, FK <code>schools.id</code>)</div>
+<div class="bullet-item">• <code>payment_id</code> (bigint, FK <code>fee_payments.id</code> with <code>ondelete=&quot;CASCADE&quot;</code>)</div>
+<div class="bullet-item">• <code>invoice_line_id</code> (bigint, FK <code>fee_invoice_lines.id</code> with <code>ondelete=&quot;RESTRICT&quot;</code>)</div>
+<div class="bullet-item">• <code>amount</code> (<code>numeric(10,2)</code>)</div>
+<div class="bullet-item">• <code>created_at</code> (<code>timestamptz</code>)</div>
+<div class="bullet-item">• <code>updated_at</code> (<code>timestamptz</code>)</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q45</span>
+            <span class="q-title">How is transport fee integrated into monthly student invoices?</span>
+          </div>
+          <div class="ans-body">
+            <div class="numbered-item"><strong>1.</strong> <code>transport_assignments</code> tracks which active bus stop (<code>route_stops</code>) the child is assigned to.</div>
+<div class="numbered-item"><strong>2.</strong> <code>route_stops.fee_slab_id</code> points to <code>transport_fee_slabs</code> (<code>monthly_amount</code>).</div>
+<div class="numbered-item"><strong>3.</strong> During invoice generation, the backend checks for an active <code>transport_assignments</code> record for the enrolment.</div>
+<div class="numbered-item"><strong>4.</strong> If found, it automatically appends a <code>fee_invoice_lines</code> entry for <code>fee_head = &#x27;Transport Fee&#x27;</code> with the slab&#x27;s <code>monthly_amount</code>.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q46</span>
+            <span class="q-title">Can a fee payment be made in multiple payment modes (e.g. part Cash, part UPI)?</span>
+          </div>
+          <div class="ans-body">
+            <p>Yes, by inserting <strong>two separate rows</strong> in <code>fee_payments</code>:</p>
+<div class="bullet-item">• Row 1: <code>amount = 2000</code>, <code>method = &#x27;cash&#x27;</code>, <code>receipt_no = RCP-001</code></div>
+<div class="bullet-item">• Row 2: <code>amount = 3000</code>, <code>method = &#x27;upi&#x27;</code>, <code>receipt_no = RCP-002</code>, <code>instrument_ref = &#x27;UPI/UTR/12345&#x27;</code></div>
+<p>Each payment independently allocates to the invoice lines via <code>payment_allocations</code>.</p>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q47</span>
+            <span class="q-title">What prevents a fee collector from altering an invoice amount to give an unauthorized discount?</span>
+          </div>
+          <div class="ans-body">
+            <div class="numbered-item"><strong>1.</strong> <strong>API Layer:</strong> There is no <code>PATCH /admin/fees/invoices/{id}</code> endpoint that accepts amount modifications.</div>
+<div class="numbered-item"><strong>2.</strong> <strong>Concession Layer:</strong> Concessions must be pre-approved in <code>fee_concessions</code> with <code>approved_by</code> referencing a user holding the <code>fees.concession.approve</code> permission.</div>
+<div class="numbered-item"><strong>3.</strong> <strong>Database Audit:</strong> Any voiding of invoices writes the actor&#x27;s ID and mandatory reason to <code>audit_log</code>.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q48</span>
+            <span class="q-title">How is the total fees collected vs fees remaining computed for the Executive Dashboard?</span>
+          </div>
+          <div class="ans-body">
+            <p><code>backend/app/services/stats.py::totals</code>:</p>
+<div class="bullet-item">• <strong>Fees Collected:</strong> <code>SELECT COALESCE(SUM(amount), 0) FROM fee_payments WHERE school_id = :sid AND status = &#x27;cleared&#x27;</code></div>
+<div class="bullet-item">• <strong>Fees Invoiced:</strong> <code>SELECT COALESCE(SUM(amount - discount), 0) FROM fee_invoice_lines WHERE school_id = :sid AND invoice_id IN (SELECT id FROM fee_invoices WHERE school_id = :sid AND status != &#x27;void&#x27;)</code></div>
+<div class="bullet-item">• <strong>Fees Remaining:</strong> <code>Fees Invoiced - Fees Collected</code>.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q49</span>
+            <span class="q-title">What is the `fee_periods` table in the database?</span>
+          </div>
+          <div class="ans-body">
+            <p><code>fee_periods</code> represents formal monthly/quarterly accounting periods.</p>
+<div class="bullet-item">• It stores <code>period_month</code>, <code>period_year</code>, <code>is_closed</code>, <code>closed_at</code>, <code>closed_by</code>.</div>
+<div class="bullet-item">• When an accounting month is marked &quot;Closed&quot;, the backend rejects any back-dated invoice creation or void actions for that closed period.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q50</span>
+            <span class="q-title">How does the system ensure that when an invoice is voided, previous payments are not orphaned?</span>
+          </div>
+          <div class="ans-body">
+            <p>The backend verifies that no active <code>payment_allocations</code> exist for any line of that invoice:</p>
+<div class="bullet-item">• If allocations exist, the backend refuses the void request with an error: *&quot;Cannot void an invoice with active payments. Reverse payments first.&quot;*</div>
+<div class="bullet-item">• Only unallocated or fully reversed invoices can be marked <code>&#x27;void&#x27;</code>.</div>
+<p>---</p>
+          </div>
+        </div>
+        
+
+            <div class="module-header" style="border-left-color: #4f46e5;">
+              <span class="module-tag">MODULE 4: Academics, Timetable &amp; Homework</span>
+            </div>
+            
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q51</span>
+            <span class="q-title">What tables represent the classroom hierarchy in the database?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <strong><code>class_sections</code></strong>: A physical class section (e.g. &quot;Class 10-A&quot;).</div>
+<div class="bullet-item">• Columns: <code>id</code>, <code>school_id</code>, <code>name</code> (e.g. <code>&#x27;10&#x27;</code>), <code>section</code> (e.g. <code>&#x27;A&#x27;</code>), <code>class_label</code> (e.g. <code>&#x27;10-A&#x27;</code>), <code>class_teacher_id</code> (FK <code>employees.id</code>), <code>room_number</code>, <code>capacity</code>.</div>
+<div class="bullet-item">• <strong><code>subjects</code></strong>: Subjects taught in the school (e.g. &quot;Mathematics&quot;, &quot;Science&quot;).</div>
+<div class="bullet-item">• <strong><code>class_subject_teacher</code></strong>: Junction assigning a subject teacher to a specific class section.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q52</span>
+            <span class="q-title">How does `class_subject_teacher` allocate teachers to subjects?</span>
+          </div>
+          <div class="ans-body">
+            <p><code>class_subject_teacher</code> contains:</p>
+<div class="bullet-item">• <code>class_section_id</code> (FK <code>class_sections.id</code>)</div>
+<div class="bullet-item">• <code>subject_id</code> (FK <code>subjects.id</code>)</div>
+<div class="bullet-item">• <code>teacher_id</code> (FK <code>employees.id</code>)</div>
+<div class="bullet-item">• <code>periods_per_week</code> (Integer, e.g. <code>6</code>)</div>
+<div class="bullet-item">• <code>is_primary</code> (Boolean)</div>
+<div class="bullet-item">• <strong>Constraint:</strong> <code>UniqueConstraint(&quot;class_section_id&quot;, &quot;subject_id&quot;, &quot;teacher_id&quot;)</code>.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q53</span>
+            <span class="q-title">What tables power the school timetable, and how are weekly slots structured?</span>
+          </div>
+          <div class="ans-body">
+            <p>Two tables:</p>
+<div class="numbered-item"><strong>1.</strong> <strong><code>school_periods</code></strong>: Defines the bell schedule (e.g., Period 1: 08:00–08:45, Period 2: 08:45–09:30, Break: 10:15–10:35).</div>
+<div class="bullet-item">• Columns: <code>id</code>, <code>school_id</code>, <code>period_number</code>, <code>name</code>, <code>start_time</code>, <code>end_time</code>, <code>is_break</code>.</div>
+<div class="numbered-item"><strong>2.</strong> <strong><code>timetable_slots</code></strong>: The actual weekly timetable cell.</div>
+<div class="bullet-item">• Columns: <code>id</code>, <code>school_id</code>, <code>class_section_id</code>, <code>day_of_week</code> (Enum: <code>monday</code>–<code>saturday</code>), <code>period_id</code> (FK <code>school_periods.id</code>), <code>subject_id</code> (FK <code>subjects.id</code>), <code>teacher_id</code> (FK <code>employees.id</code>), <code>room_number</code>.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q54</span>
+            <span class="q-title">How does the database prevent a teacher from being scheduled in two different classrooms at the same time?</span>
+          </div>
+          <div class="ans-body">
+            <p>Enforced by a composite database unique constraint on <code>timetable_slots</code>:</p>
+<p><code>UniqueConstraint(&quot;school_id&quot;, &quot;day_of_week&quot;, &quot;period_id&quot;, &quot;teacher_id&quot;)</code>.</p>
+<p>If an administrator attempts to assign Teacher A to Class 9-A and Class 10-B during Monday Period 3, PostgreSQL rejects the second insertion with a unique key conflict.</p>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q55</span>
+            <span class="q-title">How does the database prevent two different classes from being scheduled in the same room at the same time?</span>
+          </div>
+          <div class="ans-body">
+            <p>Enforced by:</p>
+<p><code>UniqueConstraint(&quot;school_id&quot;, &quot;day_of_week&quot;, &quot;period_id&quot;, &quot;room_number&quot;)</code> on <code>timetable_slots</code> (where <code>room_number IS NOT NULL</code>).</p>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q56</span>
+            <span class="q-title">What table stores homework assignments given by teachers?</span>
+          </div>
+          <div class="ans-body">
+            <p><strong><code>homework</code></strong>:</p>
+<div class="bullet-item">• <strong>Columns:</strong> <code>id</code>, <code>school_id</code>, <code>class_section_id</code> (FK), <code>subject_id</code> (FK), <code>teacher_id</code> (FK <code>employees.id</code>), <code>title</code>, <code>description</code>, <code>assigned_date</code>, <code>due_date</code>, <code>max_marks</code>, <code>attachments</code> (JSON array of document URLs).</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q57</span>
+            <span class="q-title">How does `homework_submissions` track student homework completion?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <strong>Columns:</strong> <code>id</code>, <code>school_id</code>, <code>homework_id</code> (FK <code>homework.id</code>), <code>enrolment_id</code> (FK <code>enrolments.id</code>), <code>submitted_at</code>, <code>content</code>, <code>attachments</code>, <code>status</code> (Enum: <code>pending</code>, <code>submitted</code>, <code>evaluated</code>, <code>late</code>), <code>marks_obtained</code>, <code>feedback</code>, <code>evaluated_by</code> (FK <code>employees.id</code>).</div>
+<div class="bullet-item">• <strong>Constraint:</strong> <code>UniqueConstraint(&quot;homework_id&quot;, &quot;enrolment_id&quot;)</code> ensures a student can submit homework only once per assignment.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q58</span>
+            <span class="q-title">What is the `holidays` table, and what is its role in academic scheduling?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <strong>Columns:</strong> <code>id</code>, <code>school_id</code>, <code>academic_year_id</code> (FK), <code>name</code>, <code>start_date</code>, <code>end_date</code>, <code>holiday_type</code> (<code>gazetted</code>, <code>restricted</code>, <code>vacation</code>), <code>description</code>.</div>
+<div class="bullet-item">• When calculating working days for student attendance percentages, days falling within <code>holidays</code> are excluded from the required attendance denominator.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q59</span>
+            <span class="q-title">Why does `homework_submissions` link to `enrolment_id` instead of `student_id`?</span>
+          </div>
+          <div class="ans-body">
+            <p>Because homework is assigned to a specific <strong>class section within an academic year</strong>. Linking to <code>enrolment_id</code> guarantees that submissions are cataloged against the child&#x27;s specific section record for that session.</p>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q60</span>
+            <span class="q-title">How does the backend enforce the maximum teaching load policy for a teacher?</span>
+          </div>
+          <div class="ans-body">
+            <p><code>settings</code> defines <code>timetable.max_periods_per_week</code> (default <code>30</code>).</p>
+<div class="bullet-item">• Before inserting into <code>timetable_slots</code>, the service counts existing slots:</div>
+<p><code>SELECT count(*) FROM timetable_slots WHERE teacher_id = :t_id</code>.</p>
+<div class="bullet-item">• If the count exceeds the threshold, the operation is blocked unless authorized with a leadership override.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q61</span>
+            <span class="q-title">What happens to `timetable_slots` if a subject is deleted?</span>
+          </div>
+          <div class="ans-body">
+            <p><code>timetable_slots.subject_id</code> is set to <code>ondelete=&quot;RESTRICT&quot;</code>. You cannot delete a subject from the catalog if classes have scheduled timetable periods for it.</p>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q62</span>
+            <span class="q-title">What is the relationship between `class_sections` and `employees`?</span>
+          </div>
+          <div class="ans-body">
+            <p><code>class_sections.class_teacher_id</code> is a nullable foreign key pointing to <code>employees.id</code> (<code>ondelete=&quot;SET NULL&quot;</code>). An employee serves as the primary Class Teacher responsible for daily attendance roll-call and report card remarks.</p>
+<p>---</p>
+          </div>
+        </div>
+        
+
+            <div class="module-header" style="border-left-color: #4f46e5;">
+              <span class="module-tag">MODULE 5: Student Attendance</span>
+            </div>
+            
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q63</span>
+            <span class="q-title">What table records daily student attendance, and what are its columns?</span>
+          </div>
+          <div class="ans-body">
+            <p><strong><code>attendance</code></strong>:</p>
+<div class="bullet-item">• <code>id</code> (bigint, PK)</div>
+<div class="bullet-item">• <code>school_id</code> (bigint, FK <code>schools.id</code>)</div>
+<div class="bullet-item">• <code>enrolment_id</code> (bigint, FK <code>enrolments.id</code>)</div>
+<div class="bullet-item">• <code>date</code> (date without time zone)</div>
+<div class="bullet-item">• <code>status</code> (Enum: <code>present</code>, <code>absent</code>, <code>late</code>, <code>half_day</code>, <code>excused</code>)</div>
+<div class="bullet-item">• <code>remarks</code> (<code>varchar(160)</code>, optional explanation)</div>
+<div class="bullet-item">• <code>recorded_by</code> (bigint, FK <code>users.id</code>)</div>
+<div class="bullet-item">• <code>created_at</code>, <code>updated_at</code> (<code>timestamptz</code>)</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q64</span>
+            <span class="q-title">What constraint prevents marking duplicate attendance for a student on the same day?</span>
+          </div>
+          <div class="ans-body">
+            <p><code>UniqueConstraint(&quot;school_id&quot;, &quot;enrolment_id&quot;, &quot;date&quot;)</code> on the <code>attendance</code> table.</p>
+<p>If a teacher submits roll call twice for the same morning, the database rejects the duplicate row, allowing the backend to perform an <code>upsert</code> (update existing status) instead of creating duplicate records.</p>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q65</span>
+            <span class="q-title">Why does `attendance` link to `enrolment_id` instead of `student_id`?</span>
+          </div>
+          <div class="ans-body">
+            <p>Per Design Rule 2: Attendance is a <strong>year-scoped classroom fact</strong>. A student attends Class 10-A in session 2025-26 as an *enrolment*. If it pointed at <code>student_id</code>, attendance from Class 9 would conflict or bleed into Class 10 queries for the same calendar date.</p>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q66</span>
+            <span class="q-title">How is the CBSE 75% short attendance threshold calculated by the backend?</span>
+          </div>
+          <div class="ans-body">
+            <div class="numbered-item"><strong>1.</strong> <code>settings</code> stores <code>attendance.shortage_threshold = 75</code>.</div>
+<div class="numbered-item"><strong>2.</strong> The query evaluates:</div>
+<div class="formula-box"><strong>Formula:</strong> <code>\text{Attendance \%} = \frac{\text{COUNT(attendance WHERE status = &#x27;present&#x27;)}}{\text{COUNT(total working days)}} \times 100</code></div>
+<div class="numbered-item"><strong>3.</strong> Any student whose computed percentage is $&lt; 75\%$ is flagged on the <code>/attendance</code> shortage list and debars the student from automatic admit card generation.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q67</span>
+            <span class="q-title">What are the allowed values for `attendance.status`?</span>
+          </div>
+          <div class="ans-body">
+            <p>Managed by the <code>AttendanceStatus</code> enum:</p>
+<div class="bullet-item">• <code>&#x27;present&#x27;</code>: Student present in class.</div>
+<div class="bullet-item">• <code>&#x27;absent&#x27;</code>: Unauthorized absence.</div>
+<div class="bullet-item">• <code>&#x27;late&#x27;</code>: Arrived after the morning bell.</div>
+<div class="bullet-item">• <code>&#x27;half_day&#x27;</code>: Left early or arrived after lunch.</div>
+<div class="bullet-item">• <code>&#x27;excused&#x27;</code>: Authorized absence with approved leave letter.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q68</span>
+            <span class="q-title">What index ensures fast loading of the class roll-call screen?</span>
+          </div>
+          <div class="ans-body">
+            <p>Composite index on <code>(school_id, date, enrolment_id)</code>. This allows the attendance sheet for 40 students in a section to load in $&lt;5$ milliseconds.</p>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q69</span>
+            <span class="q-title">What is the `student_leave_requests` table, and how does it relate to `attendance`?</span>
+          </div>
+          <div class="ans-body">
+            <p><code>student_leave_requests</code> stores parent leave applications:</p>
+<div class="bullet-item">• Columns: <code>id</code>, <code>school_id</code>, <code>enrolment_id</code>, <code>start_date</code>, <code>end_date</code>, <code>reason</code>, <code>status</code> (<code>pending</code>, <code>approved</code>, <code>rejected</code>), <code>approved_by</code>.</div>
+<div class="bullet-item">• When a leave request is marked <code>&#x27;approved&#x27;</code>, the attendance marking engine defaults that student&#x27;s status to <code>&#x27;excused&#x27;</code> on the roll-call register for those dates.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q70</span>
+            <span class="q-title">Does the attendance table support periods-wise attendance or daily attendance?</span>
+          </div>
+          <div class="ans-body">
+            <p>The active operational database implements <strong>daily attendance</strong> (<code>date</code> column). Period-wise tracking is modeled in architecture blueprints but daily morning roll call is the operational system of record.</p>
+<p>---</p>
+          </div>
+        </div>
+        
+
+            <div class="module-header" style="border-left-color: #8b5cf6;">
+              <span class="module-tag">MODULE 6: Examinations, Marks &amp; CBSE Grading</span>
+            </div>
+            
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q71</span>
+            <span class="q-title">What tables store exam definitions, schedules, and student marks?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <strong><code>exams</code></strong>: The exam event (e.g., &quot;Term 1 Midterm Exam 2025-26&quot;, <code>academic_year_id</code>, <code>status</code>).</div>
+<div class="bullet-item">• <strong><code>exam_schedule</code></strong>: Timetable for each subject paper (Exam ID, Subject ID, Class Section ID, Exam Date, Max Marks, Passing Marks).</div>
+<div class="bullet-item">• <strong><code>marks</code></strong>: The actual score obtained by a student for a specific paper.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q72</span>
+            <span class="q-title">What columns exist on the `marks` table?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <code>id</code> (bigint, PK)</div>
+<div class="bullet-item">• <code>school_id</code> (bigint, FK <code>schools.id</code>)</div>
+<div class="bullet-item">• <code>exam_schedule_id</code> (bigint, FK <code>exam_schedule.id</code>)</div>
+<div class="bullet-item">• <code>enrolment_id</code> (bigint, FK <code>enrolments.id</code>)</div>
+<div class="bullet-item">• <code>marks_obtained</code> (<code>numeric(5,2)</code>)</div>
+<div class="bullet-item">• <code>is_absent</code> (<code>boolean</code>, defaults to FALSE)</div>
+<div class="bullet-item">• <code>remarks</code> (<code>varchar(120)</code>)</div>
+<div class="bullet-item">• <code>entered_by</code> (bigint, FK <code>users.id</code>)</div>
+<div class="bullet-item">• <code>is_locked</code> (<code>boolean</code>, defaults to FALSE)</div>
+<div class="bullet-item">• <strong>Constraint:</strong> <code>UniqueConstraint(&quot;exam_schedule_id&quot;, &quot;enrolment_id&quot;)</code> ensures one mark record per paper per student.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q73</span>
+            <span class="q-title">What is the &quot;Paper Lock&quot; feature, and how does the database enforce it?</span>
+          </div>
+          <div class="ans-body">
+            <p>Once marks entry is complete, the academic coordinator locks the paper to prevent grade tampering:</p>
+<div class="bullet-item">• <code>exam_schedule.is_locked</code> is set to <code>TRUE</code>.</div>
+<div class="bullet-item">• Any subsequent <code>POST</code> or <code>PATCH</code> to <code>/admin/exams/{id}/marks</code> queries <code>exam_schedule.is_locked</code>. If <code>TRUE</code>, the backend raises <code>403 Forbidden: &quot;Marks entry is locked for this paper&quot;</code>.</div>
+<div class="bullet-item">• Overriding a locked paper requires the <code>exam.marks.override</code> permission, updates <code>marks.is_locked</code>, and writes a mandatory justification to <code>audit_log</code>.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q74</span>
+            <span class="q-title">How are CBSE assessment schemes and components modeled in the database?</span>
+          </div>
+          <div class="ans-body">
+            <p>Two tables:</p>
+<div class="numbered-item"><strong>1.</strong> <strong><code>assessment_schemes</code></strong>: (e.g. &quot;CBSE Secondary Assessment 2025-26&quot;, <code>theory_weightage = 80</code>, <code>practical_weightage = 20</code>).</div>
+<div class="numbered-item"><strong>2.</strong> <strong><code>scheme_components</code></strong>: Individual exam parts (e.g., &quot;Periodic Test (10 marks)&quot;, &quot;Notebook Submission (5 marks)&quot;, &quot;Subject Enrichment (5 marks)&quot;, &quot;Annual Board Exam (80 marks)&quot;).</div>
+<div class="bullet-item">• Columns: <code>scheme_id</code>, <code>name</code>, <code>max_marks</code>, <code>weightage_percent</code>, <code>sequence</code>.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q75</span>
+            <span class="q-title">How does the database calculate letter grades using `grading_scales` and `grade_bands`?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <strong><code>grading_scales</code></strong>: e.g., &quot;CBSE 8-Point Secondary Scale&quot;.</div>
+<div class="bullet-item">• <strong><code>grade_bands</code></strong>: Defines the score boundaries:</div>
+<div class="bullet-item">• <code>grade_point = 10</code>, <code>letter_grade = &#x27;A1&#x27;</code>, <code>min_percentage = 91.00</code>, <code>max_percentage = 100.00</code></div>
+<div class="bullet-item">• <code>grade_point = 9</code>, <code>letter_grade = &#x27;A2&#x27;</code>, <code>min_percentage = 81.00</code>, <code>max_percentage = 90.99</code></div>
+<div class="bullet-item">• ... down to <code>letter_grade = &#x27;E&#x27;</code> (Fail).</div>
+<div class="bullet-item">• When report cards are computed, the backend calculates the percentage:</div>
+<div class="formula-box"><strong>Formula:</strong> <code>\text{Percentage} = \frac{\sum \text{marks\_obtained}}{\sum \text{max\_marks}} \times 100</code></div>
+<p>Then matches against <code>grade_bands</code> WHERE <code>:percent BETWEEN min_percentage AND max_percentage</code>.</p>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q76</span>
+            <span class="q-title">How does the database implement policy §0.6b: &quot;Withholding report cards for unpaid fee dues&quot;?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <code>settings</code> stores <code>exams.withhold_results_for_dues = True</code>.</div>
+<div class="bullet-item">• When a student or parent requests report cards via <code>/parent/results</code> or <code>/student/results</code>:</div>
+<div class="numbered-item"><strong>1.</strong> The backend runs the fee balance query for that <code>enrolment_id</code>.</div>
+<div class="numbered-item"><strong>2.</strong> If $\text{Pending Balance} &gt; 0$, the endpoint does not return the marks dossier.</div>
+<div class="numbered-item"><strong>3.</strong> Instead, it returns <code>status: &quot;withheld&quot;</code> with message: *&quot;Report card withheld due to outstanding fees of ₹X,XXX.00. Contact accounts office.&quot;*</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q77</span>
+            <span class="q-title">What happens in `marks` if a student was absent for an exam?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <code>marks.is_absent</code> is set to <code>TRUE</code>.</div>
+<div class="bullet-item">• <code>marks.marks_obtained</code> is stored as <code>0.00</code>.</div>
+<div class="bullet-item">• The report card generator renders <code>&#x27;AB&#x27;</code> on the printed grade sheet and excludes the paper from aggregate total calculations where permissible under CBSE bylaws.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q78</span>
+            <span class="q-title">Can an exam be scheduled on a Sunday or official school holiday?</span>
+          </div>
+          <div class="ans-body">
+            <p>The backend validates <code>exam_schedule.exam_date</code> against <code>holidays</code>:</p>
+<div class="bullet-item">• If <code>exam_date</code> matches a row in <code>holidays</code> for that <code>academic_year_id</code>, the API returns a warning or blocks the schedule without administrator override.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q79</span>
+            <span class="q-title">What is the relationship between `exams` and `academic_years`?</span>
+          </div>
+          <div class="ans-body">
+            <p><code>exams.academic_year_id</code> is a foreign key pointing to <code>academic_years.id</code> (<code>ondelete=&quot;RESTRICT&quot;</code>). All exam series, schedules, and marks belong to a specific academic session.</p>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q80</span>
+            <span class="q-title">What is the `report_card_publications` table?</span>
+          </div>
+          <div class="ans-body">
+            <p>Tracks official report card release batches:</p>
+<div class="bullet-item">• Columns: <code>id</code>, <code>school_id</code>, <code>exam_id</code>, <code>class_section_id</code>, <code>published_at</code>, <code>published_by</code>, <code>withheld_count</code>, <code>released_count</code>.</div>
+<p>---</p>
+          </div>
+        </div>
+        
+
+            <div class="module-header" style="border-left-color: #4f46e5;">
+              <span class="module-tag">MODULE 7: Transport &amp; Fleet Management</span>
+            </div>
+            
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q81</span>
+            <span class="q-title">What 5 tables represent the Transport module in the database?</span>
+          </div>
+          <div class="ans-body">
+            <div class="numbered-item"><strong>1.</strong> <strong><code>vehicles</code></strong>: Physical buses/vans (registration no, seating capacity, insurance expiry, fitness certificate).</div>
+<div class="numbered-item"><strong>2.</strong> <strong><code>routes</code></strong>: Travel circuits (route code, route name, driver, attendant, vehicle).</div>
+<div class="numbered-item"><strong>3.</strong> <strong><code>route_stops</code></strong>: Halts along a route with scheduled morning pickup and evening drop times.</div>
+<div class="numbered-item"><strong>4.</strong> <strong><code>transport_fee_slabs</code></strong>: Pricing bands based on distance (e.g., Slab 1 [0-5km] = ₹1,200/mo).</div>
+<div class="numbered-item"><strong>5.</strong> <strong><code>transport_assignments</code></strong>: Student passenger allocations linking enrolments to bus stops.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q82</span>
+            <span class="q-title">How does the database prevent over-allocating students to a bus beyond its legal seating capacity?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <code>vehicles.capacity</code> stores the legal seating capacity from the RTO registration papers.</div>
+<div class="bullet-item">• <code>routes.vehicle_id</code> links the bus to the route.</div>
+<div class="bullet-item">• Before assigning a student in <code>transport_assignments</code>, the backend runs:</div>
+<pre class="code-block"><code>  SELECT count(*) FROM transport_assignments ta
+  JOIN route_stops rs ON ta.route_stop_id = rs.id
+  WHERE rs.route_id = :route_id AND ta.status = &#x27;active&#x27;;</code></pre>
+<div class="bullet-item">• If active count $\ge$ <code>vehicles.capacity</code>, the database transaction aborts:</div>
+<p><code>400 Bad Request: &quot;Vehicle capacity of 42 exceeded. Cannot allocate student.&quot;</code></p>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q83</span>
+            <span class="q-title">What columns exist on `transport_assignments`?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <code>id</code> (bigint, PK)</div>
+<div class="bullet-item">• <code>school_id</code> (bigint, FK <code>schools.id</code>)</div>
+<div class="bullet-item">• <code>enrolment_id</code> (bigint, FK <code>enrolments.id</code>)</div>
+<div class="bullet-item">• <code>route_stop_id</code> (bigint, FK <code>route_stops.id</code>)</div>
+<div class="bullet-item">• <code>direction</code> (Enum: <code>two_way</code>, <code>pickup_only</code>, <code>drop_only</code>)</div>
+<div class="bullet-item">• <code>start_date</code> (date)</div>
+<div class="bullet-item">• <code>end_date</code> (date, nullable)</div>
+<div class="bullet-item">• <code>status</code> (Enum: <code>active</code>, <code>suspended</code>, <code>cancelled</code>)</div>
+<div class="bullet-item">• <code>end_reason</code> (<code>text</code>, audited reason for ending transport)</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q84</span>
+            <span class="q-title">What is the relationship between `routes`, `employees`, and `vehicles`?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <code>routes.vehicle_id</code> points to <code>vehicles.id</code> (Many routes to one vehicle, though typically 1:1 active).</div>
+<div class="bullet-item">• <code>routes.driver_id</code> points to <code>employees.id</code> (where employee is support staff/driver).</div>
+<div class="bullet-item">• <code>routes.attendant_id</code> points to <code>employees.id</code> (bus conductor/attendant).</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q85</span>
+            <span class="q-title">How does `route_stops` connect to `transport_fee_slabs`?</span>
+          </div>
+          <div class="ans-body">
+            <p>Each halt row in <code>route_stops</code> holds a foreign key <code>fee_slab_id</code> pointing to <code>transport_fee_slabs.id</code>.</p>
+<p>When a child is assigned to that stop, the invoicing system looks up <code>route_stops.fee_slab_id -&gt; transport_fee_slabs.monthly_amount</code> to bill the exact distance fee.</p>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q86</span>
+            <span class="q-title">What unique constraint ensures bus stops are ordered correctly on a route?</span>
+          </div>
+          <div class="ans-body">
+            <p><code>UniqueConstraint(&quot;route_id&quot;, &quot;sequence&quot;)</code> on <code>route_stops</code>.</p>
+<p>Stop 1, Stop 2, Stop 3 cannot share sequence numbers, ensuring the morning bus timetable is strictly ordered.</p>
+<p>---</p>
+          </div>
+        </div>
+        
+
+            <div class="module-header" style="border-left-color: #4f46e5;">
+              <span class="module-tag">MODULE 8: Stock &amp; Inventory Management</span>
+            </div>
+            
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q87</span>
+            <span class="q-title">What tables manage stock and supplies in Sunrise ERP?</span>
+          </div>
+          <div class="ans-body">
+            <div class="numbered-item"><strong>1.</strong> <strong><code>stock_items</code></strong>: The catalog of consumable supplies and science lab materials (Item Name, Code, Category, Unit, Quantity on Hand, Minimum Reorder Threshold).</div>
+<div class="numbered-item"><strong>2.</strong> <strong><code>stock_requests</code></strong>: Material requisition tickets submitted by teachers or staff for restocking or issuance.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q88</span>
+            <span class="q-title">What columns exist on `stock_items`, and how are low-stock alerts detected?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <strong>Columns:</strong> <code>id</code>, <code>school_id</code>, <code>item_code</code> (<code>varchar(20)</code>), <code>name</code> (<code>varchar(100)</code>), <code>category</code> (Enum: <code>lab_supplies</code>, <code>stationery</code>, <code>sports</code>, <code>medical</code>, <code>maintenance</code>), <code>unit</code> (e.g. <code>&#x27;boxes&#x27;</code>, <code>&#x27;litres&#x27;</code>, <code>&#x27;pieces&#x27;</code>), <code>quantity_on_hand</code> (<code>integer</code>), <code>minimum_quantity</code> (<code>integer</code>), <code>unit_price</code> (<code>numeric(10,2)</code>), <code>location</code> (e.g. <code>&#x27;Chemistry Lab Cupboard B&#x27;</code>).</div>
+<div class="bullet-item">• <strong>Low-stock alert query:</strong></div>
+<p><code>SELECT * FROM stock_items WHERE school_id = :sid AND quantity_on_hand &lt;= minimum_quantity;</code></p>
+<p>Any item where current inventory drops below the safety buffer triggers a red status badge on the admin inventory screen.</p>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q89</span>
+            <span class="q-title">What happens in the database when a teacher flags diminishing stock from the mobile app?</span>
+          </div>
+          <div class="ans-body">
+            <p>When <code>POST /teacher/stock/flag</code> is sent:</p>
+<div class="numbered-item"><strong>1.</strong> Validates that <code>stock_items.id</code> exists and teacher is authenticated.</div>
+<div class="numbered-item"><strong>2.</strong> Inserts a row into <strong><code>stock_requests</code></strong>:</div>
+<div class="bullet-item">• <code>item_id = item.id</code>,</div>
+<div class="bullet-item">• <code>requested_by = user.id</code>,</div>
+<div class="bullet-item">• <code>request_type = &#x27;depletion_flag&#x27;</code>,</div>
+<div class="bullet-item">• <code>quantity = flagged_quantity</code>,</div>
+<div class="bullet-item">• <code>status = &#x27;pending&#x27;</code>,</div>
+<div class="bullet-item">• <code>remarks = teacher_notes</code>.</div>
+<div class="numbered-item"><strong>3.</strong> The ERP admin immediately sees the flag on the <code>/inventory</code> screen with the teacher&#x27;s name and timestamp.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q90</span>
+            <span class="q-title">What database updates occur when the admin approves a stock request?</span>
+          </div>
+          <div class="ans-body">
+            <p>Inside an atomic transaction:</p>
+<div class="numbered-item"><strong>1.</strong> <code>stock_requests.status</code> is updated to <code>&#x27;approved&#x27;</code>.</div>
+<div class="numbered-item"><strong>2.</strong> <code>stock_requests.decided_by</code> is set to <code>admin.id</code> and <code>decided_at = now()</code>.</div>
+<div class="numbered-item"><strong>3.</strong> If it is a restocking/purchase approval, <code>stock_items.quantity_on_hand += stock_requests.quantity</code>.</div>
+<div class="numbered-item"><strong>4.</strong> If it is an issuance to a classroom, <code>stock_items.quantity_on_hand -= stock_requests.quantity</code>.</div>
+<div class="numbered-item"><strong>5.</strong> An audit row is added to <code>audit_log</code>.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q91</span>
+            <span class="q-title">What unique constraint exists on `stock_items`?</span>
+          </div>
+          <div class="ans-body">
+            <p><code>UniqueConstraint(&quot;school_id&quot;, &quot;item_code&quot;)</code>.</p>
+<p>No two items can share the same SKU/code within the same school (e.g., <code>&#x27;CHEM-001&#x27;</code> is unique).</p>
+<p>---</p>
+          </div>
+        </div>
+        
+
+            <div class="module-header" style="border-left-color: #4f46e5;">
+              <span class="module-tag">MODULE 9: Grievances &amp; Feedback</span>
+            </div>
+            
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q92</span>
+            <span class="q-title">What two tables implement the Grievance and Helpdesk system?</span>
+          </div>
+          <div class="ans-body">
+            <div class="numbered-item"><strong>1.</strong> <strong><code>grievances</code></strong>: The primary ticket header.</div>
+<div class="numbered-item"><strong>2.</strong> <strong><code>grievance_replies</code></strong>: The chronological conversational thread of replies between parents, teachers, and administrators.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q93</span>
+            <span class="q-title">What columns exist on `grievances`?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <code>id</code> (bigint, PK)</div>
+<div class="bullet-item">• <code>school_id</code> (bigint, FK <code>schools.id</code>)</div>
+<div class="bullet-item">• <code>ticket_no</code> (<code>varchar(24)</code>, unique per school, e.g. <code>&#x27;GRV-2025-0004&#x27;</code>)</div>
+<div class="bullet-item">• <code>submitter_id</code> (bigint, FK <code>users.id</code>)</div>
+<div class="bullet-item">• <code>submitter_role</code> (Enum: <code>parent</code>, <code>teacher</code>, <code>student</code>, <code>staff</code>)</div>
+<div class="bullet-item">• <code>student_id</code> (bigint, nullable FK <code>students.id</code>—filled when a parent files a complaint about their child)</div>
+<div class="bullet-item">• <code>category</code> (Enum: <code>academics</code>, <code>transport</code>, <code>fees</code>, <code>facilities</code>, <code>safety</code>, <code>general</code>)</div>
+<div class="bullet-item">• <code>priority</code> (Enum: <code>low</code>, <code>medium</code>, <code>high</code>, <code>urgent</code>)</div>
+<div class="bullet-item">• <code>status</code> (Enum: <code>open</code>, <code>in_progress</code>, <code>resolved</code>, <code>closed</code>)</div>
+<div class="bullet-item">• <code>title</code> (<code>varchar(160)</code>)</div>
+<div class="bullet-item">• <code>description</code> (<code>text</code>)</div>
+<div class="bullet-item">• <code>assigned_to</code> (bigint, nullable FK <code>employees.id</code>—staff member tasked with solving the issue)</div>
+<div class="bullet-item">• <code>resolution_notes</code> (<code>text</code>, explanation recorded when closing ticket)</div>
+<div class="bullet-item">• <code>resolved_at</code> (<code>timestamptz</code>)</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q94</span>
+            <span class="q-title">How does `grievance_replies` support multi-party conversation?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <code>id</code> (bigint, PK)</div>
+<div class="bullet-item">• <code>grievance_id</code> (bigint, FK <code>grievances.id</code> with <code>ondelete=&quot;CASCADE&quot;</code>)</div>
+<div class="bullet-item">• <code>user_id</code> (bigint, FK <code>users.id</code>)</div>
+<div class="bullet-item">• <code>message</code> (<code>text</code>)</div>
+<div class="bullet-item">• <code>attachments</code> (JSON array of image/document URLs)</div>
+<div class="bullet-item">• <code>is_internal</code> (Boolean: if TRUE, only visible to administrators as private internal notes)</div>
+<div class="bullet-item">• <code>created_at</code> (<code>timestamptz</code>)</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q95</span>
+            <span class="q-title">What happens in the database when an admin assigns a grievance to a teacher?</span>
+          </div>
+          <div class="ans-body">
+            <div class="numbered-item"><strong>1.</strong> <code>PATCH /admin/grievances/{id}</code> updates <code>grievances.assigned_to = employee_id</code>.</div>
+<div class="numbered-item"><strong>2.</strong> <code>grievances.status</code> transitions from <code>&#x27;open&#x27;</code> to <code>&#x27;in_progress&#x27;</code>.</div>
+<div class="numbered-item"><strong>3.</strong> When the teacher logs in to their mobile app, the query <code>SELECT * FROM grievances WHERE assigned_to = :my_employee_id</code> displays the assigned ticket under their &quot;Assigned to Me&quot; tab.</div>
+<p>---</p>
+          </div>
+        </div>
+        
+
+            <div class="module-header" style="border-left-color: #4f46e5;">
+              <span class="module-tag">MODULE 10: Human Resources, Communication &amp; System Audit</span>
+            </div>
+            
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q96</span>
+            <span class="q-title">What tables store employee and department records?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <strong><code>departments</code></strong>: Academic and administrative departments (e.g., Mathematics Dept, Science Dept, Transport Dept, Accounts).</div>
+<div class="bullet-item">• Columns: <code>id</code>, <code>school_id</code>, <code>name</code>, <code>code</code>, <code>head_teacher_id</code> (FK <code>employees.id</code>).</div>
+<div class="bullet-item">• <strong><code>employees</code></strong>: Staff profiles.</div>
+<div class="bullet-item">• Columns: <code>id</code>, <code>school_id</code>, <code>user_id</code> (FK <code>users.id</code>, nullable for non-login staff like cleaners), <code>department_id</code> (FK <code>departments.id</code>), <code>employee_code</code> (e.g. <code>&#x27;TCH001&#x27;</code>), <code>full_name</code>, <code>email</code>, <code>phone</code>, <code>employee_type</code> (<code>teaching</code>, <code>administrative</code>, <code>support</code>), <code>designation</code>, <code>status</code> (<code>active</code>, <code>exited</code>), <code>joining_date</code>, <code>qualification</code>.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q97</span>
+            <span class="q-title">What is the relationship between `users` and `employees`?</span>
+          </div>
+          <div class="ans-body">
+            <p>A <strong>One-to-One / Many-to-One optional foreign key</strong>: <code>employees.user_id -&gt; users.id</code>.</p>
+<div class="bullet-item">• Teaching and administrative staff have a <code>user_id</code> to log in to the web ERP or mobile app.</div>
+<div class="bullet-item">• Support staff (cleaners, ground staff) exist in <code>employees</code> for payroll and contact directories, but their <code>user_id</code> is <code>NULL</code> because they do not have system logins.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q98</span>
+            <span class="q-title">What tables power school notices and announcements?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <strong><code>notices</code></strong>: Circulars published by school management.</div>
+<div class="bullet-item">• Columns: <code>id</code>, <code>school_id</code>, <code>title</code>, <code>content</code>, <code>audience</code> (Enum: <code>all</code>, <code>parents</code>, <code>teachers</code>, <code>students</code>), <code>posted_by</code> (FK <code>users.id</code>), <code>is_published</code>, <code>expires_on</code>, <code>attachments</code>.</div>
+<div class="bullet-item">• <strong><code>message_templates</code></strong>: Pre-defined SMS/Email formats for fee reminders, attendance warnings, and holiday greetings.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q99</span>
+            <span class="q-title">What are the columns and performance indexing of `audit_log`?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <strong>Columns:</strong> <code>id</code>, <code>school_id</code>, <code>user_id</code>, <code>action</code>, <code>entity_type</code>, <code>entity_id</code>, <code>reason</code>, <code>before_state</code> (JSON), <code>after_state</code> (JSON), <code>ip_address</code>, <code>created_at</code>.</div>
+<div class="bullet-item">• <strong>Indexes:</strong></div>
+<div class="bullet-item">• <code>(school_id, created_at DESC)</code> for instant chronological streaming on the admin security monitor.</div>
+<div class="bullet-item">• <code>(school_id, entity_type, entity_id)</code> to view the full audit history of a specific invoice or student record.</div>
+          </div>
+        </div>
+        
+
+        <div class="q-card">
+          <div class="q-header">
+            <span class="q-badge">Q100</span>
+            <span class="q-title">What is stored in `documents` and `document_types`?</span>
+          </div>
+          <div class="ans-body">
+            <div class="bullet-item">• <strong><code>document_types</code></strong>: Standard certificate categories required by school policy (e.g., Birth Certificate, Transfer Certificate, Aadhaar Card, Previous Marksheet).</div>
+<div class="bullet-item">• <strong><code>documents</code></strong>: Uploaded file metadata:</div>
+<div class="bullet-item">• Columns: <code>id</code>, <code>school_id</code>, <code>document_type_id</code> (FK), <code>entity_type</code> (<code>&#x27;student&#x27;</code>, <code>&#x27;employee&#x27;</code>), <code>entity_id</code>, <code>file_name</code>, <code>file_url</code>, <code>file_size</code>, <code>mime_type</code>, <code>verified_by</code> (FK <code>users.id</code>), <code>verified_at</code>.</div>
+<div class="bullet-item">• The actual binary file is stored in local storage (<code>./var/documents/</code>) or cloud S3; the database stores only metadata and file paths.</div>
+<p>---</p>
+          </div>
+        </div>
+        
+  </div>
+
+  <!-- Top 20 Questions Section -->
+  <div class="top20-section">
+    <div class="top20-header">
+      <h2>⭐ The Most Important 20 Questions to Prepare First</h2>
+      <div style="font-size: 8.5pt; color: #e0e7ff;">Master these 20 high-yield questions first to demonstrate thorough understanding of multi-tenancy, financial immutability, data flows, and constraints.</div>
+    </div>
+    
+  </div>
+
+</body>
+</html>

@@ -30,6 +30,7 @@ const ALL_MODULES = [
   "hr",
   "transport",
   "reports",
+  "inventory",
 ];
 
 const can = (held: string[]) => (p: string) => held.includes(p);
@@ -245,5 +246,86 @@ describe("ungrouped screens", () => {
     expect(groups[0].screens.map((s) => s.label)).toContain("Dashboard");
     // And no other bucket is headingless, so nothing else lost its heading.
     expect(groups.filter((g) => g.group === undefined)).toHaveLength(1);
+  });
+});
+
+describe("Role navigation boundaries: Admission Officer and Receptionist", () => {
+  const ADMISSION_OFFICER = [
+    "admission.cycle.read",
+    "admission.enquiry.read",
+    "admission.enquiry.write",
+    "admission.application.read",
+    "admission.application.write",
+    "admission.document.verify",
+    "admission.assessment.enter",
+    "admission.interview.enter",
+    "admission.decision.make",
+    "admission.application.convert",
+    "fees.payment.collect",
+  ];
+
+  const RECEPTIONIST = [
+    "admission.cycle.read",
+    "admission.enquiry.read",
+    "admission.enquiry.write",
+    "comms.notice.read",
+    "reception.found_items.read",
+    "reception.found_items.write",
+    "reception.found_items.collect",
+    "reception.passes.read",
+    "reception.passes.write",
+    "reception.authorized_persons.manage",
+    "reception.meetings.read",
+    "reception.meetings.write",
+    "reception.directory.read",
+    "fees.payment.collect",
+  ];
+
+  it("Admission Officer sees admission pipeline screens but NOT Students or Classes", () => {
+    const labels = labelsFor(ADMISSION_OFFICER, ALL_MODULES);
+    // Intact admission screens
+    expect(labels).toContain("Enquiries");
+    expect(labels).toContain("Applications");
+    expect(labels).toContain("Merit & selection");
+    expect(labels).toContain("Waitlist");
+    expect(labels).toContain("Admission reports");
+
+    // Strictly forbidden navigation screens
+    expect(labels).not.toContain("Students");
+    expect(labels).not.toContain("Classes");
+  });
+
+  it("Receptionist sees Enquiries but NOT Applications or application-processing screens", () => {
+    const labels = labelsFor(RECEPTIONIST, ALL_MODULES);
+    // Intact front-desk screen
+    expect(labels).toContain("Enquiries");
+
+    // Strictly removed application screens
+    expect(labels).not.toContain("Applications");
+    expect(labels).not.toContain("Merit & selection");
+    expect(labels).not.toContain("Waitlist");
+    expect(labels).not.toContain("Admission reports");
+
+    // Not student/academic management
+    expect(labels).not.toContain("Students");
+    expect(labels).not.toContain("Classes");
+  });
+
+  it("Receptionist sees all Front Desk screens", () => {
+    const labels = labelsFor(RECEPTIONIST, ALL_MODULES);
+    expect(labels).toContain("Found & Lost");
+    expect(labels).toContain("Student Passes");
+    expect(labels).toContain("Meeting Slips");
+    expect(labels).toContain("Important Directory");
+    expect(labels).toContain("Fee Counter");
+  });
+
+  it("Receptionist does NOT see admin fee screens (Fees, Defaulters, Fee setup, Period close)", () => {
+    const labels = labelsFor(RECEPTIONIST, ALL_MODULES);
+    expect(labels).not.toContain("Fees");
+    expect(labels).not.toContain("Student fees");
+    expect(labels).not.toContain("Defaulters");
+    expect(labels).not.toContain("Fee setup");
+    expect(labels).not.toContain("Period close");
   });
 });

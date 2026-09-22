@@ -67,6 +67,13 @@ def collect(
         raise HTTPException(
             http.HTTP_422_UNPROCESSABLE_ENTITY, "A receipt cannot be for nothing"
         )
+    if purpose is ApplicationFeePurpose.application_fee:
+        expected_fee = Decimal(str(app.cycle.application_fee))
+        if expected_fee > 0 and amount != expected_fee:
+            raise HTTPException(
+                http.HTTP_422_UNPROCESSABLE_ENTITY,
+                f"Payment amount ₹{amount} does not match cycle application fee ₹{expected_fee}",
+            )
     if idempotency_key:
         existing = db.scalar(
             select(ApplicationPayment).where(
@@ -75,6 +82,21 @@ def collect(
         )
         if existing is not None:
             # Two clicks on Collect are one payment, not two receipts.
+            if app.student_id:
+                student = db.get(Student, app.student_id)
+                enrolment = db.scalar(
+                    select(Enrolment).where(
+                        Enrolment.student_id == student.id,
+                        Enrolment.status == EnrolmentStatus.active,
+                    )
+                )
+                existing._conversion_result = {
+                    "student_id": student.id,
+                    "admission_no": student.admission_no,
+                    "class_label": enrolment.class_section.label if enrolment and enrolment.class_section else app.class_applying_for,
+                    "documents_migrated": 0,
+                    "application_no": app.application_no,
+                }
             return existing
 
     year = app.cycle.academic_year.start_date.year
@@ -108,7 +130,13 @@ def collect(
         ApplicationStatus.offer_issued,
     ):
         app_svc.move(db, app, ApplicationStatus.fee_paid, actor=actor)
-    db.commit()
+
+    if purpose is ApplicationFeePurpose.application_fee:
+        # Atomic enrollment: fee payment is the single, automatic trigger
+        conversion_info = _do_conversion(db, app, actor)
+        payment._conversion_result = conversion_info
+
+    db.flush()
     return payment
 
 
@@ -132,7 +160,7 @@ def void_payment(
         after={"status": PaymentStatus.voided.value},
         reason=reason,
     )
-    db.commit()
+    db.flush()
     return payment
 
 
@@ -278,22 +306,38 @@ def preview(db: Session, app: Application) -> dict:
 # ------------------------------------------------------------------ conversion
 
 
-def convert(db: Session, app: Application, *, actor: User) -> dict:
-    """Applicant -> student, in one transaction (§5.1.9(16)).
+def _do_conversion(db: Session, app: Application, actor: User) -> dict:
+    """Internal conversion logic: executes student, user, enrolment, guardian,
+    and document migration inside caller's transaction using db.flush()."""
+    if app.student_id is not None or app.status == ApplicationStatus.enrolled:
+        raise HTTPException(http.HTTP_409_CONFLICT, "This application has already been converted")
+    if app.status == ApplicationStatus.draft:
+        raise HTTPException(http.HTTP_422_UNPROCESSABLE_ENTITY, "A draft application must be submitted before enrollment")
+    if app.status in (
+        ApplicationStatus.cancelled_after_admission,
+        ApplicationStatus.withdrawn_by_parent,
+        ApplicationStatus.rejected,
+        ApplicationStatus.documents_rejected,
+        ApplicationStatus.offer_expired,
+    ):
+        raise HTTPException(http.HTTP_409_CONFLICT, f"An application in {app.status.value} cannot be enrolled")
 
-    Creates the student and their login, the enrolment in the allocated
-    section, the guardians and their logins, the links between them, and moves
-    the documents across. The admission number is allocated here and not before
-    (§5.1.9(17)); the application keeps an immutable pointer to what it became,
-    and the student keeps one back (§5.1.9(19)).
-    """
-    plan = preview(db, app)
-    if plan["blockers"]:
-        raise HTTPException(http.HTTP_409_CONFLICT, "; ".join(plan["blockers"]))
+    guardians = app_svc.guardians(db, app.id)
+    if not guardians or not any(g.is_primary for g in guardians):
+        raise HTTPException(
+            http.HTTP_422_UNPROCESSABLE_ENTITY,
+            "The application has no primary guardian to link or give a login to",
+        )
+    if not app.address:
+        raise HTTPException(
+            http.HTTP_422_UNPROCESSABLE_ENTITY,
+            "The application requires an address before enrollment",
+        )
 
     section, _ = allocate_section(db, app)
     joining_year = app.cycle.academic_year.start_date.year
     admission_no = audit.admission_number(db, app.school_id, joining_year)
+    roll_no = _next_roll_no(db, section.id)
 
     student_user = User(
         school_id=app.school_id,
@@ -324,12 +368,13 @@ def convert(db: Session, app: Application, *, actor: User) -> dict:
             student_id=student.id,
             academic_year_id=section.academic_year_id,
             class_section_id=section.id,
-            roll_no=_next_roll_no(db, section.id),
+            roll_no=roll_no,
             joined_on=date.today(),
+            status=EnrolmentStatus.active,
         )
     )
 
-    for i, g in enumerate(app_svc.guardians(db, app.id)):
+    for i, g in enumerate(guardians):
         guardian = _guardian_for(db, app, g)
         db.add(
             StudentGuardian(
@@ -389,17 +434,33 @@ def convert(db: Session, app: Application, *, actor: User) -> dict:
             "documents_migrated": migrated,
         },
     )
-    db.commit()
+    db.flush()
 
     return {
         "student_id": student.id,
         "admission_no": admission_no,
         "class_label": section.label,
+        "roll_no": roll_no,
         "student_login": {"login_id": admission_no, "password": DEFAULT_STUDENT_PASSWORD},
         "documents_migrated": migrated,
         "medical_transferred": medical is not None,
         "application_no": app.application_no,
     }
+
+
+def convert(db: Session, app: Application, *, actor: User) -> dict:
+    """Applicant -> student, in one transaction (§5.1.9(16)).
+
+    Creates the student and their login, the enrolment in the allocated
+    section, the guardians and their logins, the links between them, and moves
+    the documents across. The admission number is allocated here and not before
+    (§5.1.9(17)); the application keeps an immutable pointer to what it became,
+    and the student keeps one back (§5.1.9(19)).
+    """
+    plan = preview(db, app)
+    if plan["blockers"]:
+        raise HTTPException(http.HTTP_409_CONFLICT, "; ".join(plan["blockers"]))
+    return _do_conversion(db, app, actor)
 
 
 def _address_line(address: dict | None) -> str | None:

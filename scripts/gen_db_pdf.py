@@ -222,7 +222,7 @@ DOC = """<!doctype html>
     <div class="figure"><b>__USED__</b><span>holding data</span></div>
     <div class="figure"><b>__UNUSED__</b><span>still empty</span></div>
   </div>
-  <p class="provenance">Generated against migration <code>c3f61e0a77d2</code> on branch
+  <p class="provenance">Generated against migration <code>a1b2c3d4e5f6</code> on branch
   <code>slice/office-feedback</code>. Row counts come from the seeded demo school and
   will differ on another installation.</p>
 </div>

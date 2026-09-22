@@ -1,0 +1,1245 @@
+"""Generate the revised Simple Database Data-Flow Guide PDF:
+Sunrise-ERP-Operational-Data-Flows.pdf
+
+Focus:
+- TABLE -> TABLE -> TABLE -> TABLE
+- What each table stores in simple language
+- Exact PK -> FK connections
+- Why data moves
+- Short 2-5 sentence plain English explanation
+- Student ID vs Enrollment ID
+- Big Picture ERP flow & Student Data Journey
+"""
+
+import os
+import subprocess
+import sys
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+OUTPUT_HTML = os.path.join(REPO, "docs", "operational-dataflow.html")
+OUTPUT_PDF = os.path.join(REPO, "docs", "Sunrise-ERP-Operational-Data-Flows.pdf")
+
+HTML_CONTENT = """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Sunrise School ERP — Simple Database Data-Flow Guide</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    @page {
+      size: A4 portrait;
+      margin: 12mm 14mm 12mm 14mm;
+      @bottom-right {
+        content: "Page " counter(page);
+        font-family: 'Inter', sans-serif;
+        font-size: 7.5pt;
+        color: #64748b;
+      }
+      @bottom-left {
+        content: "Sunrise School ERP • Simple Database Data-Flow Guide";
+        font-family: 'Inter', sans-serif;
+        font-size: 7.5pt;
+        color: #94a3b8;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      font-size: 8.5pt;
+      line-height: 1.45;
+      color: #1e293b;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: #0f172a;
+      margin-top: 0;
+    }
+
+    code, .mono {
+      font-family: 'JetBrains Mono', Consolas, monospace;
+      font-size: 8pt;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+    .no-break {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    /* Cover Hero Banner */
+    .hero-banner {
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #312e81 100%);
+      color: #ffffff;
+      padding: 22px 24px;
+      border-radius: 10px;
+      margin-bottom: 16px;
+    }
+    .hero-banner h1 {
+      color: #ffffff;
+      font-size: 19pt;
+      font-weight: 800;
+      margin: 0 0 4px 0;
+      letter-spacing: -0.3px;
+    }
+    .hero-banner .subtitle {
+      color: #cbd5e1;
+      font-size: 10pt;
+      font-weight: 500;
+      margin-bottom: 12px;
+    }
+    .hero-banner .meta-bar {
+      display: flex;
+      gap: 16px;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 7.8pt;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .hero-banner .meta-bar span strong {
+      color: #38bdf8;
+    }
+
+    /* Section Headers */
+    .section-header {
+      background: #f8fafc;
+      border-left: 4px solid #4338ca;
+      padding: 8px 12px;
+      margin-top: 16px;
+      margin-bottom: 10px;
+      border-radius: 0 6px 6px 0;
+      break-inside: avoid;
+    }
+    .section-header h2 {
+      font-size: 12pt;
+      font-weight: 700;
+      color: #1e1b4b;
+      margin: 0;
+    }
+
+    /* Feature Data Flow Card */
+    .flow-card {
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      background: #ffffff;
+      break-inside: avoid;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .flow-card-title {
+      font-size: 10pt;
+      font-weight: 700;
+      color: #0f172a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 5px;
+    }
+    .flow-card-title .badge {
+      background: #e0e7ff;
+      color: #3730a3;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 7pt;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    /* Visual Table Flow Banner */
+    .table-flow-banner {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      background: #f1f5f9;
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      border: 1px solid #e2e8f0;
+    }
+    .table-pill {
+      background: #1e293b;
+      color: #38bdf8;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      font-size: 7.8pt;
+      padding: 4px 10px;
+      border-radius: 4px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .flow-arrow {
+      color: #64748b;
+      font-weight: 800;
+      font-size: 9pt;
+    }
+
+    /* Table Descriptions */
+    .table-desc-grid {
+      background: #f8fafc;
+      border: 1px solid #f1f5f9;
+      border-radius: 6px;
+      padding: 6px 10px;
+      margin-bottom: 8px;
+      font-size: 8pt;
+    }
+    .table-desc-row {
+      margin-bottom: 4px;
+    }
+    .table-desc-row:last-child {
+      margin-bottom: 0;
+    }
+    .table-desc-row strong code {
+      color: #0f172a;
+      font-weight: 700;
+      background: #e2e8f0;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    /* FK Connection Box */
+    .fk-box {
+      background: #0f172a;
+      color: #f8fafc;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      font-family: 'JetBrains Mono', Consolas, monospace;
+      font-size: 7.6pt;
+      line-height: 1.4;
+      border-left: 3px solid #38bdf8;
+    }
+    .fk-line {
+      margin-bottom: 2px;
+    }
+    .fk-src { color: #38bdf8; font-weight: 600; }
+    .fk-arrow { color: #94a3b8; margin: 0 4px; }
+    .fk-dst { color: #34d399; font-weight: 600; }
+
+    /* Why Data Moves */
+    .why-box {
+      background: #eff6ff;
+      border-left: 3px solid #3b82f6;
+      padding: 6px 10px;
+      border-radius: 0 4px 4px 0;
+      font-size: 8pt;
+      margin-bottom: 8px;
+      color: #1e3a8a;
+    }
+    .why-box strong {
+      color: #1d4ed8;
+    }
+
+    /* Explanation Text */
+    .explanation-text {
+      font-size: 8pt;
+      color: #334155;
+      line-height: 1.4;
+      margin: 0;
+    }
+
+    /* Big Callouts */
+    .callout-box {
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin: 10px 0;
+      font-size: 8.2pt;
+      break-inside: avoid;
+    }
+    .callout-amber {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-left: 4px solid #f59e0b;
+      color: #92400e;
+    }
+    .callout-blue {
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-left: 4px solid #0284c7;
+      color: #0369a1;
+    }
+    .callout-emerald {
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      border-left: 4px solid #10b981;
+      color: #065f46;
+    }
+
+    /* Comparison Table */
+    table.guide-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0;
+      font-size: 8pt;
+      break-inside: avoid;
+    }
+    table.guide-table th {
+      background: #1e293b;
+      color: #f8fafc;
+      padding: 6px 10px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 7.8pt;
+      border: 1px solid #334155;
+    }
+    table.guide-table td {
+      padding: 5px 10px;
+      border: 1px solid #cbd5e1;
+      vertical-align: top;
+    }
+    table.guide-table tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    /* Big Picture Diagram Box */
+    .big-diagram-box {
+      background: #0f172a;
+      color: #f8fafc;
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.6pt;
+      line-height: 1.45;
+      margin: 10px 0;
+      border: 1px solid #334155;
+      break-inside: avoid;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- COVER HERO BANNER -->
+  <div class="hero-banner">
+    <h1>Sunrise School ERP — Simple Database Data-Flow Guide</h1>
+    <div class="subtitle">A Visual Guide to How Data Moves Between Tables Across All Implemented Features</div>
+    <div class="meta-bar">
+      <span><strong>Database:</strong> PostgreSQL (93 Tables, 68 Live Tables)</span>
+      <span><strong>Core Rule:</strong> TABLE → TABLE → TABLE</span>
+      <span><strong>Scope:</strong> Verified Working Code Only</span>
+      <span><strong>Target:</strong> Clear, Simple, Relational Flow</span>
+    </div>
+  </div>
+
+  <div class="callout-box callout-blue">
+    <strong>How to Read This Guide:</strong><br>
+    This document shows you <strong>exactly how data moves across database tables</strong> for every working feature in Sunrise ERP. For each feature, look at the visual chain (<code>TABLE → TABLE</code>), read what each table is responsible for, see the exact <code>PK → FK</code> connecting them, and read why the data moved.
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- SPECIAL SECTION: STUDENT ID VS ENROLLMENT ID                              -->
+  <!-- ========================================================================= -->
+  <div class="section-header">
+    <h2>1. Student ID vs Enrollment ID (The Core Distinction)</h2>
+  </div>
+
+  <div class="callout-box callout-amber">
+    <strong>The Core Rule of Sunrise ERP:</strong><br>
+    • <strong>Student ID (<code>students.id</code> / <code>admission_no</code>):</strong> Identifies the student <strong>permanently for life</strong>.<br>
+    • <strong>Enrollment ID (<code>enrolments.id</code> / <code>roll_no</code>):</strong> Identifies that student’s <strong>enrollment in a particular class for a particular academic year</strong>.
+  </div>
+
+  <p>
+    In legacy ERPs, the class and roll number were stored directly on the student record. When a student was promoted, their class was overwritten, which accidentally re-parented old attendance marks and old invoices to the new class! Sunrise ERP prevents this by splitting them into two separate tables:
+  </p>
+
+  <div class="table-flow-banner" style="justify-content: center;">
+    <span class="table-pill">students</span>
+    <span style="font-size:8pt; color:#475569; margin: 0 4px;">(One per student for life)</span>
+    <span class="flow-arrow">──1:Many──►</span>
+    <span class="table-pill">enrolments</span>
+    <span style="font-size:8pt; color:#475569; margin: 0 4px;">(One row per year attended)</span>
+  </div>
+
+  <div class="fk-box">
+    <div class="fk-line"><span class="fk-src">students.id</span> <span class="fk-arrow">──PK to FK──►</span> <span class="fk-dst">enrolments.student_id</span></div>
+  </div>
+
+  <table class="guide-table">
+    <thead>
+      <tr>
+        <th style="width: 25%;">Aspect</th>
+        <th style="width: 37%;">Student ID (<code>students</code>)</th>
+        <th style="width: 38%;">Enrollment ID (<code>enrolments</code>)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>What it represents</strong></td>
+        <td>The student as a permanent human being.</td>
+        <td>The student's seat in a specific class section for one school year.</td>
+      </tr>
+      <tr>
+        <td><strong>Database Table</strong></td>
+        <td><code>students</code></td>
+        <td><code>enrolments</code> (spelled with a single 'l')</td>
+      </tr>
+      <tr>
+        <td><strong>Primary Key</strong></td>
+        <td><code>students.id</code> (BigInt)</td>
+        <td><code>enrolments.id</code> (BigInt)</td>
+      </tr>
+      <tr>
+        <td><strong>Human Identifier</strong></td>
+        <td><code>admission_no</code> (e.g. <code>ADM-2024-001</code>)</td>
+        <td><code>roll_no</code> (e.g. Roll #14 in Section 6-A)</td>
+      </tr>
+      <tr>
+        <td><strong>When it is created</strong></td>
+        <td>Created once when the student first joins the school.</td>
+        <td>Created every year when the student is admitted or promoted.</td>
+      </tr>
+      <tr>
+        <td><strong>Does it ever change?</strong></td>
+        <td><strong>Never.</strong> Permanent throughout all school years.</td>
+        <td><strong>Yes.</strong> A new enrollment record is created every academic year.</td>
+      </tr>
+      <tr>
+        <td><strong>How many can a student have?</strong></td>
+        <td>Exactly 1 record per student.</td>
+        <td>Multiple records (1 for each year the student spends in school).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ILLUSTRATIVE MULTI-YEAR EXAMPLE -->
+  <div class="callout-box callout-emerald">
+    <strong>Illustrative Multi-Year Example: Student Aarav Sharma</strong><br>
+    Notice how Aarav's <code>students.id</code> stays <strong>12</strong> forever, while he gets a new <code>enrolments.id</code> each year:
+    <table class="guide-table" style="margin-top:6px; background:#ffffff;">
+      <thead>
+        <tr>
+          <th>Academic Year</th>
+          <th>Student Record</th>
+          <th>Enrollment Record</th>
+          <th>Class & Section</th>
+          <th>Roll No</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>2024–25</strong></td>
+          <td><code>students.id = 12</code> (ADM-2024-001)</td>
+          <td><code>enrolments.id = 42</code></td>
+          <td>Class 5-A</td>
+          <td>Roll 12</td>
+          <td><code>promoted</code></td>
+        </tr>
+        <tr>
+          <td><strong>2025–26</strong></td>
+          <td><code>students.id = 12</code> (ADM-2024-001)</td>
+          <td><code>enrolments.id = 95</code></td>
+          <td>Class 6-A</td>
+          <td>Roll 14</td>
+          <td><code>promoted</code></td>
+        </tr>
+        <tr>
+          <td><strong>2026–27</strong></td>
+          <td><code>students.id = 12</code> (ADM-2024-001)</td>
+          <td><code>enrolments.id = 168</code></td>
+          <td>Class 7-A</td>
+          <td>Roll 15</td>
+          <td><code>active</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sub-heading" style="font-weight:700; color:#1e1b4b; margin: 10px 0 4px 0;">Which Downstream Tables Use Which ID? (Verified From Schema)</div>
+
+  <table class="guide-table">
+    <thead>
+      <tr>
+        <th style="width: 50%;">Downstream Tables Using <code>enrolment_id</code> (Year-Scoped Facts)</th>
+        <th style="width: 50%;">Downstream Tables Using <code>student_id</code> (Lifetime Facts)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          • <code>attendance.enrolment_id</code> → Daily attendance belongs to that year's class.<br>
+          • <code>fee_invoices.enrolment_id</code> → Monthly invoices billed for that academic year.<br>
+          • <code>fee_payments.enrolment_id</code> → Payments collected against that year's dues.<br>
+          • <code>student_fee_plans.enrolment_id</code> → The class fee plan attached for that year.<br>
+          • <code>fee_concessions.enrolment_id</code> → Sibling/merit discount granted for that year.<br>
+          • <code>report_card_publications.enrolment_id</code> → Annual report card issued.<br>
+          • <code>transport_assignments.enrolment_id</code> → Bus seat allocated for that session.<br>
+          • <code>student_leave_requests.enrolment_id</code> → Pupil leave from active class.
+        </td>
+        <td>
+          • <code>student_guardian.student_id</code> → Permanent link to mother, father, or guardian.<br>
+          • <code>applications.student_id</code> → The original admission application that created the child.<br>
+          • <code>application_siblings.student_id</code> → Sibling discount tracking in admissions.<br>
+          • <code>grievances.student_id</code> → Permanent helpdesk complaint record.<br>
+          • <code>marks.student_id</code> → Subject exam marks awarded to the student.<br>
+          • <code>homework_submissions.student_id</code> → Homework turn-in records.<br>
+          • <code>message_recipients.student_id</code> → Broadcast SMS/push notifications.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ========================================================================= -->
+  <!-- OPERATIONAL FEATURES: TABLE TO TABLE FLOWS                                -->
+  <!-- ========================================================================= -->
+  <div class="page-break"></div>
+  <div class="section-header">
+    <h2>2. Operational Features: Table-to-Table Data Flows</h2>
+  </div>
+
+  <!-- 1. ADMISSION PIPELINE -->
+  <div class="flow-card">
+    <div class="flow-card-title">
+      <span>1. Student Admission & Conversion Pipeline</span>
+      <span class="badge">Admissions</span>
+    </div>
+    <div class="table-flow-banner">
+      <span class="table-pill">admission_cycles</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">applications</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">application_guardians</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">students</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">enrolments</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">student_fee_plans</span>
+    </div>
+    <div class="table-desc-grid">
+      <div class="table-desc-row"><strong><code>admission_cycles</code></strong> → Stores the active academic admission intake year and dates.</div>
+      <div class="table-desc-row"><strong><code>applications</code></strong> → Stores applicant biodata, applied class, and application status.</div>
+      <div class="table-desc-row"><strong><code>application_guardians</code></strong> → Stores parent contacts and details submitted with the application.</div>
+      <div class="table-desc-row"><strong><code>students</code></strong> → Stores the permanent student record created upon successful conversion.</div>
+      <div class="table-desc-row"><strong><code>enrolments</code></strong> → Stores the child's active class section and roll number.</div>
+      <div class="table-desc-row"><strong><code>student_fee_plans</code></strong> → Links the new student enrollment to the standard class fee schedule.</div>
+    </div>
+    <div class="fk-box">
+      <div class="fk-line"><span class="fk-src">admission_cycles.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">applications.cycle_id</span></div>
+      <div class="fk-line"><span class="fk-src">applications.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">application_guardians.application_id</span></div>
+      <div class="fk-line"><span class="fk-src">users.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">students.user_id</span> (Student login account)</div>
+      <div class="fk-line"><span class="fk-src">students.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">enrolments.student_id</span></div>
+      <div class="fk-line"><span class="fk-src">enrolments.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">student_fee_plans.enrolment_id</span></div>
+    </div>
+    <div class="why-box">
+      <strong>Why Data Moves:</strong> An applicant submits form details into <code>applications</code>. Once approved, clicking 'Convert' in the UI triggers an atomic transaction that promotes the applicant into a real <code>students</code> record, enrolls them in a class section via <code>enrolments</code>, and sets up their fee billing via <code>student_fee_plans</code>.
+    </div>
+    <p class="explanation-text">
+      The admission process takes a prospective student from initial application to official enrollment. The applicant's personal data becomes permanent records in <code>students</code> and <code>guardians</code>, while their classroom placement is recorded in <code>enrolments</code>. The originating application is marked <code>enrolled</code> and links to the new student record.
+    </p>
+  </div>
+
+  <!-- 2. STUDENT & GUARDIAN MASTER -->
+  <div class="flow-card">
+    <div class="flow-card-title">
+      <span>2. Student & Guardian Family Master Linking</span>
+      <span class="badge">Master Data</span>
+    </div>
+    <div class="table-flow-banner">
+      <span class="table-pill">users</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">students</span>
+      <span class="flow-arrow">◄──►</span>
+      <span class="table-pill">student_guardian</span>
+      <span class="flow-arrow">◄──►</span>
+      <span class="table-pill">guardians</span>
+      <span class="flow-arrow">◄──</span>
+      <span class="table-pill">users</span>
+    </div>
+    <div class="table-desc-grid">
+      <div class="table-desc-row"><strong><code>users</code></strong> → Stores login credentials, email/phone, and authentication state.</div>
+      <div class="table-desc-row"><strong><code>students</code></strong> → Stores lifetime child identity, date of birth, gender, and unique admission number.</div>
+      <div class="table-desc-row"><strong><code>guardians</code></strong> → Stores parent occupation, income, and emergency contact details.</div>
+      <div class="table-desc-row"><strong><code>student_guardian</code></strong> → Junction table connecting multiple children to their parents (M:N).</div>
+    </div>
+    <div class="fk-box">
+      <div class="fk-line"><span class="fk-src">users.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">students.user_id</span> &nbsp;|&nbsp; <span class="fk-src">users.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">guardians.user_id</span></div>
+      <div class="fk-line"><span class="fk-src">students.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">student_guardian.student_id</span></div>
+      <div class="fk-line"><span class="fk-src">guardians.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">student_guardian.guardian_id</span></div>
+    </div>
+    <div class="why-box">
+      <strong>Why Data Moves:</strong> Both students and parents need login accounts (in <code>users</code>). Because parents often have multiple children in the same school (siblings), the <code>student_guardian</code> junction table connects them cleanly without duplicating parent profiles.
+    </div>
+    <p class="explanation-text">
+      This structure represents family relationships in the school. A student row is created with a permanent admission number, and a guardian row is created for the parent. The junction table records who is the father, mother, or legal guardian, allowing sibling discounts and consolidated parent billing.
+    </p>
+  </div>
+
+  <!-- 3. ACADEMICS & TIMETABLE -->
+  <div class="flow-card">
+    <div class="flow-card-title">
+      <span>3. Academics, Class Sections & Timetable Slots</span>
+      <span class="badge">Academics</span>
+    </div>
+    <div class="table-flow-banner">
+      <span class="table-pill">academic_years</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">class_sections</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">class_subject_teacher</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">timetable_slots</span>
+    </div>
+    <div class="table-desc-grid">
+      <div class="table-desc-row"><strong><code>academic_years</code></strong> → Stores the academic calendar year (e.g. 2026-27).</div>
+      <div class="table-desc-row"><strong><code>class_sections</code></strong> → Stores classroom divisions (e.g. Class 10-A) and assigns the class teacher.</div>
+      <div class="table-desc-row"><strong><code>class_subject_teacher</code></strong> → Maps which teacher teaches which subject in that section.</div>
+      <div class="table-desc-row"><strong><code>timetable_slots</code></strong> → Stores the weekly timetable schedule (day of week, period, teacher, subject).</div>
+    </div>
+    <div class="fk-box">
+      <div class="fk-line"><span class="fk-src">academic_years.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">class_sections.academic_year_id</span></div>
+      <div class="fk-line"><span class="fk-src">class_sections.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">class_subject_teacher.class_section_id</span></div>
+      <div class="fk-line"><span class="fk-src">class_sections.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">timetable_slots.class_section_id</span></div>
+      <div class="fk-line"><span class="fk-src">employees.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">timetable_slots.teacher_id</span></div>
+    </div>
+    <div class="why-box">
+      <strong>Why Data Moves:</strong> Schools organize teaching by assigning faculty to subjects, and then scheduling those subjects into weekly timetable periods so teachers and students know where to be each period.
+    </div>
+    <p class="explanation-text">
+      Academic years contain class sections. Each section has a designated class teacher and subject teachers. The timetable grid maps these teachers and subjects into concrete weekly periods, which later drives substitution conflict checking when teachers take leave.
+    </p>
+  </div>
+
+  <!-- 4. DAILY STUDENT ATTENDANCE -->
+  <div class="flow-card">
+    <div class="flow-card-title">
+      <span>4. Student Daily Attendance Roll Marking</span>
+      <span class="badge">Attendance</span>
+    </div>
+    <div class="table-flow-banner">
+      <span class="table-pill">class_sections</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">enrolments</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">attendance</span>
+    </div>
+    <div class="table-desc-grid">
+      <div class="table-desc-row"><strong><code>class_sections</code></strong> → Identifies the classroom being marked (e.g. Class 10-A).</div>
+      <div class="table-desc-row"><strong><code>enrolments</code></strong> → Provides the list of active students enrolled in that section this year.</div>
+      <div class="table-desc-row"><strong><code>attendance</code></strong> → Stores the daily roll-call mark (present, absent, late, leave) for that date.</div>
+    </div>
+    <div class="fk-box">
+      <div class="fk-line"><span class="fk-src">class_sections.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">enrolments.class_section_id</span></div>
+      <div class="fk-line"><span class="fk-src">enrolments.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">attendance.enrolment_id</span></div>
+    </div>
+    <div class="why-box">
+      <strong>Why Data Moves:</strong> When the class teacher opens the attendance screen, the system fetches the active student roster from <code>enrolments</code>. The teacher marks the roll, which inserts daily presence records into <code>attendance</code>.
+    </div>
+    <p class="explanation-text">
+      Daily attendance points to <code>enrolment_id</code> rather than <code>student_id</code> because attendance belongs to the student's year in a specific class. If the student was absent in Class 5, that record remains tied to their Class 5 enrollment forever.
+    </p>
+  </div>
+
+  <!-- 5. FEE BILLING & INVOICING -->
+  <div class="page-break"></div>
+  <div class="flow-card">
+    <div class="flow-card-title">
+      <span>5. Fee Plan Setup & Monthly Invoice Billing</span>
+      <span class="badge">Fees & Billing</span>
+    </div>
+    <div class="table-flow-banner">
+      <span class="table-pill">fee_heads</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">fee_plan_items</span>
+      <span class="flow-arrow">◄──</span>
+      <span class="table-pill">fee_plans</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">student_fee_plans</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">fee_invoices</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">fee_invoice_lines</span>
+    </div>
+    <div class="table-desc-grid">
+      <div class="table-desc-row"><strong><code>fee_heads</code></strong> → Stores fee categories (e.g. Tuition, Computer Lab, Annual Sports).</div>
+      <div class="table-desc-row"><strong><code>fee_plans</code></strong> → Stores the standard fee structure for a class (e.g. Class 10 Annual Plan).</div>
+      <div class="table-desc-row"><strong><code>fee_plan_items</code></strong> → Stores the breakdown of amounts per fee head within that plan.</div>
+      <div class="table-desc-row"><strong><code>student_fee_plans</code></strong> → Attaches the plan to the student's enrollment.</div>
+      <div class="table-desc-row"><strong><code>fee_invoices</code></strong> → Stores the monthly invoice bill issued to the student.</div>
+      <div class="table-desc-row"><strong><code>fee_invoice_lines</code></strong> → Stores the individual charges on that invoice bill.</div>
+    </div>
+    <div class="fk-box">
+      <div class="fk-line"><span class="fk-src">fee_heads.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">fee_plan_items.fee_head_id</span></div>
+      <div class="fk-line"><span class="fk-src">fee_plans.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">fee_plan_items.fee_plan_id</span></div>
+      <div class="fk-line"><span class="fk-src">enrolments.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">fee_invoices.enrolment_id</span></div>
+      <div class="fk-line"><span class="fk-src">fee_invoices.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">fee_invoice_lines.invoice_id</span></div>
+    </div>
+    <div class="why-box">
+      <strong>Why Data Moves:</strong> At the start of the month, the billing engine reads the class fee plan, creates an invoice header in <code>fee_invoices</code>, and splits the total into granular charge lines in <code>fee_invoice_lines</code>.
+    </div>
+    <p class="explanation-text">
+      Invoices are generated per enrollment. The system pulls all fee plan items, subtracts any active concessions from <code>fee_concessions</code>, and creates an official invoice. The invoice starts in <code>unpaid</code> status with individual line amounts ready for collection.
+    </p>
+  </div>
+
+  <!-- 6. FEE PAYMENT & ALLOCATION -->
+  <div class="flow-card">
+    <div class="flow-card-title">
+      <span>6. Counter Fee Collection & FIFO Line Allocation</span>
+      <span class="badge">Fee Payments</span>
+    </div>
+    <div class="table-flow-banner">
+      <span class="table-pill">fee_payments</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">payment_allocations</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">fee_invoice_lines</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">fee_invoices (status)</span>
+    </div>
+    <div class="table-desc-grid">
+      <div class="table-desc-row"><strong><code>fee_payments</code></strong> → Stores the cashier receipt voucher (amount collected, payment mode, receipt no).</div>
+      <div class="table-desc-row"><strong><code>payment_allocations</code></strong> → Junction table linking the collected money to specific unpaid invoice lines.</div>
+      <div class="table-desc-row"><strong><code>fee_invoice_lines</code></strong> → The specific charges being settled (Tuition, Library, etc.).</div>
+      <div class="table-desc-row"><strong><code>fee_invoices</code></strong> → Header updated to <code>paid</code> or <code>partial</code> once lines are settled.</div>
+    </div>
+    <div class="fk-box">
+      <div class="fk-line"><span class="fk-src">enrolments.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">fee_payments.enrolment_id</span></div>
+      <div class="fk-line"><span class="fk-src">fee_payments.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">payment_allocations.payment_id</span></div>
+      <div class="fk-line"><span class="fk-src">fee_invoice_lines.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">payment_allocations.invoice_line_id</span></div>
+    </div>
+    <div class="why-box">
+      <strong>Why Data Moves:</strong> When a parent pays money, the system creates a payment record and automatically allocates the money to the oldest unpaid invoice lines first (FIFO rule), updating the invoice status.
+    </div>
+    <p class="explanation-text">
+      Money is never dumped as an unallocated lump sum. Every collected rupee is tracked through <code>payment_allocations</code> down to the exact invoice line it cleared. If a payment is reversed later (e.g. bounced cheque), a contra row in <code>fee_payments</code> reverses those exact allocations without deleting history.
+    </p>
+  </div>
+
+  <!-- 7. EXAMS, MARKS & GRADES -->
+  <div class="flow-card">
+    <div class="flow-card-title">
+      <span>7. Examinations, Marks Entry Grid & CBSE Grading</span>
+      <span class="badge">Exams</span>
+    </div>
+    <div class="table-flow-banner">
+      <span class="table-pill">exams</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">exam_schedule</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">marks</span>
+      <span class="flow-arrow">◄──</span>
+      <span class="table-pill">students</span>
+      <span class="flow-arrow">◄──</span>
+      <span class="table-pill">grade_bands</span>
+    </div>
+    <div class="table-desc-grid">
+      <div class="table-desc-row"><strong><code>exams</code></strong> → Stores the major examination event (e.g. Term 1 Midterms).</div>
+      <div class="table-desc-row"><strong><code>exam_schedule</code></strong> → Stores paper datesheet, max marks, and locking state (<code>is_locked</code>).</div>
+      <div class="table-desc-row"><strong><code>marks</code></strong> → Stores marks awarded to the student for that exam subject paper.</div>
+      <div class="table-desc-row"><strong><code>students</code></strong> → Identifies the student who took the exam.</div>
+      <div class="table-desc-row"><strong><code>grade_bands</code></strong> → Supplies CBSE letter grade (A1, A2, B1) and grade point for the percentage score.</div>
+    </div>
+    <div class="fk-box">
+      <div class="fk-line"><span class="fk-src">exams.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">exam_schedule.exam_id</span></div>
+      <div class="fk-line"><span class="fk-src">exams.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">marks.exam_id</span></div>
+      <div class="fk-line"><span class="fk-src">students.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">marks.student_id</span></div>
+    </div>
+    <div class="why-box">
+      <strong>Why Data Moves:</strong> Teachers evaluate papers and submit scores on the marks entry grid. The system saves the score in <code>marks</code>, looks up the CBSE grade band, and locks the paper in <code>exam_schedule</code> to prevent tampering.
+    </div>
+    <p class="explanation-text">
+      Exams link to subjects and datesheets. Marks awarded to students are checked against <code>grade_bands</code> to automatically compute CBSE grades (e.g. 91-100 = A1). When the exam controller locks the schedule, no further mark updates are allowed without an audited unlock reason.
+    </p>
+  </div>
+
+  <!-- 8. SESSION ROLLOVER & PROMOTION -->
+  <div class="flow-card">
+    <div class="flow-card-title">
+      <span>8. Academic Session Rollover & Class Promotion</span>
+      <span class="badge">Promotion</span>
+    </div>
+    <div class="table-flow-banner">
+      <span class="table-pill">enrolments (2025-26)</span>
+      <span class="flow-arrow">──► (marked 'promoted')</span>
+      <br>
+      <span class="table-pill">enrolments (2026-27)</span>
+      <span class="flow-arrow">──► (inserted 'active')</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">audit_log</span>
+    </div>
+    <div class="table-desc-grid">
+      <div class="table-desc-row"><strong><code>enrolments (Old Year)</code></strong> → Prior academic year record updated to <code>status = 'promoted'</code>.</div>
+      <div class="table-desc-row"><strong><code>enrolments (New Year)</code></strong> → Brand new record inserted for target academic year with new class section and roll number.</div>
+      <div class="table-desc-row"><strong><code>students</code></strong> → <strong>NEVER MODIFIED.</strong> Student ID and admission number remain identical.</div>
+      <div class="table-desc-row"><strong><code>audit_log</code></strong> → Records rollover execution metrics, timestamp, and operator signature.</div>
+    </div>
+    <div class="fk-box">
+      <div class="fk-line"><span class="fk-src">students.id</span> <span class="fk-arrow">──Identical on both──►</span> <span class="fk-dst">enrolments.student_id</span></div>
+      <div class="fk-line"><span class="fk-src">academic_years.id</span> <span class="fk-arrow">──Points to new year──►</span> <span class="fk-dst">enrolments.academic_year_id</span></div>
+    </div>
+    <div class="why-box">
+      <strong>Why Data Moves:</strong> At the end of the school year, students advance to the next grade. The rollover wizard creates new enrollment records for the next session while marking old ones promoted, preserving 100% of past academic history.
+    </div>
+    <p class="explanation-text">
+      Session rollover creates new rows instead of destroying old ones. A student moving from Class 5-A to Class 6-A keeps their permanent student ID, but receives a new enrollment record for 2026-27. This ensures old report cards and attendance records are never corrupted.
+    </p>
+  </div>
+
+  <!-- 9. STAFF HR & PAYROLL -->
+  <div class="page-break"></div>
+  <div class="flow-card">
+    <div class="flow-card-title">
+      <span>9. Staff Directory, Salary Structures & Monthly Payroll</span>
+      <span class="badge">HR & Payroll</span>
+    </div>
+    <div class="table-flow-banner">
+      <span class="table-pill">users</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">employees</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">salary_structures</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">payroll_batches</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">payslips</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">payslip_items</span>
+    </div>
+    <div class="table-desc-grid">
+      <div class="table-desc-row"><strong><code>users</code></strong> → Stores staff authentication login credentials.</div>
+      <div class="table-desc-row"><strong><code>employees</code></strong> → Stores employee code (e.g. TCH003), designation, department, and joining date.</div>
+      <div class="table-desc-row"><strong><code>salary_structures</code></strong> → Stores compensation base pay, allowances, and statutory rules.</div>
+      <div class="table-desc-row"><strong><code>payroll_batches</code></strong> → Header for monthly payroll calculation run (e.g. August 2026).</div>
+      <div class="table-desc-row"><strong><code>payslips</code></strong> → Individual employee salary slip (Gross, Total Deductions, Net Pay).</div>
+      <div class="table-desc-row"><strong><code>payslip_items</code></strong> → Itemized earnings (Basic, DA, HRA) and deductions (EPF, ESI, TDS).</div>
+    </div>
+    <div class="fk-box">
+      <div class="fk-line"><span class="fk-src">users.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">employees.user_id</span></div>
+      <div class="fk-line"><span class="fk-src">employees.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">salary_structures.employee_id</span></div>
+      <div class="fk-line"><span class="fk-src">payroll_batches.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">payslips.batch_id</span></div>
+      <div class="fk-line"><span class="fk-src">payslips.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">payslip_items.payslip_id</span></div>
+    </div>
+    <div class="why-box">
+      <strong>Why Data Moves:</strong> At month-end, the payroll officer calculates salaries. The engine reads each staff member's salary structure, generates individual payslips, calculates statutory deductions (EPF/ESI), and exports bank disbursals.
+    </div>
+    <p class="explanation-text">
+      Staff records live in <code>employees</code>. Each employee has an assigned salary structure. When the monthly payroll batch is calculated, the system creates a payslip for each employee with itemized lines for basic pay, allowances, and EPF/TDS deductions.
+    </p>
+  </div>
+
+  <!-- 10. TEACHER LEAVE & SUBSTITUTION -->
+  <div class="flow-card">
+    <div class="flow-card-title">
+      <span>10. Teacher Mobile Leave & 100% Substitution Coverage Gate</span>
+      <span class="badge">Leave & Substitution</span>
+    </div>
+    <div class="table-flow-banner">
+      <span class="table-pill">employees</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">staff_leave_requests</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">timetable_slots (conflicts)</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">substitutions</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">in_app_notifications</span>
+    </div>
+    <div class="table-desc-grid">
+      <div class="table-desc-row"><strong><code>employees</code></strong> → The teacher applying for leave.</div>
+      <div class="table-desc-row"><strong><code>staff_leave_requests</code></strong> → Stores the leave application (dates, reason, status).</div>
+      <div class="table-desc-row"><strong><code>timetable_slots</code></strong> → Identifies which teaching periods become vacant on those dates.</div>
+      <div class="table-desc-row"><strong><code>substitutions</code></strong> → Temporary assignments linking free teachers to vacant timetable slots.</div>
+      <div class="table-desc-row"><strong><code>in_app_notifications</code></strong> → Push alerts sent to substitute teachers informing them of duties.</div>
+    </div>
+    <div class="fk-box">
+      <div class="fk-line"><span class="fk-src">employees.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">staff_leave_requests.employee_id</span></div>
+      <div class="fk-line"><span class="fk-src">staff_leave_requests.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">substitutions.leave_request_id</span></div>
+      <div class="fk-line"><span class="fk-src">timetable_slots.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">substitutions.timetable_slot_id</span></div>
+      <div class="fk-line"><span class="fk-src">employees.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">substitutions.substitute_teacher_id</span></div>
+    </div>
+    <div class="why-box">
+      <strong>Why Data Moves:</strong> A teacher applies for leave via mobile. The system finds their timetable slots for that day. The admin must assign substitute teachers to 100% of vacant slots before the 'Approve' button unlocks.
+    </div>
+    <p class="explanation-text">
+      When a teacher takes leave, their classroom periods must not be left unattended. The system detects conflicts in <code>timetable_slots</code>, allows the admin to assign free teachers in <code>substitutions</code>, and sends mobile alerts. Master timetable slots are never modified; substitutions expire automatically.
+    </p>
+  </div>
+
+  <!-- 11. TEACHER RECRUITMENT -->
+  <div class="flow-card">
+    <div class="flow-card-title">
+      <span>11. Teacher Recruitment Pipeline & 1-Click Onboarding</span>
+      <span class="badge">Recruitment</span>
+    </div>
+    <div class="table-flow-banner">
+      <span class="table-pill">candidates</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">candidate_offers</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">users</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">employees</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">user_roles</span>
+    </div>
+    <div class="table-desc-grid">
+      <div class="table-desc-row"><strong><code>candidates</code></strong> → Stores job applicant bio-data, resume, position applied, and hiring stage.</div>
+      <div class="table-desc-row"><strong><code>candidate_offers</code></strong> → Stores the formal job offer parameters (salary, designation, joining date).</div>
+      <div class="table-desc-row"><strong><code>users</code></strong> → User account created automatically when candidate is onboarded.</div>
+      <div class="table-desc-row"><strong><code>employees</code></strong> → Permanent faculty record created with new staff code (e.g. TCH014).</div>
+      <div class="table-desc-row"><strong><code>user_roles</code></strong> → Assigns the 'Teacher' system role to the newly created user.</div>
+    </div>
+    <div class="fk-box">
+      <div class="fk-line"><span class="fk-src">candidates.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">candidate_offers.candidate_id</span></div>
+      <div class="fk-line"><span class="fk-src">users.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">employees.user_id</span></div>
+      <div class="fk-line"><span class="fk-src">candidates.employee_id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">employees.id</span> (Points to created staff)</div>
+    </div>
+    <div class="why-box">
+      <strong>Why Data Moves:</strong> An applicant advances through interview stages to an accepted job offer. Clicking 'Onboard' automatically provisions them as an active employee and user without retyping information.
+    </div>
+    <p class="explanation-text">
+      The recruitment module tracks teaching applicants from application to hiring. When a candidate accepts their offer, 1-click onboarding creates their system login in <code>users</code> and adds them to <code>employees</code>, immediately making them available for timetable assignment.
+    </p>
+  </div>
+
+  <!-- 12. INVENTORY & STOCK -->
+  <div class="flow-card">
+    <div class="flow-card-title">
+      <span>12. Consumable Stock Inventory & Requisition Workflow</span>
+      <span class="badge">Inventory</span>
+    </div>
+    <div class="table-flow-banner">
+      <span class="table-pill">stock_categories</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">stock_items</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">stock_requests</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">stock_items (quantity decremented)</span>
+    </div>
+    <div class="table-desc-grid">
+      <div class="table-desc-row"><strong><code>stock_categories</code></strong> → Groups items into departments (e.g. Science Lab, Stationery, Sports).</div>
+      <div class="table-desc-row"><strong><code>stock_items</code></strong> → Stores item name, current quantity, minimum safe threshold, and unit.</div>
+      <div class="table-desc-row"><strong><code>stock_requests</code></strong> → Stores staff requests for items and approval state.</div>
+    </div>
+    <div class="fk-box">
+      <div class="fk-line"><span class="fk-src">stock_categories.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">stock_items.category_id</span></div>
+      <div class="fk-line"><span class="fk-src">stock_items.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">stock_requests.item_id</span></div>
+      <div class="fk-line"><span class="fk-src">employees.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">stock_requests.requested_by_id</span></div>
+    </div>
+    <div class="why-box">
+      <strong>Why Data Moves:</strong> Staff request consumables (e.g. whiteboard markers, test tubes). When the storekeeper approves the request, the system deducts the quantity from <code>stock_items</code> and flags an alert if stock drops below minimum threshold.
+    </div>
+    <p class="explanation-text">
+      The inventory catalog tracks school physical assets and consumables. Staff requisitions in <code>stock_requests</code> reduce physical stock upon approval. If remaining quantity falls below <code>min_quantity</code>, an amber warning badge appears on the admin dashboard.
+    </p>
+  </div>
+
+  <!-- 13. GRIEVANCES & RESOLUTION -->
+  <div class="page-break"></div>
+  <div class="flow-card">
+    <div class="flow-card-title">
+      <span>13. Parent / Staff Grievance Redressal & Helpdesk</span>
+      <span class="badge">Grievances</span>
+    </div>
+    <div class="table-flow-banner">
+      <span class="table-pill">users / students</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">grievances</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">grievance_replies</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">grievances (status='resolved')</span>
+    </div>
+    <div class="table-desc-grid">
+      <div class="table-desc-row"><strong><code>grievances</code></strong> → Stores the complaint ticket (ticket number, title, category, assigned staff, status).</div>
+      <div class="table-desc-row"><strong><code>grievance_replies</code></strong> → Stores threaded conversation replies between parent and school staff.</div>
+      <div class="table-desc-row"><strong><code>employees</code></strong> → The staff member assigned to resolve the grievance.</div>
+    </div>
+    <div class="fk-box">
+      <div class="fk-line"><span class="fk-src">students.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">grievances.student_id</span> (Optional student link)</div>
+      <div class="fk-line"><span class="fk-src">employees.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">grievances.assigned_to_id</span></div>
+      <div class="fk-line"><span class="fk-src">grievances.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">grievance_replies.grievance_id</span></div>
+    </div>
+    <div class="why-box">
+      <strong>Why Data Moves:</strong> A parent files a complaint on mobile. The admin assigns the ticket to a staff member in <code>grievances</code>. Staff and parent exchange messages in <code>grievance_replies</code> until the ticket is resolved.
+    </div>
+    <p class="explanation-text">
+      The grievance system manages school complaints and inquiries. Each ticket starts in <code>open</code> status, receives threaded responses in <code>grievance_replies</code>, and transitions to <code>resolved</code> once administrative action is taken.
+    </p>
+  </div>
+
+  <!-- 14. TRANSPORT & FLEET -->
+  <div class="flow-card">
+    <div class="flow-card-title">
+      <span>14. Fleet Transport Routes, Stops & Student Bus Assignments</span>
+      <span class="badge">Transport</span>
+    </div>
+    <div class="table-flow-banner">
+      <span class="table-pill">routes</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">route_stops</span>
+      <span class="flow-arrow">◄──►</span>
+      <span class="table-pill">vehicles</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">transport_assignments</span>
+      <span class="flow-arrow">◄──</span>
+      <span class="table-pill">enrolments</span>
+    </div>
+    <div class="table-desc-grid">
+      <div class="table-desc-row"><strong><code>routes</code></strong> → Stores the bus route name, code, and operational status.</div>
+      <div class="table-desc-row"><strong><code>route_stops</code></strong> → Stores individual pickup/drop locations along the route and stop timing.</div>
+      <div class="table-desc-row"><strong><code>vehicles</code></strong> → Stores bus vehicle details, registration, seating capacity, and driver details.</div>
+      <div class="table-desc-row"><strong><code>transport_assignments</code></strong> → Links an enrolled student to a specific bus stop and route.</div>
+    </div>
+    <div class="fk-box">
+      <div class="fk-line"><span class="fk-src">routes.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">route_stops.route_id</span></div>
+      <div class="fk-line"><span class="fk-src">enrolments.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">transport_assignments.enrolment_id</span></div>
+      <div class="fk-line"><span class="fk-src">route_stops.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">transport_assignments.route_stop_id</span></div>
+    </div>
+    <div class="why-box">
+      <strong>Why Data Moves:</strong> When parents opt for school bus service, the student's active enrollment is linked to a designated route stop in <code>transport_assignments</code>, ensuring the student appears on driver passenger manifests.
+    </div>
+    <p class="explanation-text">
+      The transport module configures routes and designated stops. Bus seats are allocated per academic session through <code>enrolment_id</code>. Vehicle paper expiry dates are monitored in <code>vehicles</code> to ensure regulatory compliance.
+    </p>
+  </div>
+
+  <!-- 15. AUTHENTICATION & RBAC -->
+  <div class="flow-card">
+    <div class="flow-card-title">
+      <span>15. Authentication, System Roles & Granular Permissions</span>
+      <span class="badge">Security & RBAC</span>
+    </div>
+    <div class="table-flow-banner">
+      <span class="table-pill">users</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">user_roles</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">roles</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">role_permissions</span>
+      <span class="flow-arrow">──►</span>
+      <span class="table-pill">permissions</span>
+    </div>
+    <div class="table-desc-grid">
+      <div class="table-desc-row"><strong><code>users</code></strong> → Stores email, password hash, and active status.</div>
+      <div class="table-desc-row"><strong><code>user_roles</code></strong> → Maps which user holds which role (e.g. Admin, Teacher, Receptionist).</div>
+      <div class="table-desc-row"><strong><code>roles</code></strong> → Catalog of system roles defined for the school.</div>
+      <div class="table-desc-row"><strong><code>role_permissions</code></strong> → Junction mapping permissions to each role.</div>
+      <div class="table-desc-row"><strong><code>permissions</code></strong> → Master catalog of granular action strings (e.g. <code>fees.invoice.read</code>).</div>
+    </div>
+    <div class="fk-box">
+      <div class="fk-line"><span class="fk-src">users.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">user_roles.user_id</span></div>
+      <div class="fk-line"><span class="fk-src">roles.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">user_roles.role_id</span></div>
+      <div class="fk-line"><span class="fk-src">roles.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">role_permissions.role_id</span></div>
+      <div class="fk-line"><span class="fk-src">permissions.id</span> <span class="fk-arrow">──►</span> <span class="fk-dst">role_permissions.permission_id</span></div>
+    </div>
+    <div class="why-box">
+      <strong>Why Data Moves:</strong> When a user logs in, the backend traverses this chain to collect all permission codes granted to their assigned roles, embedding them into their access token to gate screens and API routes.
+    </div>
+    <p class="explanation-text">
+      Security in Sunrise ERP is completely role-based. Users are assigned roles in <code>user_roles</code>, and roles are linked to permissions in <code>role_permissions</code>. The frontend UI hides unauthorized menus, and the backend blocks unauthorized API endpoints with HTTP 403.
+    </p>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- END-OF-DOCUMENT SYNTHESIS SECTIONS                                        -->
+  <!-- ========================================================================= -->
+  <div class="page-break"></div>
+  <div class="section-header">
+    <h2>3. Important IDs Glossary</h2>
+  </div>
+
+  <table class="guide-table">
+    <thead>
+      <tr>
+        <th style="width: 22%;">Identifier Name</th>
+        <th style="width: 28%;">Database Column & Type</th>
+        <th style="width: 50%;">Simple Operational Meaning</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>School ID</strong></td>
+        <td><code>school_id</code> (BigInt)</td>
+        <td>Identifies the school tenant. Present on 90 tables to keep each customer school's data completely isolated.</td>
+      </tr>
+      <tr>
+        <td><strong>User ID</strong></td>
+        <td><code>users.id</code> (BigInt)</td>
+        <td>Identifies a human login account (Admin, Teacher, Student, Parent, or Receptionist).</td>
+      </tr>
+      <tr>
+        <td><strong>Student ID</strong></td>
+        <td><code>students.id</code> (BigInt)</td>
+        <td>The internal primary key for the student's permanent lifetime record.</td>
+      </tr>
+      <tr>
+        <td><strong>Admission Number</strong></td>
+        <td><code>students.admission_no</code> (String)</td>
+        <td>The permanent human-readable student code (e.g. <code>ADM-2024-001</code>) printed on ID cards. Never changes.</td>
+      </tr>
+      <tr>
+        <td><strong>Enrollment ID</strong></td>
+        <td><code>enrolments.id</code> (BigInt)</td>
+        <td>The primary key identifying a student's enrollment in a specific class for a specific academic year.</td>
+      </tr>
+      <tr>
+        <td><strong>Roll Number</strong></td>
+        <td><code>enrolments.roll_no</code> (Integer)</td>
+        <td>The student's roll number within their class section for that year (e.g. Roll #12 in 5-A). Unique within the section.</td>
+      </tr>
+      <tr>
+        <td><strong>Employee ID</strong></td>
+        <td><code>employees.id</code> (BigInt)</td>
+        <td>The internal database primary key for a staff member (teaching or non-teaching).</td>
+      </tr>
+      <tr>
+        <td><strong>Employee Code</strong></td>
+        <td><code>employees.employee_code</code> (String)</td>
+        <td>The permanent staff number (e.g. <code>TCH001</code>, <code>TCH014</code>) used in timetable and payroll records.</td>
+      </tr>
+      <tr>
+        <td><strong>Invoice ID</strong></td>
+        <td><code>fee_invoices.id</code> (BigInt)</td>
+        <td>The unique identifier for a monthly fee bill issued to a student enrollment.</td>
+      </tr>
+      <tr>
+        <td><strong>Payment ID</strong></td>
+        <td><code>fee_payments.id</code> (BigInt)</td>
+        <td>The unique identifier for an immutable fee payment receipt voucher collected at the counter.</td>
+      </tr>
+      <tr>
+        <td><strong>Exam ID</strong></td>
+        <td><code>exams.id</code> (BigInt)</td>
+        <td>Identifies a major examination cycle (e.g. Term 1 Exams).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- BIG PICTURE ERP DATABASE FLOW -->
+  <div class="section-header">
+    <h2>4. Big-Picture ERP Database Flow</h2>
+  </div>
+
+  <div class="big-diagram-box">
+========================================================================================
+                        SUNRISE ERP: BIG-PICTURE DATABASE FLOW
+========================================================================================
+
+                 [admission_cycles]
+                         │
+                         ▼
+                  [applications]
+                         │
+        (Conversion)     ▼
+      ┌────────────────────────────────────────────────────────┐
+      │                                                        │
+      ▼                                                        ▼
+   [users] ──► [guardians] ◄── [student_guardian] ◄── [students]  (Permanent Identity)
+      │                                                   │
+      ├─► [employees] ──► [departments]                   ▼ (student_id)
+      │        │                                     [enrolments]  (Annual Membership)
+      │        ├─► [staff_leave_requests]                 │
+      │        │        │                                 ├─► [attendance]
+      │        │        ▼                                 │
+      │        │   [substitutions] ◄── [timetable_slots]  ├─► [fee_invoices] ──► [fee_invoice_lines]
+      │        │                                │         │                            ▲
+      │        ├─► [staff_attendance]           │         │                            │
+      │        │                                │         ├─► [fee_payments] ──► [payment_allocations]
+      │        └─► [payslips] ──► [payslip_items]         │
+      │                                         │         ├─► [transport_assignments]
+      └─► [user_roles] ──► [roles] ──► [permissions]     │
+                                                          └─► [report_card_publications]
+                                                                       ▲
+                                                                       │ (Marks & Grading)
+                                        [exams] ──► [exam_schedule] ──► [marks] ◄── [students]
+========================================================================================
+  </div>
+
+  <!-- FINAL STUDENT DATA JOURNEY -->
+  <div class="section-header">
+    <h2>5. The Final Student Data Journey</h2>
+  </div>
+
+  <p>
+    Here is the complete journey of a child's data through the database from their first inquiry to graduation:
+  </p>
+
+  <div class="big-diagram-box">
+1. INTAKE:
+   enquiries ──► applications ──► application_guardians / documents
+                     │
+                     ▼ (Conversion)
+2. PERMANENT IDENTITY:
+   users ──► students (admission_no: 'ADM-2024-001') ◄── student_guardian ──► guardians
+                     │
+                     ▼ (Enrolled into Class 5-A for 2024-25)
+3. ANNUAL ACADEMIC SESSION (Year 1):
+   enrolments (id: 42, class_section_id: 5-A, roll_no: 12, status: 'active')
+         │
+         ├───► attendance (Daily Roll-Call Marks for Class 5-A)
+         │
+         ├───► fee_invoices ──► fee_invoice_lines (Tuition, Lab) ◄── payment_allocations ◄── fee_payments
+         │
+         ├───► marks (Exam Scores Awarded to student_id) ──► CBSE Grade Bands (A1, A2)
+         │
+         └───► transport_assignments (Bus Route Stop Allocated)
+                     │
+                     ▼ (March: Academic Session Rollover)
+4. PROMOTION TO NEXT GRADE (Year 2):
+   • enrolments (id: 42) ──► Updated to status: 'promoted' (Past history untouched!)
+   • enrolments (id: 95) ──► INSERTED for Class 6-A in 2025-26 with roll_no: 14, status: 'active'
+   • students (id: 12)   ──► UNTOUCHED! Lifetime identity remains 'ADM-2024-001'.
+                     │
+                     ▼
+5. REPEAT CYCLE FOR EVERY SUBSEQUENT GRADE UNTIL GRADUATION!
+  </div>
+
+  <div class="callout-box callout-emerald" style="margin-top: 14px;">
+    <strong>Summary Takeaway:</strong><br>
+    In Sunrise ERP, <strong>data never gets overwritten or destroyed</strong>. Permanent identities live in <code>students</code> and <code>employees</code>. Annual facts live in <code>enrolments</code> and <code>academic_years</code>. Transactions live in <code>attendance</code>, <code>fee_invoices</code>, <code>fee_payments</code>, <code>marks</code>, and <code>payslips</code>. Destructive actions are logged in <code>audit_log</code>.
+  </div>
+
+  <div style="font-size: 7.5pt; color: #64748b; margin-top: 20px; border-top: 1px solid #cbd5e1; padding-top: 6px; display: flex; justify-content: space-between;">
+    <span>Sunrise Public School ERP • Simple Database Data-Flow Guide</span>
+    <span>PostgreSQL <code>sunrise_test</code> Introspected Schema • 93 Total Tables</span>
+  </div>
+
+</body>
+</html>
+"""
+
+def main():
+    print("Writing revised simple data-flow guide HTML...")
+    with open(OUTPUT_HTML, "w", encoding="utf-8") as f:
+        f.write(HTML_CONTENT)
+    print(f"Wrote {OUTPUT_HTML} ({len(HTML_CONTENT):,} bytes)")
+
+    print("Compiling revised PDF via headless Chrome...")
+    cmd = [
+        CHROME,
+        "--headless",
+        "--disable-gpu",
+        "--no-pdf-header-footer",
+        "--print-to-pdf=" + OUTPUT_PDF,
+        "file:///" + OUTPUT_HTML.replace("\\", "/"),
+    ]
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    if res.returncode != 0:
+        print("Chrome error:", res.stderr)
+        sys.exit(1)
+
+    size = os.path.getsize(OUTPUT_PDF)
+    print(f"SUCCESS: Generated revised PDF '{OUTPUT_PDF}' ({size:,} bytes)")
+
+if __name__ == "__main__":
+    main()

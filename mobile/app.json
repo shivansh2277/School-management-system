@@ -6,10 +6,6 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "splash": {
-      "backgroundColor": "#5B4BE0",
-      "resizeMode": "contain"
-    },
     "ios": {
       "supportsTablet": true
     },
@@ -17,7 +13,16 @@
       "package": "edu.sunrisepublic.app"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#5B4BE0",
+          "resizeMode": "contain"
+        }
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": false

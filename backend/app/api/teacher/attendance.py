@@ -21,7 +21,7 @@ def roll_sheet(
     user: User = Depends(teacher_only),
     db: Session = Depends(get_db),
 ) -> list[RollRow]:
-    scoping.assert_teaches_section(db, user, class_section_id)
+    scoping.assert_is_class_teacher(db, user, class_section_id)
     return svc.roll_sheet(db, class_section_id, date)
 
 
@@ -31,4 +31,5 @@ def mark(
     user: User = Depends(teacher_only),
     db: Session = Depends(get_db),
 ) -> list[RollRow]:
+    scoping.assert_is_class_teacher(db, user, body.class_section_id)
     return svc.mark(db, user, body)

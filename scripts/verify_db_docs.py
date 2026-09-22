@@ -60,14 +60,14 @@ BOILER = {"id", "school_id", "created_at", "updated_at"}
 html = open(os.path.join(REPO, "docs", "database-essentials.html"), encoding="utf-8").read()
 
 print("\n--- headline counts ---")
-check("86 tables in the database", len(allt) == 86, "found %d" % len(allt))
-check("58 tables hold rows", len(live) == 58, "found %d" % len(live))
+check("%d tables in the database" % len(allt), len(allt) == 93, "found %d" % len(allt))
+check("%d tables hold rows" % len(live), len(live) == 68, "found %d" % len(live))
 
 full = sum(len(cols[t]) for t in live)
 shown_expected = sum(len([c for c in cols[t] if c not in BOILER]) for t in live)
-check("document's '611' total columns", full == 611, "actual %d" % full)
-check("document's '386' shown columns", shown_expected == 386, "actual %d" % shown_expected)
-check("document's '225 removed'", full - shown_expected == 225, "actual %d" % (full - shown_expected))
+check("document's '%d' total columns" % full, full == 763, "actual %d" % full)
+check("document's '%d' shown columns" % shown_expected, shown_expected == 498, "actual %d" % shown_expected)
+check("document's '%d removed'" % (full - shown_expected), full - shown_expected == 265, "actual %d" % (full - shown_expected))
 
 print("\n--- the claim that four columns are on every table ---")
 missing = {t: sorted(BOILER - set(cols[t])) for t in live if BOILER - set(cols[t])}
@@ -86,7 +86,7 @@ check("no document still claims all four are on every table",
 
 print("\n--- every table card present, and only live tables ---")
 carded = set(re.findall(r'<article class="tbl"><header><h3>([a-z_]+)</h3>', html))
-check("all 58 live tables have a card", carded == live,
+check("all %d live tables have a card" % len(live), carded == live,
       "missing %s extra %s" % (sorted(live - carded), sorted(carded - live)))
 
 print("\n--- columns printed match the database ---")

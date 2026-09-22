@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.services.rbac import require_permission
 from app.models import Homework, User
-from app.schemas.common import HomeworkCreate, HomeworkOut, HomeworkUpdate, SubmissionRow
+from app.schemas.common import GradeSubmissionRequest, HomeworkCreate, HomeworkOut, HomeworkUpdate, SubmissionRow
 from app.services import homework as svc
 from app.services import scoping
 from app.services.school_settings import module_enabled
@@ -65,3 +65,14 @@ def submissions(
     homework_id: int, user: User = Depends(teacher_only), db: Session = Depends(get_db)
 ) -> list[SubmissionRow]:
     return svc.submissions(db, user, homework_id)
+
+
+@router.patch("/homework/submissions/{submission_id}", response_model=SubmissionRow, dependencies=[Depends(require_permission("homework.item.write"))])
+@router.post("/homework/submissions/{submission_id}/grade", response_model=SubmissionRow, dependencies=[Depends(require_permission("homework.item.write"))])
+def grade(
+    submission_id: int,
+    body: GradeSubmissionRequest,
+    user: User = Depends(teacher_only),
+    db: Session = Depends(get_db),
+) -> SubmissionRow:
+    return svc.grade_submission(db, user, submission_id, marks=body.marks, remarks=body.remarks)

@@ -17,11 +17,14 @@ router = APIRouter(
 )
 
 reader = require_permission("admission.application.read", school_wide=True)
+cycle_reader = require_permission(
+    "admission.cycle.read", "admission.application.read", school_wide=True
+)
 
 
 @router.get("/cycles/{cycle_id}/dashboard")
 def dashboard(
-    cycle_id: int, user: User = Depends(reader), db: Session = Depends(get_db)
+    cycle_id: int, user: User = Depends(cycle_reader), db: Session = Depends(get_db)
 ) -> dict:
     admission.cycle_for(db, user.school_id, cycle_id)
     return svc.dashboard(db, user.school_id, cycle_id)

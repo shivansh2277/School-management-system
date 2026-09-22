@@ -1,0 +1,3 @@
+application_id,blood_group,known_allergies,chronic_conditions,regular_medication,physical_disability,learning_needs,vision_hearing_notes,emergency_doctor,emergency_doctor_phone,consent_for_emergency_treatment,school_id,id,created_at,updated_at
+91,B+,,,,,,,Dr. K. N. Rao,9415012345,True,36,4,2026-09-21 13:44:13.285054+05:30,2026-09-21 13:44:13.285054+05:30
+92,O+,Mild pollen allergy in spring,,Cetirizine as needed,,,,Dr. Amit Verma (Father),9839011223,True,36,5,2026-09-21 13:44:34.503389+05:30,2026-09-21 13:44:34.503389+05:30

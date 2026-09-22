@@ -1,0 +1,6 @@
+name,code,type,is_refundable,gl_code,is_active,school_id,id,created_at,updated_at
+Tuition Fee,TUITION,recurring,False,,True,36,8,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+Development Fee,DEV,recurring,False,,True,36,9,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+Transport Fee,TRANSPORT,optional,False,,True,36,10,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+Admission Fee,ADMISSION,one_time,False,,True,36,11,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+Late Fee,LATE,one_time,False,,True,36,12,2026-09-21 13:43:22.177303+05:30,2026-09-21 13:43:22.177303+05:30

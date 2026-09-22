@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.models import (
     AcademicYear,
+    Attendance,
     ClassSection,
     Enrolment,
     EnrolmentStatus,
@@ -24,6 +25,8 @@ from app.models import (
     Student,
     Employee,
     EmployeeType,
+    Substitution,
+    SubstitutionStatus,
     TimetableSlot,
     User,
 )
@@ -80,11 +83,17 @@ def totals(db: Session, year: AcademicYear) -> dict:
             FeeInvoice.period_year.in_(_academic_years(year.code)),
         )
     )
+    from app.services import fees as fees_svc
+    fees_remaining = sum(
+        (r["outstanding"] for r in fees_svc.defaulters(db, school_id)),
+        Decimal("0.00"),
+    )
     return {
         "students": students,
         "teachers": teachers,
         "classes": classes,
         "fees_collected": Decimal(fees),
+        "fees_remaining": fees_remaining,
     }
 
 
@@ -183,19 +192,45 @@ def today_schedule(
     class_section_ids: list[int] | None = None,
     teacher_id: int | None = None,
 ) -> list[dict]:
-    key = DAY_KEYS[Date.today().weekday()]
+    today = Date.today()
+    key = DAY_KEYS[today.weekday()]
     if key is None:  # Sunday
         return []
+
+    # Overlay confirmed substitutions for today
+    subs = {
+        s.timetable_slot_id: s
+        for s in db.scalars(
+            select(Substitution).where(
+                Substitution.school_id == school_id,
+                Substitution.date == today,
+                Substitution.status.in_((SubstitutionStatus.assigned, SubstitutionStatus.completed)),
+            )
+        )
+    }
+
     q = select(TimetableSlot).where(
         TimetableSlot.school_id == school_id, TimetableSlot.day_of_week == key
     )
     if class_section_ids is not None:
         q = q.where(TimetableSlot.class_section_id.in_(class_section_ids))
+
+    all_day_slots = list(db.scalars(q))
+
     if teacher_id is not None:
-        # A teacher is scoped to a whole section, but only takes some of its
-        # periods. Filtering by section alone would show a colleague's class as
-        # if it were theirs.
-        q = q.where(TimetableSlot.teacher_id == teacher_id)
+        matching_slots = []
+        for slot in all_day_slots:
+            sub = subs.get(slot.id)
+            effective_teacher_id = (
+                sub.substitute_teacher_id
+                if (sub and sub.substitute_teacher_id)
+                else slot.teacher_id
+            )
+            if effective_teacher_id == teacher_id:
+                matching_slots.append(slot)
+    else:
+        matching_slots = all_day_slots
+
     labels = section_labels(db, school_id)
     subjects = subject_names(db, school_id)
     teachers = {
@@ -208,12 +243,16 @@ def today_schedule(
             "time": f"{slot.period.start_time:%H:%M}-{slot.period.end_time:%H:%M}",
             "class_label": labels.get(slot.class_section_id, ""),
             "subject": subjects.get(slot.subject_id, ""),
-            "teacher": teachers.get(slot.teacher_id, ""),
+            "teacher": teachers.get(
+                subs[slot.id].substitute_teacher_id
+                if (slot.id in subs and subs[slot.id].substitute_teacher_id)
+                else slot.teacher_id,
+                "",
+            ),
+            "is_substituted": slot.id in subs,
             "room": slot.room,
         }
-        # Bell timings live on `school_periods` now, so ordering follows the
-        # period number there rather than a column repeated on every slot.
-        for slot in sorted(db.scalars(q), key=lambda s: s.period.period_no)
+        for slot in sorted(matching_slots, key=lambda s: s.period.period_no)
     ]
 
 
@@ -347,3 +386,24 @@ def month_attendance(
     first = today.replace(day=1)
     summary = attendance.section_summary(db, school_id, class_section_id, first, today)
     return summary.model_dump()
+
+
+def today_attendance(
+    db: Session, school_id: int, class_section_id: int | None = None
+) -> dict:
+    """Attendance for today. If not yet marked today (e.g. non-school day or before
+    morning roll call), falls back to the most recent marked school day to ensure
+    the dashboard displays live, calculated data from the database.
+    """
+    today = Date.today()
+    summary = attendance.section_summary(db, school_id, class_section_id, today, today)
+    if summary.present == 0 and summary.absent == 0 and summary.leave == 0:
+        latest_date = db.scalar(
+            select(func.max(Attendance.date)).where(Attendance.school_id == school_id)
+        )
+        if latest_date:
+            summary = attendance.section_summary(
+                db, school_id, class_section_id, latest_date, latest_date
+            )
+    return summary.model_dump()
+

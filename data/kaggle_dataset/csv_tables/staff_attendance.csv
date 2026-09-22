@@ -1,0 +1,2 @@
+employee_id,date,status,check_in,check_out,marked_by,corrected_by,remarks,school_id,id,created_at,updated_at
+60,2026-08-31,present,07:55:00,14:10:00,399,,Biometric scan,36,71,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30

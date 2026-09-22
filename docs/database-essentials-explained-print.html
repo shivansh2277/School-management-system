@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Sunrise School ERP — Database Essentials Explained</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    @page {
+      size: A4 portrait;
+      margin: 11mm 13mm 13mm 13mm;
+      @bottom-right {
+        content: "Page " counter(page);
+        font-family: 'Inter', sans-serif;
+        font-size: 8pt;
+        font-weight: 500;
+        color: #94a3b8;
+      }
+      @bottom-left {
+        content: "Sunrise School ERP — Database Essentials Explained (61 Active Tables)";
+        font-family: 'Inter', sans-serif;
+        font-size: 7.5pt;
+        color: #94a3b8;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      font-size: 8.6pt;
+      line-height: 1.5;
+      color: #1e293b;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      margin: 0;
+    }
+
+    /* Header Banner */
+    .header-banner {
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #3730a3 100%);
+      color: #ffffff;
+      padding: 18px 22px;
+      border-radius: 9px;
+      margin-bottom: 14px;
+      border-bottom: 3px solid #6366f1;
+    }
+
+    .banner-badge {
+      display: inline-block;
+      background: rgba(99, 102, 241, 0.35);
+      border: 1px solid rgba(165, 180, 252, 0.4);
+      color: #c7d2fe;
+      font-size: 7.5pt;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 2.5px 8px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+    }
+
+    .header-banner h1 {
+      font-size: 16pt;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+      color: #ffffff;
+    }
+
+    .header-subtitle {
+      font-size: 8.5pt;
+      color: #cbd5e1;
+      margin-bottom: 10px;
+    }
+
+    .meta-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .meta-pill {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      font-size: 7.5pt;
+      color: #e2e8f0;
+      padding: 2.5px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    /* Golden Rules Box */
+    .golden-rules-box {
+      background: #f8fafc;
+      border: 1.5px solid #cbd5e1;
+      border-left: 5px solid #3b82f6;
+      border-radius: 7px;
+      padding: 11px 15px;
+      margin-bottom: 14px;
+      break-inside: avoid;
+    }
+
+    .golden-rules-box h2 {
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: #1e3a8a;
+      margin-bottom: 8px;
+    }
+
+    /* Process Card */
+    .process-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 7px;
+      padding: 10px 14px;
+      margin-bottom: 11px;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .process-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 7px;
+      border-bottom: 1.5px solid #f1f5f9;
+      padding-bottom: 6px;
+    }
+
+    .process-badge {
+      background: #1e1b4b;
+      color: #ffffff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.2pt;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+    }
+
+    .process-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 9.8pt;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.01em;
+    }
+
+    .subheading {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 8.3pt;
+      font-weight: 700;
+      color: #334155;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin: 8px 0 4px 0;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .sub-icon {
+      font-size: 9pt;
+    }
+
+    p {
+      margin: 2px 0 5px 0;
+      color: #334155;
+    }
+
+    /* Flow Step */
+    .flow-step {
+      display: flex;
+      gap: 8px;
+      margin: 4px 0;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      background: #e0e7ff;
+      color: #3730a3;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 7.5pt;
+      width: 17px;
+      height: 17px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .step-content {
+      flex: 1;
+      font-size: 8.3pt;
+      color: #1e293b;
+    }
+
+    .bullet-item {
+      margin: 2px 0 2px 10px;
+      font-size: 8.3pt;
+      color: #334155;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.6pt;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 1px 3px;
+      border-radius: 3px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .ascii-diagram {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.4pt;
+      background: #0f172a;
+      color: #38bdf8;
+      padding: 7px 10px;
+      border-radius: 5px;
+      margin: 6px 0;
+      line-height: 1.35;
+      white-space: pre-wrap;
+    }
+
+    /* Reference Table */
+    .summary-header {
+      margin: 18px 0 8px 0;
+      break-before: page;
+      page-break-before: always;
+    }
+
+    .summary-header h2 {
+      font-size: 11pt;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .ref-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8pt;
+      margin-top: 6px;
+    }
+
+    .ref-table th {
+      background: #1e1b4b;
+      color: #ffffff;
+      padding: 6px 8px;
+      text-align: left;
+      font-weight: 700;
+      border: 1px solid #312e81;
+    }
+
+    .ref-table td {
+      padding: 5px 8px;
+      border: 1px solid #cbd5e1;
+      vertical-align: middle;
+      color: #1e293b;
+    }
+
+    .ref-table tr:nth-child(even) {
+      background: #f8fafc;
+    }
+
+    .ref-table td:nth-child(1) {
+      font-weight: 700;
+      color: #3730a3;
+      width: 15%;
+    }
+
+    .ref-table td:nth-child(2) {
+      width: 25%;
+    }
+
+    .ref-table td:nth-child(3) {
+      width: 35%;
+    }
+
+    .ref-table td:nth-child(4) {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.4pt;
+      width: 25%;
+      color: #0f172a;
+    }
+  </style>
+</head>
+<body>
+  
+            <div class="header-banner">
+              <div class="banner-badge">Database Architecture &amp; Process Flows</div>
+              <h1>Sunrise School ERP — Database Essentials Explained</h1>
+              <div class="header-subtitle">A Step-by-Step Plain-English Guide to the 68 Active PostgreSQL Tables &amp; How Data Moves Behind the UI</div>
+              <div class="meta-pills">
+                <span class="meta-pill">🏢 16 End-to-End Processes Explained</span>
+                <span class="meta-pill">🗄️ 68 Active Populated Tables</span>
+                <span class="meta-pill">💡 5 Core Design Principles</span>
+                <span class="meta-pill">🔄 Live Transaction &amp; Query Flows</span>
+              </div>
+            </div>
+            
+<p><strong>A Plain-English Architectural &amp; Process Guide to the 68 Live Database Tables</strong></p>
+<p>*How data actually moves, changes, and stays secure behind every screen in the school ERP.*</p>
+<p>---</p>
+<div class="golden-rules-box">
+<h2>🛡️ The 5 Golden Rules of the Database Architecture</h2>
+<p>Before looking at individual processes, five core design rules govern every single table in Sunrise ERP:</p>
+<div class="flow-step"><span class="step-num">1</span><div class="step-content"><strong>Every Table Belongs to a School (<code>school_id</code> Multi-Tenancy)</strong></div></div>
+<p>Sunrise ERP is built to be sold to multiple independent schools (tenants). It is not a single-school system with branches. Almost every table carries <code>school_id</code> derived from <code>TenantBase</code>. A student, invoice, or attendance record in Sunrise Public School can never be queried or seen by another school because every database query is scoped to <code>school_id</code>.</p>
+<div class="flow-step"><span class="step-num">2</span><div class="step-content"><strong>Lifetime Facts vs. Session Facts (<code>students</code> vs. <code>enrolments</code>)</strong></div></div>
+<p>A child has facts that belong to them for life (Name, Date of Birth, Admission Number, Blood Group). These live in <code>students</code>. But a child also has facts that belong to a single class and academic year (Roll Number, Class 10-A, Fee Invoices, Marks, Attendance). These hang off <code>enrolments</code>. This prevents last year&#x27;s records from bleeding into next year when a child gets promoted.</p>
+<div class="flow-step"><span class="step-num">3</span><div class="step-content"><strong>Financial Immutability (Money is Never Edited)</strong></div></div>
+<p>In real accounting, you never change or delete an invoice or payment that was already committed. In this database:</p>
+<div class="bullet-item">• If an invoice is wrong, it is marked <code>status = &#x27;void&#x27;</code> with an audited reason, and a new one is issued.</div>
+<div class="bullet-item">• If a payment bounced or was collected in error, it is reversed with a <strong>contra payment entry</strong> (a negative amount pointing at <code>reverses_payment_id</code>). The financial history is always 100% reconstructable.</div>
+<div class="flow-step"><span class="step-num">4</span><div class="step-content"><strong>A Balance is Always a Runtime <code>SUM()</code>, Never a Stored Column</strong></div></div>
+<p>There is no <code>outstanding_balance</code> column on <code>students</code> or <code>enrolments</code>. Storing a balance causes synchronization bugs whenever a payment is reversed, a discount approved, or an invoice line voided. Instead, what a family owes is computed on-the-fly by summing <code>(invoice_lines.amount - invoice_lines.discount) - payment_allocations.amount</code>.</p>
+<div class="flow-step"><span class="step-num">5</span><div class="step-content"><strong>Destructive Actions Require a Mandatory Typed Reason (<code>audit_log</code>)</strong></div></div>
+<p>Actions like voiding an invoice, reversing money, deleting a circular, or removing a student cannot be performed without typing a justification. The backend writes the user ID, timestamp, IP address, and before/after JSON states into <code>audit_log</code>.</p>
+<p>---</p>
+
+            <div class="process-card">
+              <div class="process-header">
+                <span class="process-badge">PROCESS</span>
+                <span class="process-title">PROCESS 1: Multi-Tenancy &amp; School Onboarding</span>
+              </div>
+            
+<div class="subheading"><span class="sub-icon">🎯</span> The Real-Life Goal</div>
+<p>When multiple schools use the software on the same cloud server, each school must have its own isolated data, branding, and academic session, with zero possibility of data leakage between schools.</p>
+<div class="subheading"><span class="sub-icon">🗄️</span> Tables Involved</div>
+<div class="bullet-item">• <strong><code>schools</code></strong>: The tenant record (School Name, Code, Affiliation Number, CBSE Board, City, State, Primary Color theme, Logo URL).</div>
+<div class="bullet-item">• <strong><code>academic_years</code></strong>: The school sessions (e.g. &quot;2025-26&quot;, Start Date: 1 April, End Date: 31 March, Status: <code>active</code>).</div>
+<div class="bullet-item">• <strong><code>settings</code></strong>: School-specific configuration toggles (Sibling discount %, Late fee grace days, Timezone).</div>
+<div class="subheading"><span class="sub-icon">🔄</span> How Data Moves Step-by-Step</div>
+<div class="flow-step"><span class="step-num">1</span><div class="step-content"><strong>School Registration:</strong> A new school is created in <code>schools</code> with a unique <code>code</code> (e.g. <code>&#x27;SPS&#x27;</code> for Sunrise Public School).</div></div>
+<div class="flow-step"><span class="step-num">2</span><div class="step-content"><strong>Session Initialization:</strong> An initial <code>academic_years</code> row is created linked to <code>school_id</code>.</div></div>
+<div class="flow-step"><span class="step-num">3</span><div class="step-content"><strong>Default Settings:</strong> Default configuration rows (timezone <code>Asia/Kolkata</code>, attendance threshold <code>75%</code>) are seeded into <code>settings</code>.</div></div>
+<div class="flow-step"><span class="step-num">4</span><div class="step-content"><strong>All Subsequent Records:</strong> Every student, teacher, fee plan, and bus route created from that day forward has its <code>school_id</code> automatically populated.</div></div>
+<div class="flow-step"><span class="step-num">5</span><div class="step-content"><strong>Request Interception:</strong> Whenever any API request arrives at the backend, the user&#x27;s JWT token provides <code>user.school_id</code>. The database queries automatically append <code>WHERE school_id = :school_id</code>.</div></div>
+<div class="subheading"><span class="sub-icon">💡</span> The Clever Design Rule</div>
+<p>Only three tables lack <code>school_id</code>:</p>
+<div class="bullet-item">• <code>schools</code> (it *is* the tenant),</div>
+<div class="bullet-item">• <code>permissions</code> (global system vocabulary),</div>
+<div class="bullet-item">• <code>scheduled_jobs</code> (backend worker tasks).</div>
+<p>Every other table inherits from <code>TenantBase</code>, preventing developer oversight from causing cross-school data leaks.</p>
+<p>---</p>
+</div>
+
+            <div class="process-card">
+              <div class="process-header">
+                <span class="process-badge">PROCESS</span>
+                <span class="process-title">PROCESS 2: User Authentication &amp; Role-Based Access Control (RBAC)</span>
+              </div>
+            
+<div class="subheading"><span class="sub-icon">🎯</span> The Real-Life Goal</div>
+<p>Ensuring principals, accountants, teachers, and parents see only the screens and actions appropriate to their duties.</p>
+<div class="subheading"><span class="sub-icon">🗄️</span> Tables Involved</div>
+<div class="bullet-item">• <strong><code>users</code></strong>: Login credentials (<code>email</code>, <code>hashed_password</code>, <code>role</code>).</div>
+<div class="bullet-item">• <strong><code>roles</code></strong>: Named job roles (<code>Admin</code>, <code>Principal</code>, <code>Accountant</code>, <code>Teacher</code>, <code>Parent</code>).</div>
+<div class="bullet-item">• <strong><code>permissions</code></strong>: 146 fine-grained actions (e.g., <code>fees.invoice.read</code>, <code>exam.marks.lock</code>).</div>
+<div class="bullet-item">• <strong><code>role_permissions</code></strong>: Junction table linking roles to permissions.</div>
+<div class="bullet-item">• <strong><code>user_roles</code></strong>: Junction table linking users to roles.</div>
+<div class="bullet-item">• <strong><code>employees</code></strong>: Physical staff biodata linked to <code>users.id</code>.</div>
+<div class="subheading"><span class="sub-icon">🔄</span> How Data Moves Step-by-Step</div>
+<div class="flow-step"><span class="step-num">1</span><div class="step-content"><strong>Login:</strong> A user logs in with email and password at <code>/auth/login</code>.</div></div>
+<div class="flow-step"><span class="step-num">2</span><div class="step-content"><strong>Password Verification:</strong> The backend verifies the bcrypt password hash in <code>users</code>.</div></div>
+<div class="flow-step"><span class="step-num">3</span><div class="step-content"><strong>Permission Resolution:</strong> The backend queries:</div></div>
+<p><code>users ➡️ user_roles ➡️ roles ➡️ role_permissions ➡️ permissions</code></p>
+<div class="flow-step"><span class="step-num">4</span><div class="step-content"><strong>JWT Issuance:</strong> A signed JWT token containing the <code>user_id</code>, <code>school_id</code>, and permitted action scopes is returned to the client.</div></div>
+<div class="flow-step"><span class="step-num">5</span><div class="step-content"><strong>Screen Gating:</strong> When an administrator opens the web app, the Screen Registry checks if the token holds the necessary read permissions (e.g., <code>fees.invoice.read</code>). If not, the menu item and route are cleanly hidden.</div></div>
+<div class="subheading"><span class="sub-icon">💡</span> The Clever Design Rule</div>
+<p>Permissions are stored as atomic strings (e.g., <code>academics.class.read</code>, <code>fees.invoice.generate</code>). Separating <code>role_permissions</code> from <code>users</code> allows a school to create custom roles (e.g., &quot;Senior Vice Principal&quot;) with tailored permissions without code changes.</p>
+<p>---</p>
+</div>
+
+            <div class="process-card">
+              <div class="process-header">
+                <span class="process-badge">PROCESS</span>
+                <span class="process-title">PROCESS 3: Student Admission, Profiles &amp; Guardians</span>
+              </div>
+            
+<div class="subheading"><span class="sub-icon">🎯</span> The Real-Life Goal</div>
+<p>Managing the journey of a child from an initial walk-in enquiry to an enrolled student assigned to a classroom, complete with parent contacts and emergency authorizations.</p>
+<div class="subheading"><span class="sub-icon">🗄️</span> Tables Involved</div>
+<div class="bullet-item">• <strong><code>enquiries</code></strong>: Initial parent phone call or front-desk visit.</div>
+<div class="bullet-item">• <strong><code>students</code></strong>: Permanent master record of the child.</div>
+<div class="bullet-item">• <strong><code>guardians</code></strong>: Parent and emergency contact directory.</div>
+<div class="bullet-item">• <strong><code>student_guardian</code></strong>: Many-to-many junction linking students to guardians.</div>
+<div class="bullet-item">• <strong><code>enrolments</code></strong>: Links the student to a specific classroom for an academic year.</div>
+<div class="bullet-item">• <strong><code>class_sections</code></strong>: The physical class (e.g., &quot;Class 10-A&quot;).</div>
+<div class="subheading"><span class="sub-icon">🔄</span> How Data Moves Step-by-Step</div>
+<p>[Enquiry at Front Desk]</p>
+<div class="ascii-diagram">│ (converts to)</div>
+<div class="ascii-diagram">▼</div>
+<div class="ascii-diagram">[students Table] ──(lifetime biodata: name, DOB, admission_no)</div>
+<div class="ascii-diagram">│</div>
+<div class="ascii-diagram">├──► [student_guardian Junction] ──► [guardians Table] (father, mother, phone)</div>
+<div class="ascii-diagram">│</div>
+<div class="ascii-diagram">▼</div>
+<div class="ascii-diagram">[enrolments Table] ──(year-scoped: roll_no, class_section_id, academic_year_id)</div>
+<div class="ascii-diagram">│</div>
+<div class="ascii-diagram">▼</div>
+<p>[class_sections Table] (Class 10-A, Room 201, Class Teacher)</p>
+<div class="flow-step"><span class="step-num">1</span><div class="step-content"><strong>Front-Desk Enquiry:</strong> An entry is logged in <code>enquiries</code> with the child&#x27;s name, class of interest, and parent phone number.</div></div>
+<div class="flow-step"><span class="step-num">2</span><div class="step-content"><strong>Student Record Creation:</strong> When admitted, an official admission number is generated from <code>number_sequences</code> (e.g. <code>2024000001</code>), and a row is inserted into <code>students</code>.</div></div>
+<div class="flow-step"><span class="step-num">3</span><div class="step-content"><strong>Parent Linkage:</strong> Father and mother records are created in <code>guardians</code>. Rows in <code>student_guardian</code> link them to the student, marking <code>is_primary = TRUE</code> for the SMS contact and <code>pickup_authorized = TRUE</code>.</div></div>
+<div class="flow-step"><span class="step-num">4</span><div class="step-content"><strong>Classroom Enrolment:</strong> A row is inserted into <code>enrolments</code> specifying <code>class_section_id</code> (Class 10-A), <code>academic_year_id</code> (2025-26), and <code>roll_no = 1</code>.</div></div>
+<div class="subheading"><span class="sub-icon">💡</span> The Clever Design Rule</div>
+<p><code>guardians</code> is separate from <code>students</code>:</p>
+<div class="bullet-item">• When two siblings study in the school, both <code>students</code> rows point to the <strong>same</strong> <code>guardians</code> row through <code>student_guardian</code>.</div>
+<div class="bullet-item">• This enables automatic sibling discount detection: the system checks if an incoming student shares parents with an already enrolled student and applies a 10% fee concession.</div>
+<p>---</p>
+</div>
+
+            <div class="process-card">
+              <div class="process-header">
+                <span class="process-badge">PROCESS</span>
+                <span class="process-title">PROCESS 4: Classrooms, Subject Teachers &amp; Timetable Scheduling</span>
+              </div>
+            
+<div class="subheading"><span class="sub-icon">🎯</span> The Real-Life Goal</div>
+<p>Organizing which teacher teaches which subject in which room, and generating a weekly conflict-free bell schedule.</p>
+<div class="subheading"><span class="sub-icon">🗄️</span> Tables Involved</div>
+<div class="bullet-item">• <strong><code>class_sections</code></strong>: Class 1-A through 10-A, assigned Room Number, and designated Class Teacher.</div>
+<div class="bullet-item">• <strong><code>subjects</code></strong>: Mathematics, English, Hindi, Science, Social Studies, etc.</div>
+<div class="bullet-item">• <strong><code>class_subject_teacher</code></strong>: Which teacher teaches which subject to which class section.</div>
+<div class="bullet-item">• <strong><code>school_periods</code></strong>: Daily period timetable (Period 1: 08:00–08:45, Break: 10:15–10:35).</div>
+<div class="bullet-item">• <strong><code>timetable_slots</code></strong>: The weekly schedule grid (Monday Period 1 = Mathematics in Class 10-A with Teacher TCH001).</div>
+<div class="subheading"><span class="sub-icon">🔄</span> How Data Moves Step-by-Step</div>
+<div class="flow-step"><span class="step-num">1</span><div class="step-content"><strong>Section Allocation:</strong> The administration assigns a Class Teacher to <code>class_sections.class_teacher_id</code>.</div></div>
+<div class="flow-step"><span class="step-num">2</span><div class="step-content"><strong>Subject Allocation:</strong> In <code>class_subject_teacher</code>, Teacher A is assigned to teach Science to Class 9-A for 6 periods/week.</div></div>
+<div class="flow-step"><span class="step-num">3</span><div class="step-content"><strong>Slot Scheduling:</strong> In <code>timetable_slots</code>, slots are assigned: Day, Period, Class Section, Subject, Teacher, Room.</div></div>
+<div class="flow-step"><span class="step-num">4</span><div class="step-content"><strong>Conflict Checks:</strong> PostgreSQL constraints automatically block illegal inputs:</div></div>
+<div class="bullet-item">• A teacher cannot be in two classrooms during the same period (<code>UniqueConstraint(&quot;school_id&quot;, &quot;day_of_week&quot;, &quot;period_id&quot;, &quot;teacher_id&quot;)</code>).</div>
+<div class="bullet-item">• Two classes cannot use the same room simultaneously (<code>UniqueConstraint(&quot;school_id&quot;, &quot;day_of_week&quot;, &quot;period_id&quot;, &quot;room_number&quot;)</code>).</div>
+<p>---</p>
+</div>
+
+            <div class="process-card">
+              <div class="process-header">
+                <span class="process-badge">PROCESS</span>
+                <span class="process-title">PROCESS 5: Student Daily Attendance &amp; Shortage Tracking</span>
+              </div>
+            
+<div class="subheading"><span class="sub-icon">🎯</span> The Real-Life Goal</div>
+<p>Allowing class teachers to take morning roll-call from the web or mobile app, while automatically calculating shortage warnings below CBSE&#x27;s 75% threshold.</p>
+<div class="subheading"><span class="sub-icon">🗄️</span> Tables Involved</div>
+<div class="bullet-item">• <strong><code>attendance</code></strong>: Daily attendance records per student enrolment.</div>
+<div class="bullet-item">• <strong><code>holidays</code></strong>: Official calendar holidays excluded from working day counts.</div>
+<div class="bullet-item">• <strong><code>settings</code></strong>: Holds <code>attendance.shortage_threshold = 75</code>.</div>
+<div class="subheading"><span class="sub-icon">🔄</span> How Data Moves Step-by-Step</div>
+<div class="flow-step"><span class="step-num">1</span><div class="step-content"><strong>Roll-Call Screen:</strong> The teacher opens Class 10-A on today&#x27;s date. The backend queries <code>enrolments</code> to populate the 40 students.</div></div>
+<div class="flow-step"><span class="step-num">2</span><div class="step-content"><strong>Marking Attendance:</strong> For each student, a row is inserted or updated in <code>attendance</code>:</div></div>
+<div class="bullet-item">• <code>enrolment_id</code>, <code>date = &#x27;2026-09-14&#x27;</code>, <code>status = &#x27;present&#x27;</code> (or <code>&#x27;absent&#x27;</code>, <code>&#x27;late&#x27;</code>).</div>
+<div class="flow-step"><span class="step-num">3</span><div class="step-content"><strong>Upsert Safety:</strong> If the teacher changes an entry from Present to Absent, <code>UniqueConstraint(&quot;school_id&quot;, &quot;enrolment_id&quot;, &quot;date&quot;)</code> updates the existing row instead of creating duplicates.</div></div>
+<div class="flow-step"><span class="step-num">4</span><div class="step-content"><strong>Shortage Calculation:</strong> When the office views attendance summary reports, the backend divides total present days by total working days (excluding <code>holidays</code>). Any student below 75% is highlighted on the Shortage Warning list.</div></div>
+<p>---</p>
+</div>
+
+            <div class="process-card">
+              <div class="process-header">
+                <span class="process-badge">PROCESS</span>
+                <span class="process-title">PROCESS 6: The Complete Fee Lifecycle: Plans, Billing &amp; Invoicing</span>
+              </div>
+            
+<div class="subheading"><span class="sub-icon">🎯</span> The Real-Life Goal</div>
+<p>Configuring what each grade owes, generating monthly student bills with approved scholarships, and tracking invoices without error.</p>
+<div class="subheading"><span class="sub-icon">🗄️</span> Tables Involved</div>
+<div class="bullet-item">• <strong><code>fee_heads</code></strong>: Named fee categories (Tuition Fee, Development Charge, Transport Fee, Exam Fee).</div>
+<div class="bullet-item">• <strong><code>fee_plans</code></strong>: Master fee structure for a grade (e.g. &quot;Class 10 Fee Plan 2025-26&quot;).</div>
+<div class="bullet-item">• <strong><code>fee_plan_items</code></strong>: The items within the plan: Head, Amount, Frequency (monthly, quarterly, annual).</div>
+<div class="bullet-item">• <strong><code>fee_concessions</code></strong>: Approved scholarships or sibling discounts.</div>
+<div class="bullet-item">• <strong><code>fee_invoices</code></strong>: The monthly invoice header.</div>
+<div class="bullet-item">• <strong><code>fee_invoice_lines</code></strong>: The itemized line charges on an invoice.</div>
+<div class="subheading"><span class="sub-icon">🔄</span> How Data Moves Step-by-Step</div>
+<p>[fee_heads] (Tuition, Transport, Exam)</p>
+<div class="ascii-diagram">│</div>
+<div class="ascii-diagram">▼</div>
+<p>[fee_plan_items] (Tuition: ₹3,500/mo, Dev: ₹500/mo)</p>
+<div class="ascii-diagram">│ (grouped into)</div>
+<div class="ascii-diagram">▼</div>
+<p>[fee_plans] (&quot;Class 10 Fee Plan 2025-26&quot;)</p>
+<div class="ascii-diagram">│</div>
+<div class="ascii-diagram">│ ──[Monthly Generation Engine]── (incorporates fee_concessions)</div>
+<div class="ascii-diagram">▼</div>
+<p>[fee_invoices] (Header: Inv #INV-00142, Enrolment ID, Due Date: 10th)</p>
+<div class="ascii-diagram">│</div>
+<div class="ascii-diagram">▼</div>
+<p>[fee_invoice_lines] (Line 1: Tuition ₹3,500 [Discount ₹350], Line 2: Dev ₹500)</p>
+<div class="flow-step"><span class="step-num">1</span><div class="step-content"><strong>Fee Setup:</strong> A plan is configured in <code>fee_plans</code> and populated with <code>fee_plan_items</code>.</div></div>
+<div class="flow-step"><span class="step-num">2</span><div class="step-content"><strong>Monthly Generation:</strong> At the start of the month, the admin runs &quot;Generate Invoices&quot; for Class 10.</div></div>
+<div class="flow-step"><span class="step-num">3</span><div class="step-content"><strong>Header Created:</strong> A row is inserted into <code>fee_invoices</code>: <code>period_month = 9</code>, <code>period_year = 2026</code>, <code>due_date = &#x27;2026-09-10&#x27;</code>, <code>status = &#x27;issued&#x27;</code>.</div></div>
+<div class="flow-step"><span class="step-num">4</span><div class="step-content"><strong>Lines Created:</strong> For each fee plan item, a row is inserted into <code>fee_invoice_lines</code>.</div></div>
+<div class="flow-step"><span class="step-num">5</span><div class="step-content"><strong>Concession Application:</strong> If an approved row exists in <code>fee_concessions</code> (e.g. 10% Sibling Concession on Tuition), the engine sets <code>fee_invoice_lines.amount = 3500.00</code> and <code>fee_invoice_lines.discount = 350.00</code>. Net payable is ₹3,150.00.</div></div>
+<p>---</p>
+</div>
+
+            <div class="process-card">
+              <div class="process-header">
+                <span class="process-badge">PROCESS</span>
+                <span class="process-title">PROCESS 7: Fee Payments, Line-Level Allocation &amp; Reversals</span>
+              </div>
+            
+<div class="subheading"><span class="sub-icon">🎯</span> The Real-Life Goal</div>
+<p>Accepting parent fee payments at the counter or online, applying money accurately across bills, tracking overdue defaulters, and handling bounced payments.</p>
+<div class="subheading"><span class="sub-icon">🗄️</span> Tables Involved</div>
+<div class="bullet-item">• <strong><code>fee_payments</code></strong>: Record of money received (Receipt No, Amount, Method: Cash/UPI/Cheque).</div>
+<div class="bullet-item">• <strong><code>payment_allocations</code></strong>: Connects payment money to specific <code>fee_invoice_lines</code>.</div>
+<div class="bullet-item">• <strong><code>fee_invoices</code></strong>: Updated from <code>issued</code> ➡️ <code>partially_paid</code> ➡️ <code>paid</code>.</div>
+<div class="subheading"><span class="sub-icon">🔄</span> How Data Moves Step-by-Step</div>
+<div class="flow-step"><span class="step-num">1</span><div class="step-content"><strong>Parent Pays:</strong> A parent pays ₹4,000 via UPI.</div></div>
+<div class="flow-step"><span class="step-num">2</span><div class="step-content"><strong>Payment Inserted:</strong> A row is inserted into <code>fee_payments</code> with <code>amount = 4000.00</code>, <code>receipt_no = &#x27;RCP-2025-0089&#x27;</code>, and an <code>idempotency_key</code> (to prevent accidental double-clicks).</div></div>
+<div class="flow-step"><span class="step-num">3</span><div class="step-content"><strong>FIFO Allocation Engine:</strong></div></div>
+<div class="bullet-item">• The backend finds all unpaid <code>fee_invoice_lines</code> for that student, ordered from oldest due date to newest.</div>
+<div class="bullet-item">• It settles lines one by one.</div>
+<div class="bullet-item">• For each settled line, a row is created in <strong><code>payment_allocations</code></strong> (<code>payment_id</code>, <code>invoice_line_id</code>, <code>amount</code>).</div>
+<div class="flow-step"><span class="step-num">4</span><div class="step-content"><strong>Status Update:</strong> If all lines on an invoice are fully paid, <code>fee_invoices.status</code> becomes <code>&#x27;paid&#x27;</code> and <code>settled_on = today</code>. If partially covered, it becomes <code>&#x27;partially_paid&#x27;</code>.</div></div>
+<div class="flow-step"><span class="step-num">5</span><div class="step-content"><strong>Bounced Payment / Reversal:</strong> If the payment bounced:</div></div>
+<div class="bullet-item">• A <strong>contra payment</strong> is inserted into <code>fee_payments</code> with <code>amount = -4000.00</code> and <code>reverses_payment_id = original_id</code>.</div>
+<div class="bullet-item">• Corresponding negative allocations are added to <code>payment_allocations</code>.</div>
+<div class="bullet-item">• The invoice automatically reverts back to <code>&#x27;issued&#x27;</code> / unpaid.</div>
+<div class="subheading"><span class="sub-icon">💡</span> Why `payment_allocations` Points to Lines (Not Invoices)</div>
+<p>Because accounting requires knowing *what* was paid: did the parent pay Tuition Fee or Transport Fee? By allocating money to individual invoice lines, the school&#x27;s audit ledger maintains exact head-wise revenue recognition.</p>
+<p>---</p>
+</div>
+
+            <div class="process-card">
+              <div class="process-header">
+                <span class="process-badge">PROCESS</span>
+                <span class="process-title">PROCESS 8: Examinations, Marks Entry, Paper Locks &amp; CBSE Grading</span>
+              </div>
+            
+<div class="subheading"><span class="sub-icon">🎯</span> The Real-Life Goal</div>
+<p>Publishing datesheets, recording subject marks, locking papers against tampering, and generating CBSE report cards.</p>
+<div class="subheading"><span class="sub-icon">🗄️</span> Tables Involved</div>
+<div class="bullet-item">• <strong><code>exams</code></strong>: Exam series (e.g. &quot;Half-Yearly Examination 2025-26&quot;).</div>
+<div class="bullet-item">• <strong><code>exam_schedule</code></strong>: The specific exam paper (Mathematics on 20 Sep, Max Marks: 80, Passing: 27).</div>
+<div class="bullet-item">• <strong><code>marks</code></strong>: Individual student score for a paper.</div>
+<div class="bullet-item">• <strong><code>assessment_schemes</code></strong>: CBSE assessment weights (Theory: 80%, Internal: 20%).</div>
+<div class="bullet-item">• <strong><code>grading_scales</code> &amp; <code>grade_bands</code></strong>: Converts percentages into CBSE Letter Grades (A1, A2, B1, etc.).</div>
+<div class="subheading"><span class="sub-icon">🔄</span> How Data Moves Step-by-Step</div>
+<div class="flow-step"><span class="step-num">1</span><div class="step-content"><strong>Exam Setup:</strong> An exam is created in <code>exams</code>, and subject papers are scheduled in <code>exam_schedule</code>.</div></div>
+<div class="flow-step"><span class="step-num">2</span><div class="step-content"><strong>Marks Entry:</strong> Teachers enter scores on the marks grid. Rows are saved in <code>marks</code> (<code>marks_obtained = 74.50</code>, <code>enrolment_id</code>, <code>exam_schedule_id</code>).</div></div>
+<div class="flow-step"><span class="step-num">3</span><div class="step-content"><strong>Paper Lock:</strong> Once marks entry finishes, the coordinator clicks &quot;Lock Paper&quot;. <code>exam_schedule.is_locked = TRUE</code>. Any future edit is rejected with <code>403 Forbidden</code> unless authorized with an audited override.</div></div>
+<div class="flow-step"><span class="step-num">4</span><div class="step-content"><strong>CBSE Grading Calculation:</strong> The engine sums components, computes percentage, and matches <code>grade_bands</code> (<code>91–100% = A1</code>, <code>81–90% = A2</code>).</div></div>
+<div class="flow-step"><span class="step-num">5</span><div class="step-content"><strong>Report Card Withholding Check:</strong> Before rendering a report card, the backend checks if the student has unpaid fee invoices. If <code>exams.withhold_results_for_dues = True</code> and outstanding fees exist, the report card is automatically withheld.</div></div>
+<p>---</p>
+</div>
+
+            <div class="process-card">
+              <div class="process-header">
+                <span class="process-badge">PROCESS</span>
+                <span class="process-title">PROCESS 9: School Transport Fleet &amp; Seating Limits</span>
+              </div>
+            
+<div class="subheading"><span class="sub-icon">🎯</span> The Real-Life Goal</div>
+<p>Managing school buses, pickup/drop stops, and passenger lists while enforcing physical vehicle capacity limits.</p>
+<div class="subheading"><span class="sub-icon">🗄️</span> Tables Involved</div>
+<div class="bullet-item">• <strong><code>vehicles</code></strong>: Bus registration number, legal seating capacity, permit/fitness dates.</div>
+<div class="bullet-item">• <strong><code>routes</code></strong>: Bus circuit code, assigned Driver and Bus Attendant.</div>
+<div class="bullet-item">• <strong><code>route_stops</code></strong>: Ordered halts with pickup and drop times.</div>
+<div class="bullet-item">• <strong><code>transport_fee_slabs</code></strong>: Monthly fee based on distance (0–5 km, 5–10 km).</div>
+<div class="bullet-item">• <strong><code>transport_assignments</code></strong>: Student passenger allocations.</div>
+<div class="subheading"><span class="sub-icon">🔄</span> How Data Moves Step-by-Step</div>
+<div class="flow-step"><span class="step-num">1</span><div class="step-content"><strong>Fleet Setup:</strong> Bus <code>UP-32-AB-1234</code> is registered with <code>capacity = 42</code>.</div></div>
+<div class="flow-step"><span class="step-num">2</span><div class="step-content"><strong>Route &amp; Stops:</strong> Route 1 is mapped with Stop 1 (07:15 AM), Stop 2 (07:25 AM). Each stop points to a <code>transport_fee_slabs</code> row.</div></div>
+<div class="flow-step"><span class="step-num">3</span><div class="step-content"><strong>Student Assignment:</strong> A child is assigned to Stop 2 in <code>transport_assignments</code>.</div></div>
+<div class="flow-step"><span class="step-num">4</span><div class="step-content"><strong>Hard Capacity Enforcement:</strong> Before committing, the database checks:</div></div>
+<p>$$\text{Active Passengers on Route} &lt; \text{Vehicle Capacity (42)}$$</p>
+<p>If full, the allocation is rejected.</p>
+<div class="flow-step"><span class="step-num">5</span><div class="step-content"><strong>Automated Billing:</strong> During monthly fee generation, the active transport assignment automatically adds a Transport Fee line item to the student&#x27;s invoice.</div></div>
+<p>---</p>
+</div>
+
+            <div class="process-card">
+              <div class="process-header">
+                <span class="process-badge">PROCESS</span>
+                <span class="process-title">PROCESS 10: Classroom Supplies &amp; Stock Inventory</span>
+              </div>
+            
+<div class="subheading"><span class="sub-icon">🎯</span> The Real-Life Goal</div>
+<p>Tracking lab chemicals, equipment, and sports gear, allowing teachers to report low stock from their phone, and tracking admin restocking.</p>
+<div class="subheading"><span class="sub-icon">🗄️</span> Tables Involved</div>
+<div class="bullet-item">• <strong><code>stock_items</code></strong>: Inventory catalog (Item Name, Code, Category, Quantity on Hand, Minimum Alert Threshold).</div>
+<div class="bullet-item">• <strong><code>stock_requests</code></strong>: Requisitions and depletion flags.</div>
+<div class="subheading"><span class="sub-icon">🔄</span> How Data Moves Step-by-Step</div>
+<div class="flow-step"><span class="step-num">1</span><div class="step-content"><strong>Catalog Setup:</strong> Chemistry item &quot;Copper Sulphate&quot; is entered with <code>quantity_on_hand = 15</code> and <code>minimum_quantity = 5</code>.</div></div>
+<div class="flow-step"><span class="step-num">2</span><div class="step-content"><strong>Teacher Mobile Flagging:</strong> A chemistry teacher notices only 2 bottles remain. From the mobile app, the teacher flags low stock.</div></div>
+<div class="flow-step"><span class="step-num">3</span><div class="step-content"><strong>Request Created:</strong> A row is inserted into <code>stock_requests</code> (<code>status = &#x27;pending&#x27;</code>, <code>request_type = &#x27;depletion_flag&#x27;</code>).</div></div>
+<div class="flow-step"><span class="step-num">4</span><div class="step-content"><strong>Admin Approval &amp; Restock:</strong> When new stock arrives, the admin approves the request. <code>stock_requests.status = &#x27;approved&#x27;</code> and <code>stock_items.quantity_on_hand</code> increases to <code>25</code>.</div></div>
+<div class="flow-step"><span class="step-num">5</span><div class="step-content"><strong>Low-Stock Alert:</strong> Whenever <code>quantity_on_hand &lt;= minimum_quantity</code>, the ERP dashboard highlights the item in red.</div></div>
+<p>---</p>
+</div>
+
+            <div class="process-card">
+              <div class="process-header">
+                <span class="process-badge">PROCESS</span>
+                <span class="process-title">PROCESS 11: Grievances, Complaints &amp; Helpdesk</span>
+              </div>
+            
+<div class="subheading"><span class="sub-icon">🎯</span> The Real-Life Goal</div>
+<p>Providing parents and teachers a transparent channel to report issues (academics, transport, facilities), assigning tickets to staff, and recording resolutions.</p>
+<div class="subheading"><span class="sub-icon">🗄️</span> Tables Involved</div>
+<div class="bullet-item">• <strong><code>grievances</code></strong>: Ticket header (Ticket No, Submitter, Category, Priority, Status, Assigned Staff).</div>
+<div class="bullet-item">• <strong><code>grievance_replies</code></strong>: Chronological conversation thread.</div>
+<div class="subheading"><span class="sub-icon">🔄</span> How Data Moves Step-by-Step</div>
+<div class="flow-step"><span class="step-num">1</span><div class="step-content"><strong>Submission:</strong> A parent submits a complaint about the school bus delay via the mobile app.</div></div>
+<div class="flow-step"><span class="step-num">2</span><div class="step-content"><strong>Ticket Generation:</strong> A ticket is created in <code>grievances</code> (<code>ticket_no = &#x27;GRV-2025-0012&#x27;</code>, <code>category = &#x27;transport&#x27;</code>, <code>priority = &#x27;high&#x27;</code>, <code>status = &#x27;open&#x27;</code>).</div></div>
+<div class="flow-step"><span class="step-num">3</span><div class="step-content"><strong>Staff Assignment:</strong> The principal assigns the ticket to the Transport Manager (<code>grievances.assigned_to = employee_id</code>). Status moves to <code>&#x27;in_progress&#x27;</code>.</div></div>
+<div class="flow-step"><span class="step-num">4</span><div class="step-content"><strong>Conversation Thread:</strong> The transport manager replies explaining traffic conditions. The message is inserted into <code>grievance_replies</code>.</div></div>
+<div class="flow-step"><span class="step-num">5</span><div class="step-content"><strong>Resolution:</strong> Once solved, the ticket is marked <code>status = &#x27;resolved&#x27;</code> with mandatory <code>resolution_notes</code>.</div></div>
+<p>---</p>
+</div>
+
+            <div class="process-card">
+              <div class="process-header">
+                <span class="process-badge">PROCESS</span>
+                <span class="process-title">PROCESS 12: Security, File Storage &amp; Audit Trails</span>
+              </div>
+            
+<div class="subheading"><span class="sub-icon">🎯</span> The Real-Life Goal</div>
+<p>Maintaining a tamper-proof audit trail of administrative actions and managing uploaded documents (birth certificates, marksheets) securely.</p>
+<div class="subheading"><span class="sub-icon">🗄️</span> Tables Involved</div>
+<div class="bullet-item">• <strong><code>audit_log</code></strong>: Unalterable record of all sensitive operations.</div>
+<div class="bullet-item">• <strong><code>document_types</code></strong>: Master list of required documents (Aadhaar, Transfer Certificate, Birth Certificate).</div>
+<div class="bullet-item">• <strong><code>documents</code></strong>: Metadata for uploaded files (File URL, Size, MIME Type, Verification Status).</div>
+<div class="bullet-item">• <strong><code>number_sequences</code></strong>: Atomic sequence counter for human-readable IDs.</div>
+<div class="subheading"><span class="sub-icon">🔄</span> How Data Moves Step-by-Step</div>
+<div class="flow-step"><span class="step-num">1</span><div class="step-content"><strong>Document Upload:</strong> A birth certificate is uploaded for an admitted child. The physical PDF file is stored on disk/S3; a metadata row is inserted into <code>documents</code> referencing <code>document_types.id</code>.</div></div>
+<div class="flow-step"><span class="step-num">2</span><div class="step-content"><strong>Verification:</strong> The admissions officer verifies the certificate and clicks &quot;Mark Verified&quot;. <code>documents.verified_by = user_id</code> and <code>verified_at = now()</code>.</div></div>
+<div class="flow-step"><span class="step-num">3</span><div class="step-content"><strong>Audit Log Capture:</strong> Whenever an invoice is voided, payment reversed, or notice deleted, the backend automatically writes a row to <code>audit_log</code> capturing:</div></div>
+<div class="bullet-item">• Who did it (<code>user_id</code>),</div>
+<div class="bullet-item">• What entity was changed (<code>entity_type</code>, <code>entity_id</code>),</div>
+<div class="bullet-item">• The user&#x27;s typed reason,</div>
+<div class="bullet-item">• <code>before_state</code> and <code>after_state</code> JSON snapshots.</div>
+<p>---</p>
+</div>
+
+            <div class="process-card">
+              <div class="process-header">
+                <span class="process-badge">PROCESS</span>
+                <span class="process-title">PROCESS 13: Teacher Recruitment, Candidate Intake &amp; Onboarding</span>
+              </div>
+            
+<div class="subheading"><span class="sub-icon">🎯</span> The Real-Life Goal</div>
+<p>Handling walk-in and online teacher candidate applications, generating official CBSE A4 formatted application dossiers, issuing job offers with salary terms, and automatically provisioning active employee credentials upon hiring.</p>
+<div class="subheading"><span class="sub-icon">🗄️</span> Tables Involved</div>
+<div class="bullet-item">• <strong><code>candidates</code></strong>: Candidate biodata, teaching qualifications, prior experience, post applied for, and application status (<code>applied</code>, <code>shortlisted</code>, <code>offered</code>, <code>hired</code>, <code>rejected</code>).</div>
+<div class="bullet-item">• <strong><code>candidate_offers</code></strong>: Formal job offer details (offered designation, department, monthly CTC salary, joining date).</div>
+<div class="bullet-item">• <strong><code>employees</code></strong>: Permanent staff record created automatically when candidate joining is confirmed.</div>
+<div class="bullet-item">• <strong><code>users</code></strong>: Login credentials provisioned for the new teacher (<code>TCH0xx</code> / <code>Teacher@123</code>).</div>
+<div class="subheading"><span class="sub-icon">🔄</span> How Data Moves Step-by-Step</div>
+<div class="flow-step"><span class="step-num">1</span><div class="step-content"><strong>Candidate Intake:</strong> Receptionist fills walk-in candidate details (<code>/recruitment</code>). A row is created in <code>candidates</code> (<code>application_no = &#x27;TR-2026-0012&#x27;</code>). Receptionist can print the official CBSE A4 printable form preview.</div></div>
+<div class="flow-step"><span class="step-num">2</span><div class="step-content"><strong>Shortlisting:</strong> School admin reviews qualifications and moves candidate status to <code>shortlisted</code>.</div></div>
+<div class="flow-step"><span class="step-num">3</span><div class="step-content"><strong>Offer Letter:</strong> Admin opens &quot;Issue Job Offer&quot; modal, sets designation (&quot;TGT Mathematics&quot;), department, salary (₹36,000/mo), and joining date. Row is inserted into <code>candidate_offers</code>. Status updates to <code>offered</code>.</div></div>
+<div class="flow-step"><span class="step-num">4</span><div class="step-content"><strong>Onboarding Confirmation:</strong> Admin clicks &quot;Confirm Joining &amp; Onboard&quot;. The system:</div></div>
+<div class="bullet-item">• Creates a new <code>employees</code> record with unique code (e.g. <code>TCH013</code>),</div>
+<div class="bullet-item">• Creates a new <code>users</code> account with teacher role,</div>
+<div class="bullet-item">• Links <code>candidates.employee_id = employees.id</code>,</div>
+<div class="bullet-item">• Updates candidate status to <code>hired</code>,</div>
+<div class="bullet-item">• Displays teacher login credentials on screen for immediate handover.</div>
+<div class="subheading"><span class="sub-icon">💡</span> The Clever Design Rule</div>
+<p>Strict RBAC separation: Receptionists can register candidates and print standard forms but are strictly forbidden from viewing or executing pipeline transitions (shortlist, offer, hire).</p>
+<p>---</p>
+</div>
+
+            <div class="process-card">
+              <div class="process-header">
+                <span class="process-badge">PROCESS</span>
+                <span class="process-title">PROCESS 14: Teacher Leave Management &amp; Timetable Substitution Gate</span>
+              </div>
+            
+<div class="subheading"><span class="sub-icon">🎯</span> The Real-Life Goal</div>
+<p>Allowing teachers to apply for personal leave via the mobile app, and requiring administrators to assign 100% timetable substitutions before leave can be approved, with zero mutation to the master timetable slots.</p>
+<div class="subheading"><span class="sub-icon">🗄️</span> Tables Involved</div>
+<div class="bullet-item">• <strong><code>staff_leave_requests</code></strong>: Teacher leave applications (dates, reason, status <code>applied</code>/<code>approved</code>/<code>rejected</code>, admin remarks).</div>
+<div class="bullet-item">• <strong><code>substitutions</code></strong>: Date-scoped proxy teaching duties covering affected periods.</div>
+<div class="bullet-item">• <strong><code>timetable_slots</code></strong>: The master weekly timetable (never edited).</div>
+<div class="bullet-item">• <strong><code>staff_attendance</code></strong>: Staff daily attendance register updated to <code>status = &#x27;leave&#x27;</code> upon approval.</div>
+<div class="bullet-item">• <strong><code>in_app_notifications</code></strong>: Push alerts sent to applicant and assigned substitute teachers.</div>
+<div class="subheading"><span class="sub-icon">🔄</span> How Data Moves Step-by-Step</div>
+<div class="flow-step"><span class="step-num">1</span><div class="step-content"><strong>Mobile Application:</strong> Teacher applies for leave on the mobile app for a specific date range with a reason. A row is inserted into <code>staff_leave_requests</code> (<code>status = &#x27;applied&#x27;</code>).</div></div>
+<div class="flow-step"><span class="step-num">2</span><div class="step-content"><strong>Substitution Matrix Calculation:</strong> Admin opens <code>/staff-leave</code> and inspects the substitution matrix. The backend queries <code>timetable_slots</code> for the teacher&#x27;s scheduled periods on those dates and finds free, non-conflicting teachers.</div></div>
+<div class="flow-step"><span class="step-num">3</span><div class="step-content"><strong>Provisional Substitutions:</strong> Admin assigns available teachers to each period. Provisional rows are written to <code>substitutions</code> (<code>status = &#x27;provisional&#x27;</code>).</div></div>
+<div class="flow-step"><span class="step-num">4</span><div class="step-content"><strong>Strict Safety Gate:</strong> The &quot;Approve&quot; button remains locked at 0% or partial coverage. Only when 100% of affected periods have assigned substitutes does the button turn green and unlock.</div></div>
+<div class="flow-step"><span class="step-num">5</span><div class="step-content"><strong>Approval Commit:</strong> Admin clicks &quot;Approve Leave &amp; Confirm Substitutions&quot;:</div></div>
+<div class="bullet-item">• <code>substitutions.status</code> updates to <code>&#x27;confirmed&#x27;</code>,</div>
+<div class="bullet-item">• <code>staff_leave_requests.status</code> updates to <code>&#x27;approved&#x27;</code>,</div>
+<div class="bullet-item">• <code>staff_attendance</code> records are created with <code>status = &#x27;leave&#x27;</code>,</div>
+<div class="bullet-item">• <code>in_app_notifications</code> are dispatched to both the applicant and substitute teachers.</div>
+<div class="flow-step"><span class="step-num">6</span><div class="step-content"><strong>Rejection &amp; Clean Purge:</strong> If the leave is rejected, all provisional substitutions for the request are immediately deleted (<code>DELETE FROM substitutions WHERE leave_request_id = :id</code>), leaving the timetable completely clean.</div></div>
+<div class="subheading"><span class="sub-icon">💡</span> The Clever Design Rule</div>
+<p><strong>Zero Mutation to Master Timetable:</strong> Master <code>timetable_slots</code> are never modified or overwritten. Substitutions are date-bound rows in <code>substitutions</code> that act as daily overlays. When the leave date passes, normal timetable operation resumes automatically without requiring restoration logic.</p>
+<p>---</p>
+</div>
+
+            <div class="process-card">
+              <div class="process-header">
+                <span class="process-badge">PROCESS</span>
+                <span class="process-title">PROCESS 15: Session Rollover &amp; Academic Promotion</span>
+              </div>
+            
+<div class="subheading"><span class="sub-icon">🎯</span> The Real-Life Goal</div>
+<p>Advancing an entire cohort of students from one academic session to the next (e.g. Class 9-A in 2025-26 to Class 10-A in 2026-27), reallocating roll numbers, and handling detentions or pass-outs cleanly.</p>
+<div class="subheading"><span class="sub-icon">🗄️</span> Tables Involved</div>
+<div class="bullet-item">• <strong><code>academic_years</code></strong>: Source session and target planning session.</div>
+<div class="bullet-item">• <strong><code>enrolments</code></strong>: Historical enrolments preserved; new session enrolment rows created.</div>
+<div class="bullet-item">• <strong><code>class_sections</code></strong>: Source and destination classroom sections.</div>
+<div class="bullet-item">• <strong><code>audit_log</code></strong>: Mandatory typed audit justification for the rollover operation.</div>
+<div class="subheading"><span class="sub-icon">🔄</span> How Data Moves Step-by-Step</div>
+<div class="flow-step"><span class="step-num">1</span><div class="step-content"><strong>Wizard Step 1 (Target Selection):</strong> Admin selects source session (&quot;2025-26&quot;) and target session (&quot;2026-27&quot;), and chooses the class section to roll over.</div></div>
+<div class="flow-step"><span class="step-num">2</span><div class="step-content"><strong>Wizard Step 2 (Roster Review):</strong> The system displays the student list with proposed default outcomes (<code>Promote</code>). Admin can override individual students to <code>Detain</code>, <code>Pass Out</code>, or <code>Transfer Out</code>. Roll numbers are dynamically generated alphabetically.</div></div>
+<div class="flow-step"><span class="step-num">3</span><div class="step-content"><strong>Wizard Step 3 (Safety Gate Confirmation):</strong> Admin must type mandatory confirmation <code>PROMOTE</code> with a typed reason (&quot;Annual academic progression after Final Term exams&quot;).</div></div>
+<div class="flow-step"><span class="step-num">4</span><div class="step-content"><strong>Wizard Step 4 (Commitment):</strong> The backend queries students, creates new <code>enrolments</code> rows for the target session and section, and logs the operation to <code>audit_log</code>.</div></div>
+<div class="subheading"><span class="sub-icon">💡</span> The Clever Design Rule</div>
+<p>Historical preservation: Past enrolments, marks, attendance, and fee invoices are never overwritten. A student simply receives an additional <code>enrolments</code> record pointing to the new academic year and section.</p>
+<p>---</p>
+</div>
+
+            <div class="process-card">
+              <div class="process-header">
+                <span class="process-badge">PROCESS</span>
+                <span class="process-title">PROCESS 16: Payroll Processing &amp; Teacher Salary Disbursal</span>
+              </div>
+            
+<div class="subheading"><span class="sub-icon">🎯</span> The Real-Life Goal</div>
+<p>Calculating monthly salaries for teaching and administrative staff, factoring in allowances, statutory deductions (EPF, ESI, TDS), and attendance deductions, generating printable CBSE payslips and bank disbursal spreadsheets.</p>
+<div class="subheading"><span class="sub-icon">🗄️</span> Tables Involved</div>
+<div class="bullet-item">• <strong><code>salary_components</code></strong>: Catalog of earnings (Basic, DA, HRA, Special Allowance) and deductions (EPF, ESI, TDS, Professional Tax).</div>
+<div class="bullet-item">• <strong><code>salary_structures</code></strong>: Salary packages assigned to designations (PGT, TGT, PRT, Admin).</div>
+<div class="bullet-item">• <strong><code>payroll_runs</code></strong>: Monthly processing batch header (month, year, total gross, total deductions, total net payout).</div>
+<div class="bullet-item">• <strong><code>payslips</code></strong>: Individual employee payslip headers.</div>
+<div class="bullet-item">• <strong><code>payslip_lines</code></strong>: Itemized breakdown lines for each salary component on the payslip.</div>
+<div class="subheading"><span class="sub-icon">🔄</span> How Data Moves Step-by-Step</div>
+<div class="flow-step"><span class="step-num">1</span><div class="step-content"><strong>Batch Initiation:</strong> Bursar navigates to <code>/payroll</code> and clicks &quot;Run Payroll&quot; for the active month (e.g. September 2026).</div></div>
+<div class="flow-step"><span class="step-num">2</span><div class="step-content"><strong>Computation Engine:</strong> The backend retrieves all active employees, reads their assigned <code>salary_structures</code>, computes standard earnings, applies attendance deductions from <code>staff_attendance</code>, and calculates statutory deductions (EPF 12%, ESI 0.75%).</div></div>
+<div class="flow-step"><span class="step-num">3</span><div class="step-content"><strong>Ledger Commit:</strong> A <code>payroll_runs</code> record is created, and itemized <code>payslips</code> and <code>payslip_lines</code> are committed.</div></div>
+<div class="flow-step"><span class="step-num">4</span><div class="step-content"><strong>Printable Payslip Generation:</strong> Admin can open any staff member&#x27;s payslip to render an official CBSE-compliant payslip with Lucknow school header, currency in words, and official signature blocks.</div></div>
+<div class="flow-step"><span class="step-num">5</span><div class="step-content"><strong>Bank Transfer Export:</strong> Admin exports <code>GET /admin/payroll/runs/{id}/bank-disbursal?format=csv</code> formatted for bulk NEFT/RTGS electronic bank disbursal.</div></div>
+<p>---</p>
+</div>
+<div class="summary-header"><h2>📋 Summary of Key Entities &amp; Relationships</h2></div>
+<table class="ref-table">
+<thead>
+<tr>
+  <th>Area</th>
+  <th>Master Parent Table</th>
+  <th>Operational Child Table</th>
+  <th>Join Column</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Multi-Tenancy</strong></td>
+  <td><code>schools</code></td>
+  <td>All 65 tenant tables</td>
+  <td><code>school_id</code></td>
+</tr>
+<tr>
+  <td><strong>Students</strong></td>
+  <td><code>students</code> (lifetime)</td>
+  <td><code>enrolments</code> (session)</td>
+  <td><code>student_id</code></td>
+</tr>
+<tr>
+  <td><strong>Guardians</strong></td>
+  <td><code>students</code> &amp; <code>guardians</code></td>
+  <td><code>student_guardian</code> (M:N)</td>
+  <td><code>student_id</code>, <code>guardian_id</code></td>
+</tr>
+<tr>
+  <td><strong>Academics</strong></td>
+  <td><code>class_sections</code></td>
+  <td><code>timetable_slots</code></td>
+  <td><code>class_section_id</code></td>
+</tr>
+<tr>
+  <td><strong>Substitutions</strong></td>
+  <td><code>staff_leave_requests</code></td>
+  <td><code>substitutions</code></td>
+  <td><code>leave_request_id</code></td>
+</tr>
+<tr>
+  <td><strong>Attendance</strong></td>
+  <td><code>enrolments</code></td>
+  <td><code>attendance</code></td>
+  <td><code>enrolment_id</code></td>
+</tr>
+<tr>
+  <td><strong>Staff Leave</strong></td>
+  <td><code>employees</code></td>
+  <td><code>staff_leave_requests</code></td>
+  <td><code>employee_id</code></td>
+</tr>
+<tr>
+  <td><strong>Recruitment</strong></td>
+  <td><code>candidates</code></td>
+  <td><code>candidate_offers</code> ➡️ <code>employees</code></td>
+  <td><code>candidate_id</code>, <code>employee_id</code></td>
+</tr>
+<tr>
+  <td><strong>Notifications</strong></td>
+  <td><code>users</code></td>
+  <td><code>in_app_notifications</code></td>
+  <td><code>user_id</code></td>
+</tr>
+<tr>
+  <td><strong>Fees Setup</strong></td>
+  <td><code>fee_plans</code></td>
+  <td><code>fee_plan_items</code></td>
+  <td><code>fee_plan_id</code></td>
+</tr>
+<tr>
+  <td><strong>Fee Billing</strong></td>
+  <td><code>fee_invoices</code></td>
+  <td><code>fee_invoice_lines</code></td>
+  <td><code>invoice_id</code></td>
+</tr>
+<tr>
+  <td><strong>Fee Realization</strong></td>
+  <td><code>fee_invoice_lines</code> &amp; <code>fee_payments</code></td>
+  <td><code>payment_allocations</code></td>
+  <td><code>invoice_line_id</code>, <code>payment_id</code></td>
+</tr>
+<tr>
+  <td><strong>Exams</strong></td>
+  <td><code>exams</code></td>
+  <td><code>exam_schedule</code> ➡️ <code>marks</code></td>
+  <td><code>exam_id</code>, <code>exam_schedule_id</code></td>
+</tr>
+<tr>
+  <td><strong>Payroll</strong></td>
+  <td><code>payroll_runs</code></td>
+  <td><code>payslips</code> ➡️ <code>payslip_lines</code></td>
+  <td><code>payroll_run_id</code>, <code>payslip_id</code></td>
+</tr>
+<tr>
+  <td><strong>Transport</strong></td>
+  <td><code>routes</code></td>
+  <td><code>route_stops</code> ➡️ <code>transport_assignments</code></td>
+  <td><code>route_id</code>, <code>route_stop_id</code></td>
+</tr>
+<tr>
+  <td><strong>Inventory</strong></td>
+  <td><code>stock_items</code></td>
+  <td><code>stock_requests</code></td>
+  <td><code>item_id</code></td>
+</tr>
+<tr>
+  <td><strong>Grievances</strong></td>
+  <td><code>grievances</code></td>
+  <td><code>grievance_replies</code></td>
+  <td><code>grievance_id</code></td>
+</tr>
+<tr>
+  <td><strong>Audit</strong></td>
+  <td><code>users</code></td>
+  <td><code>audit_log</code></td>
+  <td><code>user_id</code></td>
+</tr>
+</tbody>
+</table>
+
+</body>
+</html>

@@ -5,10 +5,12 @@ gives the Accountant payroll and nothing else of HR, and the HR Manager staff
 records and not the money.
 """
 
+import csv
 from datetime import date as Date
 from decimal import Decimal
+import io
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -319,3 +321,68 @@ def cost_by_department(
     run_id: int, user: User = Depends(reader), db: Session = Depends(get_db)
 ) -> list[dict]:
     return svc.cost_by_department(db, _run(db, user, run_id))
+
+
+@router.get("/runs/{run_id}/bank-disbursal")
+def bank_disbursal(
+    run_id: int,
+    format: str | None = Query(default=None),
+    user: User = Depends(reader),
+    db: Session = Depends(get_db),
+):
+    """Bank disbursal file (NEFT transfer sheet) for salary credit."""
+    run = _run(db, user, run_id)
+    slips = db.scalars(
+        select(Payslip)
+        .where(Payslip.run_id == run.id)
+        .order_by(Payslip.payslip_no)
+    ).all()
+
+    rows = []
+    for slip in slips:
+        emp = slip.employee
+        narration = f"Salary {run.month:02d}/{run.year} {emp.employee_code}"
+        rows.append({
+            "employee_code": emp.employee_code,
+            "beneficiary_name": emp.user.full_name,
+            "bank_name": emp.bank_name or "N/A",
+            "bank_account_no": emp.bank_account_no or "N/A",
+            "bank_ifsc": emp.bank_ifsc or "N/A",
+            "net_amount": slip.net_pay,
+            "narration": narration,
+        })
+
+    if format == "csv":
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow([
+            "Employee Code",
+            "Beneficiary Name",
+            "Bank Name",
+            "Account Number",
+            "IFSC Code",
+            "Net Amount (INR)",
+            "Narration",
+        ])
+        for r in rows:
+            writer.writerow([
+                r["employee_code"],
+                r["beneficiary_name"],
+                r["bank_name"],
+                r["bank_account_no"],
+                r["bank_ifsc"],
+                f"{r['net_amount']:.2f}",
+                r["narration"],
+            ])
+        return Response(
+            content=buf.getvalue(),
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="salary_disbursal_{run.month:02d}_{run.year}_run{run.run_no}.csv"'
+                )
+            },
+        )
+
+    return rows
+

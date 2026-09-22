@@ -1,6 +1,13 @@
 from datetime import date, timedelta
+import pytest
 
 from app.services.attendance import summarise
+
+
+@pytest.fixture(autouse=True)
+def allow_marking_today(monkeypatch):
+    import app.services.attendance
+    monkeypatch.setattr(app.services.attendance, "is_working_day", lambda day, holidays: True)
 
 
 def roster_ids(db, class_section_id):

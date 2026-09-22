@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { Pressable, Text, View } from "react-native";
 
 import { api } from "../../src/api/client";
 import { useAuth } from "../../src/auth/AuthContext";
@@ -20,12 +21,33 @@ type Dashboard = {
   attendance: { present: number; absent: number; leave: number; percent: number | null } | null;
 };
 
+type SubstitutionDuty = {
+  id: number;
+  date: string;
+  period_no: number;
+  time: string;
+  class_label: string;
+  subject: string;
+  room: string | null;
+  absent_teacher_name: string;
+  status: string;
+};
+
 export default function TeacherDashboard() {
+  const router = useRouter();
   const { me } = useAuth();
   const { data, isLoading } = useQuery({
     queryKey: ["teacher-dashboard"],
     queryFn: () => api.get<Dashboard>("/teacher/dashboard"),
   });
+
+  const { data: duties } = useQuery({
+    queryKey: ["teacher-substitution-duties"],
+    queryFn: () => api.get<SubstitutionDuty[]>("/teacher/substitutions/duties"),
+  });
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayDuties = (duties ?? []).filter((d) => d.date === todayStr);
 
   if (isLoading || !data) return <Loading />;
 
@@ -52,6 +74,66 @@ export default function TeacherDashboard() {
                 : `${data.attendance.percent}%`
             }
           />
+        </View>
+      </Card>
+
+      {/* Today's Substitution Duties Alert Card */}
+      {todayDuties.length > 0 && (
+        <Card title={`Today's Substitution Duties (${todayDuties.length})`}>
+          {todayDuties.map((duty) => (
+            <Row
+              key={duty.id}
+              left={
+                <>
+                  <Text style={[s.title, { color: theme.primary, fontWeight: "600" }]}>
+                    Period {duty.period_no} • {duty.subject} ({duty.class_label})
+                  </Text>
+                  <Text style={s.meta}>
+                    Covering for: {duty.absent_teacher_name} {duty.room ? `• Room ${duty.room}` : ""}
+                  </Text>
+                </>
+              }
+              right={<Text style={s.meta}>{duty.time}</Text>}
+            />
+          ))}
+        </Card>
+      )}
+
+      {/* Quick Actions */}
+      <Card title="Quick Actions">
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Pressable
+            onPress={() => router.push("/(teacher)/leave")}
+            style={{
+              flex: 1,
+              backgroundColor: `${theme.primary}15`,
+              borderWidth: 1,
+              borderColor: theme.primary,
+              borderRadius: theme.radius.input,
+              paddingVertical: 10,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: theme.primary, fontWeight: "600", fontSize: 13 }}>
+              Apply Leave
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push("/(teacher)/timetable")}
+            style={{
+              flex: 1,
+              backgroundColor: theme.surface,
+              borderWidth: 1,
+              borderColor: theme.rule,
+              borderRadius: theme.radius.input,
+              paddingVertical: 10,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: theme.inkSoft, fontWeight: "600", fontSize: 13 }}>
+              My Timetable
+            </Text>
+          </Pressable>
         </View>
       </Card>
 

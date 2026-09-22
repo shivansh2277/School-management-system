@@ -230,3 +230,75 @@ def cancel(
     row = svc.cancel(db, user, _owned(db, user, request_id), reason=body.reason)
     db.commit()
     return svc.to_out(db, row)
+
+
+class ProvisionalSubstitutionIn(BaseModel):
+    slot_id: int
+    date: Date
+    substitute_teacher_id: int
+    reason: str | None = None
+
+
+@router.get("/{request_id}/substitution-matrix")
+def substitution_matrix(
+    request_id: int,
+    user: User = Depends(approver),
+    db: Session = Depends(get_db),
+) -> dict:
+    return svc.get_leave_substitution_matrix(db, user.school_id, request_id)
+
+
+@router.post("/{request_id}/provisional-substitution")
+def add_provisional_substitution(
+    request_id: int,
+    body: ProvisionalSubstitutionIn,
+    user: User = Depends(approver),
+    db: Session = Depends(get_db),
+) -> dict:
+    sub = svc.assign_provisional_substitution(
+        db,
+        user.school_id,
+        user,
+        request_id,
+        slot_id=body.slot_id,
+        date=body.date,
+        substitute_teacher_id=body.substitute_teacher_id,
+        reason=body.reason,
+    )
+    db.commit()
+    return {
+        "id": sub.id,
+        "slot_id": sub.timetable_slot_id,
+        "date": str(sub.date),
+        "substitute_teacher_id": sub.substitute_teacher_id,
+        "status": sub.status.value,
+    }
+
+
+@router.delete("/{request_id}/provisional-substitution/{substitution_id}")
+def delete_provisional_substitution(
+    request_id: int,
+    substitution_id: int,
+    user: User = Depends(approver),
+    db: Session = Depends(get_db),
+) -> dict:
+    svc.remove_provisional_substitution(
+        db, user.school_id, user, request_id, substitution_id
+    )
+    db.commit()
+    return {"status": "ok"}
+
+
+@router.post("/{request_id}/approve-with-substitutions")
+def approve_with_substitutions(
+    request_id: int,
+    body: DecisionIn,
+    user: User = Depends(approver),
+    db: Session = Depends(get_db),
+) -> dict:
+    req = svc.approve_teacher_leave_with_substitutions(
+        db, user, request_id, decision_note=body.note
+    )
+    db.commit()
+    return svc.to_out(db, req)
+

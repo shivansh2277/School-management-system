@@ -1,0 +1,3 @@
+entity,key,label,field_type,options,is_required,is_active,sort_order,school_id,id,created_at,updated_at
+student,father_occupation,Father's occupation,text,,False,True,10,36,9,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+student,house,House,select,"[""Ganga"", ""Yamuna"", ""Saraswati"", ""Narmada""]",False,True,20,36,10,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30

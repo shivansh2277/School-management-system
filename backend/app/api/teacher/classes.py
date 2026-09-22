@@ -47,6 +47,15 @@ def my_classes(user: User = Depends(teacher_only), db: Session = Depends(get_db)
     return out
 
 
+@router.get("/classes/class-teacher-sections")
+def my_class_teacher_sections(
+    user: User = Depends(teacher_only), db: Session = Depends(get_db)
+) -> list[dict]:
+    """Returns only class sections where this teacher is designated Class Teacher."""
+    all_classes = my_classes(user, db)
+    return [c for c in all_classes if c.get("is_class_teacher")]
+
+
 @router.get("/classes/{class_section_id}/students")
 def class_roster(
     class_section_id: int,
@@ -61,6 +70,8 @@ def class_roster(
     return [
         {
             "id": e.student_id,
+            "student_id": e.student_id,
+            "enrolment_id": e.id,
             "full_name": e.student.user.full_name,
             "roll_no": e.roll_no,
             "admission_no": e.student.admission_no,

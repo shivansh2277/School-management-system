@@ -1,0 +1,2 @@
+application_no,full_name,email,phone,gender,date_of_birth,address,post_applied_for,qualification,specialization,experience_years,previous_school,expected_salary,resume_file_key,photo_file_key,status,notes,employee_id,created_by_user_id,school_id,id,created_at,updated_at
+APP-2026-001,Sunil Kumar,sunil.kumar@example.com,9876543210,male,1992-05-14,,PGT Physics,"M.Sc. Physics, B.Ed.",Nuclear Physics,4.5,DPS Lucknow,48000.00,,,selected,Selected after interview,,399,36,4,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30

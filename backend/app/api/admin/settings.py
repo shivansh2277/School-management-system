@@ -74,7 +74,9 @@ def read_settings(user: User = Depends(reader), db: Session = Depends(get_db)) -
 def write_settings(
     body: SettingsUpdate, user: User = Depends(reader), db: Session = Depends(get_db)
 ) -> dict:
-    return {"values": svc.set_many(db, user, body.values)}
+    result = svc.set_many(db, user, body.values)
+    db.commit()
+    return {"values": result}
 
 
 @router.get("/custom-fields")

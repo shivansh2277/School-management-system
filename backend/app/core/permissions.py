@@ -126,6 +126,16 @@ PERMISSIONS: list[tuple[str, str]] = [
     ("payroll.setup.manage", "Define salary components and set salary structures"),
     ("payroll.run.manage", "Open, calculate and discard a payroll run"),
     ("payroll.run.approve", "Approve a payroll run and mark it paid"),
+    # --- inventory and stock
+    ("inventory.item.read", "View stock items and requests"),
+    ("inventory.item.write", "Create and update stock items"),
+    ("inventory.request.create", "Flag low stock or request supplies"),
+    ("inventory.request.approve", "Approve or reject stock purchase and issue requests"),
+    # --- grievances and feedback
+    ("grievance.read", "View grievances and complaints"),
+    ("grievance.write", "Manage, update status, and resolve grievances"),
+    ("grievance.assign", "Assign grievances to teachers or staff members"),
+    ("grievance.submit", "Submit grievances and reply to threads"),
     # --- administration
     ("admin.settings.read", "View school settings"),
     ("admin.settings.write", "Change school settings"),
@@ -133,6 +143,24 @@ PERMISSIONS: list[tuple[str, str]] = [
     ("admin.role.write", "Change roles and permissions"),
     ("admin.year.write", "Open, close and switch academic years"),
     ("admin.audit.read", "Read the audit log"),
+
+    # --- teacher leave & substitutions (mobile app)
+    ("teacher.leave.apply", "Apply for personal teacher leave"),
+    ("teacher.leave.view", "View personal leave status and substitution duties"),
+
+    # --- reception & front desk operations
+    ("reception.found_items.read", "View found items register"),
+    ("reception.found_items.write", "Record found items, upload photos, broadcast alerts"),
+    ("reception.found_items.collect", "Verify claimant and mark found item collected"),
+    ("reception.passes.read", "View student gate passes"),
+    ("reception.passes.write", "Issue one-time student gate passes"),
+    ("reception.authorized_persons.manage", "Manage permanent authorized pickup roster for students"),
+    ("reception.meetings.read", "View visitor meeting slips"),
+    ("reception.meetings.write", "Create visitor meeting requests for Principal and Teachers"),
+    ("reception.meetings.respond_principal", "Respond to Principal meeting requests"),
+    ("reception.meetings.respond_teacher", "Respond to Teacher meeting requests"),
+    ("reception.directory.read", "View important emergency and school directory contacts"),
+    ("reception.directory.write", "Manage important directory contacts"),
 ]
 
 # Permissions that end in `.read` but must NOT be handed out with the rest of
@@ -216,6 +244,22 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "admin.settings.write",
             "admin.year.write",
             "admin.audit.read",
+            "inventory.item.write",
+            "inventory.request.create",
+            "inventory.request.approve",
+            "grievance.write",
+            "grievance.assign",
+            "grievance.submit",
+
+            "teacher.leave.apply",
+            "teacher.leave.view",
+
+            "reception.found_items.read",
+            "reception.passes.read",
+            "reception.meetings.read",
+            "reception.meetings.respond_principal",
+            "reception.directory.read",
+            "reception.directory.write",
         ],
     ),
     (
@@ -247,6 +291,13 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "admission.cycle.write",
             "admission.application.write",
             "admin.settings.write",
+            "inventory.item.write",
+            "inventory.request.create",
+            "inventory.request.approve",
+            "grievance.write",
+            "grievance.assign",
+            "grievance.submit",
+
         ],
     ),
     (
@@ -314,6 +365,20 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "admission.enquiry.read",
             "admission.enquiry.write",
             "comms.notice.read",
+            "reception.found_items.read",
+            "reception.found_items.write",
+            "reception.found_items.collect",
+            "reception.passes.read",
+            "reception.passes.write",
+            "reception.authorized_persons.manage",
+            "reception.meetings.read",
+            "reception.meetings.write",
+            "reception.directory.read",
+            # Only fees.payment.collect: the reception fee counter's API is
+            # gated on this alone.  fees.invoice.read is deliberately omitted
+            # so the admin-facing fee screens (Fees, Defaulters, Fee setup,
+            # Period close) do not leak into the receptionist sidebar.
+            "fees.payment.collect",
         ],
     ),
     (
@@ -329,8 +394,6 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
         "admission_officer",
         "Admission Officer",
         [
-            "students.profile.read",
-            "academics.class.read",
             "admission.cycle.read",
             "admission.enquiry.read",
             "admission.enquiry.write",
@@ -341,12 +404,7 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "admission.interview.enter",
             "admission.decision.make",
             "admission.application.convert",
-            # Not admission.decision.override: admitting past capacity is the
-            # principal's call, not the pipeline's (§5.1.9(11)).
-            # Not admission.medical.read: §15 keeps a child's medical section
-            # behind its own permission, held by the school nurse and the
-            # principal rather than by everyone who works the pipeline.
-            "comms.notice.read",
+            "fees.payment.collect",
         ],
     ),
     (
@@ -374,6 +432,13 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             # sits on interview panels. They do not otherwise work admissions.
             "admission.assessment.enter",
             "admission.interview.enter",
+            "inventory.item.read",
+            "inventory.request.create",
+            "grievance.submit",
+            "teacher.leave.apply",
+            "teacher.leave.view",
+            "reception.meetings.read",
+            "reception.meetings.respond_teacher",
         ],
     ),
     (
@@ -388,6 +453,7 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "comms.notice.read",
             "fees.invoice.read",
             "fees.payment.pay_own",
+            "grievance.submit",
         ],
     ),
     (
@@ -402,6 +468,7 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "fees.invoice.read",
             "fees.payment.pay_own",
             "transport.assignment.read",
+            "grievance.submit",
         ],
     ),
     (

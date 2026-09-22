@@ -1,3 +1,4 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { Redirect } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
@@ -30,6 +31,7 @@ export default function Login() {
   const [role, setRole] = useState<Role>("student");
   const [loginId, setLoginId] = useState(DEMO.student.loginId);
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -40,6 +42,7 @@ export default function Login() {
     setRole(next);
     setLoginId(DEMO[next].loginId);
     setPassword("");
+    setShowPassword(false);
     setError(null);
   };
 
@@ -102,13 +105,49 @@ export default function Login() {
             autoCapitalize="none"
             autoCorrect={false}
           />
-          <TextInput
-            style={s.input}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-          />
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: theme.rule,
+              borderRadius: theme.radius.input,
+              backgroundColor: theme.surface,
+            }}
+          >
+            <TextInput
+              style={{
+                flex: 1,
+                padding: 12,
+                fontSize: 14,
+                color: theme.ink,
+              }}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              placeholder="Password"
+              placeholderTextColor={theme.inkFaint}
+            />
+            <Pressable
+              onPress={() => setShowPassword((prev) => !prev)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={{
+                paddingRight: 12,
+                paddingLeft: 4,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+              accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+              accessibilityRole="button"
+            >
+              <Ionicons
+                name={showPassword ? "eye-outline" : "eye-off-outline"}
+                size={20}
+                color={theme.inkSoft}
+              />
+            </Pressable>
+          </View>
         </View>
 
         {error ? <Text style={{ color: theme.danger }}>{error}</Text> : null}

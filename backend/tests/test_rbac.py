@@ -202,3 +202,55 @@ def test_scheduling_an_exam_paper_needs_the_write_permission(client, teacher, id
     assert r.status_code == 403, (
         f"a teacher without exam.definition.write scheduled a paper: {r.status_code} {r.text}"
     )
+
+
+def test_admission_officer_cannot_access_students_classes_or_notices(client, admission_officer):
+    """Admission Officer is strictly scoped to the admission pipeline:
+    students roster, academic classes, and notices must be 403 Forbidden."""
+    # Forbidden endpoints
+    r_students = client.get("/admin/students", headers=admission_officer)
+    assert r_students.status_code == 403
+    assert "students.profile.read" in r_students.text
+
+    r_classes = client.get("/admin/classes", headers=admission_officer)
+    assert r_classes.status_code == 403
+    assert "academics.class.read" in r_classes.text
+
+    r_notices = client.get("/admin/notices", headers=admission_officer)
+    assert r_notices.status_code == 403
+    assert "comms.notice.read" in r_notices.text
+
+    # Permitted admission endpoints
+    r_enquiries = client.get("/admin/admission/enquiries", headers=admission_officer)
+    assert r_enquiries.status_code == 200
+
+    r_apps = client.get("/admin/admission/applications", headers=admission_officer)
+    assert r_apps.status_code == 200
+
+
+def test_receptionist_cannot_access_applications_but_can_access_enquiries(client, receptionist):
+    """Front Desk Receptionist is strictly focused on Enquiry workflows:
+    Applications access must be 403 Forbidden, while Enquiries must be accessible."""
+    # Forbidden application endpoints
+    r_apps_read = client.get("/admin/admission/applications", headers=receptionist)
+    assert r_apps_read.status_code == 403
+    assert "admission.application.read" in r_apps_read.text
+
+    r_apps_write = client.post(
+        "/admin/admission/applications",
+        json={
+            "first_name": "Test",
+            "last_name": "Applicant",
+            "date_of_birth": "2020-01-01",
+            "gender": "female",
+            "class_applying_for": "1",
+        },
+        headers=receptionist,
+    )
+    assert r_apps_write.status_code == 403
+    assert "admission.application.write" in r_apps_write.text
+
+    # Permitted enquiry endpoints
+    r_enq_read = client.get("/admin/admission/enquiries", headers=receptionist)
+    assert r_enq_read.status_code == 200
+

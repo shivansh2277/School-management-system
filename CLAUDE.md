@@ -2,17 +2,16 @@
 
 ## Read these first, in this order
 
-0. **`SESSION-HANDOFF-2.md`** — **start here.** Written at the end of the
-   session that built Packet 0 and Packet 2. Says which branch the work is on
-   (`slice/office-feedback`, 10 commits, unpushed), a cold start that actually
-   works on this machine, what is verified and what is not, and what to do
-   next in order. It supersedes `FRONTEND-HANDOFF.md` **Part Zero and Part
-   One** only.
-1. **`FRONTEND-HANDOFF.md`** — still the brief for **Parts Two to Six**: the
+0. **`SINGLE_SOURCE_OF_TRUTH.md`**, **`SESSION-HANDOFF-8.md`**, & **`SESSION-HANDOFF-9.md`** — **start here.**
+   The canonical single source of truth and session handoffs for the ERP.
+   Details current git status (`slice/office-feedback`), verified 26 live web screens,
+   18 active staff, database tables (recruitment tables dropped),
+   Alembic migration head `c3d4e5f6a7b8` (`drop_recruitment_tables.py`), leadership credentials (`admin@sunrisepublic.edu` / `Admin@123`),
+   Session 9 completed & verified (729 passed backend tests, 1 skipped, 0 failed, 100% green; 82 passed web unit tests across 18 files; 0 TypeScript errors on web and mobile; clean Vite production build; Mobile navigation redesigned with 4 bottom tabs + top-left hamburger drawer; Admin Dashboard Fee Collection Recharts graph cleanly removed; Teacher Recruitment completely decommissioned across backend, db, seed, and web; Global Red-X close controls across modals and dialogs).
+   Supersedes all previous session handoffs.
+1. **`FRONTEND-HANDOFF.md`** — the brief for **Parts Two to Six**: the
    three contracts, what "clean and easy for a school office" means, the
    remaining packets, the report format every packet owes, and the traps list.
-   Its Part Zero and Part One are stale; use `SESSION-HANDOFF-2.md` for those.
-   `SESSION-HANDOFF.md` is an older predecessor and is **fully superseded**.
 2. **`HANDOFF.md`** (this directory) — current state, the commits and why each
    exists, and what is explicitly *not* verified.
 3. **`docs/ERP_BLUEPRINT.md` §0** — the 21 locked product decisions. **§0 wins
@@ -35,9 +34,9 @@ on both jobs** — backend lint, 615 tests, migrations from an empty schema, see
 and worker; web typecheck, schema drift, 31 tests and build. CI runs on every
 push to `main` or `part-*`.
 
-Those two figures are `main`'s. On `slice/office-feedback` they are **623
-backend** and **43 web tests in 11 files**; CI has never run on that branch
-because it has never been pushed.
+Those two figures are `main`'s. On `slice/office-feedback` they are **729 passed
+backend (1 skipped, 730 total, 0 failed)** and **82 passed web unit tests (2 skipped in 18 files)**;
+CI has never run on that branch because it has never been pushed.
 
 **Nothing is deployed**, and one thing blocks that regardless of frontend work:
 every account the ERP creates gets a fixed default password with no forced
@@ -49,15 +48,81 @@ about how accounts are issued and has deliberately not been made.
 
 ```bash
 cd backend
-../.venv/Scripts/python.exe -m pytest -q          # 615 on main, 623 on slice/office-feedback
+../.venv/Scripts/python.exe -m pytest -q          # 615 on main, 729 on slice/office-feedback
 ../.venv/Scripts/python.exe -m pytest tests/test_rbac.py -q       # one file
 ../.venv/Scripts/python.exe -m alembic upgrade head
 ../.venv/Scripts/python.exe seed.py               # idempotent
 ../.venv/Scripts/python.exe worker.py --once      # drain the job queue
-../.venv/Scripts/python.exe -m uvicorn app.main:app --reload --port 8000
+../.venv/Scripts/python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 cd web && npx tsc --noEmit && npm run dev
+
+cd mobile && npx tsc --noEmit && npx expo start --go --lan --port 8081
 ```
+
+## Key Logins & Role Isolation (RBAC)
+
+- **Leadership / Admin**: `admin@sunrisepublic.edu` (`Admin@123`) — Full school-wide administrative access across all modules. Retains the executive **Admission Dashboard** (`/admission`) with cycle overview, conversion funnels, and class intake capacities. To keep the sidebar uncluttered, the 5 operational queues are segregated from the Admin sidebar.
+- **Dedicated Receptionist**: `receptionist@sunrisepublic.edu` (`Admin@123`) — Dedicated front desk admission staff. Lands directly on `#/admission/enquiries`. Focuses strictly on Enquiries. Navigation strictly hardened: `Applications`, `Merit & selection`, `Waitlist`, and `Admission reports` are completely removed from the sidebar; direct URL `#/admission/applications` is protected with in-page refusal and backend HTTP 403 Forbidden. Non-admission screens are also completely hidden and blocked.
+- **Admission Officer**: `admission@sunrisepublic.edu` (`Admin@123`) — Owns the complete admission pipeline: Enquiries, Applications, Merit Ranking, Waitlist, Admission Reports, and atomic fee payment enrollment. Navigation strictly hardened: `Students`, `Classes`, and `Notices` are completely removed from the sidebar; direct URLs `#/students`, `#/classes`, and `#/notices` are protected with in-page refusal and backend HTTP 403 Forbidden.
+- **Fee Counter Clerk**: `counter@sunrisepublic.edu` (`Admin@123`) — Read ledger, view defaulters; cannot void payments or alter concessions.
+
+## Recent Features Built & Verified (14–21 Sep 2026)
+
+1. **Main Dashboard Upgrade (Attendance Overview)**:
+   - Replaced the top 4 summary cards (`Total Students`, `Total Teachers`, `Total Classes`, `Fees Collected`) with a dedicated live **Attendance Overview** section (100 students, 90 present, 10 absent, 90% rate).
+2. **Receptionist Role & Admission Queue Isolation**:
+   - Seeded `receptionist@sunrisepublic.edu` (`Admin@123`) front desk login with exclusive access to the 5 operational admission queues.
+3. **Staff Payroll Batches & Disbursal (`/payroll`)**:
+   - Monthly salary batch calculation across all 18 staff with statutory EPF/ESI/TDS registers, printable CBSE payslips, and bank CSV export.
+4. **Session Rollover & Promotion Wizard (`/admin/session-rollover`)**:
+   - 4-step progression wizard from 2025-26 to 2026-27 with dynamic roll numbers, class overrides, and typed PROMOTE audit gate.
+5. **Teacher Leave Management & 100% Substitution Coverage Gate (`/staff-leave`)**:
+   - Mobile teacher leave queue with timetable conflict checking and locked approval gate requiring 100% substitution coverage before approval.
+6. **Teacher Recruitment Decommissioned (Session 9)**:
+   - Recruitment decommissioned and purged across backend, database, seed data, and web UI per owner directive.
+7. **Simple Database Data-Flow Guide**:
+   - Publication of `docs/Sunrise-ERP-Operational-Data-Flows.pdf` detailing `TABLE → TABLE → TABLE` flows, PK/FK connections, and Student ID vs Enrollment ID rules.
+8. **Session 6 — Database Schema Refactoring (`enrolment_id` Migration)**:
+   - Migrated `marks` and `homework_submissions` to require `enrolment_id` (`BigInteger, NOT NULL, FK -> enrolments.id`), removing legacy `student_id` columns from both tables. Compound unique constraints ensure an enrolment holds at most one mark per exam schedule and one submission per homework.
+   - Migrated `grievances` to carry `enrolment_id` (`BigInteger, NULLABLE, FK -> enrolments.id`) for year-scoped parent grievance context.
+   - Upholds foundational ERP invariant: *"Year-scoped facts hang off `enrolment_id`; lifetime facts hang off `student_id`"*.
+   - Proven read/input translation only: `Mark.student_id` is a `@hybrid_property` with no setter (`AttributeError` on write); legacy `student_id` inputs are strictly resolved against section roster or rejected with HTTP 403 / 422. Enforced by 7 automated invariant tests.
+9. **Session 6 — Mobile App Operational Depth (`mobile/app`)**:
+   - **Teacher**: Morning roll-call marking with status toggles (`attendance.tsx`), Homework Manager with grading drawer (`homework.tsx`), Test Marks Entry Keypad with CBSE scale resolution (`results.tsx`).
+   - **Parent**: Monthly attendance calendar with sick leave request (`attendance.tsx`), Real-time fee ledger & official 2-copy downloadable PDF receipt (`fees.tsx`), CBSE report card viewer with outstanding dues withholding gate (`results.tsx`), School broadcast alerts (`notices.tsx`).
+   - **Student**: Section weekly timetable schedule (`timetable.tsx`), Digital homework turn-in modal (`homework.tsx`), Term exam results scorecard (`results.tsx`).
+   - Verified across 8 visual proofs in `docs/screenshots/` and 21/21 Expo doctor checks.
+10. **Session 7 — Complete Admission Pipeline & Atomic Student Enrollment on Fee Payment**:
+    - Fee payment dynamically sourced from `cycle.application_fee` serves as the sole atomic enrollment trigger, eliminating manual conversion and creating `application_payments`, permanent `students` (`SCH-YYYY-NNNN`), `enrolments`, student credentials (`admission_no` / `Student@123`), guardian links, and document migration with transactional rollback.
+    - Printable CBSE multi-page A4 Application Dossier, A5 Enquiry Slip with parent checklist and tear-off counterfoil, and 1/3 A4 landscape Fee Receipt Voucher with dual authorization stamps.
+    - Strict RBAC Navigation & Route Hardening: Admission Officer (removed Students, Classes, Notices; 403 on direct URLs), Receptionist (removed Applications, Merit, Waitlist, Reports; 403 on direct URLs). Super Admin/Principal navigation 100% intact.
+11. **Session 7 — Mobile API Dynamic Connectivity & Password Visibility Eye Toggle**:
+    - Dynamic host IP resolution via `Constants.expoConfig?.hostUri` / `Constants.manifest2?.extra?.expoGo?.debuggerHost` eliminating physical Android `127.0.0.1:8000` ConnectException. Uvicorn `--host 0.0.0.0 --port 8000` LAN binding.
+    - Interactive password visibility eye toggle inside password input (`eye-outline` vs `eye-off-outline`), default hidden, resetting on role tab switch.
+12. **Complete Digital Admission Dossier (Application 360° Major Overhaul — 21 Sep 2026)**:
+    - Re-architected Application 360° into a complete, fully editable Digital Admission Dossier with 10 modular tabs (`web/src/components/admission/dossier/`), supporting complete CBSE data capture across 11 official sections. Seeded and verified demo profiles: **Aarav Sharma** (#91) and **Ananya Verma** (#92). Publication guide generated at `docs/Sunrise-ERP-Admission-Demo-Guide.pdf` (265 KB).
+13. **Session 9 — Mobile Navigation Redesign, Fee Graph Removal, Recruitment Purge & Red-X Controls**:
+    - **Mobile Navigation Redesign**: 4 bottom tabs per role (Parent: Home, Child, Fees, Profile; Teacher: Home, Classes, Attendance, Profile; Student: Home, Timetable, Homework, Profile); top-left hamburger opening reusable `NavDrawer.tsx` with user profile header, multi-child switcher, categorized menu sections (`ACADEMICS`, `OPERATIONS`, `COMMUNICATION`, `OTHER`), and confirmation-guarded Logout; hidden tabs preserved via `options={{ href: null }}` with zero feature loss.
+    - **Admin Dashboard Fee Collection Graph Removal**: Cleanly removed `<Card title="Fee Collection">` Recharts chart from `web/src/pages/Dashboard.tsx` with balanced grid layout.
+    - **Teacher Recruitment Decommissioning**: Purged all backend models, services, APIs, permissions, module flags, and seed rows; dropped tables `candidates` and `candidate_offers` via migration `c3d4e5f6a7b8`; deleted web `/recruitment` route, page, and components; regenerated API types.
+    - **Global Red-X Close Controls**: Standardized modal/dialog dismiss controls to Red X icon buttons across web and mobile.
+
+## Active Status (Session 9 Complete)
+
+Canonical specification is in `SESSION-HANDOFF-8.md` covering 6 mobile ERP refinements:
+1. **Student Home Isolation**: Remove `Today's Schedule` (Timetable) and `Latest Notices` cards from the Student Home dashboard (`mobile/app/(student)/dashboard.tsx`) while preserving dedicated tab routes.
+2. **Parent Fees Accurate Invoicing**: Fix `₹0.00` display by resolving `invoice.payable` from `/parent/fees` backend response (`invTotal = invoice.payable ?? invoice.total ?? invoice.amount ?? 0`).
+3. **Teacher Supplies Real Stock Consumption**: Add `"Use / Consume Stock"` workflow in `mobile/app/(teacher)/stock.tsx` and backend service `consume_stock`, updating `current_quantity`, logging audit trails, preventing over-consumption (`HTTP 400`), and automatically flagging `is_low_stock` when `<= min_quantity`.
+4. **Universal Standardized Date Display**: Standardize all user-facing dates to `DD-MM-YYYY` using shared `formatDate(d)` helper across Student, Parent, and Teacher screens.
+5. **Class Teacher Only Attendance Authorization**: Enforce `ClassSection.class_teacher_id == teacher.id` at the backend API level (`HTTP 403 Forbidden` for subject teachers) and filter mobile UI section dropdown.
+6. **Student Homework Submitted Tab Fix**: Correct boolean filter bug in `mobile/app/(student)/homework.tsx` (`item.marks === null && item.marks === undefined` -> `item.submitted && (item.marks === null || item.marks === undefined)`).
+
+Upcoming Web Roadmap:
+1. **Public Online Admission Portal UI (`/apply`)**: Parent-facing unauthenticated landing page and registration form with CAPTCHA/bot protection connecting to existing `/public/admission/*` endpoints.
+2. **Packet 4 — Contract 3 System-Wide Audit Reason Sweep**: System-wide enforcement pass ensuring 100% of destructive operations prompt a mandatory user-typed reason modal recorded in `audit_log`.
+3. **Academic Year Manager UI (`/configuration`)**: Front-end wizard for clerks to activate/deactivate terms and academic years without developer API calls.
+4. **Third-Party Integrations (V2 Scope)**: Razorpay/Easebuzz fee gateway, TRAI DLT SMS & WhatsApp alerts, bulk Excel roster importer, AIS-140 GPS bus tracking.
 
 Postgres runs natively on this machine, not in Docker. `make testdb` uses
 `docker compose exec` and fails here — create `sunrise_test` by hand.
@@ -142,6 +207,18 @@ Postgres runs natively on this machine, not in Docker. `make testdb` uses
   concession, the due day and the teacher load ceiling all live in
   `core/settings_registry.py`; changing behaviour by editing a number in code
   is the wrong place.
+- **Receptionist vs Admin sidebar isolation**: Do not add operational admission queues back to the Admin sidebar; Admin retains only `/admission` (executive cycle overview & intake capacities), while Receptionist exclusively sees the 5 operational queues and is blocked from `/dashboard` and all other screens.
+- **Year-scoped facts must never hold `student_id`**: Marks, homework submissions, and daily attendance records attach strictly to `enrolment_id`. `Mark.student_id` is a read-only `@hybrid_property` without a setter — never attempt to assign `mark.student_id = x` or instantiate `Mark(student_id=x)`.
+- **Services `flush()`, Endpoints `commit()`**: Service functions in `app/services/` must call `db.flush()`, NEVER `db.commit()`. Calling `db.commit()` inside service logic breaks per-test transaction savepoint isolation (`join_transaction_mode="create_savepoint"` in `conftest.py`), causing uncommitted data from one test to leak into subsequent tests or violate foreign key constraints. Commits belong exclusively in API route handlers (`app/api/`).
+- **Operational seed rows must avoid `teacher_1` and slot 1**: When adding sample data to `seed.py` for operational tables (such as leave requests or substitutions), never attach them to `teacher_1` (`TCH001`) or the first timetable slot (`id=1`). The test suite fixtures assume `teacher_1` opens with a clean zero-used balance, and slot 1 is used by timetable tests to verify deletion without FK violations. Target `teachers[-1]` instead.
+- **React Native Hermes `window` polyfill trap**: In React Native with Hermes, `typeof window !== "undefined"` evaluates to `true` (`window === globalThis`). Never rely on `typeof window` to branch between web and mobile environments; use `Platform.OS === 'web'` and query `Constants.expoConfig?.hostUri` to dynamically discover developer machine LAN IP.
+- **Uvicorn `0.0.0.0` host binding trap for physical mobile devices**: When testing on physical mobile devices over Wi-Fi, Uvicorn MUST be started with `--host 0.0.0.0 --port 8000`. Omitting `--host` binds exclusively to `127.0.0.1`, which refuses connections from external LAN clients even if they are on the same Wi-Fi subnet.
+- **Fee invoice serialization key**: In `backend/app/services/fees.py`, the net invoice amount is keyed as `"payable"`, with `"balance"` for outstanding dues. Frontend clients looking for `invoice.total` or `invoice.amount` silently resolve to `undefined` or `0.00` if `payable` is omitted from property lookups.
+- **Boolean strict equality traps in filters**: Never combine mutually exclusive equality checks with `&&` (e.g. `val === null && val === undefined` is mathematically impossible in JavaScript and always evaluates to `false`). Use loose equality `val == null` or logical OR `val === null || val === undefined`.
+- **Guardian serialization completeness**: In `backend/app/api/admin/applications.py`, ensure all columns from `ApplicationGuardian` (`qualification`, `office_address`, `date_of_birth`, etc.) are explicitly serialized in `_guardian_out`. Missing keys silently drop edited fields on browser reload even though they exist in the database.
+- **Dynamic enrollment resolution on application detail**: When an applicant is enrolled, `application.student_id` links to the lifetime `students` row, but class, section, and roll number exist on the annual `enrolments` row. Always resolve `enrolled_student` dynamically via `db.get(Student, app.student_id)` and the active enrolment record.
+- **`Enrolment` academic year relationship trap**: The `Enrolment` model has `academic_year_id` (`BIGINT`), NOT an `academic_year` ORM relationship. Accessing `enrolment.academic_year.code` raises `AttributeError`. Safely resolve via `db.get(AcademicYear, enrolment.academic_year_id)` or fallback to `application.cycle.academic_year.code`.
+- **ActionButton form submission**: Using `<ActionButton>` inside a `<form onSubmit={...}>` with an explicit `type="submit"` requires that `ActionButton` pass `type="submit"` through to the underlying `<button>` and allow `onClick` to be optional; otherwise, the browser does not fire the synthetic form submit event.
 
 ## Working style for this project
 

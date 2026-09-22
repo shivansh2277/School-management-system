@@ -1,13 +1,15 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { ReactNode } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, ColorValue, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { statusColor, theme } from "../theme";
 
 /** Without an explicit icon, the tab bar renders a missing-glyph box. */
 export const tabIcon =
   (name: React.ComponentProps<typeof Ionicons>["name"]) =>
-  ({ color, size }: { color: string; size: number }) => <Ionicons name={name} color={color} size={size} />;
+  ({ color, size }: { color: ColorValue; size: number }) => (
+    <Ionicons name={name} color={color as string} size={size} />
+  );
 
 export function Screen({ children }: { children: ReactNode }) {
   return (

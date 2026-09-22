@@ -1,0 +1,3 @@
+code,name,vehicle_id,driver_id,attendant_id,distance_km,status,school_id,id,created_at,updated_at
+R1,Gomti Nagar,36,58,60,12.50,active,36,35,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+R2,Alambagh and Krishna Nagar,37,59,,13.50,active,36,36,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30

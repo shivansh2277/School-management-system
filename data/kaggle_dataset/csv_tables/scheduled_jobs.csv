@@ -1,0 +1,5 @@
+kind,payload,enabled,every_minutes,at_hour,last_run_at,next_run_at,id,created_at,updated_at
+fees.overdue_sweep,,True,1440,2,,,9,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+admission.offer_sweep,,True,1440,6,,,10,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+transport.document_expiry,,True,1440,1,,,11,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+system.heartbeat,,True,60,,,,12,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30

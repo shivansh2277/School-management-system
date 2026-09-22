@@ -132,13 +132,27 @@ DOMAINS = [
         "application_siblings", "application_medical", "application_payments",
         "assessments", "assessment_subjects", "interviews",
         "admission_decisions", "admission_offers", "waitlist_entries"]),
+    ("Teacher recruitment and hiring", [
+        "candidates", "candidate_offers"]),
     ("Communication", [
         "notices", "messages", "message_recipients", "message_templates",
-        "notification_preferences"]),
+        "notification_preferences", "in_app_notifications"]),
+    ("Inventory and stock", ["stock_items", "stock_requests"]),
+    ("Grievances and feedback", ["grievances", "grievance_replies"]),
     ("System", ["audit_log", "documents", "document_types", "jobs", "scheduled_jobs"]),
 ]
 
 PURPOSE = {
+    "candidates": "Teacher recruitment candidate registering personal details, CBSE teaching qualifications, prior school experience, post applied for, expected salary, and application status.",
+    "candidate_offers": "Job offer letter issued to a shortlisted teacher candidate, tracking offered designation, department, monthly salary, joining date, and formal hiring confirmation.",
+    "in_app_notifications": "In-app notifications dispatched to teachers and administrators for leave status updates, timetable substitutions, and duty reminders.",
+    "staff_leave_requests": "Staff leave applications submitted by teachers via the mobile app, with dates, reason, status (applied, approved, rejected), and administrative review notes.",
+    "substitutions": "Date-bound substitution assignments covering timetable periods when a teacher is on leave. Daily overlays that preserve master timetable slots untouched.",
+    "staff_attendance": "Daily staff roll-call and attendance status records for teachers and school staff (present, absent, leave, half-day).",
+    "grievances": "A formal concern, problem, or support ticket raised by a teacher, parent, or student, tracking severity, category, resolution notes, and teacher assignment.",
+    "grievance_replies": "A conversational message or progress update exchanged on an open grievance thread between school leadership, assigned teachers, and complainants.",
+    "stock_items": "An inventory item held in a school store, lab, or medical room, tracking quantities, reorder thresholds, and physical count discrepancies.",
+    "stock_requests": "A replenishment indent, issue request, or teacher diminishing-stock alert awaiting administrative approval or purchase.",
     "users": "Every person who can sign in - staff, students and guardians alike. One row per login; the role-specific detail lives in `students`, `guardians` or `employees`, each of which points back here.",
     "subjects": "The catalogue of subjects the school teaches. A subject exists once and is attached to sections through `class_subject_teacher`.",
     "class_sections": "One class-and-section for one academic year - 10-A, 9-B - with its capacity, room and class teacher. The unit almost everything academic is scoped to.",
@@ -397,7 +411,7 @@ running database**, not written by hand, so they cannot have drifted from what
 Postgres actually enforces. Each table's purpose is taken from the model's own
 docstring where it has one.
 
-> Generated against migration `c3f61e0a77d2` on branch `slice/office-feedback`.
+> Generated against migration `a1b2c3d4e5f6` on branch `slice/office-feedback`.
 > Row counts come from the seeded demo school and will differ on yours.
 
 %s

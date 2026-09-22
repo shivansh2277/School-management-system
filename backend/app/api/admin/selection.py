@@ -31,6 +31,9 @@ router = APIRouter(
 )
 
 reader = require_permission("admission.application.read", school_wide=True)
+cycle_reader = require_permission(
+    "admission.cycle.read", "admission.application.read", school_wide=True
+)
 decider = require_permission("admission.decision.make", school_wide=True)
 
 
@@ -83,7 +86,7 @@ def _offer_out(o: AdmissionOffer) -> dict:
 def seats(
     cycle_id: int,
     class_name: str | None = None,
-    user: User = Depends(reader),
+    user: User = Depends(cycle_reader),
     db: Session = Depends(get_db),
 ) -> list[dict]:
     """Filled against capacity per class — the top half of screen 1."""

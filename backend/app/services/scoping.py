@@ -72,6 +72,25 @@ def assert_teaches_section(db: Session, user: User, class_section_id: int) -> No
         raise forbidden("You do not teach this class section")
 
 
+def class_teacher_section_ids_for(db: Session, user: User) -> list[int]:
+    """Sections where this teacher is specifically the designated class teacher."""
+    teacher = employee_for(db, user)
+    return list(
+        db.scalars(
+            select(ClassSection.id)
+            .where(ClassSection.class_teacher_id == teacher.id)
+            .order_by(ClassSection.class_name, ClassSection.section)
+        )
+    )
+
+
+def assert_is_class_teacher(db: Session, user: User, class_section_id: int) -> None:
+    """Requires caller to be the assigned class teacher of this specific section."""
+    allowed = class_teacher_section_ids_for(db, user)
+    if class_section_id not in allowed:
+        raise forbidden("Only the designated class teacher can mark attendance for this section")
+
+
 def readable_section_ids(db: Session, user: User) -> list[int] | None:
     """Sections this caller may read children in, or None for the whole school.
 

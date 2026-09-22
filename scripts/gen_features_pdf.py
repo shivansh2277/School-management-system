@@ -1,0 +1,963 @@
+"""Generates the non-technical, human-friendly feature guide PDF:
+Sunrise-ERP-Features-Operational-and-Planned.pdf
+
+Target Audience: School Owner, Principal, Administrator, Trustee, or Auditor.
+Format:
+  - What You Can View (Screens, numbers, student cards, alerts)
+  - What You Can Do (Actions, one-click exports, decisions, approvals)
+  - Real School Workflow Context (In plain, non-jargon language)
+"""
+import os
+import subprocess
+import sys
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+OUTPUT_HTML = os.path.join(REPO, "docs", "features-operational-and-planned.html")
+OUTPUT_PDF = os.path.join(REPO, "docs", "Sunrise-ERP-Features-Operational-and-Planned.pdf")
+
+HTML_CONTENT = """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Sunrise School ERP — Non-Technical Feature Guide</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+    @page {
+      size: A4 portrait;
+      margin: 12mm 14mm 14mm 14mm;
+      @bottom-right {
+        content: "Page " counter(page);
+        font-family: 'Inter', sans-serif;
+        font-size: 8pt;
+        color: #94a3b8;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      font-size: 9pt;
+      line-height: 1.5;
+      color: #1e293b;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    /* Cover / Header Header */
+    .header-banner {
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%);
+      color: #ffffff;
+      padding: 20px 24px;
+      border-radius: 12px;
+      margin-bottom: 18px;
+    }
+    .header-banner h1 {
+      margin: 0 0 4px 0;
+      font-size: 19pt;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .header-banner .tagline {
+      font-size: 10pt;
+      color: #c7d2fe;
+      font-weight: 500;
+      margin-bottom: 12px;
+    }
+    .header-meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid rgba(255, 255, 255, 0.18);
+      padding-top: 10px;
+      font-size: 8pt;
+      color: #e0e7ff;
+    }
+
+    /* Key Metrics Chips */
+    .metrics-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .metric-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      text-align: left;
+    }
+    .metric-num {
+      font-size: 15pt;
+      font-weight: 800;
+      color: #1e1b4b;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .metric-label {
+      font-size: 8pt;
+      color: #64748b;
+      font-weight: 600;
+      margin-top: 1px;
+    }
+
+    /* Section Headings */
+    .section-title {
+      font-size: 12.5pt;
+      font-weight: 800;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 18px 0 10px 0;
+      padding-bottom: 5px;
+      border-bottom: 2px solid #e2e8f0;
+      break-after: avoid;
+    }
+    .part-tag {
+      font-size: 7.5pt;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .tag-live {
+      background: #15803d;
+      color: #ffffff;
+    }
+    .tag-planned {
+      background: #b45309;
+      color: #ffffff;
+    }
+
+    /* Module Feature Card */
+    .feature-card {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      break-inside: avoid;
+      overflow: hidden;
+    }
+    .feature-card-header {
+      background: #f1f5f9;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 5px 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .feature-card-title {
+      font-size: 9.5pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .screen-route {
+      font-family: monospace;
+      font-size: 7.8pt;
+      background: #e2e8f0;
+      color: #334155;
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+    .feature-card-body {
+      padding: 7px 10px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .col-view {
+      border-right: 1px solid #f1f5f9;
+      padding-right: 8px;
+    }
+    .sub-head {
+      font-size: 7.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 3px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .head-view { color: #2563eb; }
+    .head-action { color: #059669; }
+
+    ul.feature-list {
+      margin: 0;
+      padding-left: 14px;
+      font-size: 8.2pt;
+      color: #334155;
+      line-height: 1.45;
+    }
+    ul.feature-list li {
+      margin-bottom: 2px;
+    }
+    ul.feature-list li strong {
+      color: #0f172a;
+    }
+
+    /* Planned Grid */
+    .planned-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 6px;
+      font-size: 8.3pt;
+      break-inside: avoid;
+    }
+    .planned-table th {
+      background: #f8fafc;
+      text-align: left;
+      padding: 7px 10px;
+      font-weight: 700;
+      font-size: 7.8pt;
+      text-transform: uppercase;
+      color: #475569;
+      border-top: 1px solid #cbd5e1;
+      border-bottom: 1.5px solid #cbd5e1;
+    }
+    .planned-table td {
+      padding: 7px 10px;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: top;
+    }
+    .planned-table tr:nth-child(even) td {
+      background: #fafafa;
+    }
+    .priority-badge {
+      font-size: 7pt;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .p-high { background: #fee2e2; color: #991b1b; }
+    .p-med { background: #fef3c7; color: #92400e; }
+    .p-v2 { background: #f1f5f9; color: #475569; }
+
+    .summary-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 14px;
+      font-size: 8.7pt;
+      color: #1e3a8a;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- BANNER -->
+  <div class="header-banner">
+    <h1>Sunrise Public School ERP</h1>
+    <div class="tagline">Complete Non-Technical Feature Guide: What You Can View & What You Can Do</div>
+    <div class="header-meta-row">
+      <div><strong>School:</strong> Sunrise Public School (CBSE Affiliated, Lucknow)</div>
+      <div><strong>Target Audience:</strong> School Owner, Principal, Administrator, Auditor</div>
+      <div><strong>Verified as of:</strong> 17 September 2026</div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="metrics-bar">
+    <div class="metric-box">
+      <div class="metric-num">27 Live Screens</div>
+      <div class="metric-label">Website Features Working Today</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-num">18 Active Staff</div>
+      <div class="metric-label">Teachers, Admin & Drivers</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-num">93 DB Tables</div>
+      <div class="metric-label">68 Live / 25 Unused For Now</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-num">21 Reports</div>
+      <div class="metric-label">Instant One-Click Exports</div>
+    </div>
+  </div>
+
+  <div class="summary-box">
+    <strong>How to read this document:</strong> This guide explains what the Sunrise Public School management system does in clear, everyday terms. For every section, it details <em>"What You Can View"</em> (the exact information, tables, and summaries shown on the screen) and <em>"What You Can Do"</em> (the tasks, approvals, exports, and actions you can perform).
+  </div>
+
+  <!-- PART 1: OPERATIONAL FEATURES -->
+  <div class="section-title">
+    <span class="part-tag tag-live">Part 1</span>
+    Operational Features: Available on the Website Today
+  </div>
+
+  <!-- 1. DASHBOARD -->
+  <div class="feature-card">
+    <div class="feature-card-header">
+      <div class="feature-card-title">1. Executive Dashboard & Leadership Command Center</div>
+      <span class="screen-route">/dashboard</span>
+    </div>
+    <div class="feature-card-body">
+      <div class="col-view">
+        <div class="sub-head head-view">👁 What You Can View</div>
+        <ul class="feature-list">
+          <li><strong>School Vital Signs:</strong> Live counts of Total Students (100), Active Teachers (12), Classrooms (10), and Total Realized Fees (₹4,72,890.00).</li>
+          <li><strong>Fees Overview Card:</strong> Real-time split showing <em>Fees Collected</em> (49%) vs <em>Fees Remaining</em> (₹5,00,040.00) with a visual progress bar.</li>
+          <li><strong>Grievance Activity:</strong> Live counter chips showing Open, In Progress, and Resolved complaints from teachers and parents.</li>
+          <li><strong>Quick Notice & Holiday Board:</strong> Summary of upcoming official school holidays and recent parent circulars.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-head head-action">⚡ What You Can Do</div>
+        <ul class="feature-list">
+          <li><strong>Click "Fees Remaining":</strong> Instantly opens a complete roster of all students with pending fee dues.</li>
+          <li><strong>Export Defaulters Report:</strong> Download a full 10-column spreadsheet report with one click, showing pending amounts, due dates, and grand total.</li>
+          <li><strong>Open Grievances:</strong> Click any complaint to read the full conversation thread between parents, teachers, and leadership.</li>
+          <li><strong>Reply & Assign:</strong> Write a response back to the parent/teacher, assign the ticket to another staff member, and mark it resolved.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. ADMISSION OVERVIEW & INTAKE -->
+  <div class="feature-card">
+    <div class="feature-card-header">
+      <div class="feature-card-title">2. New Student Admissions & Seat Intake Management</div>
+      <span class="screen-route">/admission</span>
+    </div>
+    <div class="feature-card-body">
+      <div class="col-view">
+        <div class="sub-head head-view">👁 What You Can View</div>
+        <ul class="feature-list">
+          <li><strong>Class Seat Capacity:</strong> Exact approved seats, enrolled children, and remaining vacancies for each grade (Nursery through Class 10).</li>
+          <li><strong>Admission Funnel:</strong> Visual drop-off funnel showing how many leads moved from Inquiry &rarr; Application &rarr; Test &rarr; Offer &rarr; Final Enrolment.</li>
+          <li><strong>Active Academic Cycle:</strong> Which session is currently accepting applications (e.g. 2025-26 or 2026-27).</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-head head-action">⚡ What You Can Do</div>
+        <ul class="feature-list">
+          <li><strong>Edit Class Capacities:</strong> Adjust the maximum seat ceiling for any class as physical room availability permits.</li>
+          <li><strong>Monitor Over-Enrolment:</strong> The system automatically blocks admitting more children than the physical seat cap allows.</li>
+          <li><strong>Track Cycle Progress:</strong> Inspect conversion percentages to know which classes still have vacant seats.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. ENQUIRIES REGISTER -->
+  <div class="feature-card">
+    <div class="feature-card-header">
+      <div class="feature-card-title">3. Walk-In & Phone Inquiry Register</div>
+      <span class="screen-route">/admission/enquiries</span>
+    </div>
+    <div class="feature-card-body">
+      <div class="col-view">
+        <div class="sub-head head-view">👁 What You Can View</div>
+        <ul class="feature-list">
+          <li><strong>Inquiry Log:</strong> Chronological log of visiting parents, telephone queries, prospective student names, and desired class.</li>
+          <li><strong>Follow-Up Notes:</strong> Detailed conversation history recorded by reception staff (e.g. "Parent called asking for fee structure").</li>
+          <li><strong>Status Badges:</strong> Whether the inquiry is New, Followed-up, Converted, or Disqualified.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-head head-action">⚡ What You Can Do</div>
+        <ul class="feature-list">
+          <li><strong>Log Walk-In Visits:</strong> Receptionists can record parent phone numbers and questions within 30 seconds.</li>
+          <li><strong>Record Follow-Ups:</strong> Schedule call-back reminders and log staff notes directly onto the parent's file.</li>
+          <li><strong>One-Click Conversion:</strong> Click "Convert to Application" to prefill the formal admission form without re-typing details.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- 4. APPLICANT DOSSIER -->
+  <div class="feature-card">
+    <div class="feature-card-header">
+      <div class="feature-card-title">4. Complete 360° Applicant Dossier</div>
+      <span class="screen-route">/admission/applications</span>
+    </div>
+    <div class="feature-card-body">
+      <div class="col-view">
+        <div class="sub-head head-view">👁 What You Can View</div>
+        <ul class="feature-list">
+          <li><strong>Applicant Profile (7 Tabs):</strong> Personal biodata, residential address, parent occupation, and previous school transfer details.</li>
+          <li><strong>Document Checklist:</strong> Verified status of Birth Certificate, Aadhaar (last 4 digits), Transfer Certificate, and Report Cards.</li>
+          <li><strong>Medical & Allergy Notes:</strong> Blood group, known allergies, medical emergency notes, and family physician contacts.</li>
+          <li><strong>Sibling Links:</strong> Identifies if an elder brother or sister is already studying in the school for fee concession eligibility.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-head head-action">⚡ What You Can Do</div>
+        <ul class="feature-list">
+          <li><strong>Verify Documents:</strong> Mark certificates as Verified or Incomplete with official auditor remarks.</li>
+          <li><strong>Record Admission Test Scores:</strong> Enter written test and interview scorecards directly on the candidate's sheet.</li>
+          <li><strong>Issue Admission Offers:</strong> Approve applications and generate official offer letters.</li>
+          <li><strong>Convert to Enrolled Student:</strong> Once the admission fee is cleared, finalize enrollment to assign their permanent 10-digit Admission ID.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. MERIT & WAITLIST -->
+  <div class="feature-card">
+    <div class="feature-card-header">
+      <div class="feature-card-title">5. Merit Ranking, Selection & Waiting List</div>
+      <span class="screen-route">/admission/merit &amp; /admission/waitlist</span>
+    </div>
+    <div class="feature-card-body">
+      <div class="col-view">
+        <div class="sub-head head-view">👁 What You Can View</div>
+        <ul class="feature-list">
+          <li><strong>Merit Lists:</strong> Candidates ordered automatically by their total test and interview scores per class.</li>
+          <li><strong>Ordered Waiting List:</strong> Candidates who qualified but did not receive an immediate seat, ranked strictly by merit.</li>
+          <li><strong>Capacity Meters:</strong> Live visual bars indicating whether seats are full or open for promotion.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-head head-action">⚡ What You Can Do</div>
+        <ul class="feature-list">
+          <li><strong>Batch Approvals:</strong> Select the top 20 candidates and issue admission offers in one batch with a shared audit reason.</li>
+          <li><strong>Promote from Waitlist:</strong> When an admitted candidate drops out, click "Promote" to immediately offer the vacant seat to the next student in line.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. STUDENT DIRECTORY -->
+  <div class="feature-card">
+    <div class="feature-card-header">
+      <div class="feature-card-title">6. Student Directory & Profile Records</div>
+      <span class="screen-route">/students</span>
+    </div>
+    <div class="feature-card-body">
+      <div class="col-view">
+        <div class="sub-head head-view">👁 What You Can View</div>
+        <ul class="feature-list">
+          <li><strong>School Roster:</strong> Complete roster of all 100 students across classes 1-A to 10-A.</li>
+          <li><strong>Student Details:</strong> Permanent Admission Number, class section, guardian name, phone number, and fee clearance status.</li>
+          <li><strong>Class Filter:</strong> Instantly filter the roster by any individual class (e.g., show only Class 10-A).</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-head head-action">⚡ What You Can Do</div>
+        <ul class="feature-list">
+          <li><strong>Real-Time Search:</strong> Search for any student in under 2 seconds by typing their name, admission number, or father's phone.</li>
+          <li><strong>Profile Drilldown:</strong> Click any student to review their complete academic records, past attendance, and family details.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. TEACHERS & STAFF DIRECTORY -->
+  <div class="feature-card">
+    <div class="feature-card-header">
+      <div class="feature-card-title">7. Teachers & Staff Directory</div>
+      <span class="screen-route">/teachers</span>
+    </div>
+    <div class="feature-card-body">
+      <div class="col-view">
+        <div class="sub-head head-view">👁 What You Can View</div>
+        <ul class="feature-list">
+          <li><strong>Staff Directory:</strong> Complete listing of 16 school employees (teachers, administrators, bus drivers, and support attendants).</li>
+          <li><strong>Assignments:</strong> Which teacher is the official Class Teacher, which subjects they teach, and their department.</li>
+          <li><strong>Contact Details:</strong> Official employee codes, phone numbers, and email addresses.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-head head-action">⚡ What You Can Do</div>
+        <ul class="feature-list">
+          <li><strong>Find Contact Info:</strong> Quickly look up an educator's phone number during emergency office situations.</li>
+          <li><strong>Verify Subject Load:</strong> Check which teacher is responsible for specific subjects like Science or Mathematics.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- 8. CLASSES & TIMETABLE -->
+  <div class="feature-card">
+    <div class="feature-card-header">
+      <div class="feature-card-title">8. Classrooms, Subject Teachers & Timetable Grid</div>
+      <span class="screen-route">/classes</span>
+    </div>
+    <div class="feature-card-body">
+      <div class="col-view">
+        <div class="sub-head head-view">👁 What You Can View</div>
+        <ul class="feature-list">
+          <li><strong>Class Sections:</strong> Class 1-A to 10-A with designated Class Teachers and total enrolled students.</li>
+          <li><strong>Subject Allocations:</strong> List of all curriculum subjects (Math, English, Science, Social Science, Hindi) and their assigned instructors.</li>
+          <li><strong>Weekly Timetable Grid:</strong> Period-by-period schedule from Monday to Saturday for every section.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-head head-action">⚡ What You Can Do</div>
+        <ul class="feature-list">
+          <li><strong>Assign Class Teachers:</strong> Change or appoint the lead teacher for any classroom section.</li>
+          <li><strong>Review Schedule Clashes:</strong> Inspect the timetable grid to verify that teachers are not double-booked across different rooms.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. STUDENT ATTENDANCE REGISTER -->
+  <div class="feature-card">
+    <div class="feature-card-header">
+      <div class="feature-card-title">9. Daily Student Attendance Register</div>
+      <span class="screen-route">/attendance</span>
+    </div>
+    <div class="feature-card-body">
+      <div class="col-view">
+        <div class="sub-head head-view">👁 What You Can View</div>
+        <ul class="feature-list">
+          <li><strong>Daily Roll-Call Sheet:</strong> Roster of children with status badges: Present, Absent, Late, or Approved Leave.</li>
+          <li><strong>Short Attendance Warning:</strong> Immediate warning alert highlighting any student whose attendance drops below CBSE's mandatory 75%.</li>
+          <li><strong>School Closed Safeguard:</strong> Clearly flags official school holidays and declared weather closures.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-head head-action">⚡ What You Can Do</div>
+        <ul class="feature-list">
+          <li><strong>Mark Roll-Call:</strong> Class teachers or clerks can record attendance with a single click per child.</li>
+          <li><strong>Generate Absence Lists:</strong> Pull a list of all children absent on today's date so office staff can phone their parents.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. EXAMINATIONS, MARKS & REPORT CARDS -->
+  <div class="feature-card">
+    <div class="feature-card-header">
+      <div class="feature-card-title">10. Examinations, Marks Entry & CBSE Report Cards</div>
+      <span class="screen-route">/exams</span>
+    </div>
+    <div class="feature-card-body">
+      <div class="col-view">
+        <div class="sub-head head-view">👁 What You Can View</div>
+        <ul class="feature-list">
+          <li><strong>Exam Datesheets:</strong> Schedule of upcoming Half-Yearly, Unit Tests, and Final Board examinations with dates and max marks.</li>
+          <li><strong>CBSE Grading Rules:</strong> Official 8-point grading scale (A1 for 91-100%, A2 for 81-90%, down to E).</li>
+          <li><strong>Marks Roster:</strong> Grid listing all students in a section with their individual marks, Absent flags, or Medical Exemptions.</li>
+          <li><strong>Official CBSE Report Card Preview:</strong> Term 1 & Term 2 marks, internal assessments (PT, Notebook, Subject Enrichment), and grades.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-head head-action">⚡ What You Can Do</div>
+        <ul class="feature-list">
+          <li><strong>Enter Marks in Grid:</strong> Input scores directly into a spreadsheet-like interface with instant score validation.</li>
+          <li><strong>Lock Exam Papers:</strong> Permanently lock marks after verification. Once locked, changing a mark requires an audited reason.</li>
+          <li><strong>Check Publication Readiness:</strong> The system automatically verifies that all papers are scored before issuing report cards.</li>
+          <li><strong>Withhold Report Cards for Dues:</strong> Automatically marks report cards as "Withheld" if a student has unpaid school fees.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 11. FEES & LEDGERS -->
+  <div class="feature-card">
+    <div class="feature-card-header">
+      <div class="feature-card-title">11. Student Fees, Ledgers & Counter Collections</div>
+      <span class="screen-route">/fees &amp; /fees/ledger</span>
+    </div>
+    <div class="feature-card-body">
+      <div class="col-view">
+        <div class="sub-head head-view">👁 What You Can View</div>
+        <ul class="feature-list">
+          <li><strong>Financial Snapshot:</strong> Total fees billed vs realized cash collections for the academic session.</li>
+          <li><strong>Student Account Ledger:</strong> Complete chronological financial history for any child showing every bill and receipt.</li>
+          <li><strong>Late Fee Calculations:</strong> Automatic late-fee charges (₹300 after 5 days, then ₹100/day capped at 50% of the invoice).</li>
+          <li><strong>Fee Receipts:</strong> Official numbered receipts with transaction date, payment mode (Cash, Cheque, UPI), and clerk ID.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-head head-action">⚡ What You Can Do</div>
+        <ul class="feature-list">
+          <li><strong>Generate Monthly Invoices:</strong> Raise tuition and transport fee bills for all classes in a single automated batch.</li>
+          <li><strong>Collect Payments:</strong> Record counter fee payments against specific invoice heads with instant receipt issuance.</li>
+          <li><strong>Audited Payment Reversals:</strong> If a cheque bounces or an error is made, reverse the entry with a mandatory typed audit explanation.</li>
+          <li><strong>Close Accounting Periods:</strong> Lock completed calendar months to prevent unauthorized backdated edits by clerks.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- 12. DEFAULTER CHASE LIST -->
+  <div class="feature-card">
+    <div class="feature-card-header">
+      <div class="feature-card-title">12. Fee Defaulter Chasing Register</div>
+      <span class="screen-route">/fees/defaulters</span>
+    </div>
+    <div class="feature-card-body">
+      <div class="col-view">
+        <div class="sub-head head-view">👁 What You Can View</div>
+        <ul class="feature-list">
+          <li><strong>Worst-First Ranking:</strong> Complete list of all families behind on payments, ranked from highest overdue balance down.</li>
+          <li><strong>Guardian Emergency Contacts:</strong> Displays father's and mother's mobile numbers directly alongside the amount owed.</li>
+          <li><strong>Months Overdue:</strong> Exactly how many billing cycles (1 month, 2 months, 3+ months) the student has missed.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-head head-action">⚡ What You Can Do</div>
+        <ul class="feature-list">
+          <li><strong>Filter by Amount:</strong> Set a threshold (e.g. show only students owing more than ₹5,000) for prioritized chasing.</li>
+          <li><strong>Phone Calling Roster:</strong> Administrative staff can sit with this screen and ring parents directly with the exact figure at hand.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 13. INVENTORY & STOCK -->
+  <div class="feature-card">
+    <div class="feature-card-header">
+      <div class="feature-card-title">13. Classroom Supplies & Lab Stock Management</div>
+      <span class="screen-route">/inventory</span>
+    </div>
+    <div class="feature-card-body">
+      <div class="col-view">
+        <div class="sub-head head-view">👁 What You Can View</div>
+        <ul class="feature-list">
+          <li><strong>Supplies Catalogue:</strong> Inventory of laboratory chemicals, glassware, science models, math kits, chalks, and dusters.</li>
+          <li><strong>Low-Stock Highlights:</strong> Real-time alerts when supplies fall below minimum threshold (e.g. Printer Paper &lt; 2 reams).</li>
+          <li><strong>Pending Approval Counter:</strong> Number of purchase and item-issue requests awaiting leadership approval.</li>
+          <li><strong>Department Locations:</strong> Which room holds which material (e.g., Chemistry Lab, Admin Store, Medical Room).</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-head head-action">⚡ What You Can Do</div>
+        <ul class="feature-list">
+          <li><strong>Add New Stock:</strong> Register new supplies, set units (bottles, boxes, kits), and define minimum reorder thresholds.</li>
+          <li><strong>Approve / Reject Requests:</strong> Review teacher requests for art supplies or lab acids and approve distributions.</li>
+          <li><strong>Receive Mobile Flags:</strong> When teachers report low chalk or broken beakers from their phone, it appears here instantly.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 14. NOTICE BOARD -->
+  <div class="feature-card">
+    <div class="feature-card-header">
+      <div class="feature-card-title">14. Notice Board & Parent Circulars</div>
+      <span class="screen-route">/notices</span>
+    </div>
+    <div class="feature-card-body">
+      <div class="col-view">
+        <div class="sub-head head-view">👁 What You Can View</div>
+        <ul class="feature-list">
+          <li><strong>Published Circulars:</strong> Chronological board of school notices (exam schedules, winter vacations, staff meetings).</li>
+          <li><strong>Target Audience Tags:</strong> Whether the notice was published for Everyone, Parents Only, Teachers Only, or Specific Classes.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-head head-action">⚡ What You Can Do</div>
+        <ul class="feature-list">
+          <li><strong>Compose Notices:</strong> Write announcements with rich titles and body text, and select the exact recipient group.</li>
+          <li><strong>Audited Archival:</strong> Delete or archive outdated circulars with a permanent recorded reason.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 15. TRANSPORT -->
+  <div class="feature-card">
+    <div class="feature-card-header">
+      <div class="feature-card-title">15. School Bus Routes, Stops & Capacity Tracking</div>
+      <span class="screen-route">/transport</span>
+    </div>
+    <div class="feature-card-body">
+      <div class="col-view">
+        <div class="sub-head head-view">👁 What You Can View</div>
+        <ul class="feature-list">
+          <li><strong>Active Routes:</strong> Bus route names (e.g. Gomti Nagar Express, Aliganj Route), driver name, and vehicle registration number.</li>
+          <li><strong>Stops & Timings:</strong> Sequential pick-up stops along the route with scheduled morning and afternoon timings.</li>
+          <li><strong>Seating Occupancy:</strong> Total bus seats vs enrolled student passengers (e.g. 28 / 32 seats filled).</li>
+          <li><strong>Interactive Map:</strong> Visual Leaflet map showing Lucknow bus stops and route paths.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-head head-action">⚡ What You Can Do</div>
+        <ul class="feature-list">
+          <li><strong>Assign Students to Stops:</strong> Allocate newly admitted students to their nearest designated bus stop.</li>
+          <li><strong>Prevent Overcrowding:</strong> The system warns administrators if assigning another child exceeds the vehicle's safe seat limit.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 16. REPORTS LIBRARY -->
+  <div class="feature-card">
+    <div class="feature-card-header">
+      <div class="feature-card-title">16. Official Reports Library & Audit Exports</div>
+      <span class="screen-route">/reports</span>
+    </div>
+    <div class="feature-card-body">
+      <div class="col-view">
+        <div class="sub-head head-view">👁 What You Can View</div>
+        <ul class="feature-list">
+          <li><strong>21 Standard School Reports:</strong> Categorized across Fees, Attendance, Academics, Timetable, Transport, Communication, and HR.</li>
+          <li><strong>Interactive Data Previews:</strong> Live tabular formatting with student names, dates, amounts, and contact details.</li>
+          <li><strong>KPI Stat Cards:</strong> High-level visual metrics for quick executive reviews.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-head head-action">⚡ What You Can Do</div>
+        <ul class="feature-list">
+          <li><strong>Dynamic Filtering:</strong> Run reports by specific date ranges, classes, or fee balance thresholds.</li>
+          <li><strong>Export to CSV / Excel:</strong> One-click button to download clean, audit-ready spreadsheets for board meetings or tax filings.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- 17. MOBILE INTEGRATIONS -->
+  <div class="feature-card">
+    <div class="feature-card-header">
+      <div class="feature-card-title">17. Mobile App Access: Teacher &amp; Parent Portals</div>
+      <span class="screen-route">mobile/(teacher) &amp; mobile/(parent)</span>
+    </div>
+    <div class="feature-card-body">
+      <div class="col-view">
+        <div class="sub-head head-view">👁 What You Can View</div>
+        <ul class="feature-list">
+          <li><strong>Teacher Leave Portal:</strong> Personal leave history, pending applications, approval/rejection status, and admin remarks.</li>
+          <li><strong>Substitute Duty Roster:</strong> "Duties" tab showing assigned proxy classroom periods covering for absent colleagues.</li>
+          <li><strong>Teacher Supply Catalogue:</strong> Teachers can inspect lab and classroom materials right from their phone.</li>
+          <li><strong>Grievance Portals:</strong> Teachers and parents can log issues, track resolution states, and exchange messages with school leadership.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-head head-action">⚡ What You Can Do</div>
+        <ul class="feature-list">
+          <li><strong>Teacher Self-Service Leave:</strong> Apply for full-day or consecutive multi-day leave with reason (strictly non-cancellable once submitted).</li>
+          <li><strong>In-App Notifications:</strong> Instant alert banners when leave requests are approved or rejected, or when substitution duties are assigned.</li>
+          <li><strong>Flag Diminishing Stock:</strong> Tap to alert the school office that classroom supplies, chalk, or reagents are depleted.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 18. STAFF LEAVE & SUBSTITUTION GATE -->
+  <div class="feature-card">
+    <div class="feature-card-header">
+      <div class="feature-card-title">18. Staff Leave Management &amp; Timetable Substitution Gate</div>
+      <span class="screen-route">/staff-leave &amp; mobile/(teacher)/leave</span>
+    </div>
+    <div class="feature-card-body">
+      <div class="col-view">
+        <div class="sub-head head-view">👁 What You Can View</div>
+        <ul class="feature-list">
+          <li><strong>Staff Leave Queue:</strong> Chronological register of teacher leave applications showing applicant name, leave dates, reason, and status (Applied, Approved, Rejected).</li>
+          <li><strong>Dynamic Substitution Matrix:</strong> Affected periods breakdown (Period #, Class, Subject, Scheduled Teacher) derived from master timetable.</li>
+          <li><strong>Coverage Status &amp; Safety Gate:</strong> Visual progress gauge (0%, 50%, 100%) and color-coded alert banner. Approval button remains strictly locked until 100% covered.</li>
+          <li><strong>Free Teacher Availability:</strong> System dynamically calculates free, non-conflicting faculty members for each affected period.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-head head-action">⚡ What You Can Do</div>
+        <ul class="feature-list">
+          <li><strong>Assign Provisional Substitutes:</strong> Select available teachers from dropdowns for each uncovered classroom period.</li>
+          <li><strong>Approve Leave with 100% Coverage:</strong> Once all slots are covered, click "Approve Leave &amp; Confirm Substitutions" to commit date-bound substitutions.</li>
+          <li><strong>Reject Application &amp; Purge:</strong> Reject an application with an audited justification (e.g. critical exam duty), immediately purging provisional substitutions and preserving master timetable slots.</li>
+          <li><strong>Mobile Duty Reflection:</strong> Assigned substitute teachers automatically receive in-app duty notices on their mobile device.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- 19. TEACHER RECRUITMENT -->
+  <div class="feature-card">
+    <div class="feature-card-header">
+      <div class="feature-card-title">19. Teacher Recruitment &amp; Candidate Intake Dossier</div>
+      <span class="screen-route">/recruitment</span>
+    </div>
+    <div class="feature-card-body">
+      <div class="col-view">
+        <div class="sub-head head-view">👁 What You Can View</div>
+        <ul class="feature-list">
+          <li><strong>Recruitment Pipeline:</strong> Visual stage cards tracking Applied, Shortlisted, Interviewed, Offered, Hired, and Rejected applicants.</li>
+          <li><strong>CBSE A4 Application Preview:</strong> Printable standard candidate dossier with passport photograph box, academic/teaching credentials, prior school experience, and signature blocks.</li>
+          <li><strong>Offer &amp; Salary Terms:</strong> Offered designation, department, monthly CTC salary (₹), and scheduled joining date.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-head head-action">⚡ What You Can Do</div>
+        <ul class="feature-list">
+          <li><strong>Front-Desk Candidate Intake:</strong> Receptionist can register walk-in teacher applicants and print official CBSE A4 submission dossiers within 1 minute.</li>
+          <li><strong>RBAC Pipeline Isolation:</strong> Receptionist is strictly isolated from hiring actions; only School Admin can shortlist, offer, or hire.</li>
+          <li><strong>Issue Job Offer:</strong> Admin sets designation and salary terms via "Issue Job Offer" modal.</li>
+          <li><strong>One-Click Onboarding:</strong> Confirming joining automatically provisions active teacher employee records and login credentials (<code>TCH0xx</code> / <code>Teacher@123</code>) for immediate mobile/web login.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 20. PAYROLL -->
+  <div class="feature-card">
+    <div class="feature-card-header">
+      <div class="feature-card-title">20. Payroll Processing &amp; Teacher Salary Disbursal</div>
+      <span class="screen-route">/payroll</span>
+    </div>
+    <div class="feature-card-body">
+      <div class="col-view">
+        <div class="sub-head head-view">👁 What You Can View</div>
+        <ul class="feature-list">
+          <li><strong>Monthly Payroll Batches:</strong> Total school wage bill, employee headcount, gross earnings, statutory deductions, and net payout.</li>
+          <li><strong>Salary Structure Registry:</strong> Compensation packages by designation (PGT ₹42,000, TGT ₹32,000, PRT ₹19,500, Driver ₹16,000).</li>
+          <li><strong>Statutory Breakdown:</strong> Itemized Provident Fund (EPF 12%), Employee State Insurance (ESI 0.75%), TDS, and Professional Tax.</li>
+          <li><strong>Printable CBSE Payslip:</strong> Official Lucknow school letterhead, earnings vs deductions grid, amount in words, and authorized sign-off.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-head head-action">⚡ What You Can Do</div>
+        <ul class="feature-list">
+          <li><strong>Run Monthly Payroll:</strong> One-click batch calculation applying attendance loss-of-pay and generating itemized payslips.</li>
+          <li><strong>Export Bank Disbursal CSV:</strong> Download electronic bank transfer spreadsheet in standard NEFT/RTGS format for batch bank processing.</li>
+          <li><strong>Print Official Payslips:</strong> Print individual or batch staff payslips via browser print with official school seals.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 21. SESSION ROLLOVER -->
+  <div class="feature-card">
+    <div class="feature-card-header">
+      <div class="feature-card-title">21. Session Rollover &amp; Promotion Wizard</div>
+      <span class="screen-route">/admin/session-rollover</span>
+    </div>
+    <div class="feature-card-body">
+      <div class="col-view">
+        <div class="sub-head head-view">👁 What You Can View</div>
+        <ul class="feature-list">
+          <li><strong>4-Step Wizard Workflow:</strong> Session selector (2025-26 to 2026-27), Class Card Selector, Roster Review &amp; Overrides, and Confirmation.</li>
+          <li><strong>Cohort Progression Grid:</strong> Class roster displaying student name, admission ID, current class/sec, proposed next class/sec, and new roll number.</li>
+          <li><strong>Decision Outcome Badges:</strong> Visual chips for Promote, Detain, Pass Out (Class 10), and Transfer Out.</li>
+          <li><strong>Capacity &amp; Blocker Alerts:</strong> Live indicators warning of section capacity overflows or unallocated students.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="sub-head head-action">⚡ What You Can Do</div>
+        <ul class="feature-list">
+          <li><strong>Batch Student Progression:</strong> Automatically advance entire classes (Class 1-A to Class 2-A) while reallocating roll numbers alphabetically.</li>
+          <li><strong>Individual Overrides:</strong> Selectively detain failed students or mark departing students as Pass Out / Transfer Out.</li>
+          <li><strong>Audited Safety Gate:</strong> Enforces typed <code>PROMOTE</code> confirmation with a user-entered audit justification saved to <code>audit_log</code>.</li>
+          <li><strong>Preserve Historical Ledger:</strong> Seamlessly creates new academic year enrolments while keeping past grades, attendance, and fee history intact.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- PART 2: PLANNED FEATURES -->
+  <div class="section-title">
+    <span class="part-tag tag-planned">Part 2</span>
+    Planned Features: What Will Be Built Next
+  </div>
+  <p style="margin-top: 0; color: #475569; font-size: 8.5pt;">
+    These upcoming capabilities are part of the planned roadmap. They will be added to the website and mobile apps in the next phases of development:
+  </p>
+
+  <table class="planned-table">
+    <thead>
+      <tr>
+        <th style="width: 25%;">Upcoming Feature</th>
+        <th style="width: 15%;">Who Uses It</th>
+        <th style="width: 10%;">Priority</th>
+        <th>What It Will Do For The School</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Public Online Admission Website</strong></td>
+        <td>Prospective Parents</td>
+        <td><span class="priority-badge p-med">Medium</span></td>
+        <td>A welcoming public webpage where prospective parents can read about Sunrise Public School, fill out admission forms from home on their phone, and submit applications online.</td>
+      </tr>
+      <tr>
+        <td><strong>Online Fee Payments (UPI / Cards)</strong></td>
+        <td>Parents</td>
+        <td><span class="priority-badge p-v2">V2 Scope</span></td>
+        <td>Integrating an online payment gateway (Razorpay or UPI) so parents can pay school fees securely from their phone and receive instant digital receipts.</td>
+      </tr>
+      <tr>
+        <td><strong>Instant SMS &amp; WhatsApp Alerts</strong></td>
+        <td>School Office</td>
+        <td><span class="priority-badge p-v2">V2 Scope</span></td>
+        <td>Automated SMS and WhatsApp messages sent to parents at 09:30 AM if their child is marked absent, plus automated fee overdue reminders and emergency weather closure alerts.</td>
+      </tr>
+      <tr>
+        <td><strong>Teacher Mobile Attendance Marking</strong></td>
+        <td>Class Teachers</td>
+        <td><span class="priority-badge p-med">Medium</span></td>
+        <td>Allows teachers to mark daily classroom roll call directly on their mobile phone while walking around the room, without needing a paper register or computer.</td>
+      </tr>
+      <tr>
+        <td><strong>Parent Mobile Attendance &amp; Report Cards</strong></td>
+        <td>Parents</td>
+        <td><span class="priority-badge p-med">Medium</span></td>
+        <td>Parents can check their child's monthly attendance calendar, apply for medical leave, and download official term report cards in PDF format on their phone.</td>
+      </tr>
+      <tr>
+        <td><strong>Bulk Excel Student Importer</strong></td>
+        <td>Office Clerk</td>
+        <td><span class="priority-badge p-v2">Onboarding</span></td>
+        <td>A simple upload wizard allowing school administrators to upload an Excel sheet containing hundreds of students, parents, and past balances all in one go.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- FOOTER -->
+  <div style="font-size: 8pt; color: #64748b; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 8px; display: flex; justify-content: space-between;">
+    <span>Sunrise Public School ERP • Official Non-Technical Capability Guide</span>
+    <span>Generated 17 Sep 2026 • 27 Live Screens Verified Working</span>
+  </div>
+
+</body>
+</html>
+"""
+
+def main():
+    print("Writing HTML non-technical specification template...")
+    with open(OUTPUT_HTML, "w", encoding="utf-8") as f:
+        f.write(HTML_CONTENT)
+    print(f"Wrote {OUTPUT_HTML} ({len(HTML_CONTENT)} bytes)")
+
+    print(f"Invoking Chrome headless to generate PDF: {OUTPUT_PDF}...")
+    cmd = [
+        CHROME,
+        "--headless",
+        "--disable-gpu",
+        "--no-pdf-header-footer",
+        "--print-to-pdf=" + OUTPUT_PDF,
+        "file:///" + OUTPUT_HTML.replace("\\", "/"),
+    ]
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    if res.returncode != 0:
+        print("Chrome error:", res.stderr)
+        sys.exit(1)
+
+    size = os.path.getsize(OUTPUT_PDF)
+    print(f"Successfully generated PDF: {OUTPUT_PDF} ({size:,} bytes)")
+
+if __name__ == "__main__":
+    main()

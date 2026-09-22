@@ -179,9 +179,8 @@ def install_system_roles(db: Session, school_id: int) -> dict[str, Role]:
                 .where(RolePermission.role_id == role.id)
             )
         )
-        # dict.fromkeys de-duplicates while keeping order: a code can appear
-        # both in READ_ONLY and in a role's explicit list.
-        for pcode in dict.fromkeys(granted):
+        granted_codes = set(dict.fromkeys(granted))
+        for pcode in granted_codes:
             if pcode in held:
                 continue
             db.add(
@@ -191,6 +190,18 @@ def install_system_roles(db: Session, school_id: int) -> dict[str, Role]:
                     permission_id=perms[pcode].id,
                 )
             )
+        for pcode in held:
+            if pcode not in granted_codes:
+                perm_id = perms[pcode].id
+                to_delete = db.scalars(
+                    select(RolePermission).where(
+                        RolePermission.school_id == school_id,
+                        RolePermission.role_id == role.id,
+                        RolePermission.permission_id == perm_id,
+                    )
+                ).all()
+                for rp in to_delete:
+                    db.delete(rp)
         out[code] = role
     db.flush()
     return out

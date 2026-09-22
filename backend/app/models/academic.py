@@ -107,6 +107,8 @@ class TimetableSlot(TenantBase):
 
     period = relationship("SchoolPeriod", lazy="joined")
     class_section = relationship("ClassSection", lazy="joined")
+    subject = relationship("Subject", lazy="joined")
+
 
 
 class Substitution(TenantBase):
@@ -139,5 +141,13 @@ class Substitution(TenantBase):
     status: Mapped[SubstitutionStatus] = enum_col(
         SubstitutionStatus, nullable=False, default=SubstitutionStatus.pending
     )
+    leave_request_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("staff_leave_requests.id", ondelete="CASCADE"), index=True
+    )
 
     slot = relationship("TimetableSlot", lazy="joined")
+    leave_request = relationship("StaffLeaveRequest", foreign_keys=[leave_request_id], lazy="joined")
+    substitute_teacher = relationship("Employee", foreign_keys=[substitute_teacher_id], lazy="joined")
+    absent_teacher = relationship("Employee", foreign_keys=[absent_teacher_id], lazy="joined")
+
+

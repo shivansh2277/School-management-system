@@ -1,0 +1,2 @@
+school_id,code,start_date,end_date,status,is_current,promotion_completed_at,result_published_at,closed_at,id,created_at,updated_at
+36,2025-26,2025-04-01,2026-03-31,active,True,,,,49,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30

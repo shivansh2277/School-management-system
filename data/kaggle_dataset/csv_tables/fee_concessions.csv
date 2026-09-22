@@ -1,0 +1,3 @@
+enrolment_id,type,fee_head_id,percent,amount,reason,status,requested_by,approved_by,decided_at,valid_from,valid_to,school_id,id,created_at,updated_at
+299,sibling,,10.00,,"Sibling concession, 10% (school policy)",approved,,,2026-09-21 13:43:20.243494+05:30,,,36,5,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+301,sibling,,10.00,,"Sibling concession, 10% (school policy)",approved,,,2026-09-21 13:43:20.243600+05:30,,,36,6,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30

@@ -1171,7 +1171,7 @@ def test_pinning_a_stop_keeps_the_children_who_ride_from_it(client, admin, db):
     refuses outright once anyone rides it. Pinning a stop on a running route is
     the ordinary case, so it has its own route that updates in place.
     """
-    from app.models import Route, RouteStop, TransportAssignment
+    from app.models import Route, RouteStop
 
     route = db.scalars(select(Route)).first()
     stop = sorted(route.stops, key=lambda s: s.sequence)[0]

@@ -42,6 +42,30 @@ def roster(
     return svc.marks_roster(db, user, exam_schedule_id)
 
 
+@router.get(
+    "/exams/{exam_id}/classes/{class_section_id}/subjects/{subject_id}/roster",
+    response_model=list[MarksRosterRow],
+)
+def roster_by_path(
+    exam_id: int,
+    class_section_id: int,
+    subject_id: int,
+    user: User = Depends(teacher_only),
+    db: Session = Depends(get_db),
+) -> list[MarksRosterRow]:
+    schedule = db.scalars(
+        select(ExamSchedule).where(
+            ExamSchedule.exam_id == exam_id,
+            ExamSchedule.class_section_id == class_section_id,
+            ExamSchedule.subject_id == subject_id,
+        )
+    ).first()
+    if not schedule:
+        from fastapi import HTTPException, status
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Exam schedule not found")
+    return svc.marks_roster(db, user, schedule.id)
+
+
 @router.post("/marks", response_model=list[MarksRosterRow], dependencies=[Depends(require_permission("exam.marks.enter"))])
 def enter(
     body: MarksRequest, user: User = Depends(teacher_only), db: Session = Depends(get_db)

@@ -49,36 +49,35 @@ export function ActionButton({
   disabled,
   variant = "primary",
   className = "",
+  type = "button",
   children,
 }: {
   /** The permission the write needs. Omit only for a control that writes nothing. */
   permission?: string;
-  onClick: () => void;
+  onClick?: () => void;
   disabled?: boolean;
-  variant?: "primary" | "danger";
+  variant?: "primary" | "danger" | "secondary";
   className?: string;
+  type?: "button" | "submit" | "reset";
   children: ReactNode;
 }) {
   const { can } = useAuth();
   const allowed = permission === undefined || can(permission);
   const base =
     variant === "danger"
-      ? "bg-danger hover:opacity-90"
-      : "bg-primary hover:bg-primary-dark";
+      ? "bg-danger text-white hover:opacity-90"
+      : variant === "secondary"
+      ? "bg-surface text-primary border border-primary hover:bg-primary/10"
+      : "bg-primary text-white hover:bg-primary-dark";
 
   return (
     <button
-      // Explicitly "button": a <button> with no type defaults to "submit", so
-      // inside a <form> one click fires onClick AND submits, running the write
-      // twice. On the fee counter only the idempotency key stood between that
-      // and taking a payment twice - which is a guard, not a licence. Set here
-      // rather than at each call site so no later packet has to remember.
-      type="button"
+      type={type}
       onClick={onClick}
       disabled={!allowed || disabled}
       aria-disabled={!allowed || disabled}
       title={allowed ? undefined : `Your role does not hold ${permission}`}
-      className={`rounded-input px-4 py-2 text-white text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed ${base} ${className}`}
+      className={`rounded-input px-4 py-2 text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed ${base} ${className}`}
     >
       {children}
     </button>

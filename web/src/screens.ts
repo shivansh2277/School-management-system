@@ -52,7 +52,9 @@ export type ModuleCode =
   | "timetable"
   | "hr"
   | "transport"
-  | "reports";
+  | "reports"
+  | "inventory"
+  | "grievances";
 
 export type Screen = {
   path: string;
@@ -86,6 +88,75 @@ export const SCREENS: Screen[] = [
     element: lazy(() => import("./pages/Dashboard").then((m) => ({ default: m.Dashboard }))),
   },
   {
+    path: "/admission",
+    label: "Admission dashboard",
+    group: "Admission",
+    // GET /admin/admission/cycles, /admin/admission/cycles/{id}/dashboard,
+    // and /admin/admission/cycles/{id}/seats. Module admission.
+    permissions: ["admin.settings.read", "admission.cycle.read"],
+    modules: ["admission"],
+    element: lazy(() =>
+      import("./pages/admission/AdmissionOverview").then((m) => ({ default: m.AdmissionOverview })),
+    ),
+  },
+  {
+    path: "/admission/enquiries",
+    label: "Enquiries",
+    group: "Admission",
+    // GET /admin/admission/enquiries and /admin/admission/enquiries/{id}.
+    // Module admission.
+    permissions: ["admission.enquiry.read"],
+    modules: ["admission"],
+    element: lazy(() =>
+      import("./pages/admission/Enquiries").then((m) => ({ default: m.Enquiries })),
+    ),
+  },
+  {
+    path: "/admission/applications",
+    label: "Applications",
+    group: "Admission",
+    // GET /admin/admission/applications and /admin/admission/applications/{id}.
+    // Module admission.
+    permissions: ["admission.application.read"],
+    modules: ["admission"],
+    element: lazy(() =>
+      import("./pages/admission/Applications").then((m) => ({ default: m.Applications })),
+    ),
+  },
+  {
+    path: "/admission/merit",
+    label: "Merit & selection",
+    group: "Admission",
+    // GET /admin/admission/cycles/{id}/merit. Module admission.
+    permissions: ["admission.application.read"],
+    modules: ["admission"],
+    element: lazy(() =>
+      import("./pages/admission/MeritSelection").then((m) => ({ default: m.MeritSelection })),
+    ),
+  },
+  {
+    path: "/admission/waitlist",
+    label: "Waitlist",
+    group: "Admission",
+    // GET /admin/admission/cycles/{id}/waitlist. Module admission.
+    permissions: ["admission.application.read"],
+    modules: ["admission"],
+    element: lazy(() =>
+      import("./pages/admission/Waitlist").then((m) => ({ default: m.Waitlist })),
+    ),
+  },
+  {
+    path: "/admission/reports",
+    label: "Admission reports",
+    group: "Admission",
+    // GET /admin/admission/cycles/{id}/reports. Module admission.
+    permissions: ["admission.application.read"],
+    modules: ["admission"],
+    element: lazy(() =>
+      import("./pages/admission/AdmissionReports").then((m) => ({ default: m.AdmissionReports })),
+    ),
+  },
+  {
     path: "/students",
     label: "Students",
     group: "People",
@@ -109,14 +180,20 @@ export const SCREENS: Screen[] = [
     // GET /admin/employees and /admin/employees/{id} - api/admin/hr.py, both
     // on `reader` = require_permission("hr.employee.read", school_wide=True),
     // with the whole router behind Depends(module_enabled("hr")).
-    //
-    // It used to read /admin/teachers, which is teaching staff only. Same
-    // permission and same module, so the entry is unchanged - but the screen
-    // now covers the drivers, the bus attendant and the office administrator,
-    // who were in the database and in no screen.
     permissions: ["hr.employee.read"],
     modules: ["hr"],
     element: lazy(() => import("./pages/Teachers").then((m) => ({ default: m.Teachers }))),
+  },
+  {
+    path: "/staff-leave",
+    label: "Staff leave",
+    group: "People",
+    // GET /admin/staff-leave - api/admin/staff_leave.py, hr.leave.read, module hr.
+    permissions: ["hr.leave.read"],
+    modules: ["hr"],
+    element: lazy(() =>
+      import("./pages/StaffLeavePage").then((m) => ({ default: m.StaffLeavePage })),
+    ),
   },
   {
     path: "/classes",
@@ -152,6 +229,17 @@ export const SCREENS: Screen[] = [
     permissions: ["exam.definition.read", "academics.class.read"],
     modules: ["examinations"],
     element: lazy(() => import("./pages/Exams").then((m) => ({ default: m.Exams }))),
+  },
+  {
+    path: "/admin/session-rollover",
+    label: "Session rollover",
+    group: "Academics",
+    // POST /admin/promotion/preview, /admin/promotion/commit, GET /admin/promotion/years
+    permissions: ["students.enrolment.promote", "academics.class.read"],
+    modules: ["students"],
+    element: lazy(() =>
+      import("./pages/SessionRollover").then((m) => ({ default: m.SessionRollover })),
+    ),
   },
   {
     path: "/fees",
@@ -228,6 +316,18 @@ export const SCREENS: Screen[] = [
     element: lazy(() => import("./pages/FeePeriods").then((m) => ({ default: m.FeePeriods }))),
   },
   {
+    path: "/payroll",
+    label: "Payroll",
+    group: "Money",
+    // GET /admin/payroll/runs, /admin/payroll/components - payroll.py,
+    // payroll.run.read, module hr.
+    // Writes (open_run, calculate, approve, mark_paid, discard) gate
+    // themselves on payroll.run.manage and payroll.run.approve.
+    permissions: ["payroll.run.read"],
+    modules: ["hr"],
+    element: lazy(() => import("./pages/Payroll").then((m) => ({ default: m.Payroll }))),
+  },
+  {
     path: "/notices",
     label: "Notices",
     group: "Communication",
@@ -261,6 +361,14 @@ export const SCREENS: Screen[] = [
     permissions: ["transport.setup.read"],
     modules: ["transport"],
     element: lazy(() => import("./pages/Transport").then((m) => ({ default: m.Transport }))),
+  },
+  {
+    path: "/inventory",
+    label: "Stock",
+    group: "Operations",
+    permissions: ["inventory.item.read"],
+    modules: ["inventory"],
+    element: lazy(() => import("./pages/Inventory").then((m) => ({ default: m.Inventory }))),
   },
   {
     path: "/configuration",
@@ -299,6 +407,71 @@ export const SCREENS: Screen[] = [
     // screen-level one.
     permissions: ["admin.settings.read"],
     element: lazy(() => import("./pages/Settings").then((m) => ({ default: m.Settings }))),
+  },
+  {
+    path: "/reports",
+    label: "Reports library",
+    group: "Analytics",
+    permissions: ["admin.settings.read"],
+    modules: ["reports"],
+    element: lazy(() => import("./pages/Reports").then((m) => ({ default: m.Reports }))),
+  },
+  {
+    path: "/reception/found-items",
+    label: "Found & Lost",
+    group: "Front Desk",
+    permissions: ["reception.found_items.read"],
+    element: lazy(() =>
+      import("./pages/reception/FoundItemsPage").then((m) => ({ default: m.FoundItemsPage })),
+    ),
+  },
+  {
+    path: "/reception/passes",
+    label: "Student Passes",
+    group: "Front Desk",
+    permissions: ["reception.passes.read"],
+    element: lazy(() =>
+      import("./pages/reception/StudentPassPage").then((m) => ({ default: m.StudentPassPage })),
+    ),
+  },
+  {
+    path: "/reception/meetings",
+    label: "Meeting Slips",
+    group: "Front Desk",
+    permissions: ["reception.meetings.read"],
+    element: lazy(() =>
+      import("./pages/reception/MeetingsPage").then((m) => ({ default: m.MeetingsPage })),
+    ),
+  },
+  {
+    path: "/reception/directory",
+    label: "Important Directory",
+    group: "Front Desk",
+    permissions: ["reception.directory.read"],
+    element: lazy(() =>
+      import("./pages/reception/DirectoryPage").then((m) => ({ default: m.DirectoryPage })),
+    ),
+  },
+  {
+    path: "/reception/fee-counter",
+    label: "Fee Counter",
+    group: "Front Desk",
+    // GET /admin/reception/fees/status and POST /admin/reception/fees/collect -
+    // reception.py, fees.payment.collect, module fees.
+    //
+    // fees.invoice.read is deliberately NOT declared: the reception fee counter
+    // hits its own endpoints (/admin/reception/fees/*), which are gated on
+    // fees.payment.collect alone. Declaring fees.invoice.read here would hide
+    // this screen from the receptionist role, which does not hold it — and the
+    // admin fee screens that DO require it would leak into the receptionist
+    // sidebar.
+    permissions: ["fees.payment.collect"],
+    modules: ["fees"],
+    element: lazy(() =>
+      import("./pages/reception/ReceptionFeeCounterPage").then((m) => ({
+        default: m.ReceptionFeeCounterPage,
+      })),
+    ),
   },
 ];
 

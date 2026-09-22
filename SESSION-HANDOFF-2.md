@@ -1,3 +1,7 @@
+> **SUPERSEDED — 12 September 2026.** Superseded by **`SESSION-HANDOFF-3.md`**
+> and **`SINGLE_SOURCE_OF_TRUTH.md`**. Packet 1 (Admission), Academics & Examination
+> Depth, Reports Library, and UI Standardization are all complete.
+
 # Session handoff — Packet 0 and Packet 2 are done
 
 **Written 10 September 2026**, at the end of the session that built the write

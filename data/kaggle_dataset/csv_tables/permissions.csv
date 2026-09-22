@@ -1,0 +1,92 @@
+code,module,action,description,id,created_at,updated_at
+students.profile.read,students,read,View student profiles,183,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+students.profile.write,students,write,Create and edit students,184,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+students.profile.export,students,export,Export student data in bulk,185,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+students.enrolment.promote,students,promote,Run year-end promotion,186,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+academics.class.read,academics,read,View classes and sections,187,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+academics.class.write,academics,write,Create and edit classes and sections,188,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+attendance.record.read,attendance,read,View attendance,189,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+attendance.record.mark,attendance,mark,Mark attendance,190,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+attendance.record.correct,attendance,correct,Correct attendance after the fact,191,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+timetable.slot.read,timetable,read,View timetables,192,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+timetable.slot.write,timetable,write,Build and edit the timetable,193,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+timetable.slot.override,timetable,override,Schedule past a teacher's maximum weekly load,194,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+timetable.substitution.manage,timetable,manage,Arrange cover for an absent teacher,195,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+exam.definition.read,exam,read,View exams and datesheets,196,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+exam.definition.write,exam,write,Create exams and schedule papers,197,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+exam.marks.read,exam,read,View marks,198,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+exam.marks.enter,exam,enter,Enter marks,199,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+exam.marks.manage_any,exam,manage_any,"View and enter marks for any paper, not only one's own subjects",200,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+exam.marks.lock,exam,lock,"Close marks entry on a paper, and reopen it",201,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+exam.marks.override,exam,override,"Change a mark after the paper is locked, with a reason",202,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+exam.result.publish,exam,publish,Publish results and report cards,203,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+fees.setup.manage,fees,manage,"Define fee heads, plans and student assignments",204,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+fees.invoice.read,fees,read,View invoices and dues,205,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+fees.invoice.generate,fees,generate,Generate invoices,206,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+fees.payment.collect,fees,collect,Collect a payment and issue a receipt,207,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+fees.payment.pay_own,fees,pay_own,Pay one's own (or one's child's) invoice,208,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+fees.payment.void,fees,void,Void or reverse a payment,209,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+fees.concession.approve,fees,approve,Approve a fee concession or waiver,210,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+homework.item.read,homework,read,View homework,211,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+homework.item.write,homework,write,Set homework,212,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+homework.submission.submit,homework,submit,Submit homework,213,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+admission.cycle.read,admission,read,View admission cycles and seat configuration,214,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+admission.cycle.write,admission,write,"Set up cycles, seats and document checklists",215,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+admission.enquiry.read,admission,read,View the enquiry register,216,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+admission.enquiry.write,admission,write,Record and follow up enquiries,217,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+admission.application.read,admission,read,View applications,218,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+admission.application.write,admission,write,"Create and edit applications, and move them along",219,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+admission.document.verify,admission,verify,Verify or reject an applicant's documents,220,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+admission.assessment.enter,admission,enter,Schedule applicant tests and enter their marks,221,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+admission.decision.make,admission,make,"Admit, waitlist or reject an applicant",222,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+admission.application.convert,admission,convert,Turn an admitted applicant into an enrolled student,223,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+admission.decision.override,admission,override,Approve admitting past the seats configured for a class,224,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+admission.interview.enter,admission,enter,Enter interview feedback as a panel member,225,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+admission.medical.read,admission,read,View and edit an applicant's medical and special-needs section,226,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+comms.notice.read,comms,read,Read notices,227,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+comms.notice.publish,comms,publish,Publish a notice,228,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+comms.message.read,comms,read,View the outbox and its delivery report,229,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+comms.message.send,comms,send,Compose and send a message,230,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+comms.message.approve,comms,approve,Approve a bulk send above the school's threshold (§5.9.9),231,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+comms.emergency.broadcast,comms,broadcast,"Send an emergency broadcast, which overrides opt-out and quiet hours",232,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+comms.template.manage,comms,manage,Create and supersede message templates,233,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+transport.setup.read,transport,read,"View vehicles, routes, stops and fee slabs",234,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+transport.setup.write,transport,write,"Register vehicles and design routes, stops and fee slabs",235,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+transport.assignment.read,transport,read,View which children ride which bus,236,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+transport.assignment.manage,transport,manage,"Put a child on a stop, and end an assignment",237,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+hr.employee.read,hr,read,View staff records,238,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+hr.employee.write,hr,write,Create and edit staff records,239,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+hr.employee.exit,hr,exit,Record that a member of staff has left,240,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+hr.department.write,hr,write,Create and edit departments,241,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+hr.salary.read,hr,read,"View PAN, PF, ESI and bank details — gated apart from the rest of the staff profile (§5.3.9)",242,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+hr.salary.write,hr,write,"Edit PAN, PF, ESI and bank details",243,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+hr.leave.read,hr,read,View staff leave requests and balances,244,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+hr.leave.apply,hr,apply,"Apply for staff leave, and withdraw an application",245,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+hr.leave.approve,hr,approve,Approve or reject staff leave,246,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+hr.leave.configure,hr,configure,Define leave types and their entitlements,247,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+hr.attendance.read,hr,read,View the staff register,248,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+hr.attendance.mark,hr,mark,Mark and correct the staff register,249,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+payroll.run.read,payroll,read,"View salary components, structures, runs and payslips",250,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+payroll.setup.manage,payroll,manage,Define salary components and set salary structures,251,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+payroll.run.manage,payroll,manage,"Open, calculate and discard a payroll run",252,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+payroll.run.approve,payroll,approve,Approve a payroll run and mark it paid,253,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+inventory.item.read,inventory,read,View stock items and requests,254,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+inventory.item.write,inventory,write,Create and update stock items,255,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+inventory.request.create,inventory,create,Flag low stock or request supplies,256,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+inventory.request.approve,inventory,approve,Approve or reject stock purchase and issue requests,257,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+grievance.read,grievance,read,View grievances and complaints,258,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+grievance.write,grievance,write,"Manage, update status, and resolve grievances",259,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+grievance.assign,grievance,assign,Assign grievances to teachers or staff members,260,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+grievance.submit,grievance,submit,Submit grievances and reply to threads,261,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+admin.settings.read,admin,read,View school settings,262,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+admin.settings.write,admin,write,Change school settings,263,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+admin.role.read,admin,read,View roles and permissions,264,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+admin.role.write,admin,write,Change roles and permissions,265,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+admin.year.write,admin,write,"Open, close and switch academic years",266,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+admin.audit.read,admin,read,Read the audit log,267,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+recruitment.candidate.read,recruitment,read,View candidate applications,268,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+recruitment.candidate.write,recruitment,write,Create and edit candidate applications,269,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+recruitment.candidate.review,recruitment,review,Shortlist and reject candidate applications,270,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+recruitment.candidate.hire,recruitment,hire,Issue job offers and confirm teacher hiring,271,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+teacher.leave.apply,teacher,apply,Apply for personal teacher leave,272,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+teacher.leave.view,teacher,view,View personal leave status and substitution duties,273,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30

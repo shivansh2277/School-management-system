@@ -48,7 +48,7 @@ def submit(
     user: User = Depends(student_only),
     db: Session = Depends(get_db),
 ) -> StudentHomeworkOut:
-    return homework.submit(db, user, homework_id, body.answer_text)
+    return homework.submit(db, user, homework_id, body.answer_text, attachment_url=body.attachment_url)
 
 
 @router.get("/exams", response_model=list[ExamScheduleOut])

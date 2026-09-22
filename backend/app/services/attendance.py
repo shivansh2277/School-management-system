@@ -135,6 +135,7 @@ def roll_sheet(db: Session, class_section_id: int, day: Date) -> list[RollRow]:
     return [
         RollRow(
             student_id=e.student_id,
+            enrolment_id=e.id,
             full_name=e.student.user.full_name,
             roll_no=e.roll_no,
             status=marked[e.id].status if e.id in marked else None,
@@ -165,19 +166,21 @@ def mark(db: Session, user: User, body: AttendanceMarkRequest) -> list[RollRow]:
             "That day is not a working day for this school",
         )
 
-    by_student = {e.student_id: e for e in roster(db, body.class_section_id)}
+    roster_list = roster(db, body.class_section_id)
+    by_student = {e.student_id: e for e in roster_list}
+    by_enrolment = {e.id: e for e in roster_list}
     existing = {
         a.enrolment_id: a
         for a in db.scalars(
             select(Attendance).where(
-                Attendance.enrolment_id.in_([e.id for e in by_student.values()] or [0]),
+                Attendance.enrolment_id.in_([e.id for e in roster_list] or [0]),
                 Attendance.date == body.date,
             )
         )
     }
     now = datetime.now(UTC)
     for entry in body.entries:
-        enrolment = by_student.get(entry.student_id)
+        enrolment = by_enrolment.get(entry.enrolment_id) if entry.enrolment_id else by_student.get(entry.student_id)
         if enrolment is None:
             raise scoping.forbidden("Student is not in this class section")
         row = existing.get(enrolment.id)

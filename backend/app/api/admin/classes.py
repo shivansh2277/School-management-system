@@ -52,6 +52,7 @@ def _row(db: Session, c: ClassSection) -> dict:
         "section": c.section,
         "class_label": c.label,
         "academic_year": year.code if (year := db.get(AcademicYear, c.academic_year_id)) else "",
+        "academic_year_id": c.academic_year_id,
         "class_teacher_id": c.class_teacher_id,
         "class_teacher": teacher.user.full_name if teacher else None,
         "student_count": len(roster(db, c.id)),

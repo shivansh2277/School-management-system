@@ -158,3 +158,15 @@ from app.models.jobs import Job, ScheduledJob
 from app.models.rbac import Permission, Role, RolePermission, UserRoleAssignment
 from app.models.settings import CustomField, Setting
 from app.models.tenancy import AcademicYear, School
+from app.models.inventory import StockItem, StockRequest
+from app.models.grievance import Grievance, GrievanceReply
+from app.models.notification import InAppNotification
+from app.models.reception import (
+    DirectoryContact,
+    FoundItem,
+    PrincipalMeetingRequest,
+    StudentAuthorizedPerson,
+    StudentPass,
+    TeacherMeetingRequest,
+)
+

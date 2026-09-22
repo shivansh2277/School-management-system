@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 
-import { api } from "../../src/api/client";
+import { api, formatDate } from "../../src/api/client";
 import { Button, Card, Empty, Loading, Row, Screen, s } from "../../src/components/ui";
 import { theme } from "../../src/theme";
 
@@ -121,7 +121,7 @@ export default function TeacherAnnouncements() {
                   <Text style={s.meta}>{n.class_label}</Text>
                 </>
               }
-              right={<Text style={s.meta}>{new Date(n.published_at).toLocaleDateString()}</Text>}
+              right={<Text style={s.meta}>{formatDate(n.published_at)}</Text>}
             />
           ))
         )}

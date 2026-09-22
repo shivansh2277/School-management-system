@@ -5,10 +5,18 @@ from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.models import ApplicationFeePurpose, ApplicationPayment, User
+from app.models import (
+    ApplicationFeePurpose,
+    ApplicationPayment,
+    Enrolment,
+    EnrolmentStatus,
+    Student,
+    User,
+)
 from app.services import applications as app_svc
 from app.services import conversion as svc
 from app.services.rbac import require_permission
@@ -29,7 +37,7 @@ class PaymentInput(BaseModel):
     model_config = {"extra": "forbid"}
 
     purpose: ApplicationFeePurpose
-    amount: Decimal
+    amount: Decimal | None = None
     method: str = "cash"
     reference: str | None = None
     # The counter sends the same key on a retry; two clicks are one receipt.
@@ -72,22 +80,66 @@ def collect_payment(
     """Offline collection only — §0.10 defers the gateway to V2 — so what is
     recorded is cash, a cheque or a UPI reference somebody actually saw."""
     app = app_svc.get(db, user.school_id, application_id)
-    payment = svc.collect(
-        db,
-        app,
-        actor=user,
-        purpose=body.purpose,
-        amount=body.amount,
-        method=body.method,
-        reference=body.reference,
-        idempotency_key=body.idempotency_key,
+    payment_amount = (
+        body.amount
+        if body.amount is not None
+        else app.cycle.application_fee
     )
-    return {**_payment_out(payment), "application_status": app.status}
+    try:
+        payment = svc.collect(
+            db,
+            app,
+            actor=user,
+            purpose=body.purpose,
+            amount=payment_amount,
+            method=body.method,
+            reference=body.reference,
+            idempotency_key=body.idempotency_key,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    student_data = None
+    if getattr(payment, "_conversion_result", None):
+        cr = payment._conversion_result
+        student_data = {
+            "id": cr.get("student_id"),
+            "admission_no": cr.get("admission_no"),
+            "class_label": cr.get("class_label"),
+            "roll_no": cr.get("roll_no"),
+        }
+    elif app.student_id is not None:
+        student = db.get(Student, app.student_id)
+        if student:
+            enrolment = db.scalar(
+                select(Enrolment).where(
+                    Enrolment.student_id == student.id,
+                    Enrolment.status == EnrolmentStatus.active,
+                )
+            )
+            class_label = (
+                enrolment.class_section.label
+                if (enrolment and enrolment.class_section)
+                else app.class_applying_for
+            )
+            student_data = {
+                "id": student.id,
+                "admission_no": student.admission_no,
+                "class_label": class_label,
+                "roll_no": enrolment.roll_no if enrolment else None,
+            }
+
+    out = {**_payment_out(payment), "application_status": app.status}
+    if student_data:
+        out["student"] = student_data
+    return out
 
 
 @router.delete(
     "/payments/{payment_id}",
-    dependencies=[Depends(require_permission("fees.payment.void"))],
+    dependencies=[Depends(require_permission("fees.payment.void", "admission.application.write"))],
 )
 def void_payment(
     payment_id: int,
@@ -99,6 +151,7 @@ def void_payment(
     if payment is None or payment.school_id != user.school_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found")
     svc.void_payment(db, payment, actor=user, reason=reason)
+    db.commit()
     return _payment_out(payment)
 
 
@@ -119,4 +172,6 @@ def convert(
     documents (§5.1.9(16)). A partial conversion is the failure this exists to
     make impossible."""
     app = app_svc.get(db, user.school_id, application_id)
-    return svc.convert(db, app, actor=user)
+    res = svc.convert(db, app, actor=user)
+    db.commit()
+    return res

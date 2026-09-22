@@ -1,0 +1,41 @@
+code,version,name,channel,category,subject,body,is_active,school_id,id,created_at,updated_at
+general.notice,1,General notice,email,general,$school_name: $notice_title,"Dear $guardian_name,
+
+$notice_body
+
+Regards,
+$school_name
+",True,36,9,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+emergency.broadcast,1,Emergency broadcast,email,emergency,URGENT - $school_name: $notice_title,"Dear $guardian_name,
+
+$notice_body
+
+This is an urgent notice from $school_name and has been sent to every family.
+",True,36,10,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+fees.overdue,1,Fee reminder,email,fees,$school_name: fees outstanding for $child_name,"Dear $guardian_name,
+
+Our records show an outstanding balance of Rs $amount_due for $child_name
+($class_label), covering $months_due month(s). The oldest amount is
+$days_overdue days past its due date.
+
+If you have already paid, please ignore this message — or contact the school
+office with your receipt number so we can correct our records.
+
+Regards,
+$school_name
+",True,36,11,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+transport.compliance_alert,1,Vehicle and crew papers expiring,email,transport,$school_name: $expiring transport document(s) need attention,"Dear $staff_name,
+
+$expiring transport document(s) are expiring within the next 60 days, of which
+$already_expired have already lapsed.
+
+$expiry_list
+
+A vehicle whose insurance, fitness, permit or PUC has expired cannot be
+assigned to an active route, and a driver without a current licence and police
+verification cannot crew one. The system will refuse those assignments, so
+please renew these before they lapse.
+
+Regards,
+$school_name
+",True,36,12,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30

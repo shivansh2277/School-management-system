@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     BigInteger,
@@ -7,10 +8,13 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
+    select,
 )
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TenantBase, enum_col
@@ -119,16 +123,41 @@ class Homework(TenantBase):
     description: Mapped[str | None] = mapped_column(Text)
     assigned_date: Mapped[date] = mapped_column(Date, nullable=False)
     due_date: Mapped[date] = mapped_column(Date, nullable=False)
+    attachment_url: Mapped[str | None] = mapped_column(String(500))
 
 
 class HomeworkSubmission(TenantBase):
     __tablename__ = "homework_submissions"
-    __table_args__ = (UniqueConstraint("homework_id", "student_id", name="uq_submission"),)
+    __table_args__ = (UniqueConstraint("homework_id", "enrolment_id", name="uq_submission"),)
 
     homework_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("homework.id"), nullable=False)
-    student_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("students.id"), nullable=False)
+    enrolment_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("enrolments.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     answer_text: Mapped[str] = mapped_column(Text, nullable=False)
     submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    marks: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
+    remarks: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    graded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    attachment_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    enrolment = relationship("Enrolment", lazy="joined")
+    homework = relationship("Homework", lazy="joined")
+
+    @hybrid_property
+    def student_id(self) -> int | None:
+        return self.enrolment.student_id if self.enrolment else None
+
+    @student_id.inplace.expression
+    @classmethod
+    def _student_id_expression(cls):
+        from app.models.enrolment import Enrolment
+        return (
+            select(Enrolment.student_id)
+            .where(Enrolment.id == cls.enrolment_id)
+            .correlate_except(Enrolment)
+            .scalar_subquery()
+        )
 
 
 class Notice(TenantBase):

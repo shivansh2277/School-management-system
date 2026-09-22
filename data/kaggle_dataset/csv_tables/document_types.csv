@@ -1,0 +1,22 @@
+code,name,applies_to,is_mandatory,required_if_category,has_expiry,is_confidential,sort_order,school_id,id,created_at,updated_at
+birth_certificate,Birth Certificate,application,True,,False,False,10,36,43,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+transfer_certificate,Transfer Certificate,application,True,,False,False,20,36,44,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+previous_marksheet,Previous Report Card,application,True,,False,False,30,36,45,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+photo,Passport Photograph,application,True,,False,False,40,36,46,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+address_proof,Address Proof,application,True,,False,False,50,36,47,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+aadhaar_child,Aadhaar (Child),application,False,,False,True,60,36,48,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+aadhaar_parent,Aadhaar (Parent),application,False,,False,True,70,36,49,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+caste_certificate,Caste / Category Certificate,application,True,SC,False,True,80,36,50,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+income_certificate,Income Certificate,application,True,EWS,False,True,90,36,51,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+medical_certificate,Medical Certificate,application,False,,True,True,100,36,52,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+disability_certificate,Disability Certificate,application,False,,False,True,110,36,53,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+migration_certificate,Migration Certificate,application,False,,False,False,120,36,54,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+student_photo,Student Photograph,student,False,,False,False,130,36,55,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+employee_id_proof,Identity Proof,employee,True,,False,True,140,36,56,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+employee_qualification,Qualification Certificate,employee,True,,False,False,150,36,57,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+police_verification,Police Verification,employee,True,,True,True,160,36,58,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+driving_licence,Driving Licence,employee,False,,True,True,170,36,59,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+vehicle_insurance,Insurance,vehicle,True,,True,False,180,36,60,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+vehicle_fitness,Fitness Certificate,vehicle,True,,True,False,190,36,61,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+vehicle_permit,Permit,vehicle,True,,True,False,200,36,62,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+vehicle_puc,Pollution Certificate,vehicle,True,,True,False,210,36,63,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30

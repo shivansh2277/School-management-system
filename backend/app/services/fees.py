@@ -21,7 +21,9 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import (
+    AcademicYear,
     AuditAction,
+    Employee,
     Enrolment,
     EnrolmentStatus,
     FeeFrequency,
@@ -906,12 +908,30 @@ def defaulters(
             )
         )
 
+    ay_map = {
+        ay.id: ay.code
+        for ay in db.scalars(select(AcademicYear).where(AcademicYear.school_id == school_id))
+    }
+    teacher_map = {
+        emp.id: emp.user.full_name
+        for emp in db.scalars(select(Employee).where(Employee.school_id == school_id))
+        if emp.user
+    }
+
     by_student: dict[int, dict] = {}
     for invoice in db.scalars(q):
         amounts = totals(db, invoice)
         if amounts["balance"] <= ZERO:
             continue
         student = invoice.enrolment.student
+        class_sec = invoice.enrolment.class_section
+        teacher_name = (
+            teacher_map.get(class_sec.class_teacher_id, "—")
+            if (class_sec and class_sec.class_teacher_id)
+            else "—"
+        )
+        academic_year = ay_map.get(invoice.enrolment.academic_year_id, "—")
+
         row = by_student.setdefault(
             student.id,
             {
@@ -919,22 +939,45 @@ def defaulters(
                 "enrolment_id": invoice.enrolment_id,
                 "student_name": student.user.full_name,
                 "admission_no": student.admission_no,
-                "class_label": invoice.enrolment.class_section.label,
+                "class_label": class_sec.label if class_sec else "—",
+                "class_teacher_name": teacher_name,
+                "academic_year": academic_year,
                 "contact": primary_contact(db, student.id),
                 "months_due": 0,
                 "oldest_due_date": invoice.due_date,
                 "outstanding": ZERO,
                 "late_fee": ZERO,
+                "total_paid": ZERO,
+                "fee_heads": set(),
+                "is_overdue": False,
             },
         )
         row["months_due"] += 1
         row["outstanding"] += amounts["balance"]
+        row["total_paid"] += amounts.get("paid", ZERO)
         row["late_fee"] += late_fee_charged(db, invoice)
         row["oldest_due_date"] = min(row["oldest_due_date"], invoice.due_date)
+        if invoice.due_date < on:
+            row["is_overdue"] = True
+        for line in invoice.lines:
+            if line.head and line.head.name:
+                row["fee_heads"].add(line.head.name)
+            elif line.description:
+                row["fee_heads"].add(line.description)
 
     rows = [r for r in by_student.values() if r["outstanding"] >= min_amount]
     for row in rows:
-        row["days_overdue"] = (on - row["oldest_due_date"]).days
+        row["days_overdue"] = max(0, (on - row["oldest_due_date"]).days)
+        row["due_date"] = row["oldest_due_date"].isoformat()
+        heads_list = sorted(list(row.pop("fee_heads", set())))
+        row["fee_type"] = ", ".join(heads_list) if heads_list else "Tuition Fee"
+        if row.pop("is_overdue", False):
+            row["payment_status"] = "Overdue"
+        elif row.pop("total_paid", ZERO) > ZERO:
+            row["payment_status"] = "Partially Paid"
+        else:
+            row.pop("total_paid", None)
+            row["payment_status"] = "Unpaid"
     return sorted(rows, key=lambda r: r["outstanding"], reverse=True)
 
 

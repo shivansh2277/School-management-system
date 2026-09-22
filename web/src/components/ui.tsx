@@ -131,9 +131,16 @@ export function Modal({
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold">{title}</h2>
-          <button onClick={onClose} className="text-ink-faint hover:text-ink">
-            Close
+          <h2 className="font-semibold text-lg text-ink">{title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-full transition-colors flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-red-400"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </header>
         {children}

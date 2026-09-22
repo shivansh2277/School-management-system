@@ -1,0 +1,2 @@
+academic_year_id,name,status,starts_on,ends_on,application_fee,late_fee,allow_online_applications,admission_fee_refund_policy,school_id,id,created_at,updated_at
+49,Admissions 2025-26,open,2025-01-05,2025-03-31,500.00,250.00,True,The application fee is non-refundable. The admission fee is refunded in full if the seat is declined before the session begins.,36,2,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30

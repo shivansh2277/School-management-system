@@ -1,0 +1,5 @@
+code,name,annual_quota,is_paid,active,school_id,id,created_at,updated_at
+CL,Casual Leave,12.0,True,True,36,9,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+SL,Sick Leave,10.0,True,True,36,10,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+EL,Earned Leave,15.0,True,True,36,11,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30
+LWP,Leave Without Pay,0.0,False,True,36,12,2026-09-21 13:42:20.897635+05:30,2026-09-21 13:42:20.897635+05:30

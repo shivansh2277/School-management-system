@@ -14,8 +14,10 @@ from sqlalchemy import (
     String,
     Time,
     UniqueConstraint,
+    select,
     text,
 )
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import TenantBase
@@ -151,7 +153,7 @@ class Mark(TenantBase):
 
     __tablename__ = "marks"
     __table_args__ = (
-        UniqueConstraint("exam_schedule_id", "student_id", name="uq_mark"),
+        UniqueConstraint("exam_schedule_id", "enrolment_id", name="uq_mark"),
         CheckConstraint("marks_obtained >= 0", name="ck_marks_non_negative"),
         # A child is absent or exempted, not both, and neither carries a score.
         CheckConstraint(
@@ -166,7 +168,9 @@ class Mark(TenantBase):
     exam_schedule_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("exam_schedule.id"), nullable=False
     )
-    student_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("students.id"), nullable=False)
+    enrolment_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("enrolments.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
     marks_obtained: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
     is_absent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_exempted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -177,6 +181,23 @@ class Mark(TenantBase):
     entered_by: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("users.id"), nullable=False
     )
+
+    enrolment = relationship("Enrolment", lazy="joined")
+
+    @hybrid_property
+    def student_id(self) -> int | None:
+        return self.enrolment.student_id if self.enrolment else None
+
+    @student_id.inplace.expression
+    @classmethod
+    def _student_id_expression(cls):
+        from app.models.enrolment import Enrolment
+        return (
+            select(Enrolment.student_id)
+            .where(Enrolment.id == cls.enrolment_id)
+            .correlate_except(Enrolment)
+            .scalar_subquery()
+        )
 
 
 class GradeBand(TenantBase):

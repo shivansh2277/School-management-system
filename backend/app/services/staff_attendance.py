@@ -217,7 +217,7 @@ def write_leave(db: Session, request: StaffLeaveRequest) -> list[StaffAttendance
             employee_id=request.employee_id,
             date=day,
             status=AttendanceStatus.leave,
-            remarks=f"{request.leave_type.name} approved",
+            remarks=f"{request.leave_type.name if request.leave_type else 'Teacher Leave'} approved",
             marked_by=None,
         )
         db.add(row)

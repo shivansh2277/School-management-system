@@ -1,4 +1,5 @@
 from datetime import UTC, date as Date, datetime
+from decimal import Decimal
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
@@ -67,6 +68,7 @@ def to_out(db: Session, items: list[Homework]) -> list[HomeworkOut]:
             # pending = roster - submissions; there is no status column (§7.4)
             submitted_count=subs.get(h.id, 0),
             total_students=sizes.get(h.class_section_id, 0),
+            attachment_url=h.attachment_url,
         )
         for h in items
     ]
@@ -86,6 +88,7 @@ def create(db: Session, user: User, body: HomeworkCreate) -> HomeworkOut:
         description=body.description,
         assigned_date=assigned,
         due_date=body.due_date,
+        attachment_url=body.attachment_url,
     )
     db.add(hw)
     db.commit()
@@ -112,6 +115,8 @@ def update(db: Session, user: User, homework_id: int, body: HomeworkUpdate) -> H
                 status.HTTP_400_BAD_REQUEST, "due_date must not precede assigned_date"
             )
         hw.due_date = body.due_date
+    if body.attachment_url is not None:
+        hw.attachment_url = body.attachment_url
     db.commit()
     return to_out(db, [hw])[0]
 
@@ -126,23 +131,30 @@ def delete(db: Session, user: User, homework_id: int) -> None:
 def submissions(db: Session, user: User, homework_id: int) -> list[SubmissionRow]:
     hw = _owned(db, user, homework_id)
     rows = {
-        s.student_id: s
+        s.enrolment_id: s
         for s in db.scalars(
             select(HomeworkSubmission).where(HomeworkSubmission.homework_id == hw.id)
         )
     }
     out = []
     for e in roster(db, hw.class_section_id):
-        sub = rows.get(e.student_id)
+        sub = rows.get(e.id)
         out.append(
             SubmissionRow(
+                id=sub.id if sub else None,
+                submission_id=sub.id if sub else None,
                 student_id=e.student_id,
+                enrolment_id=e.id,
                 full_name=e.student.user.full_name,
                 roll_no=e.roll_no,
                 submitted=sub is not None,
                 submitted_at=sub.submitted_at if sub else None,
                 late=bool(sub and sub.submitted_at.date() > hw.due_date),
                 answer_text=sub.answer_text if sub else None,
+                marks=sub.marks if sub else None,
+                remarks=sub.remarks if sub else None,
+                graded_at=sub.graded_at if sub else None,
+                attachment_url=sub.attachment_url if sub else None,
             )
         )
     return out
@@ -160,7 +172,7 @@ def for_student(db: Session, student_id: int, only: str = "all") -> list[Student
     subs = {
         s.homework_id: s
         for s in db.scalars(
-            select(HomeworkSubmission).where(HomeworkSubmission.student_id == student_id)
+            select(HomeworkSubmission).where(HomeworkSubmission.enrolment_id == enrolment.id)
         )
     }
     out = []
@@ -177,26 +189,51 @@ def for_student(db: Session, student_id: int, only: str = "all") -> list[Student
                 submitted_at=sub.submitted_at if sub else None,
                 late=bool(sub and sub.submitted_at.date() > hw.due_date),
                 answer_text=sub.answer_text if sub else None,
+                marks=sub.marks if sub else None,
+                remarks=sub.remarks if sub else None,
+                graded_at=sub.graded_at if sub else None,
             )
         )
     return out
 
 
-def submit(db: Session, user: User, homework_id: int, answer_text: str) -> StudentHomeworkOut:
+def submit(
+    db: Session,
+    user: User,
+    homework_id: int,
+    answer_text: str,
+    attachment_url: str | None = None,
+    enrolment_id: int | None = None,
+) -> StudentHomeworkOut:
     student = scoping.student_for(db, user)
     hw = db.get(Homework, homework_id)
     if hw is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Homework not found")
-    if hw.class_section_id != require_current_enrolment(db, student.id).class_section_id:
-        raise scoping.forbidden("This homework is not assigned to your class")
-    answer = answer_text.strip()
-    if not answer:
+    current_enr = require_current_enrolment(db, student.id)
+    if enrolment_id is not None:
+        enr = db.get(Enrolment, enrolment_id)
+        if enr is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Enrolment not found")
+        if enr.school_id != user.school_id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Cross-tenant access forbidden")
+        if enr.student_id != student.id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Cannot submit for another student")
+        if enr.class_section_id != hw.class_section_id:
+            raise scoping.forbidden("This homework is not assigned to your class")
+        target_enrolment = enr
+    else:
+        if hw.class_section_id != current_enr.class_section_id:
+            raise scoping.forbidden("This homework is not assigned to your class")
+        target_enrolment = current_enr
+
+    answer = answer_text.strip() if answer_text else ""
+    if not answer and not attachment_url:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Answer must not be empty")
 
     existing = db.scalar(
         select(HomeworkSubmission).where(
             HomeworkSubmission.homework_id == hw.id,
-            HomeworkSubmission.student_id == student.id,
+            HomeworkSubmission.enrolment_id == target_enrolment.id,
         )
     )
     now = datetime.now(UTC)
@@ -205,16 +242,56 @@ def submit(db: Session, user: User, homework_id: int, answer_text: str) -> Stude
             HomeworkSubmission(
                 school_id=student.school_id,
                 homework_id=hw.id,
-                student_id=student.id,
+                enrolment_id=target_enrolment.id,
                 answer_text=answer,
+                attachment_url=attachment_url,
                 submitted_at=now,
             )
         )
     else:  # resubmission updates in place and refreshes the timestamp (§8)
         existing.answer_text = answer
+        if attachment_url is not None:
+            existing.attachment_url = attachment_url
         existing.submitted_at = now
     db.commit()
     return next(h for h in for_student(db, student.id) if h.id == hw.id)
+
+
+def grade_submission(
+    db: Session,
+    user: User,
+    submission_id: int,
+    marks: Decimal | float | None = None,
+    remarks: str | None = None,
+) -> SubmissionRow:
+    sub = db.get(HomeworkSubmission, submission_id)
+    if sub is None:
+        sub = db.scalar(select(HomeworkSubmission).where(HomeworkSubmission.enrolment_id == submission_id))
+    if sub is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Submission not found")
+    hw = db.get(Homework, sub.homework_id)
+    scoping.assert_teaches_subject_in_section(db, user, hw.class_section_id, hw.subject_id)
+    sub.marks = Decimal(str(marks)) if marks is not None else None
+    sub.remarks = remarks
+    sub.graded_at = datetime.now(UTC)
+    db.commit()
+    db.refresh(sub)
+    enrolment = db.get(Enrolment, sub.enrolment_id)
+    return SubmissionRow(
+        id=sub.id,
+        student_id=enrolment.student_id,
+        enrolment_id=enrolment.id,
+        full_name=enrolment.student.user.full_name,
+        roll_no=enrolment.roll_no,
+        submitted=True,
+        submitted_at=sub.submitted_at,
+        late=bool(sub.submitted_at.date() > hw.due_date),
+        answer_text=sub.answer_text,
+        marks=sub.marks,
+        remarks=sub.remarks,
+        graded_at=sub.graded_at,
+        attachment_url=sub.attachment_url,
+    )
 
 
 def pending_count(db: Session, student_id: int) -> int:

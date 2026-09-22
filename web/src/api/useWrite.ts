@@ -50,6 +50,7 @@ export function useWrite<TArgs = void, TResult = unknown>({
 
   return {
     run: m.mutate,
+    runAsync: m.mutateAsync,
     busy: m.isPending,
     error: m.error as unknown,
     /** Per-field messages for a 422, to hand to `FormField`'s `error` prop. */

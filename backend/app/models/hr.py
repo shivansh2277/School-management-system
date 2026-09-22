@@ -103,8 +103,8 @@ class StaffLeaveRequest(TenantBase):
     employee_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("employees.id"), nullable=False, index=True
     )
-    leave_type_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("leave_types.id"), nullable=False
+    leave_type_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("leave_types.id"), nullable=True
     )
     academic_year_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("academic_years.id"), nullable=False

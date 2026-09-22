@@ -1,6 +1,6 @@
 from datetime import date as Date
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -10,6 +10,7 @@ from app.services.rbac import require_permission
 from app.models import (
     Exam,
     ExamSchedule,
+    Enrolment,
     FeeInvoice,
     LeaveType,
     Mark,
@@ -22,6 +23,7 @@ from app.models import (
     Employee,
     User,
 )
+from app.pdf.report_card import build_report_card_pdf
 from app.schemas.common import AttendanceMonth, ReportCard, StudentHomeworkOut
 from app.services import assessment, attendance, fees, homework, leave, notices, scoping
 from app.services.common import current_enrolment, enrolment_map
@@ -91,14 +93,55 @@ def summary(
 @router.get("/children/{student_id}/attendance", response_model=AttendanceMonth)
 def child_attendance(
     student_id: int,
-    month: int | None = None,
+    month: str | int | None = None,
     year: int | None = None,
     user: User = Depends(parent_only),
     db: Session = Depends(get_db),
 ) -> AttendanceMonth:
     scoping.assert_can_read_student(db, user, student_id)
     today = Date.today()
-    return attendance.student_month(db, student_id, month or today.month, year or today.year)
+    if isinstance(month, str) and "-" in month:
+        parts = month.split("-")
+        m_val = int(parts[1])
+        y_val = int(parts[0])
+    else:
+        m_val = int(month) if month is not None else today.month
+        y_val = year or today.year
+    return attendance.student_month(db, student_id, m_val, y_val)
+
+
+@router.get("/children/{student_id}/fees/summary")
+def child_fees_summary(
+    student_id: int,
+    user: User = Depends(parent_only),
+    db: Session = Depends(get_db),
+) -> dict:
+    scoping.assert_can_read_student(db, user, student_id)
+    enrolment = current_enrolment(db, student_id)
+    if not enrolment:
+        return {
+            "student_id": student_id,
+            "enrolment_id": None,
+            "total_invoiced": 0.0,
+            "total_paid": 0.0,
+            "total_dues": 0.0,
+            "balance": 0.0,
+            "invoices": [],
+        }
+    invs = list(db.scalars(select(FeeInvoice).where(FeeInvoice.enrolment_id == enrolment.id)))
+    invoice_list = fees.list_invoices(db, invs)
+    total_invoiced = sum(float(i.get("payable", i.get("total", 0))) for i in invoice_list)
+    total_paid = sum(float(i.get("paid", 0)) for i in invoice_list)
+    total_dues = sum(float(i.get("balance", 0)) for i in invoice_list if float(i.get("balance", 0)) > 0)
+    return {
+        "student_id": student_id,
+        "enrolment_id": enrolment.id,
+        "total_invoiced": round(total_invoiced, 2),
+        "total_paid": round(total_paid, 2),
+        "total_dues": round(total_dues, 2),
+        "balance": round(total_dues, 2),
+        "invoices": invoice_list,
+    }
 
 
 @router.get("/children/{student_id}/homework", response_model=list[StudentHomeworkOut])
@@ -142,6 +185,33 @@ def child_report_card(
 ) -> ReportCard:
     scoping.assert_can_read_student(db, user, student_id)
     return assessment.report_card(db, student_id, exam_id)
+
+
+@router.get("/children/{student_id}/report-card/{exam_id}")
+@router.get("/children/{student_id}/results/{exam_id}/pdf")
+def child_report_card_pdf(
+    student_id: int,
+    exam_id: int,
+    user: User = Depends(parent_only),
+    db: Session = Depends(get_db),
+) -> Response:
+    scoping.assert_can_read_student(db, user, student_id)
+    enrolment = current_enrolment(db, student_id)
+    if enrolment:
+        invs = list(db.scalars(select(FeeInvoice).where(FeeInvoice.enrolment_id == enrolment.id)))
+        invoice_list = fees.list_invoices(db, invs)
+        total_dues = sum(float(i["balance"]) for i in invoice_list if i["balance"] > 0)
+        if total_dues > 0:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail="Report card withheld due to pending fee dues",
+            )
+    pdf_bytes = build_report_card_pdf(db, student_id, exam_id)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"inline; filename=report-card-{student_id}-{exam_id}.pdf"},
+    )
 
 
 @router.get("/children/{student_id}/profile")
@@ -209,13 +279,15 @@ def my_notices(user: User = Depends(parent_only), db: Session = Depends(get_db))
 class LeaveIn(BaseModel):
     model_config = {"extra": "forbid"}
 
-    student_id: int
+    student_id: int | None = None
+    enrolment_id: int | None = None
     from_date: Date
     to_date: Date
     type: LeaveType = LeaveType.sick
     reason: str = Field(min_length=3, max_length=400)
 
 
+@router.post("/leave", status_code=201)
 @router.post("/leave-requests", status_code=201)
 def apply_for_leave(
     body: LeaveIn, user: User = Depends(parent_only), db: Session = Depends(get_db)
@@ -224,8 +296,15 @@ def apply_for_leave(
 
     Only a request: it changes the register when someone approves it.
     """
+    sid = body.student_id
+    if sid is None and body.enrolment_id is not None:
+        enr = db.get(Enrolment, body.enrolment_id)
+        if enr:
+            sid = enr.student_id
+    if sid is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "student_id or enrolment_id required")
     row = leave.apply_for(
-        db, user, body.student_id, body.from_date, body.to_date, body.type, body.reason
+        db, user, sid, body.from_date, body.to_date, body.type, body.reason
     )
     return leave.to_out(db, row)
 

@@ -70,7 +70,7 @@ export function LoginPage() {
         </button>
 
         <p className="text-xs text-ink-faint">
-          Demo admin: admin@sunrisepublic.edu — password in PASSWORDS.md
+          Demo admin / leadership: admin@sunrisepublic.edu — password in PASSWORDS.md
         </p>
       </form>
     </div>

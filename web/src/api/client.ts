@@ -40,15 +40,19 @@ type DeletePaths = { [P in keyof paths]: paths[P] extends { delete: unknown } ? 
  */
 type Body<T> = T extends { requestBody: { content: { "application/json": infer B } } }
   ? B
-  : undefined;
+  : T extends { requestBody?: { content: { "application/json": infer B } } }
+    ? B
+    : undefined;
 
 /**
- * The body argument, present only when the route actually takes one.
- *
- * A plain `body?: Body<...>` would catch a wrong shape but still let a required
- * body be omitted entirely, which is the same runtime 422 by a shorter route.
+ * The body argument, mandatory when required by the route, optional when optional,
+ * and omitted when the route takes none.
  */
-type BodyArg<T> = Body<T> extends undefined ? [] : [body: Body<T>];
+type BodyArg<T> = T extends { requestBody: { content: { "application/json": infer B } } }
+  ? [body: B]
+  : T extends { requestBody?: { content: { "application/json": infer B } } }
+    ? [body?: B]
+    : [];
 
 /** The 200 body of one operation. `unknown` where the route is untyped. */
 type Ok<T> = T extends { responses: { 200: { content: { "application/json": infer R } } } }

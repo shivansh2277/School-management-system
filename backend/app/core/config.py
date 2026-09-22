@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
-    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:8081"
+    CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8081"
     SCHOOL_NAME: str = "Sunrise Public School"
     ACADEMIC_YEAR: str = "2025-26"
 

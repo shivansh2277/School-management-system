@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.models import (
+    AcademicYear,
     AdmissionCategory,
     Application,
     ApplicationGuardian,
@@ -22,6 +23,8 @@ from app.models import (
     ApplicationSibling,
     ApplicationStatus,
     Employee,
+    Enrolment,
+    EnrolmentStatus,
     Enquiry,
     EnquiryStatus,
     EnquirySource,
@@ -166,13 +169,16 @@ def _guardian_out(g: ApplicationGuardian) -> dict:
         "id": g.id,
         "relation": g.relation,
         "full_name": g.full_name,
-        "mobile": g.mobile,
-        "alternate_mobile": g.alternate_mobile,
-        "email": g.email,
+        "date_of_birth": g.date_of_birth,
+        "qualification": g.qualification,
         "occupation": g.occupation,
         "designation": g.designation,
         "organisation": g.organisation,
         "annual_income_band": g.annual_income_band,
+        "office_address": g.office_address,
+        "mobile": g.mobile,
+        "alternate_mobile": g.alternate_mobile,
+        "email": g.email,
         "is_primary": g.is_primary,
         "is_emergency_contact": g.is_emergency_contact,
         "is_authorised_for_pickup": g.is_authorised_for_pickup,
@@ -203,6 +209,33 @@ def _row(a: Application) -> dict:
 
 
 def _detail(db: Session, a: Application) -> dict:
+    enrolled_student = None
+    if a.student_id:
+        st = db.get(Student, a.student_id)
+        if st:
+            enr = db.scalar(
+                select(Enrolment).where(
+                    Enrolment.student_id == st.id,
+                    Enrolment.status == EnrolmentStatus.active,
+                )
+            )
+            ay_code = None
+            if enr and enr.academic_year_id:
+                ay = db.get(AcademicYear, enr.academic_year_id)
+                ay_code = ay.code if ay else None
+            elif a.cycle and getattr(a.cycle, "academic_year", None):
+                ay_code = a.cycle.academic_year.code
+
+            enrolled_student = {
+                "student_id": st.id,
+                "admission_no": st.admission_no,
+                "class_label": enr.class_section.label if (enr and enr.class_section) else a.class_applying_for,
+                "section": enr.class_section.section if (enr and enr.class_section) else None,
+                "roll_no": enr.roll_no if enr else None,
+                "academic_year": ay_code,
+                "status": enr.status.value if enr else "active",
+            }
+
     return {
         **_row(a),
         "first_name": a.first_name,
@@ -242,6 +275,7 @@ def _detail(db: Session, a: Application) -> dict:
         ],
         "completeness_pct": svc.completeness(db, a),
         "effective_category": svc.eligible_categories(a),
+        "enrolled_student": enrolled_student,
     }
 
 
@@ -298,6 +332,18 @@ def create_application(
         enquiry.converted_application_id = app.id
         enquiry.status = EnquiryStatus.converted
         enquiry.next_follow_up_on = None
+        if enquiry.enquirer_name and enquiry.mobile:
+            db.add(
+                ApplicationGuardian(
+                    school_id=user.school_id,
+                    application_id=app.id,
+                    relation=GuardianRelation.father,
+                    full_name=enquiry.enquirer_name,
+                    mobile=enquiry.mobile,
+                    email=enquiry.email,
+                    is_primary=True,
+                )
+            )
     db.commit()
     return _detail(db, app)
 

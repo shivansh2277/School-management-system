@@ -1,0 +1,2 @@
+timetable_slot_id,date,absent_teacher_id,substitute_teacher_id,reason,status,leave_request_id,school_id,id,created_at,updated_at
+605,2026-08-25,60,59,Casual leave coverage,assigned,35,36,217,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30

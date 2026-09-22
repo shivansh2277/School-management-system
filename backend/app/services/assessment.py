@@ -24,6 +24,8 @@ from sqlalchemy.orm import Session
 
 from app.models import (
     AuditAction,
+    ClassSection,
+    Enrolment,
     Exam,
     ExamSchedule,
     Mark,
@@ -107,15 +109,16 @@ def marks_roster(
 ) -> list[MarksRosterRow]:
     sched = _owned_schedule(db, user, exam_schedule_id, school_wide=school_wide)
     existing = {
-        m.student_id: m
+        m.enrolment_id: m
         for m in db.scalars(select(Mark).where(Mark.exam_schedule_id == sched.id))
     }
     rows = []
     for e in roster(db, sched.class_section_id):
-        m = existing.get(e.student_id)
+        m = existing.get(e.id)
         rows.append(
             MarksRosterRow(
                 student_id=e.student_id,
+                enrolment_id=e.id,
                 full_name=e.student.user.full_name,
                 roll_no=e.roll_no,
                 marks_obtained=m.marks_obtained if m else None,
@@ -147,9 +150,10 @@ def enter_marks(
     db: Session, user: User, body: MarksRequest, *, school_wide: bool = False
 ) -> list[MarksRosterRow]:
     sched = _owned_schedule(db, user, body.exam_schedule_id, school_wide=school_wide)
-    students = {e.student_id: e.student for e in roster(db, sched.class_section_id)}
+    section_roster = roster(db, sched.class_section_id)
+    enrolments_by_student = {e.student_id: e for e in section_roster}
     existing = {
-        m.student_id: m
+        m.enrolment_id: m
         for m in db.scalars(select(Mark).where(Mark.exam_schedule_id == sched.id))
     }
 
@@ -168,10 +172,38 @@ def enter_marks(
                 "A reason is required to change a mark after the paper is locked",
             )
 
+    sched_sec = db.get(ClassSection, sched.class_section_id)
     for entry in body.entries:
-        student = students.get(entry.student_id)
-        if student is None:
-            raise scoping.forbidden("Student is not in this class section")
+        enrolment = None
+        if entry.enrolment_id is not None:
+            enrolment = db.get(Enrolment, entry.enrolment_id)
+            if enrolment is None:
+                raise HTTPException(status.HTTP_404_NOT_FOUND, f"Enrolment {entry.enrolment_id} not found")
+            if enrolment.school_id != user.school_id:
+                raise HTTPException(status.HTTP_403_FORBIDDEN, "Cross-tenant access forbidden")
+            if sched_sec and enrolment.academic_year_id != sched_sec.academic_year_id:
+                raise HTTPException(
+                    status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    f"Enrolment belongs to year {enrolment.academic_year_id}, section is year {sched_sec.academic_year_id}",
+                )
+            if enrolment.class_section_id != sched.class_section_id:
+                raise HTTPException(
+                    status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    f"Enrolment is not in section {sched.class_section_id}",
+                )
+        elif entry.student_id is not None:
+            enrolment = enrolments_by_student.get(entry.student_id)
+            if enrolment is None:
+                st = db.get(Student, entry.student_id)
+                if st is None:
+                    raise HTTPException(status.HTTP_404_NOT_FOUND, f"Student {entry.student_id} not found")
+                if st.school_id != user.school_id:
+                    raise HTTPException(status.HTTP_403_FORBIDDEN, "Cross-tenant access forbidden")
+                raise scoping.forbidden("Student is not in this class section")
+        else:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "enrolment_id or student_id required")
+
+        student = enrolment.student
         score, absent, exempted = _state(entry)
         if score is not None and (score < 0 or score > sched.max_marks):
             raise HTTPException(
@@ -183,13 +215,13 @@ def enter_marks(
             # writing a null would erase a mark somebody already entered.
             continue
 
-        row = existing.get(entry.student_id)
+        row = existing.get(enrolment.id)
         if row is None:
             db.add(
                 Mark(
                     school_id=sched.school_id,
                     exam_schedule_id=sched.id,
-                    student_id=entry.student_id,
+                    enrolment_id=enrolment.id,
                     marks_obtained=score,
                     is_absent=absent,
                     is_exempted=exempted,
@@ -218,9 +250,7 @@ def enter_marks(
                 entity_id=row.id,
                 action=AuditAction.status_change,
                 before=before,
-                after=audit.snapshot(
-                    row, ["marks_obtained", "is_absent", "is_exempted"]
-                ),
+                after=audit.snapshot(row, ["marks_obtained", "is_absent", "is_exempted"]),
                 reason=body.reason,
             )
     db.commit()
@@ -301,7 +331,7 @@ def report_card(db: Session, student_id: int, exam_id: int) -> ReportCard:
         m.exam_schedule_id: m
         for m in db.scalars(
             select(Mark).where(
-                Mark.student_id == student_id,
+                Mark.enrolment_id == enrolment.id,
                 Mark.exam_schedule_id.in_([s.id for s in schedules] or [0]),
             )
         )

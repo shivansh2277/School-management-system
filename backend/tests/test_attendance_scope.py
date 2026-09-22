@@ -57,7 +57,6 @@ def test_a_teacher_reads_their_own_section(client, teacher, ids):
 
 
 def test_a_teacher_cannot_read_another_teachers_section(client, teacher, ids, db):
-    from sqlalchemy import select
 
     from app.models import ClassSection
 

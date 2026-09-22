@@ -1,0 +1,2 @@
+employee_id,leave_type_id,academic_year_id,from_date,to_date,is_half_day,days,reason,status,balance_exception,decided_by,decided_at,decision_note,school_id,id,created_at,updated_at
+60,9,49,2026-08-25,2026-08-25,False,1.0,Family medical consultation,approved,False,399,2026-08-24 16:30:00+05:30,Approved,36,35,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30

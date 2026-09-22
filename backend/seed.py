@@ -88,13 +88,26 @@ from app.models import (
     Subject,
     Employee,
     TimetableSlot,
+    StockItem,
+    StockRequest,
+    Grievance,
+    GrievanceReply,
     ScopeType,
     User,
     UserRole,
+
+    InAppNotification,
+    LeaveStatus,
+    StaffAttendance,
+    StaffLeaveRequest,
+    Substitution,
+    SubstitutionStatus,
 )
 
 ACADEMIC_YEAR = "2025-26"
 CASHIER_LOGIN = "counter@sunrisepublic.edu"
+RECEPTIONIST_LOGIN = "receptionist@sunrisepublic.edu"
+ADMISSION_OFFICER_LOGIN = "admission@sunrisepublic.edu"
 SCHOOL_CODE = "SPS"
 TODAY = date(2026, 9, 1)  # deterministic "today" so the seeded window never drifts
 
@@ -522,6 +535,27 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
     )
     db.add(admin)
 
+    # Leadership accounts: Principal, Vice Principal, Administration, Owner, Coordinator
+    # can use the same shared login (admin@sunrisepublic.edu) or their individual logins,
+    # all sharing the same password (Admin@123) and holding full super_admin permissions.
+    leadership_accounts = [
+        ("principal@sunrisepublic.edu", "Principal"),
+        ("viceprincipal@sunrisepublic.edu", "Vice Principal"),
+        ("owner@sunrisepublic.edu", "School Owner / Management"),
+        ("coordinator@sunrisepublic.edu", "Academic Coordinator"),
+    ]
+    for email_id, title in leadership_accounts:
+        db.add(
+            User(
+                role=UserRole.admin,
+                login_id=email_id,
+                password_hash=hash_password(DEMO_PASSWORDS[UserRole.admin]),
+                full_name=title,
+                email=email_id,
+                phone="+91 522 400 1234",
+            )
+        )
+
     # A cashier, so the segregation of duties in §5.5.9 is demonstrable rather
     # than theoretical: this account may take money and may not cancel it.
     cashier = User(
@@ -533,6 +567,28 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
         phone="+91 522 400 1235",
     )
     db.add(cashier)
+
+    # Front Desk Receptionist: dedicated role for handling admissions exclusively
+    receptionist = User(
+        role=UserRole.admin,
+        login_id=RECEPTIONIST_LOGIN,
+        password_hash=hash_password(DEMO_PASSWORDS[UserRole.admin]),
+        full_name="Front Desk Receptionist",
+        email=RECEPTIONIST_LOGIN,
+        phone="+91 522 400 1236",
+    )
+    db.add(receptionist)
+
+    # Admission Officer: owns application processing and enrollment fee collection
+    admission_officer = User(
+        role=UserRole.admin,
+        login_id=ADMISSION_OFFICER_LOGIN,
+        password_hash=hash_password(DEMO_PASSWORDS[UserRole.admin]),
+        full_name="Admission Officer",
+        email=ADMISSION_OFFICER_LOGIN,
+        phone="+91 522 400 1237",
+    )
+    db.add(admission_officer)
 
     teachers: list[Employee] = []
     departments = {}
@@ -1042,7 +1098,7 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
                     db.add(
                         Mark(
                             exam_schedule_id=sched.id,
-                            student_id=s.id,
+                            enrolment_id=enrolment_of[s.id].id,
                             marks_obtained=score,
                             entered_by=teacher_user_id[cst[(sec.id, sub.id)]],
                         )
@@ -1081,7 +1137,7 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
             db.add(
                 HomeworkSubmission(
                     homework_id=hw.id,
-                    student_id=s.id,
+                    enrolment_id=enrolment_of[s.id].id,
                     answer_text="Completed the exercise as instructed.",
                     submitted_at=datetime.combine(
                         assigned + timedelta(days=offset), time(18, 30), tzinfo=UTC
@@ -1292,11 +1348,399 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
             Setting.school_id == school.id, Setting.key == "feature.transport"
         )
     ) is None:
-        db.add(Setting(key="feature.transport", value=True))
+        db.add(Setting(school_id=school.id, key="feature.transport", value=True))
+    if db.scalar(
+        select(Setting).where(
+            Setting.school_id == school.id, Setting.key == "feature.inventory"
+        )
+    ) is None:
+        db.add(Setting(school_id=school.id, key="feature.inventory", value=True))
+    if db.scalar(
+        select(Setting).where(
+            Setting.school_id == school.id, Setting.key == "feature.grievances"
+        )
+    ) is None:
+        db.add(Setting(school_id=school.id, key="feature.grievances", value=True))
     db.flush()
+
+    _seed_inventory(db, school)
+    _seed_grievances(db, school)
+    _seed_operational_tables(db, school, academic_year_id)
 
     _assign_roles(db, roles, sections)
     db.commit()
+
+
+def _seed_inventory(db: Session, school) -> None:
+    """Seed stock items and requests for laboratory chemicals, glassware, models,
+    mathematics kits, art materials, chalks, dusters, printer paper and first-aid supplies.
+    Calibrated to exactly 18 low-stock items, 7 pending requests, and 3 discrepancies.
+    """
+    if db.scalar(select(StockItem).where(StockItem.school_id == school.id)) is not None:
+        return
+
+    admin_user = db.scalar(
+        select(User).where(User.school_id == school.id, User.role == UserRole.admin)
+    )
+    teachers = list(
+        db.scalars(
+            select(User).where(User.school_id == school.id, User.role == UserRole.teacher)
+        )
+    )
+    t_sci = teachers[0] if len(teachers) > 0 else admin_user
+    t_math = teachers[1] if len(teachers) > 1 else t_sci
+    t_art = teachers[2] if len(teachers) > 2 else t_sci
+
+    items_data = [
+        # --- Critical stock alerts (3 items)
+        ("Printer Paper A4 (75 GSM)", "Stationery", "Admin Store", "reams", 2, 10, Decimal("280.00"), True, False, None),
+        ("First-aid Supplies & Antiseptic Kits", "Medical Room", "Medical Room", "kits", 1, 5, Decimal("450.00"), True, False, None),
+        ("Science Chemicals (Titration Reagents)", "Science Lab", "Science Lab", "bottles", 2, 12, Decimal("320.00"), True, False, None),
+        # --- Science Lab (chemicals, glassware, models)
+        ("Hydrochloric Acid 500ml", "Science Lab", "Science Lab", "bottles", 3, 8, Decimal("180.00"), False, False, None),
+        ("Copper Sulphate Crystals 250g", "Science Lab", "Science Lab", "bottles", 4, 10, Decimal("150.00"), False, False, None),
+        ("Litmus Solution (Blue & Red)", "Science Lab", "Science Lab", "bottles", 2, 6, Decimal("90.00"), False, False, None),
+        ("Sodium Hydroxide Pellets 500g", "Science Lab", "Science Lab", "bottles", 16, 6, Decimal("220.00"), False, False, None),
+        ("Borosil Glass Beakers 250ml", "Science Lab", "Science Lab", "pieces", 8, 20, Decimal("85.00"), False, False, None),
+        ("Test Tubes Pyrex (Pack of 50)", "Science Lab", "Science Lab", "boxes", 3, 10, Decimal("350.00"), False, True, "Physical audit found 1 box damaged and 1 box missing after term practicals"),
+        ("Conical Flasks 500ml", "Science Lab", "Science Lab", "pieces", 14, 10, Decimal("110.00"), False, False, None),
+        ("Graduated Measuring Cylinders 100ml", "Science Lab", "Science Lab", "pieces", 6, 15, Decimal("140.00"), False, False, None),
+        ("Human Anatomy Torso Model 3D", "Science Lab", "Science Lab", "pieces", 1, 2, Decimal("4500.00"), False, False, None),
+        ("DNA Double Helix Biological Model", "Science Lab", "Science Lab", "pieces", 2, 3, Decimal("1800.00"), False, False, None),
+        ("Solar System Planetary Motion Model", "Science Lab", "Science Lab", "pieces", 3, 2, Decimal("2400.00"), False, False, None),
+        ("Electric Circuit Demonstration Kit", "Science Lab", "Science Lab", "kits", 4, 8, Decimal("750.00"), False, False, None),
+        # --- Mathematics (mathematics kits)
+        ("Geometry Wooden Box Set for Blackboard", "Mathematics", "Math Lab", "sets", 5, 15, Decimal("650.00"), False, False, None),
+        ("Fraction Discs & Circles Demonstration Kit", "Mathematics", "Math Lab", "kits", 3, 10, Decimal("420.00"), False, False, None),
+        ("Algebra Tiles Student Kit", "Mathematics", "Math Lab", "kits", 4, 10, Decimal("380.00"), False, False, None),
+        ("Junior Abacus Display Models", "Mathematics", "Math Lab", "pieces", 12, 6, Decimal("290.00"), False, False, None),
+        ("Trigonometry Clinometer Set", "Mathematics", "Math Lab", "kits", 8, 5, Decimal("320.00"), False, False, None),
+        # --- Art & Craft (art materials)
+        ("Camel Poster Colours 12-Pack", "Art & Craft", "Art Room", "boxes", 6, 20, Decimal("160.00"), False, True, "Audit count short by 4 boxes compared to store requisition receipt"),
+        ("A3 Cartridge Drawing Sheets", "Art & Craft", "Art Room", "reams", 2, 8, Decimal("340.00"), False, False, None),
+        ("Acrylic Paint Tubes 12-Color Set", "Art & Craft", "Art Room", "sets", 18, 10, Decimal("240.00"), False, False, None),
+        ("Modelling Clay 500g Assorted", "Art & Craft", "Art Room", "packs", 25, 15, Decimal("95.00"), False, False, None),
+        ("Craft Safety Scissors Round-Tip", "Art & Craft", "Art Room", "pairs", 30, 25, Decimal("45.00"), False, False, None),
+        # --- Stationery & Supplies (chalks, dusters, office stationery)
+        ("White Dustless Chalk (Box of 100)", "Stationery", "Admin Store", "boxes", 8, 30, Decimal("70.00"), False, False, None),
+        ("Coloured Chalk (Box of 50)", "Stationery", "Admin Store", "boxes", 15, 10, Decimal("55.00"), False, False, None),
+        ("Wooden Magnetic Dusters", "Stationery", "Staff Room", "pieces", 12, 10, Decimal("45.00"), False, True, "3 dusters reported misplaced from Class 8-A and 9-A classrooms"),
+        ("Whiteboard Marker Pens (Pack of 4)", "Stationery", "Admin Store", "packs", 24, 15, Decimal("120.00"), False, False, None),
+        ("Official School Envelopes A4 (Pack of 100)", "Stationery", "Admin Store", "packs", 14, 8, Decimal("180.00"), False, False, None),
+        ("Digital Infrared Forehead Thermometer", "Medical Room", "Medical Room", "pieces", 4, 2, Decimal("950.00"), False, False, None),
+    ]
+
+    saved_items = {}
+    for name, cat, loc, unit, cur_q, min_q, cost, crit, disc, disc_notes in items_data:
+        it = StockItem(
+            school_id=school.id,
+            name=name,
+            category=cat,
+            location=loc,
+            unit=unit,
+            current_quantity=cur_q,
+            min_quantity=min_q,
+            unit_cost=cost,
+            is_critical=crit,
+            has_discrepancy=disc,
+            discrepancy_notes=disc_notes,
+            last_checked_at=datetime.combine(TODAY - timedelta(days=2), time(11, 30), tzinfo=UTC),
+            last_checked_by_id=admin_user.id if admin_user else None,
+        )
+        db.add(it)
+        saved_items[name] = it
+
+    db.flush()
+
+    requests_data = [
+        # Exactly 7 Pending Approvals & Teacher Flags
+        ("Printer Paper A4 (75 GSM)", "Stationery", "Admin Store", 20, "critical", "pending", "purchase", admin_user, "Emergency reorder: exam question paper printing begins next week"),
+        ("First-aid Supplies & Antiseptic Kits", "Medical Room", "Medical Room", 6, "urgent", "pending", "purchase", admin_user, "Annual sports trials and field day replenishment for dispensary"),
+        ("Science Chemicals (Titration Reagents)", "Science Lab", "Science Lab", 5, "critical", "pending", "diminishing", t_sci, "Class 10 CBSE titration practicals scheduled next Tuesday; chemicals almost exhausted"),
+        ("White Dustless Chalk (Box of 100)", "Stationery", "Admin Store", 25, "urgent", "pending", "diminishing", t_math, "Ground floor classrooms ran out of chalk boxes today"),
+        ("Borosil Glass Beakers 250ml", "Science Lab", "Science Lab", 8, "normal", "pending", "purchase", t_sci, "Replenish glassware breakages from Term 1 laboratory sessions"),
+        ("Geometry Wooden Box Set for Blackboard", "Mathematics", "Math Lab", 6, "normal", "pending", "diminishing", t_math, "Class 9 coordinate geometry construction sessions start next week"),
+        ("Camel Poster Colours 12-Pack", "Art & Craft", "Art Room", 12, "normal", "pending", "diminishing", t_art, "Inter-school Art Exhibition in October requires additional poster colour sets"),
+        # Historical resolved requests (2 requests)
+        ("A3 Cartridge Drawing Sheets", "Art & Craft", "Art Room", 5, "normal", "approved", "purchase", t_art, "Quarterly art supplies requisition"),
+        ("Whiteboard Marker Pens (Pack of 4)", "Stationery", "Admin Store", 10, "normal", "fulfilled", "issue", admin_user, "Monthly allocation for senior staff room"),
+    ]
+
+    for item_name, cat, loc, qty, urg, req_stat, ftype, req_user, reason in requests_data:
+        matched_item = saved_items.get(item_name)
+        req = StockRequest(
+            school_id=school.id,
+            item_id=matched_item.id if matched_item else None,
+            item_name=item_name,
+            category=cat,
+            location=loc,
+            quantity_requested=qty,
+            urgency=urg,
+            status=req_stat,
+            flag_type=ftype,
+            requested_by_id=req_user.id if req_user else admin_user.id,
+            requested_by_name=req_user.full_name if req_user else "Administrator",
+            reason=reason,
+            decided_by_id=admin_user.id if req_stat != "pending" else None,
+            decided_at=datetime.combine(TODAY - timedelta(days=1), time(16, 0), tzinfo=UTC) if req_stat != "pending" else None,
+            decision_note="Approved as per term budget" if req_stat != "pending" else None,
+        )
+        db.add(req)
+
+    db.flush()
+
+
+def _seed_grievances(db: Session, school) -> None:
+    """Seed demo grievances from teachers and parents with replies, status, and assignments."""
+    if db.scalar(select(Grievance).where(Grievance.school_id == school.id)) is not None:
+        return
+
+    admin_user = db.scalar(
+        select(User).where(User.school_id == school.id, User.role == UserRole.admin)
+    )
+    teachers = db.scalars(
+        select(Employee).where(Employee.school_id == school.id)
+    ).all()
+    t1 = teachers[0] if teachers else None
+    t2 = teachers[1] if len(teachers) > 1 else t1
+
+    students = db.scalars(select(Student).where(Student.school_id == school.id)).all()
+    s1 = students[0] if students else None
+    s2 = students[1] if len(students) > 1 else s1
+    e1 = db.scalar(select(Enrolment).where(Enrolment.student_id == s1.id).order_by(Enrolment.id.desc())) if s1 else None
+    e2 = db.scalar(select(Enrolment).where(Enrolment.student_id == s2.id).order_by(Enrolment.id.desc())) if s2 else None
+
+    guardians = db.scalars(select(Guardian).where(Guardian.school_id == school.id)).all()
+    g1 = guardians[0] if guardians else None
+
+    # Grievance 1: Teacher (Open, Urgent)
+    g1_item = Grievance(
+        school_id=school.id,
+        title="Broken Projector in Senior Physics Lab Room 204",
+        description="The ceiling mounted HDMI projector is flickering constantly and shuts down mid-lecture. Class 12 practical demonstrations are affected.",
+        category="facilities",
+        raised_by_id=t1.user_id if t1 else admin_user.id,
+        raised_by_role="teacher",
+        raised_by_name=t1.user.full_name if t1 else "Teacher",
+        status="open",
+        priority="urgent",
+        created_at=datetime.combine(TODAY - timedelta(days=2), time(9, 30), tzinfo=UTC),
+    )
+    db.add(g1_item)
+
+    # Grievance 2: Parent (In Progress, High, assigned to Teacher Rajesh/t2)
+    g2_item = Grievance(
+        school_id=school.id,
+        title="Bus Route 2 morning pickup delay and route confusion",
+        description="For the past 3 days, Bus #2 has arrived 25 minutes behind schedule at Sector 14 stop. Children reached school after morning assembly.",
+        category="transport",
+        raised_by_id=g1.user_id if g1 else admin_user.id,
+        raised_by_role="parent",
+        raised_by_name=g1.user.full_name if g1 else "Parent",
+        student_id=s1.id if s1 else None,
+        student_name=s1.user.full_name if s1 else None,
+        enrolment_id=e1.id if e1 else None,
+        status="in_progress",
+        priority="high",
+        assigned_to_id=t2.id if t2 else None,
+        assigned_to_name=t2.user.full_name if t2 else None,
+        created_at=datetime.combine(TODAY - timedelta(days=3), time(8, 15), tzinfo=UTC),
+    )
+    db.add(g2_item)
+    db.flush()
+
+    db.add(
+        GrievanceReply(
+            school_id=school.id,
+            grievance_id=g2_item.id,
+            author_id=admin_user.id,
+            author_name=admin_user.full_name,
+            author_role="admin",
+            message="We have contacted the transport supervisor and assigned the class teacher to check arrival logs.",
+            created_at=datetime.combine(TODAY - timedelta(days=2), time(11, 0), tzinfo=UTC),
+        )
+    )
+    db.add(
+        GrievanceReply(
+            school_id=school.id,
+            grievance_id=g2_item.id,
+            author_id=g1.user_id if g1 else admin_user.id,
+            author_name=g1.user.full_name if g1 else "Parent",
+            author_role="parent",
+            message="Thank you for the prompt response. We hope the morning schedule normalizes by tomorrow.",
+            created_at=datetime.combine(TODAY - timedelta(days=1), time(14, 20), tzinfo=UTC),
+        )
+    )
+
+    # Grievance 3: Teacher (In Progress, Medium)
+    g3_item = Grievance(
+        school_id=school.id,
+        title="Shortage of Class 10 Chemistry Lab Practical Manuals",
+        description="15 copies of the CBSE laboratory manual are missing or worn out before mid-term assessments.",
+        category="academic",
+        raised_by_id=t2.user_id if t2 else admin_user.id,
+        raised_by_role="teacher",
+        raised_by_name=t2.user.full_name if t2 else "Teacher",
+        status="in_progress",
+        priority="medium",
+        created_at=datetime.combine(TODAY - timedelta(days=4), time(10, 0), tzinfo=UTC),
+    )
+    db.add(g3_item)
+    db.flush()
+    db.add(
+        GrievanceReply(
+            school_id=school.id,
+            grievance_id=g3_item.id,
+            author_id=admin_user.id,
+            author_name=admin_user.full_name,
+            author_role="admin",
+            message="Procurement order placed with publisher. Deliveries expected within 4 business days.",
+            created_at=datetime.combine(TODAY - timedelta(days=3), time(16, 0), tzinfo=UTC),
+        )
+    )
+
+    # Grievance 4: Parent (Resolved, Medium)
+    g4_item = Grievance(
+        school_id=school.id,
+        title="Fee receipt discrepancy for Q2 Tuition installment",
+        description="Paid fee online via UPI reference #981245; the ERP portal was still showing overdue notice yesterday.",
+        category="fees",
+        raised_by_id=g1.user_id if g1 else admin_user.id,
+        raised_by_role="parent",
+        raised_by_name=g1.user.full_name if g1 else "Parent",
+        student_id=s2.id if s2 else None,
+        student_name=s2.user.full_name if s2 else None,
+        enrolment_id=e2.id if e2 else None,
+        status="resolved",
+        priority="medium",
+        resolution_notes="Payment verified and reconciled against bank statement. Receipt generated and portal updated.",
+        resolved_at=datetime.combine(TODAY - timedelta(days=1), time(17, 0), tzinfo=UTC),
+        created_at=datetime.combine(TODAY - timedelta(days=5), time(12, 0), tzinfo=UTC),
+    )
+    db.add(g4_item)
+    db.flush()
+    db.add(
+        GrievanceReply(
+            school_id=school.id,
+            grievance_id=g4_item.id,
+            author_id=admin_user.id,
+            author_name=admin_user.full_name,
+            author_role="admin",
+            message="Reconciliation complete. Your receipt is now accessible under Fee History.",
+            created_at=datetime.combine(TODAY - timedelta(days=1), time(16, 45), tzinfo=UTC),
+        )
+    )
+
+    # Grievance 5: Teacher (Open, Medium)
+    g5_item = Grievance(
+        school_id=school.id,
+        title="Air conditioning malfunctioning in Staff Room 1",
+        description="The split AC in Staff Room 1 is leaking water and not cooling properly during the afternoon hours.",
+        category="facilities",
+        raised_by_id=t1.user_id if t1 else admin_user.id,
+        raised_by_role="teacher",
+        raised_by_name=t1.user.full_name if t1 else "Teacher",
+        status="open",
+        priority="medium",
+        created_at=datetime.combine(TODAY - timedelta(hours=18), time(14, 0), tzinfo=UTC),
+    )
+    db.add(g5_item)
+    db.flush()
+
+
+def _seed_operational_tables(db: Session, school, academic_year_id: int) -> None:
+    """Seed sample rows for operational depth tables: staff_leave_requests,
+    staff_attendance, substitutions, and in_app_notifications."""
+    if db.scalar(select(StaffLeaveRequest).where(StaffLeaveRequest.school_id == school.id)) is not None:
+        return
+
+    admin_user = db.scalar(
+        select(User).where(User.school_id == school.id, User.role == UserRole.admin)
+    )
+    teachers = list(db.scalars(select(Employee).where(Employee.school_id == school.id)))
+    # Target the last teacher (TCH012) for operational seed sample rows,
+    # leaving teacher_1 (TCH001) and slot 1 clean for test suite invariants.
+    target_emp = teachers[-1] if teachers else None
+    sub_emp = teachers[-2] if len(teachers) > 1 else target_emp
+
+    sci_dept = db.scalar(select(Department).where(Department.school_id == school.id, Department.code == "SCI"))
+    cl_type = db.scalar(select(LeaveTypeDef).where(LeaveTypeDef.school_id == school.id, LeaveTypeDef.code == "CL"))
+
+
+    # 2. Staff Leave Request & Staff Attendance
+    if target_emp:
+        leave_req = StaffLeaveRequest(
+            school_id=school.id,
+            employee_id=target_emp.id,
+            leave_type_id=cl_type.id if cl_type else None,
+            academic_year_id=academic_year_id,
+            from_date=TODAY - timedelta(days=7),
+            to_date=TODAY - timedelta(days=7),
+            is_half_day=False,
+            days=Decimal("1.0"),
+            reason="Family medical consultation",
+            status=LeaveStatus.approved,
+            balance_exception=False,
+            decided_by=admin_user.id if admin_user else None,
+            decided_at=datetime.combine(TODAY - timedelta(days=8), time(11, 0), tzinfo=UTC),
+            decision_note="Approved",
+        )
+        db.add(leave_req)
+        db.flush()
+
+        db.add(
+            StaffAttendance(
+                school_id=school.id,
+                employee_id=target_emp.id,
+                date=TODAY - timedelta(days=1),
+                status=AttendanceStatus.present,
+                check_in=time(7, 55),
+                check_out=time(14, 10),
+                marked_by=admin_user.id if admin_user else None,
+                remarks="Biometric scan",
+            )
+        )
+
+        # 3. Timetable Substitution
+        target_slot = db.scalar(
+            select(TimetableSlot).where(
+                TimetableSlot.school_id == school.id,
+                TimetableSlot.teacher_id == target_emp.id,
+            )
+        )
+        if not target_slot:
+            target_slot = db.scalars(
+                select(TimetableSlot).where(TimetableSlot.school_id == school.id).order_by(TimetableSlot.id.desc())
+            ).first()
+
+        if target_slot:
+            db.add(
+                Substitution(
+                    school_id=school.id,
+                    timetable_slot_id=target_slot.id,
+                    date=TODAY - timedelta(days=7),
+                    absent_teacher_id=target_emp.id,
+                    substitute_teacher_id=sub_emp.id if sub_emp else target_emp.id,
+                    reason="Casual leave coverage",
+                    status=SubstitutionStatus.assigned,
+                    leave_request_id=leave_req.id,
+                )
+            )
+
+        # 4. In-App Notification
+        db.add(
+            InAppNotification(
+                school_id=school.id,
+                user_id=target_emp.user_id,
+                title="Leave Approved",
+                message="Your Casual Leave for 25-Aug has been approved.",
+                category="leave",
+                link_url="/teacher/leaves",
+                is_read=False,
+            )
+        )
+
+    db.flush()
 
 
 def _seed_transport(db: Session, school, departments: dict, enrolment_of: dict, students: list) -> None:
@@ -1485,6 +1929,10 @@ def _assign_roles(db: Session, roles: dict, sections: list) -> None:
         code = (
             "fee_collector"
             if user.login_id == CASHIER_LOGIN
+            else "receptionist"
+            if user.login_id == RECEPTIONIST_LOGIN
+            else "admission_officer"
+            if user.login_id == ADMISSION_OFFICER_LOGIN
             else "transport_manager"
             if user.login_id.startswith("TRM")
             else LEGACY_ROLE_MAP[user.role.value]

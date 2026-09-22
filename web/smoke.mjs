@@ -80,6 +80,12 @@ const SCREEN_ENDPOINTS = {
   "Fee setup": { path: "/admin/fees/plans", module: "fees" },
   "Period close": { path: "/admin/fees/periods", module: "fees" },
   Notices: { path: "/admin/notices", module: "communication" },
+  "Admission overview": { path: "/admin/admission/cycles", module: "admission" },
+  Enquiries: { path: "/admin/admission/enquiries", module: "admission" },
+  Applications: { path: "/admin/admission/applications", module: "admission" },
+  "Merit & selection": { path: "/admin/admission/cycles", module: "admission" },
+  Waitlist: { path: "/admin/admission/cycles", module: "admission" },
+  "Admission reports": { path: "/admin/admission/cycles", module: "admission" },
   Settings: { path: "/admin/settings" },
   Configuration: { path: "/admin/configuration" },
 };

@@ -22,7 +22,7 @@ export function Shell() {
         className={`${sidebarOpen ? "w-60" : "w-0 invisible"} shrink-0 overflow-hidden bg-primary transition-[width,visibility] duration-200 ease-in-out`}
       >
        <div className="w-60 h-full text-white/90 p-4 flex flex-col">
-        <div className="px-2 py-3 mb-2">
+        <div className="px-3 py-3 mb-2">
           <p className="font-semibold text-white">Sunrise</p>
           <p className="text-xs text-white/70">Public School</p>
         </div>

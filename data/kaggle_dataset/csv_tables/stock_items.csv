@@ -1,0 +1,32 @@
+name,category,location,unit,current_quantity,min_quantity,unit_cost,is_critical,has_discrepancy,discrepancy_notes,last_checked_at,last_checked_by_id,school_id,id,created_at,updated_at
+Printer Paper A4 (75 GSM),Stationery,Admin Store,reams,2,10,280.00,True,False,,2026-08-30 17:00:00+05:30,399,36,34,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+First-aid Supplies & Antiseptic Kits,Medical Room,Medical Room,kits,1,5,450.00,True,False,,2026-08-30 17:00:00+05:30,399,36,35,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Science Chemicals (Titration Reagents),Science Lab,Science Lab,bottles,2,12,320.00,True,False,,2026-08-30 17:00:00+05:30,399,36,36,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Hydrochloric Acid 500ml,Science Lab,Science Lab,bottles,3,8,180.00,False,False,,2026-08-30 17:00:00+05:30,399,36,37,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Copper Sulphate Crystals 250g,Science Lab,Science Lab,bottles,4,10,150.00,False,False,,2026-08-30 17:00:00+05:30,399,36,38,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Litmus Solution (Blue & Red),Science Lab,Science Lab,bottles,2,6,90.00,False,False,,2026-08-30 17:00:00+05:30,399,36,39,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Sodium Hydroxide Pellets 500g,Science Lab,Science Lab,bottles,16,6,220.00,False,False,,2026-08-30 17:00:00+05:30,399,36,40,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Borosil Glass Beakers 250ml,Science Lab,Science Lab,pieces,8,20,85.00,False,False,,2026-08-30 17:00:00+05:30,399,36,41,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Test Tubes Pyrex (Pack of 50),Science Lab,Science Lab,boxes,3,10,350.00,False,True,Physical audit found 1 box damaged and 1 box missing after term practicals,2026-08-30 17:00:00+05:30,399,36,42,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Conical Flasks 500ml,Science Lab,Science Lab,pieces,14,10,110.00,False,False,,2026-08-30 17:00:00+05:30,399,36,43,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Graduated Measuring Cylinders 100ml,Science Lab,Science Lab,pieces,6,15,140.00,False,False,,2026-08-30 17:00:00+05:30,399,36,44,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Human Anatomy Torso Model 3D,Science Lab,Science Lab,pieces,1,2,4500.00,False,False,,2026-08-30 17:00:00+05:30,399,36,45,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+DNA Double Helix Biological Model,Science Lab,Science Lab,pieces,2,3,1800.00,False,False,,2026-08-30 17:00:00+05:30,399,36,46,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Solar System Planetary Motion Model,Science Lab,Science Lab,pieces,3,2,2400.00,False,False,,2026-08-30 17:00:00+05:30,399,36,47,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Electric Circuit Demonstration Kit,Science Lab,Science Lab,kits,4,8,750.00,False,False,,2026-08-30 17:00:00+05:30,399,36,48,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Geometry Wooden Box Set for Blackboard,Mathematics,Math Lab,sets,5,15,650.00,False,False,,2026-08-30 17:00:00+05:30,399,36,49,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Fraction Discs & Circles Demonstration Kit,Mathematics,Math Lab,kits,3,10,420.00,False,False,,2026-08-30 17:00:00+05:30,399,36,50,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Algebra Tiles Student Kit,Mathematics,Math Lab,kits,4,10,380.00,False,False,,2026-08-30 17:00:00+05:30,399,36,51,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Junior Abacus Display Models,Mathematics,Math Lab,pieces,12,6,290.00,False,False,,2026-08-30 17:00:00+05:30,399,36,52,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Trigonometry Clinometer Set,Mathematics,Math Lab,kits,8,5,320.00,False,False,,2026-08-30 17:00:00+05:30,399,36,53,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Camel Poster Colours 12-Pack,Art & Craft,Art Room,boxes,6,20,160.00,False,True,Audit count short by 4 boxes compared to store requisition receipt,2026-08-30 17:00:00+05:30,399,36,54,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+A3 Cartridge Drawing Sheets,Art & Craft,Art Room,reams,2,8,340.00,False,False,,2026-08-30 17:00:00+05:30,399,36,55,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Acrylic Paint Tubes 12-Color Set,Art & Craft,Art Room,sets,18,10,240.00,False,False,,2026-08-30 17:00:00+05:30,399,36,56,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Modelling Clay 500g Assorted,Art & Craft,Art Room,packs,25,15,95.00,False,False,,2026-08-30 17:00:00+05:30,399,36,57,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Craft Safety Scissors Round-Tip,Art & Craft,Art Room,pairs,30,25,45.00,False,False,,2026-08-30 17:00:00+05:30,399,36,58,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+White Dustless Chalk (Box of 100),Stationery,Admin Store,boxes,8,30,70.00,False,False,,2026-08-30 17:00:00+05:30,399,36,59,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Coloured Chalk (Box of 50),Stationery,Admin Store,boxes,15,10,55.00,False,False,,2026-08-30 17:00:00+05:30,399,36,60,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Wooden Magnetic Dusters,Stationery,Staff Room,pieces,12,10,45.00,False,True,3 dusters reported misplaced from Class 8-A and 9-A classrooms,2026-08-30 17:00:00+05:30,399,36,61,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Whiteboard Marker Pens (Pack of 4),Stationery,Admin Store,packs,24,15,120.00,False,False,,2026-08-30 17:00:00+05:30,399,36,62,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Official School Envelopes A4 (Pack of 100),Stationery,Admin Store,packs,14,8,180.00,False,False,,2026-08-30 17:00:00+05:30,399,36,63,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30
+Digital Infrared Forehead Thermometer,Medical Room,Medical Room,pieces,4,2,950.00,False,False,,2026-08-30 17:00:00+05:30,399,36,64,2026-09-21 13:43:27.486575+05:30,2026-09-21 13:43:27.486575+05:30

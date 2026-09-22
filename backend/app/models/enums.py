@@ -56,8 +56,7 @@ class OwnerType(StrEnum):
 
 class EmployeeStatus(StrEnum):
     """ERP_BLUEPRINT §5.3.7, trimmed to the states this system can actually
-    reach. `applicant`, `offered` and `onboarding` belong to recruitment, which
-    is not built — adding them now would be three statuses nothing can set.
+    reach without unhandled intermediate statuses.
     """
 
     active = "active"
@@ -164,9 +163,11 @@ class SubstitutionStatus(StrEnum):
     was assigned to is the number a principal wants on a dashboard."""
 
     pending = "pending"
+    provisional = "provisional"
     assigned = "assigned"
     unfilled = "unfilled"
     completed = "completed"
+
 
 
 class LeaveType(StrEnum):

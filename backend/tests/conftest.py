@@ -56,6 +56,10 @@ def engine():
     else:
         Base.metadata.drop_all(eng)
     Base.metadata.create_all(eng)
+    if url.startswith("postgresql"):
+        with eng.begin() as conn:
+            conn.execute(text("CREATE TABLE IF NOT EXISTS alembic_version (version_num VARCHAR(32) NOT NULL, CONSTRAINT alembic_version_pkc PRIMARY KEY (version_num))"))
+            conn.execute(text("INSERT INTO alembic_version (version_num) VALUES ('b2c3d4e5f6a7') ON CONFLICT DO NOTHING"))
     yield eng
     eng.dispose()
 
@@ -113,6 +117,18 @@ def auth(token: str) -> dict[str, str]:
 @pytest.fixture()
 def admin(client):
     return auth(_token(client, "admin", "admin@sunrisepublic.edu", "Admin@123"))
+
+
+@pytest.fixture()
+def receptionist(client):
+    """The receptionist: holds admission permissions exclusively."""
+    return auth(_token(client, "admin", "receptionist@sunrisepublic.edu", "Admin@123"))
+
+
+@pytest.fixture()
+def admission_officer(client):
+    """The admission officer: holds application processing and fee collection permissions."""
+    return auth(_token(client, "admin", "admission@sunrisepublic.edu", "Admin@123"))
 
 
 @pytest.fixture()

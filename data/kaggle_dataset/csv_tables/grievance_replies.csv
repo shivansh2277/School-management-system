@@ -1,0 +1,5 @@
+grievance_id,author_id,author_name,author_role,message,is_internal,school_id,id,created_at,updated_at
+12,399,Office Administrator,admin,We have contacted the transport supervisor and assigned the class teacher to check arrival logs.,False,36,6,2026-08-30 16:30:00+05:30,2026-09-21 13:43:27.486575+05:30
+12,519,Suresh Sharma,parent,Thank you for the prompt response. We hope the morning schedule normalizes by tomorrow.,False,36,7,2026-08-31 19:50:00+05:30,2026-09-21 13:43:27.486575+05:30
+13,399,Office Administrator,admin,Procurement order placed with publisher. Deliveries expected within 4 business days.,False,36,8,2026-08-29 21:30:00+05:30,2026-09-21 13:43:27.486575+05:30
+14,399,Office Administrator,admin,Reconciliation complete. Your receipt is now accessible under Fee History.,False,36,9,2026-08-31 22:15:00+05:30,2026-09-21 13:43:27.486575+05:30
