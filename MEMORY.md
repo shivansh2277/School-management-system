@@ -1,23 +1,23 @@
 # MEMORY.md — Sunrise School ERP
 
-**Date:** 21 September 2026  
+**Date:** 23 September 2026  
 **Canonical State Document:** [`SINGLE_SOURCE_OF_TRUTH.md`](SINGLE_SOURCE_OF_TRUTH.md)  
-**Completed Milestone:** Session 9 Completed: Mobile Navigation Redesign (Acharya Prashant 4 Bottom Tabs + Drawer), Admin Dashboard Fee Graph Removal, Teacher Recruitment Decommissioning, and Global Red-X Controls.  
-**Active Session Specification:** [`SESSION-HANDOFF-9.md`](SESSION-HANDOFF-9.md)  
+**Completed Milestone:** Session 10 Completed: Receptionist Operational Suite (Found & Lost, Student Gate Passes, Principal & Teacher Meeting Slips, Important Directory, Reception Fee Counter, and Admission Dossier Enhancement) & Strict Front-Desk Navigation Hardening.  
+**Active Session Specification:** [`SESSION-HANDOFF-10.md`](SESSION-HANDOFF-10.md)  
 **Active Branch:** `slice/office-feedback` (strictly local-only per owner directive)  
-**Alembic Migration Head:** `c3d4e5f6a7b8` (`c3d4e5f6a7b8_drop_recruitment_tables.py`)  
+**Alembic Migration Head:** `d4e5f6a7b8c9` (`d4e5f6a7b8c9_receptionist_operations.py`)  
 
 ---
 
 ## 1. Executive Summary & Current Status
 
 Sunrise School ERP is a multi-tenant school management system built for independent private schools.
-- **Backend Test Suite**: **729 passed, 1 skipped, 0 failed** in 229s (100% green across all 730 tests).
-- **26 Live Screens** registered in `web/src/screens.ts` (all functional and permission-gated; recruitment purged).
+- **Backend Test Suite**: **735 passed, 1 skipped, 0 failed** (100% green across all 736 tests).
+- **31 Live Screens** registered in `web/src/screens.ts` (all functional and permission-gated; 5 Front Desk screens live).
 - **18 Active Staff** in employee directory (`employees`).
-- **Database**: PostgreSQL tables in `sunrise_test`. Alembic head `c3d4e5f6a7b8` drops `candidates` and `candidate_offers`.
+- **Database**: PostgreSQL tables in `sunrise_test`. Alembic head `d4e5f6a7b8c9` adds all 6 reception tables.
 - **TypeScript**: 0 errors across backend, web (`npx tsc --noEmit`), and mobile (`npx tsc --noEmit`).
-- **Web Unit Tests**: Vitest 2.1 — **82 passed, 2 skipped across 18 test files** (100% green).
+- **Web Unit Tests**: Vitest 2.1 — **84 passed, 2 skipped across 18 test files** (100% green).
 - **Mobile Stack**: Expo SDK 57, React Native `0.86.3`. Navigation redesigned with 4 bottom tabs per role, top-left hamburger opening smooth drawer (`NavDrawer.tsx`), multi-child switcher, and zero lost features via `options={{ href: null }}`. Red X dismiss buttons.
 - **Primary Canonical PDFs in `docs/`**:
   1. `Sunrise-ERP-Admission-Demo-Guide.pdf` (265 KB, Complete Digital Admission Dossier & Interactive Testing Guide)
@@ -147,35 +147,34 @@ Sunrise School ERP is a multi-tenant school management system built for independ
 - **Global Red-X Close Controls**:
   - Replaced textual "Close" buttons on modals/drawers across web and mobile with standardized Red X icon buttons (`#ef4444` / `text-red-500` / `theme.danger`).
 
+### K. Session 10 — Receptionist Operational Responsibilities & Sidebar Cleanup (23 Sep 2026)
+- **Found & Lost Register (`/reception/found-items`)**: Multi-step found item intake, broadcast alerts, student verification search, and claim/handover tracking with photo recording (`found_items` table).
+- **Student Gate Pass & Authorized Roster (`/reception/passes`)**: One-time early departure gate passes (`student_passes`), permanent pre-approved pickup roster (`student_authorized_persons`), and official printable A5 gate pass slip (`PrintableStudentPass.tsx`).
+- **Visitor Meeting Slips (`/reception/meetings`)**: Dual-tab visitor workflow for Principal executive appointments and Teacher academic parent interactions with Accept/Wait/Decline response states and printable slips.
+- **Important Emergency Directory (`/reception/directory`)**: 7 seeded verified civic, police, and medical contacts; read-only for receptionist, full CRUD for admin.
+- **Front Desk Fee Counter (`/reception/fee-counter`)**: Student lookup, FIFO invoice settlement, complete-month-only collection invariant, and printable receipt voucher (`PrintableFeeReceiptSlip.tsx`).
+- **Admission Dossier Print Enhancement**: Upgraded `PrintableAdmissionDossier.tsx` with all mandatory audit fields.
+- **Sidebar Navigation Leak Fix**: Removed `fees.invoice.read` from receptionist to cleanly eliminate admin fee screens (`Fees`, `Defaulters`, `Fee setup`, `Period close`) from front desk sidebar navigation. Verified with 12/12 automated browser checks.
+
 ---
 
-## 3. Active Status: Session 9 Complete
+## 3. Active Status: Session 10 Complete, Session 11 Handoff
 
-Session 9 has been fully delivered and verified on local branch `slice/office-feedback` (strictly local-only):
-- Backend tests: 729 passed, 1 skipped, 0 failed (100% green).
-- Web unit tests: 82 passed, 2 skipped across 18 test files (100% green).
+Session 10 has been fully delivered and verified on local branch `slice/office-feedback` (strictly local-only):
+- Backend tests: 735 passed, 1 skipped, 0 failed (100% green).
+- Web unit tests: 84 passed, 2 skipped across 18 test files (100% green).
 - Web typecheck: 0 errors (`npx tsc --noEmit`).
 - Mobile typecheck: 0 errors (`npx tsc --noEmit`).
 - Web build: clean Vite build (`npm run build`).
-- Alembic migration head: `c3d4e5f6a7b8 (head)`.
-- 26 live web screens.
+- Alembic migration head: `d4e5f6a7b8c9 (head)`.
+- 31 live web screens (5 Front Desk screens live).
 
-1. **Student Home Isolation**: Remove `Today's Schedule` (Timetable) and `Latest Notices` cards from the Student Home dashboard (`mobile/app/(student)/dashboard.tsx`) while preserving dedicated tab routes.
-2. **Parent Fees Accurate Invoicing**: Fix `₹0.00` display by resolving `invoice.payable` from `/parent/fees` backend response (`invTotal = invoice.payable ?? invoice.total ?? invoice.amount ?? 0`).
-3. **Teacher Supplies Real Stock Consumption**: Add `"Use / Consume Stock"` workflow in `mobile/app/(teacher)/stock.tsx` and backend service `consume_stock`, updating `current_quantity`, logging audit trails, preventing over-consumption (`HTTP 400`), and automatically flagging `is_low_stock` when `<= min_quantity`.
-4. **Universal Standardized Date Display**: Standardize all user-facing dates to `DD-MM-YYYY` using shared `formatDate(d)` helper across Student, Parent, and Teacher screens.
-5. **Class Teacher Only Attendance Authorization**: Enforce `ClassSection.class_teacher_id == teacher.id` at the backend API level (`HTTP 403 Forbidden` for subject teachers) and filter mobile UI section dropdown.
-6. **Student Homework Submitted Tab Fix**: Correct boolean filter bug in `mobile/app/(student)/homework.tsx` (`item.marks === null && item.marks === undefined` -> `item.submitted && (item.marks === null || item.marks === undefined)`).
-
-### Upcoming Web Scope:
-1. **Public Online Admission Portal UI (`/apply`)**:
-   - Parent-facing unauthenticated landing page and registration form with CAPTCHA/bot protection connecting to existing `/public/admission/*` endpoints.
-2. **Packet 4 — Contract 3 System-Wide Audit Reason Sweep**:
-   - System-wide enforcement pass ensuring 100% of destructive operations (employee exits, status changes, mark overrides, invoice cancellations) prompt a mandatory user-typed reason modal recorded in `audit_log`.
-3. **Academic Year Manager UI (`/configuration`)**:
-   - Front-end wizard for clerks to activate/deactivate terms and academic years without developer API calls.
-4. **Third-Party Integrations (V2 Scope)**:
-   - Razorpay/Easebuzz fee gateway, TRAI DLT SMS & WhatsApp alerts, bulk Excel roster importer, AIS-140 GPS bus tracking.
+Canonical specification for Session 11 is defined in **`SESSION-HANDOFF-10.md`**:
+1. **Teacher Meeting Slip Response Interface**: Wire teacher view on web/mobile (`mobile/app/(teacher)/meetings.tsx`) to inspect incoming visitor slips and respond (`ACCEPTED` / `DECLINED`).
+2. **Real Image / Photo Upload Pipeline for Front Desk**: Multipart upload endpoint `POST /admin/reception/upload` for found items and handover photos, replacing plain text URLs with file pickers / camera capture.
+3. **End-to-End Visual Verification for Live Printable Slips**: Automated Puppeteer runner creating live transactions and capturing proof screenshots of all 4 printable slips (`PrintableStudentPass`, `PrintablePrincipalMeetingSlip`, `PrintableTeacherMeetingSlip`, `PrintableFeeReceiptSlip`).
+4. **Public Online Admission Portal UI (`/apply`)**: Unauthenticated parent application portal.
+5. **System-Wide Audit Reason Sweep (Packet 4 Contract 3)**: Ensuring 100% of destructive operations prompt mandatory user-typed reasons.
 
 ---
 
@@ -213,4 +212,10 @@ Session 9 has been fully delivered and verified on local branch `slice/office-fe
    - The `Enrolment` model has `academic_year_id` (`BIGINT`), NOT an `academic_year` ORM relationship. Accessing `enrolment.academic_year.code` raises `AttributeError`. Safely resolve via `db.get(AcademicYear, enrolment.academic_year_id)` or fallback to `application.cycle.academic_year.code`.
 14. **ActionButton Form Submission**:
    - Using `<ActionButton>` inside a `<form onSubmit={...}>` with an explicit `type="submit"` requires that `ActionButton` pass `type="submit"` through to the underlying `<button>` and allow `onClick` to be optional; otherwise, the browser does not fire the synthetic form submit event.
+15. **Reception Fee Counter vs Admin Fee Screens Gate Segregation**:
+    - The front desk fee counter endpoint `/admin/reception/fees/*` is gated strictly on `fees.payment.collect`. Granting `fees.invoice.read` to the receptionist causes admin-only billing screens (`/fees`, `/fees/defaulters`, `/fees/setup`, `/fees/periods`) to inadvertently appear in the receptionist's navigation sidebar. Omitting `fees.invoice.read` from the receptionist role and declaring only `fees.payment.collect` on `/reception/fee-counter` guarantees complete front-desk navigation hygiene while preserving counter fee collection capabilities.
+16. **Decoupled Authorized Pickup Roster from Single-Use Gate Passes**:
+    - Emergency or early student gate passes require recording the specific authorized person collecting the student. Coupling gate pass records directly to permanent authorized pickup lists creates friction when a pre-approved relative collects a child. Maintain a permanent roster table (`student_authorized_persons`) for authorized guardians/drivers alongside one-time transactional passes (`student_passes`), allowing the receptionist to either select from the roster or enter a verified single-use collector with relationship.
+17. **Complete-Month Fee Collection Invariant**:
+    - Receptionists at the front desk are prohibited from taking arbitrary partial fee amounts (e.g. ₹500 against a ₹5,400 bill). Fee collection logic at the reception counter enforces strict chronological FIFO settlement of complete billing periods (1 month, 2 months, ..., N months) to eliminate reconciliation discrepancies and prevent ledger tampering.
 

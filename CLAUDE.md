@@ -2,12 +2,12 @@
 
 ## Read these first, in this order
 
-0. **`SINGLE_SOURCE_OF_TRUTH.md`**, **`SESSION-HANDOFF-8.md`**, & **`SESSION-HANDOFF-9.md`** — **start here.**
+0. **`SINGLE_SOURCE_OF_TRUTH.md`**, **`SESSION-HANDOFF-9.md`**, & **`SESSION-HANDOFF-10.md`** — **start here.**
    The canonical single source of truth and session handoffs for the ERP.
-   Details current git status (`slice/office-feedback`), verified 26 live web screens,
-   18 active staff, database tables (recruitment tables dropped),
-   Alembic migration head `c3d4e5f6a7b8` (`drop_recruitment_tables.py`), leadership credentials (`admin@sunrisepublic.edu` / `Admin@123`),
-   Session 9 completed & verified (729 passed backend tests, 1 skipped, 0 failed, 100% green; 82 passed web unit tests across 18 files; 0 TypeScript errors on web and mobile; clean Vite production build; Mobile navigation redesigned with 4 bottom tabs + top-left hamburger drawer; Admin Dashboard Fee Collection Recharts graph cleanly removed; Teacher Recruitment completely decommissioned across backend, db, seed, and web; Global Red-X close controls across modals and dialogs).
+   Details current git status (`slice/office-feedback`), verified 31 live web screens,
+   18 active staff, database tables (reception tables added),
+   Alembic migration head `d4e5f6a7b8c9` (`receptionist_operations.py`), leadership credentials (`admin@sunrisepublic.edu` / `Admin@123`),
+   Session 10 completed & verified (735 passed backend tests, 1 skipped, 0 failed, 100% green; 84 passed web unit tests across 18 files; 0 TypeScript errors on web and mobile; clean Vite production build; 5 new Front Desk operational modules live: Found & Lost, Student Gate Passes, Meeting Slips, Important Directory, Reception Fee Counter; complete-month fee collection invariant; Admission Dossier print enhancement; Front-desk sidebar navigation leak cleanly resolved with 12/12 automated checks passing).
    Supersedes all previous session handoffs.
 1. **`FRONTEND-HANDOFF.md`** — the brief for **Parts Two to Six**: the
    three contracts, what "clean and easy for a school office" means, the
@@ -34,8 +34,8 @@ on both jobs** — backend lint, 615 tests, migrations from an empty schema, see
 and worker; web typecheck, schema drift, 31 tests and build. CI runs on every
 push to `main` or `part-*`.
 
-Those two figures are `main`'s. On `slice/office-feedback` they are **729 passed
-backend (1 skipped, 730 total, 0 failed)** and **82 passed web unit tests (2 skipped in 18 files)**;
+Those two figures are `main`'s. On `slice/office-feedback` they are **735 passed
+backend (1 skipped, 736 total, 0 failed)** and **84 passed web unit tests (2 skipped in 18 files)**;
 CI has never run on that branch because it has never been pushed.
 
 **Nothing is deployed**, and one thing blocks that regardless of frontend work:
@@ -48,7 +48,7 @@ about how accounts are issued and has deliberately not been made.
 
 ```bash
 cd backend
-../.venv/Scripts/python.exe -m pytest -q          # 615 on main, 729 on slice/office-feedback
+../.venv/Scripts/python.exe -m pytest -q          # 615 on main, 735 on slice/office-feedback
 ../.venv/Scripts/python.exe -m pytest tests/test_rbac.py -q       # one file
 ../.venv/Scripts/python.exe -m alembic upgrade head
 ../.venv/Scripts/python.exe seed.py               # idempotent
@@ -63,11 +63,11 @@ cd mobile && npx tsc --noEmit && npx expo start --go --lan --port 8081
 ## Key Logins & Role Isolation (RBAC)
 
 - **Leadership / Admin**: `admin@sunrisepublic.edu` (`Admin@123`) — Full school-wide administrative access across all modules. Retains the executive **Admission Dashboard** (`/admission`) with cycle overview, conversion funnels, and class intake capacities. To keep the sidebar uncluttered, the 5 operational queues are segregated from the Admin sidebar.
-- **Dedicated Receptionist**: `receptionist@sunrisepublic.edu` (`Admin@123`) — Dedicated front desk admission staff. Lands directly on `#/admission/enquiries`. Focuses strictly on Enquiries. Navigation strictly hardened: `Applications`, `Merit & selection`, `Waitlist`, and `Admission reports` are completely removed from the sidebar; direct URL `#/admission/applications` is protected with in-page refusal and backend HTTP 403 Forbidden. Non-admission screens are also completely hidden and blocked.
+- **Dedicated Receptionist**: `receptionist@sunrisepublic.edu` (`Admin@123`) — Dedicated front desk operational staff. Lands directly on `#/admission/enquiries`. Owns Enquiries, Notices, and all 5 Front Desk operational modules: Found & Lost (`/reception/found-items`), Student Gate Passes (`/reception/passes`), Meeting Slips (`/reception/meetings`), Important Directory (`/reception/directory`), and Reception Fee Counter (`/reception/fee-counter`). Navigation strictly hardened: `Applications`, `Merit & selection`, `Waitlist`, `Admission reports`, and all admin fee management screens (`Fees`, `Defaulters`, `Fee setup`, `Period close`, `Student fees`) are completely removed; direct URLs are protected with in-page refusal and backend HTTP 403 Forbidden.
 - **Admission Officer**: `admission@sunrisepublic.edu` (`Admin@123`) — Owns the complete admission pipeline: Enquiries, Applications, Merit Ranking, Waitlist, Admission Reports, and atomic fee payment enrollment. Navigation strictly hardened: `Students`, `Classes`, and `Notices` are completely removed from the sidebar; direct URLs `#/students`, `#/classes`, and `#/notices` are protected with in-page refusal and backend HTTP 403 Forbidden.
 - **Fee Counter Clerk**: `counter@sunrisepublic.edu` (`Admin@123`) — Read ledger, view defaulters; cannot void payments or alter concessions.
 
-## Recent Features Built & Verified (14–21 Sep 2026)
+## Recent Features Built & Verified (14–23 Sep 2026)
 
 1. **Main Dashboard Upgrade (Attendance Overview)**:
    - Replaced the top 4 summary cards (`Total Students`, `Total Teachers`, `Total Classes`, `Fees Collected`) with a dedicated live **Attendance Overview** section (100 students, 90 present, 10 absent, 90% rate).
@@ -107,16 +107,23 @@ cd mobile && npx tsc --noEmit && npx expo start --go --lan --port 8081
     - **Admin Dashboard Fee Collection Graph Removal**: Cleanly removed `<Card title="Fee Collection">` Recharts chart from `web/src/pages/Dashboard.tsx` with balanced grid layout.
     - **Teacher Recruitment Decommissioning**: Purged all backend models, services, APIs, permissions, module flags, and seed rows; dropped tables `candidates` and `candidate_offers` via migration `c3d4e5f6a7b8`; deleted web `/recruitment` route, page, and components; regenerated API types.
     - **Global Red-X Close Controls**: Standardized modal/dialog dismiss controls to Red X icon buttons across web and mobile.
+14. **Session 10 — Receptionist Operational Responsibilities & Sidebar Cleanup (23 Sep 2026)**:
+    - **Found & Lost Register (`/reception/found-items`)**: Multi-step found item intake, broadcast alerts, student verification search, and claim/handover tracking with photo recording (`found_items` table).
+    - **Student Gate Pass & Authorized Roster (`/reception/passes`)**: One-time early departure gate passes (`student_passes`), permanent pre-approved pickup roster (`student_authorized_persons`), and official printable A5 gate pass slip (`PrintableStudentPass.tsx`).
+    - **Visitor Meeting Slips (`/reception/meetings`)**: Dual-tab visitor workflow for Principal executive appointments and Teacher academic parent interactions with Accept/Wait/Decline response states and printable slips.
+    - **Important Emergency Directory (`/reception/directory`)**: 7 seeded verified civic, police, and medical contacts; read-only for receptionist, full CRUD for admin.
+    - **Front Desk Fee Counter (`/reception/fee-counter`)**: Student lookup, FIFO invoice settlement, complete-month-only collection invariant, and printable receipt voucher (`PrintableFeeReceiptSlip.tsx`).
+    - **Admission Dossier Print Enhancement**: Upgraded `PrintableAdmissionDossier.tsx` with all mandatory audit fields.
+    - **Sidebar Navigation Leak Fix**: Removed `fees.invoice.read` from receptionist to cleanly eliminate admin fee screens (`Fees`, `Defaulters`, `Fee setup`, `Period close`) from front desk sidebar navigation. Verified with 12/12 automated browser checks.
 
-## Active Status (Session 9 Complete)
+## Active Status (Session 10 Complete, Session 11 Handoff)
 
-Canonical specification is in `SESSION-HANDOFF-8.md` covering 6 mobile ERP refinements:
-1. **Student Home Isolation**: Remove `Today's Schedule` (Timetable) and `Latest Notices` cards from the Student Home dashboard (`mobile/app/(student)/dashboard.tsx`) while preserving dedicated tab routes.
-2. **Parent Fees Accurate Invoicing**: Fix `₹0.00` display by resolving `invoice.payable` from `/parent/fees` backend response (`invTotal = invoice.payable ?? invoice.total ?? invoice.amount ?? 0`).
-3. **Teacher Supplies Real Stock Consumption**: Add `"Use / Consume Stock"` workflow in `mobile/app/(teacher)/stock.tsx` and backend service `consume_stock`, updating `current_quantity`, logging audit trails, preventing over-consumption (`HTTP 400`), and automatically flagging `is_low_stock` when `<= min_quantity`.
-4. **Universal Standardized Date Display**: Standardize all user-facing dates to `DD-MM-YYYY` using shared `formatDate(d)` helper across Student, Parent, and Teacher screens.
-5. **Class Teacher Only Attendance Authorization**: Enforce `ClassSection.class_teacher_id == teacher.id` at the backend API level (`HTTP 403 Forbidden` for subject teachers) and filter mobile UI section dropdown.
-6. **Student Homework Submitted Tab Fix**: Correct boolean filter bug in `mobile/app/(student)/homework.tsx` (`item.marks === null && item.marks === undefined` -> `item.submitted && (item.marks === null || item.marks === undefined)`).
+Canonical specification for Session 11 is defined in **`SESSION-HANDOFF-10.md`**:
+1. **Teacher Meeting Slip Response Interface**: Wire teacher view on web/mobile (`mobile/app/(teacher)/meetings.tsx`) to inspect incoming visitor slips and respond (`ACCEPTED` / `DECLINED`).
+2. **Real Image / Photo Upload Pipeline for Front Desk**: Multipart upload endpoint `POST /admin/reception/upload` for found items and handover photos, replacing plain text URLs with file pickers / camera capture.
+3. **End-to-End Visual Verification for Live Printable Slips**: Automated Puppeteer runner creating live transactions and capturing proof screenshots of all 4 printable slips (`PrintableStudentPass`, `PrintablePrincipalMeetingSlip`, `PrintableTeacherMeetingSlip`, `PrintableFeeReceiptSlip`).
+4. **Public Online Admission Portal UI (`/apply`)**: Unauthenticated parent application portal.
+5. **System-Wide Audit Reason Sweep (Packet 4 Contract 3)**: Ensuring 100% of destructive operations prompt mandatory user-typed reasons.
 
 Upcoming Web Roadmap:
 1. **Public Online Admission Portal UI (`/apply`)**: Parent-facing unauthenticated landing page and registration form with CAPTCHA/bot protection connecting to existing `/public/admission/*` endpoints.
