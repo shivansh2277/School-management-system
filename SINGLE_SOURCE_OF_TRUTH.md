@@ -1,14 +1,14 @@
 # Sunrise School ERP — Single Source of Truth
 
-**Date:** 21 September 2026  
-**Status:** Authoritative — Session 9 Completed: Mobile Navigation Redesign (Acharya Prashant Concept with 4 Bottom Tabs + Drawer), Admin Dashboard Fee Collection Graph Removal, Teacher Recruitment Decommissioned, and Global Red-X Close Controls Verified.  
+**Date:** 23 September 2026  
+**Status:** Authoritative — Session 10 Completed: Receptionist Operational Suite (Found & Lost, Student Gate Passes, Principal & Teacher Meeting Slips, Important Directory, Reception Fee Counter, and Admission Dossier Enhancement) & Strict Front-Desk Navigation Hardening.  
 **Canonical Branch:** `slice/office-feedback` (strictly local per owner decision).  
 **Primary PDF Deliverables:**
 - [`docs/Sunrise-ERP-Admission-Demo-Guide.pdf`](docs/Sunrise-ERP-Admission-Demo-Guide.pdf) — Complete Digital Admission Dossier & Interactive Testing Guide for Application 360° with Aarav Sharma & Ananya Verma walkthroughs.
 - [`docs/Sunrise-ERP-Operational-Data-Flows.pdf`](docs/Sunrise-ERP-Operational-Data-Flows.pdf) — Simple Database Data-Flow Guide showing TABLE → TABLE → TABLE flows, PK/FK connections, Student ID vs Enrollment ID rules, and the final student data journey.
 - [`docs/Sunrise-ERP-Database-Tables-and-Features.pdf`](docs/Sunrise-ERP-Database-Tables-and-Features.pdf) — Complete 93-table database & feature mapping reference (all 68 live tables + 25 unused tables mapped to web routes, UI components, and workflows).
 - [`docs/Sunrise-ERP-Database-Viva-100.pdf`](docs/Sunrise-ERP-Database-Viva-100.pdf) — 100 Project-Specific Database & Backend Viva Questions and Answers with Top 20 Focus.
-- [`docs/Sunrise-ERP-Features-Operational-and-Planned.pdf`](docs/Sunrise-ERP-Features-Operational-and-Planned.pdf) — Comprehensive operational (27 live screens, 18 staff) & planned feature specification.
+- [`docs/Sunrise-ERP-Features-Operational-and-Planned.pdf`](docs/Sunrise-ERP-Features-Operational-and-Planned.pdf) — Comprehensive operational (31 live screens, 18 staff) & planned feature specification.
 - [`docs/Sunrise-ERP-Database-Essentials-Explained.pdf`](docs/Sunrise-ERP-Database-Essentials-Explained.pdf) — Step-by-step plain-English process explanation guide for the 68 essential database tables across 16 end-to-end workflows.
 - [`docs/Sunrise-ERP-Database-Essentials.pdf`](docs/Sunrise-ERP-Database-Essentials.pdf) — 68 live data tables with entity relationship diagrams.
 - [`docs/Sunrise-ERP-Database.pdf`](docs/Sunrise-ERP-Database.pdf) — Complete 93-table database schema with all 1,097 columns and 250 foreign keys.
@@ -33,26 +33,26 @@
      - Academic Coordinator: `coordinator@sunrisepublic.edu`
     - Fee counter clerk: `counter@sunrisepublic.edu` (`Admin@123`) — segregated duties (can read ledger, view defaulters, but cannot void payments or approve concessions).
     - Admission officer: `admission@sunrisepublic.edu` (`Admin@123`) — owns the complete admission pipeline (enquiries, applications, merit ranking, waitlist, reports, and atomic fee collection). Navigation strictly hardened: `Students`, `Classes`, and `Notices` removed; direct URLs `#/students`, `#/classes`, `#/notices` protected with in-page refusal and backend HTTP 403 Forbidden.
-    - Front desk receptionist: `receptionist@sunrisepublic.edu` (`Admin@123`) — dedicated front desk enquiry and candidate intake. Navigation strictly hardened: `Applications`, `Merit & selection`, `Waitlist`, and `Admission reports` removed; direct URL `#/admission/applications` protected with in-page refusal and backend HTTP 403 Forbidden. Receptionist focuses exclusively on `Enquiries` (and `Notices`).
+    - Front desk receptionist: `receptionist@sunrisepublic.edu` (`Admin@123`) — dedicated front desk operational suite. Owns Enquiries, Notices, and all Front Desk modules: Found & Lost, Student Gate Passes, Visitor Meeting Slips (Principal & Teacher), Important Directory, and Reception Fee Counter. Navigation strictly hardened: `Applications`, `Merit & selection`, `Waitlist`, `Admission reports`, and all admin fee management screens (`Fees`, `Defaulters`, `Fee setup`, `Period close`, `Student fees`) are completely removed; direct URLs protected with in-page refusal and backend HTTP 403 Forbidden.
 4. **Git Protocol (Owner Directive)**:
    - **Continue building locally.** Do not push to GitHub or open a PR until explicitly approved.
    - Always display the exact file list and commit history before any hard-to-undo operation.
 
 ---
 
-## 2. Verified Technical State (Measured 21 Sep 2026 — Session 9 Verified)
+## 2. Verified Technical State (Measured 23 Sep 2026 — Session 10 Verified)
 
 | Layer | Metric | Verification Command | Result |
 |---|---|---|:---:|
-| **Backend Suite** | 730 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest -q` | **729 passed, 1 skipped, 0 failed** (100% green, 0 regressions) |
-| **Active Migration Head** | Revision `c3d4e5f6a7b8` | `alembic current` | **`c3d4e5f6a7b8 (head)` clean bidirectional** |
+| **Backend Suite** | 736 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest -q` | **735 passed, 1 skipped, 0 failed** (100% green, 0 regressions) |
+| **Active Migration Head** | Revision `d4e5f6a7b8c9` | `alembic current` | **`d4e5f6a7b8c9 (head)` clean bidirectional (receptionist operations)** |
 | **Web Typecheck** | TypeScript 5.5 | `cd web && npx tsc --noEmit` | **0 errors** |
-| **Web Unit Tests** | Vitest 2.1 | `cd web && npm test` | **82 passed, 2 skipped across 18 test files** (100% green) |
+| **Web Unit Tests** | Vitest 2.1 | `cd web && npm test` | **84 passed, 2 skipped across 18 test files** (100% green) |
 | **Mobile Typecheck** | React Native 0.86 / TS | `cd mobile && npx tsc --noEmit` | **0 errors (Expo SDK 57, clean compilation)** |
-| **Database Schema** | Migrations Synced | `alembic current` | **Head `c3d4e5f6a7b8` (recruitment dropped)** |
-| **Production Build** | Vite 5.4 | `cd web && npm run build` | **Clean build (13.02s)** |
-| **Declared Web Screens** | 26 Screens | Registered in `web/src/screens.ts` | **26/26 functional & gated (Recruitment purged)** |
-| **Visual Verification Proofs** | Mobile & Web Proofs | Headless Chrome E2E Suite | **All visual proofs captured in artifacts and `docs/screenshots/`** |
+| **Database Schema** | Migrations Synced | `alembic current` | **Head `d4e5f6a7b8c9` (reception tables active)** |
+| **Production Build** | Vite 5.4 | `cd web && npm run build` | **Clean build** |
+| **Declared Web Screens** | 31 Screens | Registered in `web/src/screens.ts` | **31/31 functional & gated (5 Front Desk screens added)** |
+| **Visual Verification Proofs** | Reception & Admin E2E | Puppeteer Headless Chrome | **47/48 E2E checks passed, 12/12 sidebar checks passed, 23+ screenshots saved in `docs/screenshots/`** |
 
 ### Local Stack Configuration
 - **FastAPI Backend API**: `http://127.0.0.1:8000` (LAN binding: `http://0.0.0.0:8000` / `http://192.168.29.227:8000`)
@@ -105,7 +105,7 @@
 
 ---
 
-## 5. Screen Registry Inventory (26 Screens Live)
+## 5. Screen Registry Inventory (31 Screens Live)
 
 | Screen | Route | Group | Primary Permissions | Module Gate | What It Does |
 |---|---|---|---|---|---|
@@ -132,6 +132,11 @@
 | **Notices** | `/notices` | Communication | `comms.notice.read` | `communication` | School notice board, composer with audience targeting, audited delete action with reason |
 | **Transport** | `/transport` | Operations | `transport.setup.read` | `transport` | Routes running, seat capacities, riders drill-down, expiring vehicle papers, Leaflet route map |
 | **Stock** | `/inventory` | Operations | `inventory.item.read` | `inventory` | Consumable and equipment catalog, low-stock threshold alerts, purchase/issue approval modal, teacher depletion flagging |
+| **Found & Lost** | `/reception/found-items` | Front Desk | `reception.found_items.read` | — | Found items register, record found item modal with photo URL, broadcast notifications, student claim & photo handover modal |
+| **Student Passes** | `/reception/passes` | Front Desk | `reception.passes.read` | — | One-time student gate passes, parent/guardian authorization, independent permanent authorized roster management, printable gate pass slip |
+| **Meeting Slips** | `/reception/meetings` | Front Desk | `reception.meetings.read` | — | Executive visitor appointments for Principal and academic parent-teacher meetings, accept/wait/decline response, printable meeting slips |
+| **Important Directory** | `/reception/directory` | Front Desk | `reception.directory.read` | — | Essential school, medical, civic, police, and emergency services directory (read-only for receptionist, full CRUD with Add/Edit/Delete for admin) |
+| **Fee Counter** | `/reception/fee-counter` | Front Desk | `fees.payment.collect` | `fees` | Front desk counter fee collection: student lookup, chronological FIFO invoice loading, complete-month-only collection invariant, printable fee receipt slip |
 | **Configuration** | `/configuration` | Administration | `admin.settings.read` | — | 11 module feature switches with live refresh, setting registry groups, custom field editor |
 | **Settings** | `/settings` | Administration | `admin.settings.read` | — | School profile, address, academic year, grading scale editor, fee structure editor |
 | **Reports library** | `/reports` | Analytics | `admin.settings.read` | `reports` | Full reporting centre for the 21 registered backend reports across 9 categories, dynamic runner modal, formatted tables/stat cards, authenticated CSV export |
@@ -366,54 +371,121 @@ Delivered in direct response to the authoritative requirement: **"APPLICATION 36
 366:      - Student: `Home`, `Timetable`, `Homework`, `Profile`
 367:    - **Top-Left Hamburger Header & Smooth Drawer (`mobile/src/components/NavDrawer.tsx`)**:
 368:      - User profile header with circular avatar, initials, role pill, and school/class subtitle.
-369:      - Quick multi-child switcher for parents with active child highlight and instant context update.
-370:      - Categorized menu sections (`ACADEMICS`, `OPERATIONS`, `COMMUNICATION`, `OTHER`) with distinct icons.
-371:      - Hidden tab routes preserved via `options={{ href: null }}` on `<Tabs.Screen>` allowing full deep-linking and zero feature loss.
-372:      - Role-isolated menus and confirmation-guarded Logout action.
-373: 2. **Admin Dashboard Fee Collection Graph Removal**:
-374:    - Completely removed `<Card title="Fee Collection">` and all Recharts components/imports in `web/src/pages/Dashboard.tsx`.
-375:    - Layout preserved with 2-column balanced grid without blank container artifacts; test suite passes cleanly.
-376: 3. **Teacher Recruitment Decommissioning & Purge**:
-377:    - Pre-drop safety audit confirmed `candidates` and `candidate_offers` tables were 100% recruitment-exclusive with 0 incoming foreign keys from any other school table.
-378:    - Alembic migration `c3d4e5f6a7b8_drop_recruitment_tables.py` applied, dropping `candidate_offers` and `candidates` tables.
-379:    - Permanently removed backend models (`Candidate`, `CandidateOffer`, `CandidateStatus`), schemas, services (`app/services/recruitment.py`), and routes (`app/api/admin/recruitment.py`).
-380:    - Removed `recruitment.candidate.*` permissions from `app/core/permissions.py` and `"recruitment"` module from `app/core/modules.py`.
-381:    - Removed seed data from `backend/seed.py` and updated operational seed idempotency check to `StaffLeaveRequest`.
-382:    - Cleaned up web client: removed `/recruitment` route, `RecruitmentPage.tsx`, `RecruitmentPage.test.tsx`, and `components/recruitment/`.
-383:    - Regenerated TypeScript API types (`web/src/api/schema.d.ts`).
-384: 4. **Global Red-X Close Controls**:
-385:    - Replaced all textual "Close" buttons on modals, dialogs, and slide-overs across web and mobile with standardized Red X icon buttons (`#ef4444` / `text-red-500` / `theme.danger`).
-386:    - Web: Standard `Modal` in `web/src/components/ui.tsx` and printable dialogs (`PrintableFeeReceipt.tsx`, `PrintableEnquirySlip.tsx`, `PrintableAdmissionDossier.tsx`).
-387:    - Mobile: `NavDrawer.tsx`, `mobile/app/(teacher)/grievances.tsx`, `mobile/app/(parent)/grievances.tsx`, `mobile/app/(teacher)/stock.tsx`.
-388:    - Kept business action buttons ("Close Grievance", "Period Close") strictly untouched.
-389: 
-390: ---
-391: 
-392: ## 7. Operational Traps & Hard-Won Lessons
-393: 
-394: 1. **Postgres vs SQLite**: SQLite returns naive datetimes and misses foreign key wipe order bugs. Always verify migrations and logic against native PostgreSQL.
-395: 2. **`alembic upgrade head` after Pytest**: Pytest runs `create_all` which drops/creates tables without writing Alembic version stamps. Drop the public schema before running Alembic migrations.
-396: 3. **Zombie Uvicorn Processes**: On Windows, always ensure port 8000/8078 has a single listener (`netstat -ano | findstr :8000`) before starting the server.
-397: 4. **HTML `<button>` Submit Default**: A `<button>` without an explicit `type="button"` inside a `<form>` submits the form. Use `ActionButton` which defaults to `type="button"`.
-398: 5. **React Controlled Input Automation**: Setting `input.value` in browser automation does not trigger React's synthetic `onChange`. Use `Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set` before dispatching `input`.
-399: 6. **Query Cache Lifecycle**: Query cache must be cleared on logout (`qc.clear()`) so subsequent logins on shared office PCs cannot inspect cached data from other roles.
-400: 7. **LF Line Endings**: `web/src/api/schema.d.ts` is pinned to LF via `.gitattributes` to ensure schema drift checks pass across Windows and Linux.
-401: 8. **Badge Wrapping & Flex Constraints**: Always pair `truncate min-w-0` on flexible text containers with `shrink-0` on sibling badge clusters in card headers; otherwise, longer text pushes right-side badges beyond card borders.
-402: 9. **Visual Cleanliness in High-Volume School Offices**: Avoid explanatory paragraph subtitles beneath main headings; school administrators and counter clerks navigate repetitively and prefer immediate vertical access to filters, data tables, and primary actions.
-403: 10. **Headless Chrome PDF Rendering**: When generating PDFs via Chrome headless, avoid page breaks inside cards and tables using `break-inside: avoid` and `@page` layout margins to guarantee zero split headers or dangling footers.
-404: 11. **Year-scoped facts must never hold `student_id`**: Marks, homework submissions, and daily attendance records attach strictly to `enrolment_id`. `Mark.student_id` is a read-only `@hybrid_property` without a setter — never attempt to assign `mark.student_id = x` or instantiate `Mark(student_id=x)`.
-405: 12. **Services `flush()`, Endpoints `commit()`**: Service functions in `app/services/` must call `db.flush()`, NEVER `db.commit()`. Calling `db.commit()` inside service logic breaks per-test transaction savepoint isolation (`join_transaction_mode="create_savepoint"` in `conftest.py`), causing uncommitted data from one test to leak into subsequent tests or violate foreign key constraints. Commits belong exclusively in API route handlers (`app/api/`).
-406: 13. **Operational seed rows must avoid `teacher_1` and slot 1**: When adding sample data to `seed.py` for operational tables (such as leave requests or substitutions), never attach them to `teacher_1` (`TCH001`) or the first timetable slot (`id=1`). The test suite fixtures assume `teacher_1` opens with a clean zero-used balance, and slot 1 is used by timetable tests to verify deletion without FK violations. Target `teachers[-1]` instead.
-407: 14. **React Native Hermes `window` Polyfill Trap**: In React Native with Hermes, `typeof window !== "undefined"` is true (`window === globalThis`). Never rely on `typeof window` to branch between web and mobile environments; use `Platform.OS === 'web'` and query `Constants.expoConfig?.hostUri` to dynamically discover developer machine LAN IP.
-408: 15. **Uvicorn Host Binding for Physical Mobile Devices**: When testing on physical mobile devices over Wi-Fi, Uvicorn MUST be started with `--host 0.0.0.0 --port 8000`. Omitting `--host` binds exclusively to `127.0.0.1`, which refuses connections from external LAN clients even if they are on the same Wi-Fi subnet.
-409: 16. **Fee Invoice Serialization Key**: In `backend/app/services/fees.py`, the net invoice amount is keyed as `"payable"`, with `"balance"` for outstanding dues. Frontend clients looking for `invoice.total` or `invoice.amount` silently resolve to `undefined` or `0.00` if `payable` is omitted from property lookups.
-410: 17. **Boolean Strict Equality Traps in Filters**: Never combine mutually exclusive equality checks with `&&` (e.g. `val === null && val === undefined` is mathematically impossible in JavaScript and always evaluates to `false`). Use loose equality `val == null` or logical OR `val === null || val === undefined`.
-411: 18. **Guardian Serialization Completeness**: In `backend/app/api/admin/applications.py`, ensure all columns from `ApplicationGuardian` (`qualification`, `office_address`, `date_of_birth`, etc.) are explicitly serialized in `_guardian_out`. Missing keys silently drop edited fields on browser reload even though they exist in the database.
-412: 19. **Dynamic Enrollment Resolution on Application Detail**: When an applicant is enrolled, `application.student_id` links to the lifetime `students` row, but class, section, and roll number exist on the annual `enrolments` row. Always resolve `enrolled_student` dynamically via `db.get(Student, app.student_id)` and the active enrolment record.
-413: 20. **`Enrolment` Academic Year Relationship Trap**: The `Enrolment` model has `academic_year_id` (`BIGINT`), NOT an `academic_year` ORM relationship. Accessing `enrolment.academic_year.code` raises `AttributeError`. Safely resolve via `db.get(AcademicYear, enrolment.academic_year_id)` or fallback to `application.cycle.academic_year.code`.
-414: 21. **ActionButton Form Submission**: Using `<ActionButton>` inside a `<form onSubmit={...}>` with an explicit `type="submit"` requires that `ActionButton` pass `type="submit"` through to the underlying `<button>` and allow `onClick` to be optional; otherwise, the browser does not fire the synthetic form submit event.
-415: 22. **Seed Idempotency Table Coupling**: When decommissioning models, inspect seed idempotency gates. If `seed.py` uses a decommissioned model (e.g. `select(Candidate)`) to gate optional or operational seeding blocks, replace it with an enduring operational table (`StaffLeaveRequest`).
-416: 23. **Expo Router Hidden Screen Registration**: In Expo Router, setting `options={{ href: null }}` on `<Tabs.Screen>` cleanly hides the tab from the bottom bar while preserving the route definition. This enables full deep-linking (`router.push('/(role)/screen')`) without route unregistered warnings or missing component errors.
-417: 24. **React Native StyleSheet Absolute Fill**: In TypeScript React Native builds, use explicit `{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }` for modal backdrops to avoid typing discrepancies with `StyleSheet.absoluteFillObject` across different React Native bundler definitions.
+   - Verified by dedicated automated test suite `backend/tests/test_admission_dossier_demo.py` (2/2 passed, full backend suite 731 passed, 1 skipped).
 
+---
 
+### 6.9 Session 9 Verification Gate Results (All 5 Scope Items Complete & Verified)
+
+Delivered and verified strictly on local branch `slice/office-feedback` with **729 backend tests (100% green)**, **82 web tests (100% green)**, 0 type errors on web and mobile, and a clean Vite production build:
+1. **Mobile Navigation Redesign (Acharya Prashant Interaction Concept)**:
+   - **4 Visible Bottom Tabs Per Role**:
+     - Parent: `Home`, `Child`, `Fees`, `Profile`
+     - Teacher: `Home`, `Classes`, `Attendance`, `Profile`
+     - Student: `Home`, `Timetable`, `Homework`, `Profile`
+   - **Top-Left Hamburger Header & Smooth Drawer (`mobile/src/components/NavDrawer.tsx`)**:
+     - User profile header with circular avatar, initials, role pill, and school/class subtitle.
+     - Quick multi-child switcher for parents with active child highlight and instant context update.
+     - Categorized menu sections (`ACADEMICS`, `OPERATIONS`, `COMMUNICATION`, `OTHER`) with distinct icons.
+     - Hidden tab routes preserved via `options={{ href: null }}` on `<Tabs.Screen>` allowing full deep-linking and zero feature loss.
+     - Role-isolated menus and confirmation-guarded Logout action.
+2. **Admin Dashboard Fee Collection Graph Removal**:
+   - Completely removed `<Card title="Fee Collection">` and all Recharts components/imports in `web/src/pages/Dashboard.tsx`.
+   - Layout preserved with 2-column balanced grid without blank container artifacts; test suite passes cleanly.
+3. **Teacher Recruitment Decommissioning & Purge**:
+   - Pre-drop safety audit confirmed `candidates` and `candidate_offers` tables were 100% recruitment-exclusive with 0 incoming foreign keys from any other school table.
+   - Alembic migration `c3d4e5f6a7b8_drop_recruitment_tables.py` applied, dropping `candidate_offers` and `candidates` tables.
+   - Permanently removed backend models (`Candidate`, `CandidateOffer`, `CandidateStatus`), schemas, services (`app/services/recruitment.py`), and routes (`app/api/admin/recruitment.py`).
+   - Removed `recruitment.candidate.*` permissions from `app/core/permissions.py` and `"recruitment"` module from `app/core/modules.py`.
+   - Removed seed data from `backend/seed.py` and updated operational seed idempotency check to `StaffLeaveRequest`.
+   - Cleaned up web client: removed `/recruitment` route, `RecruitmentPage.tsx`, `RecruitmentPage.test.tsx`, and `components/recruitment/`.
+   - Regenerated TypeScript API types (`web/src/api/schema.d.ts`).
+4. **Global Red-X Close Controls**:
+   - Replaced all textual "Close" buttons on modals, dialogs, and slide-overs across web and mobile with standardized Red X icon buttons (`#ef4444` / `text-red-500` / `theme.danger`).
+   - Web: Standard `Modal` in `web/src/components/ui.tsx` and printable dialogs (`PrintableFeeReceipt.tsx`, `PrintableEnquirySlip.tsx`, `PrintableAdmissionDossier.tsx`).
+   - Mobile: `NavDrawer.tsx`, `mobile/app/(teacher)/grievances.tsx`, `mobile/app/(parent)/grievances.tsx`, `mobile/app/(teacher)/stock.tsx`.
+   - Kept business action buttons ("Close Grievance", "Period Close") strictly untouched.
+
+---
+
+### 6.10 Session 10 — Receptionist Operational Responsibilities & Sidebar Cleanup (Delivered & Verified 23 Sep 2026)
+
+Delivered in direct response to the authoritative specification for Receptionist Operational Responsibilities and strict front-desk navigation hardening:
+
+1. **Found & Lost — Found Item Workflow (`web/src/pages/reception/FoundItemsPage.tsx`)**:
+   - Backend table `found_items` (`id`, `school_id`, `item_name`, `category`, `description`, `found_location`, `found_date`, `status`, `photo_url`, `receiving_student_id`, `handover_photo_url`, `collected_at`, `notes`, `created_at`).
+   - Workflow:
+     1. Receptionist records found object (name, category, description, location, date/time, photo URL).
+     2. Broadcast alert to all students (sets status to `BROADCASTED`).
+     3. Student identification and verification search via `/admin/reception/students/search?q=...`.
+     4. Claim & Handover modal with claimant verification, handover photo URL, receiving student name/roll/admission number, and timestamp.
+     5. Preserves complete historical audit trail of found objects and collection outcomes.
+
+2. **Student Gate Pass & Authorized Collector Roster (`web/src/pages/reception/StudentPassPage.tsx`)**:
+   - Backend tables `student_passes` (single-use transactional gate passes) and `student_authorized_persons` (permanent pre-approved collector roster).
+   - Strict decoupling: One-time gate passes can be issued either to a person on the permanent roster or to a one-time emergency collector with verified relationship, reason, date, and departure time.
+   - Authorized Persons Roster modal allows managing permanent approved pickup persons (name, relationship, phone, photo URL, ID proof, active status).
+   - Official CBSE A5 format printable gate pass slip (`PrintableStudentPass.tsx`) with student details, collector authorization, gate security checkpoint tear-off, and school seal block.
+
+3. **Visitor Meeting Slips — Principal & Teacher (`web/src/pages/reception/MeetingsPage.tsx`)**:
+   - Backend tables `principal_meeting_requests` and `teacher_meeting_requests`.
+   - Dual-tab interface:
+     - **Principal Tab:** Receptionist logs visitor meeting request (visitor name, mobile, affiliation/type, purpose, student reference if applicable). Executive response workflow allows Principal/Admin to review pending requests and mark `ACCEPTED`, `WAITING`, or `DECLINED` with executive notes. Printable Principal Meeting Slip (`PrintablePrincipalMeetingSlip.tsx`).
+     - **Teacher Tab:** Receptionist creates meeting slip targeting any school teacher (`teacher_id`). Teacher or coordinator can accept or decline with schedule notes. Printable Teacher Meeting Slip (`PrintableTeacherMeetingSlip.tsx`).
+
+4. **Important Emergency & School Directory (`web/src/pages/reception/DirectoryPage.tsx`)**:
+   - Backend table `directory_contacts` (`name`, `category`, `department`, `phone_primary`, `phone_secondary`, `email`, `address`, `operating_hours`, `is_emergency`, `notes`).
+   - Seeded with 7 verified Lucknow school community contacts (City General Hospital & Trauma Centre, Sector 12 Police Station, School Pediatric Clinic & Ambulance, District Fire & Rescue Services, District Education Officer, School Bus Fleet Contractor, Child Helpline).
+   - Strict Role Separation:
+     - Receptionist: Clean **Read-Only** view with quick 1-click phone number copy buttons and emergency badges. Add/Edit/Delete action buttons are strictly suppressed via `<Can permission="reception.directory.write">`.
+     - Administrator: Full CRUD management (Add Contact modal, inline Edit, and Delete).
+
+5. **Front Desk Fee Counter (`web/src/pages/reception/ReceptionFeeCounterPage.tsx`)**:
+   - Purpose-built front desk fee counter endpoint `/admin/reception/fees/status` and `/admin/reception/fees/collect`.
+   - Workflow & Invariants:
+     - Instant student search by Admission Number (`2024000001`) or Student Name.
+     - Displays active enrolment details (Class, Section, Roll No) and total outstanding balance.
+     - Loads outstanding fee invoices in strict chronological FIFO priority order (#1 oldest unpaid, #2 next, etc.).
+     - **Complete-Month Collection Invariant:** Receptionist is strictly prohibited from collecting arbitrary partial amounts. System generates discrete, one-click options for complete billing cycles only (e.g., "1 Month: ₹1,800.00", "2 Months: ₹7,200.00").
+     - Records payment method (Cash, UPI, POS Card, Demand Draft), issues official receipt, and provides immediate printable receipt slip (`PrintableFeeReceiptSlip.tsx`).
+
+6. **Admission Dossier Print Enhancement (`PrintableAdmissionDossier.tsx`)**:
+   - Upgraded multi-page A4 dossier to display all mandatory fields: Place of Birth, Single Child status, Identification Marks, Optional Subject, Preferred Section, Admission Category, Transport Facility, Age Override Reason, and Health/Medical metrics with graceful fallback formatting.
+
+7. **Front-Desk Sidebar Navigation Hygiene (Fix Applied & Verified)**:
+   - Eliminated navigation leak where admin fee screens (`Fees`, `Defaulters`, `Fee setup`, `Period close`) appeared under "Money" for receptionist.
+   - Root Cause: Receptionist had `fees.invoice.read` in `app/core/permissions.py`, which is what admin fee screens declare as their entry gate.
+   - Fix: Removed `fees.invoice.read` from receptionist role; updated `/reception/fee-counter` in `screens.ts` to require only `fees.payment.collect`.
+   - Verified clean navigation sidebar in Puppeteer: Receptionist sees only `Admission > Enquiries`, `Communication > Notices`, and `Front Desk > Found & Lost, Student Passes, Meeting Slips, Important Directory, Fee Counter`. All 6 forbidden admin fee screens confirmed 100% absent.
+
+---
+
+## 7. Operational Traps & Hard-Won Lessons
+
+1. **Postgres vs SQLite**: SQLite returns naive datetimes and misses foreign key wipe order bugs. Always verify migrations and logic against native PostgreSQL.
+2. **`alembic upgrade head` after Pytest**: Pytest runs `create_all` which drops/creates tables without writing Alembic version stamps. Drop the public schema before running Alembic migrations.
+3. **Zombie Uvicorn Processes**: On Windows, always ensure port 8000/8078 has a single listener (`netstat -ano | findstr :8000`) before starting the server.
+4. **HTML `<button>` Submit Default**: A `<button>` without an explicit `type="button"` inside a `<form>` submits the form. Use `ActionButton` which defaults to `type="button"`.
+5. **React Controlled Input Automation**: Setting `input.value` in browser automation does not trigger React's synthetic `onChange`. Use `Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set` before dispatching `input`.
+6. **Query Cache Lifecycle**: Query cache must be cleared on logout (`qc.clear()`) so subsequent logins on shared office PCs cannot inspect cached data from other roles.
+7. **LF Line Endings**: `web/src/api/schema.d.ts` is pinned to LF via `.gitattributes` to ensure schema drift checks pass across Windows and Linux.
+8. **Badge Wrapping & Flex Constraints**: Always pair `truncate min-w-0` on flexible text containers with `shrink-0` on sibling badge clusters in card headers; otherwise, longer text pushes right-side badges beyond card borders.
+9. **Visual Cleanliness in High-Volume School Offices**: Avoid explanatory paragraph subtitles beneath main headings; school administrators and counter clerks navigate repetitively and prefer immediate vertical access to filters, data tables, and primary actions.
+10. **Headless Chrome PDF Rendering**: When generating PDFs via Chrome headless, avoid page breaks inside cards and tables using `break-inside: avoid` and `@page` layout margins to guarantee zero split headers or dangling footers.
+11. **Year-scoped facts must never hold `student_id`**: Marks, homework submissions, and daily attendance records attach strictly to `enrolment_id`. `Mark.student_id` is a read-only `@hybrid_property` without a setter — never attempt to assign `mark.student_id = x` or instantiate `Mark(student_id=x)`.
+12. **Services `flush()`, Endpoints `commit()`**: Service functions in `app/services/` must call `db.flush()`, NEVER `db.commit()`. Calling `db.commit()` inside service logic breaks per-test transaction savepoint isolation (`join_transaction_mode="create_savepoint"` in `conftest.py`), causing uncommitted data from one test to leak into subsequent tests or violate foreign key constraints. Commits belong exclusively in API route handlers (`app/api/`).
+13. **Operational seed rows must avoid `teacher_1` and slot 1**: When adding sample data to `seed.py` for operational tables (such as leave requests or substitutions), never attach them to `teacher_1` (`TCH001`) or the first timetable slot (`id=1`). The test suite fixtures assume `teacher_1` opens with a clean zero-used balance, and slot 1 is used by timetable tests to verify deletion without FK violations. Target `teachers[-1]` instead.
+14. **React Native Hermes `window` Polyfill Trap**: In React Native with Hermes, `typeof window !== "undefined"` is true (`window === globalThis`). Never rely on `typeof window` to branch between web and mobile environments; use `Platform.OS === 'web'` and query `Constants.expoConfig?.hostUri` to dynamically discover developer machine LAN IP.
+15. **Uvicorn Host Binding for Physical Mobile Devices**: When testing on physical mobile devices over Wi-Fi, Uvicorn MUST be started with `--host 0.0.0.0 --port 8000`. Omitting `--host` binds exclusively to `127.0.0.1`, which refuses connections from external LAN clients even if they are on the same Wi-Fi subnet.
+16. **Fee Invoice Serialization Key**: In `backend/app/services/fees.py`, the net invoice amount is keyed as `"payable"`, with `"balance"` for outstanding dues. Frontend clients looking for `invoice.total` or `invoice.amount` silently resolve to `undefined` or `0.00` if `payable` is omitted from property lookups.
+17. **Boolean Strict Equality Traps in Filters**: Never combine mutually exclusive equality checks with `&&` (e.g. `val === null && val === undefined` is mathematically impossible in JavaScript and always evaluates to `false`). Use loose equality `val == null` or logical OR `val === null || val === undefined`.
+18. **Guardian Serialization Completeness**: In `backend/app/api/admin/applications.py`, ensure all columns from `ApplicationGuardian` (`qualification`, `office_address`, `date_of_birth`, etc.) are explicitly serialized in `_guardian_out`. Missing keys silently drop edited fields on browser reload even though they exist in the database.
+19. **Dynamic Enrollment Resolution on Application Detail**: When an applicant is enrolled, `application.student_id` links to the lifetime `students` row, but class, section, and roll number exist on the annual `enrolments` row. Always resolve `enrolled_student` dynamically via `db.get(Student, app.student_id)` and the active enrolment record.
+20. **`Enrolment` Academic Year Relationship Trap**: The `Enrolment` model has `academic_year_id` (`BIGINT`), NOT an `academic_year` ORM relationship. Accessing `enrolment.academic_year.code` raises `AttributeError`. Safely resolve via `db.get(AcademicYear, enrolment.academic_year_id)` or fallback to `application.cycle.academic_year.code`.
+21. **ActionButton Form Submission**: Using `<ActionButton>` inside a `<form onSubmit={...}>` with an explicit `type="submit"` requires that `ActionButton` pass `type="submit"` through to the underlying `<button>` and allow `onClick` to be optional; otherwise, the browser does not fire the synthetic form submit event.
+22. **Seed Idempotency Table Coupling**: When decommissioning models, inspect seed idempotency gates. If `seed.py` uses a decommissioned model (e.g. `select(Candidate)`) to gate optional or operational seeding blocks, replace it with an enduring operational table (`StaffLeaveRequest`).
+23. **Expo Router Hidden Screen Registration**: In Expo Router, setting `options={{ href: null }}` on `<Tabs.Screen>` cleanly hides the tab from the bottom bar while preserving the route definition. This enables full deep-linking (`router.push('/(role)/screen')`) without route unregistered warnings or missing component errors.
+24. **React Native StyleSheet Absolute Fill**: In TypeScript React Native builds, use explicit `{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }` for modal backdrops to avoid typing discrepancies with `StyleSheet.absoluteFillObject` across different React Native bundler definitions.
+25. **Reception Fee Counter vs Admin Fee Screens Gate Segregation**: The front desk fee counter endpoint `/admin/reception/fees/*` is gated strictly on `fees.payment.collect`. Granting `fees.invoice.read` to the receptionist causes admin-only billing screens (`/fees`, `/fees/defaulters`, `/fees/setup`, `/fees/periods`) to inadvertently appear in the receptionist's navigation sidebar. Omitting `fees.invoice.read` from the receptionist role and declaring only `fees.payment.collect` on `/reception/fee-counter` guarantees complete front-desk navigation hygiene while preserving counter fee collection capabilities.
+26. **Decoupled Authorized Pickup Roster from Single-Use Gate Passes**: Emergency or early student gate passes require recording the specific authorized person collecting the student. Coupling gate pass records directly to permanent authorized pickup lists creates friction when a pre-approved relative collects a child. Maintain a permanent roster table (`student_authorized_persons`) for authorized guardians/drivers alongside one-time transactional passes (`student_passes`), allowing the receptionist to either select from the roster or enter a verified single-use collector with relationship.
+27. **Complete-Month Fee Collection Invariant**: Receptionists at the front desk are prohibited from taking arbitrary partial fee amounts (e.g. ₹500 against a ₹5,400 bill). Fee collection logic at the reception counter enforces strict chronological FIFO settlement of complete billing periods (1 month, 2 months, ..., N months) to eliminate reconciliation discrepancies and prevent ledger tampering.
