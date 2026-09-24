@@ -45,7 +45,16 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins(self) -> list[str]:
-        return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+        val = self.CORS_ORIGINS.strip()
+        if val.startswith("[") and val.endswith("]"):
+            import json
+            try:
+                parsed = json.loads(val)
+                if isinstance(parsed, list):
+                    return [str(o).strip() for o in parsed if o and str(o).strip() != "*"]
+            except Exception:
+                pass
+        return [o.strip() for o in val.split(",") if o.strip() and o.strip() != "*"]
 
     @property
     def is_production(self) -> bool:
