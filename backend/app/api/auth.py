@@ -104,7 +104,7 @@ def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)) ->
                 .join(UserRoleAssignment, UserRoleAssignment.role_id == Role.id)
                 .where(UserRoleAssignment.user_id == user.id)
             )
-        ),
+        ) or (["super_admin"] if user.role == UserRole.admin else []),
         school_code=school.code if school else None,
         school_name=school.name if school else None,
         academic_year=year.code if year else None,

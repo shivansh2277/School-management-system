@@ -20,6 +20,7 @@ from app.models import (
     RolePermission,
     ScopeType,
     User,
+    UserRole,
     UserRoleAssignment,
 )
 
@@ -94,6 +95,18 @@ def grants_for(db: Session, user: User) -> list[Grant]:
             UserRoleAssignment.school_id == user.school_id,
         )
     ).all()
+    if not rows and user.role == UserRole.admin:
+        super_admin_role = db.scalar(
+            select(Role).where(Role.school_id == user.school_id, Role.code == "super_admin")
+        )
+        if super_admin_role is None:
+            installed = install_system_roles(db, user.school_id)
+            super_admin_role = installed.get("super_admin")
+        if super_admin_role:
+            assign(db, user, super_admin_role, scope_type=ScopeType.school)
+            db.commit()
+            return grants_for(db, user)
+
     return [Grant(code=c, scope_type=st, scope_id=sid) for c, st, sid in rows]
 
 

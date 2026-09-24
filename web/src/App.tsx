@@ -24,7 +24,7 @@ import { SCREENS, getUserRoles, visibleScreens } from "./screens";
  *   for Admin, /students for Fee Collector) without a redirect loop.
  */
 function Home() {
-  const { me, can, hasModule } = useAuth();
+  const { me, can, hasModule, logout } = useAuth();
   if (me) {
     const userRoles = getUserRoles(me);
     const screens = visibleScreens(can, hasModule, userRoles);
@@ -34,11 +34,22 @@ function Home() {
     const first = transportScreen ?? screens[0];
     if (!first) {
       return (
-        <div className="rounded-card bg-surface border border-rule p-8">
-          <p className="font-medium text-ink">No screens enabled</p>
-          <p className="text-sm text-ink-soft mt-1">
-            Your account does not have access to anything in this dashboard. Contact the office.
-          </p>
+        <div className="min-h-[60vh] flex items-center justify-center p-4">
+          <div className="rounded-card bg-surface border border-rule p-8 max-w-md w-full shadow-card text-center space-y-4">
+            <p className="font-semibold text-lg text-ink">No screens enabled</p>
+            <p className="text-sm text-ink-soft">
+              Your account does not have access to any enabled screens, or your session needs to be refreshed.
+            </p>
+            <button
+              onClick={() => {
+                logout();
+                window.location.hash = "#/login";
+              }}
+              className="rounded-input bg-primary text-white px-5 py-2.5 text-sm font-medium hover:bg-primary-dark transition-colors cursor-pointer w-full"
+            >
+              Sign out & Re-login
+            </button>
+          </div>
         </div>
       );
     }

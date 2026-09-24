@@ -13,7 +13,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (me) return <Navigate to="/" replace />;
+  if (me && me.permissions && me.permissions.length > 0) return <Navigate to="/" replace />;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
