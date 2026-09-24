@@ -11,11 +11,25 @@ class Base(DeclarativeBase):
 
 
 def make_engine(url: str):
-    # ponytail: SQLite is supported only so the suite runs without a Postgres
-    # instance; production is Postgres 16 per BLUEPRINT §3.
-    kwargs = {"pool_pre_ping": True, "future": True}
+    # Normalize postgresql:// or postgres:// to postgresql+psycopg:// for psycopg 3
+    # compatibility when deploying to cloud providers like Neon Tech.
+    if url.startswith("postgresql://"):
+        url = "postgresql+psycopg://" + url[len("postgresql://"):]
+    elif url.startswith("postgres://"):
+        url = "postgresql+psycopg://" + url[len("postgres://"):]
+
     if url.startswith("sqlite"):
         kwargs = {"connect_args": {"check_same_thread": False}, "future": True}
+    else:
+        # Neon Tech Serverless / Cloud Postgres connection pool resilience
+        kwargs = {
+            "pool_pre_ping": True,
+            "pool_recycle": settings.DB_POOL_RECYCLE,
+            "pool_size": settings.DB_POOL_SIZE,
+            "max_overflow": settings.DB_MAX_OVERFLOW,
+            "pool_timeout": settings.DB_POOL_TIMEOUT,
+            "future": True,
+        }
     return create_engine(url, **kwargs)
 
 

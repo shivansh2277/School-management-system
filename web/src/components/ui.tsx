@@ -123,15 +123,15 @@ export function Modal({
   children: ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 z-50 bg-ink/40 grid place-items-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-ink/40 grid place-items-center p-2 sm:p-4" onClick={onClose}>
       <div
         className={`bg-surface rounded-card shadow-card w-full ${
           wide ? "max-w-4xl" : "max-w-lg"
-        } p-6 max-h-[85vh] overflow-y-auto`}
+        } p-4 sm:p-6 max-h-[92vh] sm:max-h-[85vh] overflow-y-auto`}
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-lg text-ink">{title}</h2>
+          <h2 className="font-semibold text-base sm:text-lg text-ink">{title}</h2>
           <button
             type="button"
             onClick={onClose}

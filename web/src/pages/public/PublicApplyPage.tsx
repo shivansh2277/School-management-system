@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
-import { api } from "../../api/client";
+import { api, toMediaUrl } from "../../api/client";
 
 type OpenCycleClass = {
   class_name: string;
@@ -99,12 +99,7 @@ function PhotoUploadField({
     }
   };
 
-  const apiBase = import.meta.env.VITE_API_URL || "http://localhost:8000";
-  const displayUrl = value
-    ? value.startsWith("http") || value.startsWith("data:")
-      ? value
-      : `${apiBase}${value.startsWith("/") ? "" : "/"}${value}`
-    : null;
+  const displayUrl = toMediaUrl(value);
 
   return (
     <div>

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { api, money } from "../api/client";
+import { api, money, API_BASE_URL } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { ActionButton, Can } from "../components/Can";
 import {
@@ -245,7 +245,7 @@ export function Payroll() {
 
   const exportBankDisbursal = (runId: number) => {
     const token = localStorage.getItem("sunrise.token");
-    const url = `${import.meta.env.VITE_API_URL ?? "http://localhost:8078"}/admin/payroll/runs/${runId}/bank-disbursal?format=csv`;
+    const url = `${API_BASE_URL}/admin/payroll/runs/${runId}/bank-disbursal?format=csv`;
     // Trigger download via fetch with auth header
     fetch(url, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},

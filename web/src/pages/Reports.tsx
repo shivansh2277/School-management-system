@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { api, tokenStore } from "../api/client";
+import { api, tokenStore, API_BASE_URL } from "../api/client";
 import { errorText } from "../api/errors";
 import { Card, Empty, FormField, Modal, Pill, inputClass } from "../components/ui";
 import { useClasses, type ClassRow } from "./useClasses";
 
-const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const BASE = API_BASE_URL;
 
 type ReportItem = {
   code: string;

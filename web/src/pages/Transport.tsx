@@ -187,7 +187,7 @@ export function Transport() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <StatCard label="Routes running" value={active} hint={`${routes.data?.length ?? 0} configured`} />
         <StatCard label="Children riding" value={riding} hint="Active assignments" />
         <StatCard label="Fleet capacity" value={`${riding} / ${totalFleetCapacity}`} hint="Riders / Total seats" />

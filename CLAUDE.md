@@ -2,12 +2,12 @@
 
 ## Read these first, in this order
 
-0. **`SINGLE_SOURCE_OF_TRUTH.md`**, **`SESSION-HANDOFF-13.md`**, & **`SESSION-HANDOFF-14.md`** — **start here.**
+0. **`SINGLE_SOURCE_OF_TRUTH.md`** & **`SESSION-HANDOFF-15.md`** — **start here.**
    The canonical single source of truth and session handoffs for the ERP.
    Details current git status (`slice/office-feedback`), verified 31 live web screens,
    18 active staff, database tables (reception, authorized pickup, and route stop address tables added),
    Alembic migration head `f6a7b8c9d0e1` (`route_stop_address.py`), leadership credentials (`admin@sunrisepublic.edu` / `Admin@123`),
-   Session 14 completed & verified (749 passed backend tests, 1 skipped, 0 failed, 100% green; 109 passed web unit tests across 20 files; 0 TypeScript errors on web and mobile; clean Vite production build; Transport Upgrade Plan 1 Fleet & Route Setup Desk; Plan 2 Student Transport Allocation Desk; Address-Based Geocoding Location System; Printable A4 Route Manifest & Roster; 25/25 automated visual verification checks passing).
+   Session 15 completed & verified (749 passed backend tests, 1 skipped, 0 failed, 100% green; 109 passed web unit tests across 20 files; 0 TypeScript errors on web and mobile; clean Vite production build; Responsive Design across 390px, 768px, 1280px, 1440px with off-canvas mobile drawer and 0 horizontal scroll; Neon Tech cloud database configuration with Psycopg 3 dialect auto-normalization; production seed safety guards; centralized API and media URLs; N+1 fee query batching; 8/8 automated visual responsive verification checks passing).
    Supersedes all previous session handoffs.
 1. **`FRONTEND-HANDOFF.md`** — the brief for **Parts Two to Six**: the
    three contracts, what "clean and easy for a school office" means, the

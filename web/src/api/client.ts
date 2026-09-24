@@ -4,7 +4,18 @@ import { ApiError } from "./errors";
 
 export { ApiError };
 
-const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+export const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const BASE = API_BASE_URL;
+
+export function toMediaUrl(path: string | null | undefined): string {
+  if (!path) return "";
+  if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:") || path.startsWith("blob:")) {
+    return path;
+  }
+  const cleanBase = API_BASE_URL.replace(/\/+$/, "");
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  return `${cleanBase}${cleanPath}`;
+}
 const TOKEN_KEY = "sunrise.token";
 const REFRESH_KEY = "sunrise.refresh";
 

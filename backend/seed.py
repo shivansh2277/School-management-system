@@ -398,24 +398,22 @@ def _stamp_tenant(db: Session, school_id: int) -> None:
                 obj.school_id = school_id
 
 
-def wipe(db: Session) -> None:
-    """Empty every table.
+def wipe(db: Session, force: bool = False) -> None:
+    """Empty every table with strict production safety guards."""
+    from app.core.config import settings
+    db_url = str(db.bind.url) if db.bind else ""
+    is_cloud_or_prod = (
+        settings.is_production
+        or any(k in db_url.lower() for k in ("neon.tech", "oraclecloud", "rds.amazonaws.com", "supabase.co"))
+    )
 
-    This used to be a hand-ordered list of models, which went stale the moment
-    a migration added a table nobody remembered to add to it: seeding a
-    migrated Postgres database failed on `document_types` still referencing
-    `schools`. So the order came from `sorted_tables` instead — until
-    `employees` and `departments` began pointing at each other (a department
-    has a head, an employee has a department). A cycle has no topological
-    order, so SQLAlchemy drops those foreign keys from its sort and warns that
-    it may raise instead in a later release. The order it produced was then
-    correct only by luck.
+    if is_cloud_or_prod and not force and not settings.ALLOW_SEED_WIPE:
+        raise RuntimeError(
+            "SAFETY GUARD: Refusing to wipe database! Connected to remote/production host "
+            f"({db_url.split('@')[-1] if '@' in db_url else 'cloud'}). "
+            "To override and re-seed, set ALLOW_SEED_WIPE=true in environment or pass --force."
+        )
 
-    On Postgres, `TRUNCATE ... CASCADE` is one statement that does not need an
-    order at all, which is the right answer to a cycle rather than a second
-    hand-maintained list of the columns to null first. SQLite has no CASCADE
-    and does not enforce foreign keys anyway, so the delete loop stands there.
-    """
     if db.bind is not None and db.bind.dialect.name == "postgresql":
         # No sort at all: asking for one is what emits the cycle warning, and
         # TRUNCATE CASCADE does not want an order.
@@ -427,9 +425,15 @@ def wipe(db: Session) -> None:
     db.commit()
 
 
-def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it would only hide it
+def seed(db: Session, reset: bool = True, force: bool = False) -> None:  # noqa: PLR0915 - linear script; splitting it would only hide it
     rng = random.Random(20260901)
-    wipe(db)
+    if reset:
+        wipe(db, force=force)
+    else:
+        existing = db.scalar(select(School).where(School.code == SCHOOL_CODE))
+        if existing:
+            print(f"Notice: Demo school '{SCHOOL_CODE}' already exists. Skipping seed.")
+            return
 
     school = School(
         code=SCHOOL_CODE,
@@ -1998,9 +2002,15 @@ def _assign_roles(db: Session, roles: dict, sections: list) -> None:
 
 
 def main() -> None:
+    import argparse
+    parser = argparse.ArgumentParser(description="Seed Sunrise School ERP demo database")
+    parser.add_argument("--skip-wipe", action="store_true", help="Idempotently seed demo data without wiping existing tables")
+    parser.add_argument("--force", action="store_true", help="Force wipe even on cloud/production database")
+    args = parser.parse_args()
+
     Base.metadata.create_all(engine)
     with SessionLocal() as db:
-        seed(db)
+        seed(db, reset=not args.skip_wipe, force=args.force)
     print("Seeded Sunrise Public School demo data.")
 
 

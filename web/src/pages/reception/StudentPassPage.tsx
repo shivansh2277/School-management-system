@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { api } from "../../api/client";
+import { api, toMediaUrl } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { Can } from "../../components/Can";
 import {
@@ -46,8 +46,6 @@ export function StudentPassPage() {
   const [activePrintPass, setActivePrintPass] = useState<StudentPassData | null>(null);
   const [showRosterModal, setShowRosterModal] = useState(false);
   const [rosterStudent, setRosterStudent] = useState<{ id: number; name: string; admission_no: string } | null>(null);
-
-  const apiBase = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
   // Form states for creating a pass
   const [passForm, setPassForm] = useState({
@@ -520,11 +518,7 @@ export function StudentPassPage() {
                         <div className="flex items-center gap-2.5 min-w-0">
                           {person.photo_url ? (
                             <img
-                              src={
-                                person.photo_url.startsWith("http")
-                                  ? person.photo_url
-                                  : `${apiBase}${person.photo_url.startsWith("/") ? "" : "/"}${person.photo_url}`
-                              }
+                              src={toMediaUrl(person.photo_url)}
                               alt={person.name}
                               className="w-8 h-8 rounded-full object-cover border border-rule shadow-xs flex-shrink-0"
                             />
@@ -568,11 +562,7 @@ export function StudentPassPage() {
               {passForm.pickup_person_photo_url && (
                 <div className="flex items-center gap-3 p-2 bg-primary/5 border border-primary/20 rounded">
                   <img
-                    src={
-                      passForm.pickup_person_photo_url.startsWith("http")
-                        ? passForm.pickup_person_photo_url
-                        : `http://localhost:8000${passForm.pickup_person_photo_url.startsWith("/") ? "" : "/"}${passForm.pickup_person_photo_url}`
-                    }
+                    src={toMediaUrl(passForm.pickup_person_photo_url)}
                     alt={passForm.pickup_person_name || "Escort photo"}
                     className="w-12 h-12 rounded object-cover border border-primary/30 shadow-sm shrink-0"
                   />
@@ -712,11 +702,7 @@ export function StudentPassPage() {
                       <div className="flex items-center gap-2.5 min-w-0">
                         {p.photo_url ? (
                           <img
-                            src={
-                              p.photo_url.startsWith("http")
-                                ? p.photo_url
-                                : `${apiBase}${p.photo_url.startsWith("/") ? "" : "/"}${p.photo_url}`
-                            }
+                            src={toMediaUrl(p.photo_url)}
                             alt={p.name}
                             className="w-9 h-9 rounded-full object-cover border border-rule shadow-xs flex-shrink-0"
                           />

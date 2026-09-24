@@ -1,7 +1,7 @@
 # Sunrise School ERP — Single Source of Truth
 
 **Date:** 24 September 2026  
-**Status:** Authoritative — Session 14 Completed: Transport Module Upgrade — Plan 1 (Fleet & Route Setup Desk), Plan 2 (Student Transport Allocation Desk), and Address-Based Location System.  
+**Status:** Authoritative — Session 15 Completed: Responsive Design (Mobile 390px, Tablet 768px, Laptop 1280px, Desktop 1440px), Neon Tech Serverless Database Architecture, Oracle Cloud Production Readiness, and N+1 Latency Elimination.  
 **Canonical Branch:** `slice/office-feedback` (strictly local per owner decision).  
 **Primary PDF Deliverables:**
 - [`docs/Sunrise-ERP-Admission-Demo-Guide.pdf`](docs/Sunrise-ERP-Admission-Demo-Guide.pdf) — Complete Digital Admission Dossier & Interactive Testing Guide for Application 360° with Aarav Sharma & Ananya Verma walkthroughs.
@@ -42,7 +42,7 @@
 
 ---
 
-## 2. Verified Technical State (Measured 24 Sep 2026 — Session 14 Verified)
+## 2. Verified Technical State (Measured 24 Sep 2026 — Session 15 Verified)
 
 | Layer | Metric | Verification Command | Result |
 |---|---|---|:---:|
@@ -54,7 +54,7 @@
 | **Database Schema** | Migrations Synced | `alembic current` | **Head `f6a7b8c9d0e1` (route_stops.address column active)** |
 | **Production Build** | Vite 5.4 | `cd web && npm run build` | **Clean build** |
 | **Declared Web Screens** | 31 Screens | Registered in `web/src/screens.ts` | **31/31 functional & gated (Role-specific excludeRoles & RBAC)** |
-| **Visual Verification Proofs** | Session 14 Suite | Puppeteer Headless Chrome | **25/25 checks passed, high-fidelity proofs in `docs/screenshots/`** |
+| **Responsive Verification** | 4 Breakpoints | `node verify_responsive_visual.mjs` in `web/` | **8/8 viewports passed (390px, 768px, 1280px, 1440px), 0 horizontal scroll** |
 
 ### Local Stack Configuration
 - **FastAPI Backend API**: `http://127.0.0.1:8000` (LAN binding: `http://0.0.0.0:8000` / `http://192.168.29.227:8000`)

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { api, money, newIdempotencyKey } from "../../api/client";
+import { API_BASE_URL, api, money, newIdempotencyKey } from "../../api/client";
 import { useWrite } from "../../api/useWrite";
 import { ActionButton, Can } from "../../components/Can";
 import {
@@ -395,9 +395,8 @@ export function Applications() {
       formData.append("file", uploadFile);
 
       const token = localStorage.getItem("sunrise.token");
-      const base = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
       const res = await fetch(
-        `${base}/admin/admission/applications/${selectedAppId}/documents`,
+        `${API_BASE_URL}/admin/admission/applications/${selectedAppId}/documents`,
         {
           method: "POST",
           headers: token ? { Authorization: `Bearer ${token}` } : {},

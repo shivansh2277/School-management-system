@@ -18,7 +18,7 @@ from decimal import Decimal
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.models import (
     AcademicYear,
@@ -39,6 +39,7 @@ from app.models import (
     InvoiceStatus,
     PaymentAllocation,
     School,
+    Student,
     StudentGuardian,
     User,
 )
@@ -101,8 +102,13 @@ def allocated_by_line(db: Session, line_ids: list[int]) -> dict[int, Decimal]:
     return {line_id: Decimal(total) for line_id, total in rows}
 
 
-def totals(db: Session, invoice: FeeInvoice) -> dict:
-    paid_by_line = allocated_by_line(db, [line.id for line in invoice.lines])
+def totals(
+    db: Session,
+    invoice: FeeInvoice,
+    paid_by_line: dict[int, Decimal] | None = None,
+) -> dict:
+    if paid_by_line is None:
+        paid_by_line = allocated_by_line(db, [line.id for line in invoice.lines])
     charged = sum((line.amount for line in invoice.lines), ZERO)
     discount = sum((line.discount for line in invoice.lines), ZERO)
     paid = sum((paid_by_line.get(line.id, ZERO) for line in invoice.lines), ZERO)
@@ -896,10 +902,18 @@ def defaulters(
     about, and it would be discovered by a parent.
     """
     on = on or Date.today()
-    q = select(FeeInvoice).where(
-        FeeInvoice.school_id == school_id,
-        FeeInvoice.status.not_in(DEAD),
-        FeeInvoice.settled_on.is_(None),
+    q = (
+        select(FeeInvoice)
+        .where(
+            FeeInvoice.school_id == school_id,
+            FeeInvoice.status.not_in(DEAD),
+            FeeInvoice.settled_on.is_(None),
+        )
+        .options(
+            selectinload(FeeInvoice.lines),
+            joinedload(FeeInvoice.enrolment).joinedload(Enrolment.student).joinedload(Student.user),
+            joinedload(FeeInvoice.enrolment).joinedload(Enrolment.class_section),
+        )
     )
     if class_section_id is not None:
         q = q.where(
@@ -907,6 +921,10 @@ def defaulters(
                 select(Enrolment.id).where(Enrolment.class_section_id == class_section_id)
             )
         )
+
+    invoices = db.scalars(q).unique().all()
+    if not invoices:
+        return []
 
     ay_map = {
         ay.id: ay.code
@@ -918,9 +936,42 @@ def defaulters(
         if emp.user
     }
 
+    # Batch pre-fetch late fee head once
+    late_head = db.scalar(
+        select(FeeHead).where(
+            FeeHead.school_id == school_id, FeeHead.code == LATE_FEE_CODE
+        )
+    )
+    late_head_id = late_head.id if late_head else None
+
+    # Batch pre-fetch all line allocations in a single query
+    all_line_ids = [line.id for inv in invoices for line in inv.lines]
+    all_paid_map = allocated_by_line(db, all_line_ids)
+
+    # Batch pre-fetch all primary contacts for students in a single query
+    student_ids = list({inv.enrolment.student_id for inv in invoices if inv.enrolment and inv.enrolment.student_id})
+    contacts_map: dict[int, dict] = {}
+    if student_ids:
+        guardian_rows = db.execute(
+            select(StudentGuardian.student_id, Guardian)
+            .join(Guardian, StudentGuardian.guardian_id == Guardian.id)
+            .options(joinedload(Guardian.user))
+            .where(
+                StudentGuardian.student_id.in_(student_ids),
+                StudentGuardian.is_primary.is_(True),
+            )
+        ).all()
+        for s_id, g in guardian_rows:
+            if g and g.user:
+                contacts_map[s_id] = {
+                    "name": g.user.full_name,
+                    "phone": g.user.phone,
+                    "email": g.user.email,
+                }
+
     by_student: dict[int, dict] = {}
-    for invoice in db.scalars(q):
-        amounts = totals(db, invoice)
+    for invoice in invoices:
+        amounts = totals(db, invoice, all_paid_map)
         if amounts["balance"] <= ZERO:
             continue
         student = invoice.enrolment.student
@@ -942,7 +993,7 @@ def defaulters(
                 "class_label": class_sec.label if class_sec else "—",
                 "class_teacher_name": teacher_name,
                 "academic_year": academic_year,
-                "contact": primary_contact(db, student.id),
+                "contact": contacts_map.get(student.id) or primary_contact(db, student.id),
                 "months_due": 0,
                 "oldest_due_date": invoice.due_date,
                 "outstanding": ZERO,
@@ -955,7 +1006,7 @@ def defaulters(
         row["months_due"] += 1
         row["outstanding"] += amounts["balance"]
         row["total_paid"] += amounts.get("paid", ZERO)
-        row["late_fee"] += late_fee_charged(db, invoice)
+        row["late_fee"] += late_fee_charged(db, invoice, late_head_id)
         row["oldest_due_date"] = min(row["oldest_due_date"], invoice.due_date)
         if invoice.due_date < on:
             row["is_overdue"] = True
@@ -1027,17 +1078,23 @@ def collection(db: Session, year: int, school_id: int) -> dict:
     }
 
 
-def late_fee_charged(db: Session, invoice: FeeInvoice) -> Decimal:
+def late_fee_charged(
+    db: Session,
+    invoice: FeeInvoice,
+    late_head_id: int | None = None,
+) -> Decimal:
     """What fine currently stands on this invoice. A read: it never assesses."""
-    head = db.scalar(
-        select(FeeHead).where(
-            FeeHead.school_id == invoice.school_id, FeeHead.code == LATE_FEE_CODE
+    if late_head_id is None:
+        head = db.scalar(
+            select(FeeHead).where(
+                FeeHead.school_id == invoice.school_id, FeeHead.code == LATE_FEE_CODE
+            )
         )
-    )
-    if head is None:
-        return ZERO
+        if head is None:
+            return ZERO
+        late_head_id = head.id
     return money(
-        sum((line.net for line in invoice.lines if line.fee_head_id == head.id), ZERO)
+        sum((line.net for line in invoice.lines if line.fee_head_id == late_head_id), ZERO)
     )
 
 

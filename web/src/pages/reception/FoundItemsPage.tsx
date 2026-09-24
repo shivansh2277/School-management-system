@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { api } from "../../api/client";
+import { api, toMediaUrl } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import { Can } from "../../components/Can";
 import {
@@ -18,12 +18,7 @@ import {
 import { ImageUploader } from "../../components/reception/ImageUploader";
 
 function resolveImageUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
-    return url;
-  }
-  const base = import.meta.env.VITE_API_URL || "http://localhost:8000";
-  return `${base}${url.startsWith("/") ? "" : "/"}${url}`;
+  return toMediaUrl(url) || null;
 }
 
 export interface FoundItem {

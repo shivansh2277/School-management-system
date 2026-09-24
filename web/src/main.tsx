@@ -8,7 +8,14 @@ import { AuthProvider } from "./auth/AuthContext";
 import "./index.css";
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 30_000, // 30s freshness prevents WAN request storms between Oracle Cloud and Neon Tech
+      gcTime: 300_000, // 5 min garbage collection
+    },
+  },
 });
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

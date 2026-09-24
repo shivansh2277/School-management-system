@@ -1,4 +1,5 @@
 import React, { useRef } from "react";
+import { toMediaUrl } from "../../api/client";
 
 export interface StudentPassData {
   id: number;
@@ -38,8 +39,6 @@ export function PrintableStudentPass({
     month: "long",
     year: "numeric",
   });
-
-  const apiBase = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 overflow-y-auto">
@@ -150,11 +149,7 @@ export function PrintableStudentPass({
                 <div className="flex gap-2.5">
                   {pass.pickup_person_photo_url && (
                     <img
-                      src={
-                        pass.pickup_person_photo_url.startsWith("http")
-                          ? pass.pickup_person_photo_url
-                          : `${apiBase}${pass.pickup_person_photo_url.startsWith("/") ? "" : "/"}${pass.pickup_person_photo_url}`
-                      }
+                      src={toMediaUrl(pass.pickup_person_photo_url)}
                       alt={pass.pickup_person_name}
                       className="w-14 h-16 object-cover rounded border border-gray-300 shadow-xs flex-shrink-0"
                     />

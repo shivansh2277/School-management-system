@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { api } from "../../api/client";
+import { api, API_BASE_URL, toMediaUrl } from "../../api/client";
 
 interface ImageUploaderProps {
   value?: string | null;
@@ -22,12 +22,8 @@ export function ImageUploader({
   const [isDragging, setIsDragging] = useState(false);
   const [showManualInput, setShowManualInput] = useState(false);
 
-  const apiBase = import.meta.env.VITE_API_URL || "http://localhost:8000";
-  const displayUrl = value
-    ? value.startsWith("http") || value.startsWith("data:")
-      ? value
-      : `${apiBase}${value.startsWith("/") ? "" : "/"}${value}`
-    : null;
+  const apiBase = API_BASE_URL;
+  const displayUrl = toMediaUrl(value);
 
   const handleFile = async (file: File) => {
     setError(null);
