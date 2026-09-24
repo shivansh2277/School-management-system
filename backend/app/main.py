@@ -88,6 +88,7 @@ app.mount("/documents", StaticFiles(directory=str(storage_path)), name="document
 
 
 @app.get("/health", tags=["meta"])
+@app.get("/healthz", tags=["meta"])
 @app.get("/api/v1/health", tags=["meta"])
 def health() -> dict[str, str]:
     return {"status": "ok"}
