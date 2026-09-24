@@ -26,9 +26,16 @@ import {
 
 export function MeetingsPage() {
   const queryClient = useQueryClient();
-  const { me } = useAuth();
+  const { me, can } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<"principal" | "teacher">("principal");
+  const isTeacherOnly =
+    !can("admin.settings.read") &&
+    !can("reception.meetings.write") &&
+    can("reception.meetings.respond_teacher");
+
+  const [activeTab, setActiveTab] = useState<"principal" | "teacher">(
+    isTeacherOnly ? "teacher" : "principal"
+  );
 
   // Principal state
   const [principalDate, setPrincipalDate] = useState<string>(new Date().toISOString().slice(0, 10));
@@ -161,33 +168,39 @@ export function MeetingsPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-ink tracking-tight">Visitor Meeting Slips</h1>
+          <h1 className="text-2xl font-bold text-ink tracking-tight">
+            {isTeacherOnly ? "My Visitor Meetings" : "Visitor Meeting Slips"}
+          </h1>
           <p className="text-sm text-ink-faint">
-            Manage executive visitor appointments for the Principal and academic parent-teacher interactions.
+            {isTeacherOnly
+              ? "View incoming parent and visitor meeting requests addressed to you and record your response."
+              : "Manage executive visitor appointments for the Principal and academic parent-teacher interactions."}
           </p>
         </div>
 
         {/* Tab Buttons */}
-        <div className="flex items-center gap-2 bg-ground p-1 rounded-pill border border-rule">
-          <button
-            type="button"
-            onClick={() => setActiveTab("principal")}
-            className={`px-4 py-1.5 rounded-pill text-xs font-semibold transition ${
-              activeTab === "principal" ? "bg-primary text-white shadow-xs" : "text-ink-faint hover:text-ink"
-            }`}
-          >
-            Principal Meeting Slips
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("teacher")}
-            className={`px-4 py-1.5 rounded-pill text-xs font-semibold transition ${
-              activeTab === "teacher" ? "bg-primary text-white shadow-xs" : "text-ink-faint hover:text-ink"
-            }`}
-          >
-            Teacher Meeting Slips
-          </button>
-        </div>
+        {!isTeacherOnly && (
+          <div className="flex items-center gap-2 bg-ground p-1 rounded-pill border border-rule">
+            <button
+              type="button"
+              onClick={() => setActiveTab("principal")}
+              className={`px-4 py-1.5 rounded-pill text-xs font-semibold transition ${
+                activeTab === "principal" ? "bg-primary text-white shadow-xs" : "text-ink-faint hover:text-ink"
+              }`}
+            >
+              Principal Meeting Slips
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("teacher")}
+              className={`px-4 py-1.5 rounded-pill text-xs font-semibold transition ${
+                activeTab === "teacher" ? "bg-primary text-white shadow-xs" : "text-ink-faint hover:text-ink"
+              }`}
+            >
+              Teacher Meeting Slips
+            </button>
+          </div>
+        )}
       </div>
 
       {/* TAB 1: PRINCIPAL MEETINGS */}

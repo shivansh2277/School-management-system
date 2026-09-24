@@ -73,6 +73,8 @@ export type Screen = {
   permissions: string[];
   /** Hidden entirely unless the school has all of these modules switched on. */
   modules?: ModuleCode[];
+  /** Roles that are strictly excluded/restricted from viewing or accessing this screen. */
+  excludeRoles?: string[];
   element: LazyExoticComponent<ComponentType>;
 };
 
@@ -107,6 +109,7 @@ export const SCREENS: Screen[] = [
     // Module admission.
     permissions: ["admission.enquiry.read"],
     modules: ["admission"],
+    excludeRoles: ["super_admin", "admin"],
     element: lazy(() =>
       import("./pages/admission/Enquiries").then((m) => ({ default: m.Enquiries })),
     ),
@@ -119,6 +122,7 @@ export const SCREENS: Screen[] = [
     // Module admission.
     permissions: ["admission.application.read"],
     modules: ["admission"],
+    excludeRoles: ["super_admin", "admin"],
     element: lazy(() =>
       import("./pages/admission/Applications").then((m) => ({ default: m.Applications })),
     ),
@@ -130,6 +134,7 @@ export const SCREENS: Screen[] = [
     // GET /admin/admission/cycles/{id}/merit. Module admission.
     permissions: ["admission.application.read"],
     modules: ["admission"],
+    excludeRoles: ["super_admin", "admin"],
     element: lazy(() =>
       import("./pages/admission/MeritSelection").then((m) => ({ default: m.MeritSelection })),
     ),
@@ -141,6 +146,7 @@ export const SCREENS: Screen[] = [
     // GET /admin/admission/cycles/{id}/waitlist. Module admission.
     permissions: ["admission.application.read"],
     modules: ["admission"],
+    excludeRoles: ["super_admin", "admin"],
     element: lazy(() =>
       import("./pages/admission/Waitlist").then((m) => ({ default: m.Waitlist })),
     ),
@@ -152,6 +158,7 @@ export const SCREENS: Screen[] = [
     // GET /admin/admission/cycles/{id}/reports. Module admission.
     permissions: ["admission.application.read"],
     modules: ["admission"],
+    excludeRoles: ["super_admin", "admin"],
     element: lazy(() =>
       import("./pages/admission/AdmissionReports").then((m) => ({ default: m.AdmissionReports })),
     ),
@@ -171,6 +178,7 @@ export const SCREENS: Screen[] = [
     // skips the call instead.
     permissions: ["students.profile.read"],
     modules: ["students"],
+    excludeRoles: ["transport_incharge"],
     element: lazy(() => import("./pages/Students").then((m) => ({ default: m.Students }))),
   },
   {
@@ -182,6 +190,7 @@ export const SCREENS: Screen[] = [
     // with the whole router behind Depends(module_enabled("hr")).
     permissions: ["hr.employee.read"],
     modules: ["hr"],
+    excludeRoles: ["transport_incharge"],
     element: lazy(() => import("./pages/Teachers").then((m) => ({ default: m.Teachers }))),
   },
   {
@@ -191,6 +200,7 @@ export const SCREENS: Screen[] = [
     // GET /admin/staff-leave - api/admin/staff_leave.py, hr.leave.read, module hr.
     permissions: ["hr.leave.read"],
     modules: ["hr"],
+    excludeRoles: ["transport_incharge"],
     element: lazy(() =>
       import("./pages/StaffLeavePage").then((m) => ({ default: m.StaffLeavePage })),
     ),
@@ -204,6 +214,7 @@ export const SCREENS: Screen[] = [
     // grid this screen draws comes from the classes router, not the gated
     // timetable one, so it does not depend on the timetable module.
     permissions: ["academics.class.read"],
+    excludeRoles: ["transport_incharge"],
     element: lazy(() => import("./pages/Classes").then((m) => ({ default: m.Classes }))),
   },
   {
@@ -215,6 +226,7 @@ export const SCREENS: Screen[] = [
     // GET /admin/classes (useClasses) - academics.class.read.
     permissions: ["attendance.record.read", "academics.class.read"],
     modules: ["attendance"],
+    excludeRoles: ["transport_incharge"],
     element: lazy(() => import("./pages/Attendance").then((m) => ({ default: m.Attendance }))),
   },
   {
@@ -228,6 +240,7 @@ export const SCREENS: Screen[] = [
     // custom role can, and then the subject picker fails.
     permissions: ["exam.definition.read", "academics.class.read"],
     modules: ["examinations"],
+    excludeRoles: ["transport_incharge"],
     element: lazy(() => import("./pages/Exams").then((m) => ({ default: m.Exams }))),
   },
   {
@@ -237,6 +250,7 @@ export const SCREENS: Screen[] = [
     // POST /admin/promotion/preview, /admin/promotion/commit, GET /admin/promotion/years
     permissions: ["students.enrolment.promote", "academics.class.read"],
     modules: ["students"],
+    excludeRoles: ["transport_incharge"],
     element: lazy(() =>
       import("./pages/SessionRollover").then((m) => ({ default: m.SessionRollover })),
     ),
@@ -270,6 +284,7 @@ export const SCREENS: Screen[] = [
     // fees.payment.void.
     permissions: ["fees.invoice.read", "students.profile.read"],
     modules: ["fees"],
+    excludeRoles: ["super_admin", "admin"],
     element: lazy(() =>
       import("./pages/FeeLedger").then((m) => ({ default: m.FeeLedger })),
     ),
@@ -285,6 +300,7 @@ export const SCREENS: Screen[] = [
     // fees.invoice.read without academics.class.read.
     permissions: ["fees.invoice.read"],
     modules: ["fees"],
+    excludeRoles: ["super_admin", "admin"],
     element: lazy(() =>
       import("./pages/Defaulters").then((m) => ({ default: m.Defaulters })),
     ),
@@ -412,7 +428,7 @@ export const SCREENS: Screen[] = [
     path: "/reports",
     label: "Reports library",
     group: "Analytics",
-    permissions: ["admin.settings.read"],
+    permissions: ["reports.read"],
     modules: ["reports"],
     element: lazy(() => import("./pages/Reports").then((m) => ({ default: m.Reports }))),
   },
@@ -421,6 +437,7 @@ export const SCREENS: Screen[] = [
     label: "Found & Lost",
     group: "Front Desk",
     permissions: ["reception.found_items.read"],
+    excludeRoles: ["super_admin", "admin"],
     element: lazy(() =>
       import("./pages/reception/FoundItemsPage").then((m) => ({ default: m.FoundItemsPage })),
     ),
@@ -430,6 +447,7 @@ export const SCREENS: Screen[] = [
     label: "Student Passes",
     group: "Front Desk",
     permissions: ["reception.passes.read"],
+    excludeRoles: ["super_admin", "admin"],
     element: lazy(() =>
       import("./pages/reception/StudentPassPage").then((m) => ({ default: m.StudentPassPage })),
     ),
@@ -467,6 +485,7 @@ export const SCREENS: Screen[] = [
     // sidebar.
     permissions: ["fees.payment.collect"],
     modules: ["fees"],
+    excludeRoles: ["super_admin", "admin"],
     element: lazy(() =>
       import("./pages/reception/ReceptionFeeCounterPage").then((m) => ({
         default: m.ReceptionFeeCounterPage,
@@ -478,6 +497,21 @@ export const SCREENS: Screen[] = [
 type Can = (permission: string) => boolean;
 type HasModule = (code: string) => boolean;
 
+/** Extracts the effective RBAC roles for a user, preferring roles list over legacy user.role. */
+export function getUserRoles(me?: { roles?: string[]; user?: { role?: string } } | null): string[] {
+  if (!me) return [];
+  if (me.roles && me.roles.length > 0) return me.roles;
+  return me.user?.role ? [me.user.role] : [];
+}
+
+/** Whether a screen is permitted for the given roles. */
+export function isScreenAllowed(screen: Screen, roles?: string[]): boolean {
+  if (!roles || roles.length === 0 || !screen.excludeRoles || screen.excludeRoles.length === 0) {
+    return true;
+  }
+  return !roles.some((r) => screen.excludeRoles!.includes(r));
+}
+
 /** The first module this school has switched off, or undefined. */
 export function missingModule(screen: Screen, hasModule: HasModule): ModuleCode | undefined {
   return (screen.modules ?? []).find((m) => !hasModule(m));
@@ -488,10 +522,13 @@ export function missingPermission(screen: Screen, can: Can): string | undefined 
   return screen.permissions.find((p) => !can(p));
 }
 
-/** Screens this caller may actually open. Both gates, all of each, in order. */
-export function visibleScreens(can: Can, hasModule: HasModule): Screen[] {
+/** Screens this caller may actually open. All gates in order: module, role exclusion, permission. */
+export function visibleScreens(can: Can, hasModule: HasModule, roles?: string[]): Screen[] {
   return SCREENS.filter(
-    (s) => missingModule(s, hasModule) === undefined && missingPermission(s, can) === undefined,
+    (s) =>
+      missingModule(s, hasModule) === undefined &&
+      isScreenAllowed(s, roles) &&
+      missingPermission(s, can) === undefined,
   );
 }
 
@@ -499,9 +536,10 @@ export function visibleScreens(can: Can, hasModule: HasModule): Screen[] {
 export function groupedNav(
   can: Can,
   hasModule: HasModule,
+  roles?: string[],
 ): { group?: string; screens: Screen[] }[] {
   const out: { group?: string; screens: Screen[] }[] = [];
-  for (const screen of visibleScreens(can, hasModule)) {
+  for (const screen of visibleScreens(can, hasModule, roles)) {
     const existing = out.find((g) => g.group === screen.group);
     if (existing) existing.screens.push(screen);
     else out.push({ group: screen.group, screens: [screen] });

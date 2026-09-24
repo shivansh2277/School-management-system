@@ -19,18 +19,22 @@ not a CAPTCHA: a school in Lucknow with intermittent connectivity should not
 have a Google widget between a parent and their child's admission.
 """
 
+import uuid
 from datetime import UTC, date as Date, datetime, timedelta
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.db import get_db
 from app.services.common import class_sort_key
 from app.models import (
     AdmissionCategory,
     Application,
+    ApplicationAuthorizedPerson,
     ApplicationGuardian,
     ApplicationStatus,
     AuditAction,
@@ -98,6 +102,20 @@ class PublicGuardian(BaseModel):
     email: str | None = None
     occupation: str | None = None
     is_primary: bool = False
+    photo_url: str | None = None
+    is_authorised_for_pickup: bool = True
+
+
+class PublicAuthorizedPickupPerson(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    name: str = Field(min_length=1, max_length=120)
+    relationship: str = Field(min_length=1, max_length=60)
+    phone: str = Field(min_length=10, max_length=30)
+    id_proof_type: str | None = None
+    id_proof_number: str | None = None
+    photo_url: str | None = None
+    notes: str | None = None
 
 
 class PublicApplication(BaseModel):
@@ -117,6 +135,7 @@ class PublicApplication(BaseModel):
     address: dict | None = None
     previous_school: dict | None = None
     guardians: list[PublicGuardian]
+    authorized_pickup_persons: list[PublicAuthorizedPickupPerson] = []
     heard_about_us: EnquirySource = EnquirySource.website
     # §5.1.4 step 9. Consent is explicit and never pre-ticked; the two the
     # school cannot proceed without are checked below rather than by a default.
@@ -127,6 +146,67 @@ class PublicApplication(BaseModel):
     # Honeypot. A real form renders this hidden and empty; a bot fills every
     # field it finds. Named as something a scraper would want to complete.
     website: str | None = None
+
+
+ALLOWED_IMAGE_MIMES = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
+MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024  # 5MB
+
+
+@router.post("/upload")
+def upload_admission_photo(
+    school_code: str,
+    file: UploadFile = File(...),
+    request: Request = None,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Public photo upload for admission applications (applicant and authorized escorts).
+    Files are stored in local storage and served statically under /documents.
+    """
+    school = _school(db, school_code)
+    if request:
+        ip = _client_ip(request)
+        _rate_limit(db, school.id, ip)
+
+    content_type = (file.content_type or "").lower()
+    ext = ALLOWED_IMAGE_MIMES.get(content_type)
+    if not ext:
+        suffix = Path(file.filename or "").suffix.lower()
+        if suffix in {".jpg", ".jpeg"}:
+            ext = ".jpg"
+        elif suffix == ".png":
+            ext = ".png"
+        elif suffix == ".webp":
+            ext = ".webp"
+        else:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "Only image files (.jpg, .jpeg, .png, .webp) are accepted",
+            )
+
+    data = file.file.read()
+    if len(data) > MAX_IMAGE_SIZE_BYTES:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "Image file exceeds maximum allowed size of 5MB",
+        )
+
+    target_dir = Path(settings.STORAGE_LOCAL_PATH) / str(school.id) / "admission"
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    filename = f"{uuid.uuid4().hex}{ext}"
+    file_path = target_dir / filename
+    file_path.write_bytes(data)
+
+    rel_url = f"/documents/{school.id}/admission/{filename}"
+    return {
+        "url": rel_url,
+        "filename": file.filename,
+        "size": len(data),
+    }
 
 
 @router.get("/open")
@@ -226,6 +306,7 @@ def apply(
         **body.model_dump(
             exclude={
                 "guardians",
+                "authorized_pickup_persons",
                 "heard_about_us",
                 "information_accuracy",
                 "school_rules_accepted",
@@ -249,6 +330,14 @@ def apply(
         db.add(
             ApplicationGuardian(
                 school_id=school.id, application_id=app.id, **g.model_dump()
+            )
+        )
+    for p in body.authorized_pickup_persons:
+        db.add(
+            ApplicationAuthorizedPerson(
+                school_id=school.id,
+                application_id=app.id,
+                **p.model_dump(),
             )
         )
     db.flush()

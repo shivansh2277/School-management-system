@@ -161,6 +161,9 @@ PERMISSIONS: list[tuple[str, str]] = [
     ("reception.meetings.respond_teacher", "Respond to Teacher meeting requests"),
     ("reception.directory.read", "View important emergency and school directory contacts"),
     ("reception.directory.write", "Manage important directory contacts"),
+
+    # --- reporting
+    ("reports.read", "View report library and run operational reports"),
 ]
 
 # Permissions that end in `.read` but must NOT be handed out with the rest of
@@ -319,10 +322,34 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "fees.invoice.generate",
             "fees.payment.collect",
             "fees.payment.void",
+            "fees.concession.approve",
+            "reports.read",
             "comms.notice.read",
             # §5.9.8 scopes the Accountant to fee-related communication. The
             # permission is held school-wide and the restriction is in the
             # service, the same separation the teacher's marks entry uses.
+            "comms.message.send",
+        ],
+    ),
+    (
+        "accounts",
+        "Accounts",
+        [
+            "fees.setup.manage",
+            "fees.invoice.read",
+            "fees.invoice.generate",
+            "fees.payment.collect",
+            "fees.payment.void",
+            "fees.concession.approve",
+            "payroll.run.read",
+            "payroll.setup.manage",
+            "payroll.run.manage",
+            "hr.employee.read",
+            "hr.salary.read",
+            "students.profile.read",
+            "academics.class.read",
+            "reports.read",
+            "comms.notice.read",
             "comms.message.send",
         ],
     ),
@@ -485,6 +512,20 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "transport.assignment.read",
             "transport.assignment.manage",
             "hr.employee.read",
+            "comms.notice.read",
+            "comms.message.send",
+        ],
+    ),
+    (
+        "transport_incharge",
+        "Transport In-Charge",
+        [
+            # Dedicated role for Transport In-Charge: manages vehicles, routes,
+            # and student assignments without administrative, academic, or people management access.
+            "transport.setup.read",
+            "transport.setup.write",
+            "transport.assignment.read",
+            "transport.assignment.manage",
             "comms.notice.read",
             "comms.message.send",
         ],

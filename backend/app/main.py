@@ -49,6 +49,7 @@ from app.api.teacher import marks as teacher_marks
 from app.api.teacher import stock as teacher_stock
 from app.api.teacher import grievances as teacher_grievances
 from app.api.teacher import leave as teacher_leave
+from app.api.teacher import meetings as teacher_meetings
 from app.api.teacher import notifications as teacher_notifications
 from app.core.config import settings
 
@@ -68,13 +69,22 @@ for module in (
     admin_stats, admin_students, admin_teachers, admin_classes,
     admin_exams, admin_grading, admin_schemes, admin_promotion, admin_report_cards, admin_hr, admin_staff_leave, admin_staff_attendance, admin_payroll, admin_notices, admin_comms, admin_fees, admin_fee_setup, admin_attendance, admin_timetable, admin_transport, admin_settings, admin_admission, admin_applications, admin_admission_documents, admin_admission_assessment, admin_selection, admin_conversion, admin_admission_reports, admin_reports, admin_inventory, admin_grievances, admin_reception,
     teacher_dashboard, teacher_classes, teacher_attendance,
-    teacher_homework, teacher_marks, teacher_announcements, teacher_stock, teacher_grievances, teacher_leave, teacher_notifications,
+    teacher_homework, teacher_marks, teacher_announcements, teacher_stock, teacher_grievances, teacher_leave, teacher_notifications, teacher_meetings,
     student_dashboard, student_academics,
     parent_children, parent_fees, parent_grievances,
     public_admission,
 ):
     app.include_router(module.router)
     app.include_router(module.router, prefix="/api/v1")
+
+
+# Mount static document directory for uploaded reception and school documents
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+
+storage_path = Path(settings.STORAGE_LOCAL_PATH)
+storage_path.mkdir(parents=True, exist_ok=True)
+app.mount("/documents", StaticFiles(directory=str(storage_path)), name="documents")
 
 
 @app.get("/health", tags=["meta"])

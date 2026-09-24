@@ -1,11 +1,15 @@
 """API endpoints for Receptionist Operations: Found & Lost, Passes, Meetings, Directory, and Fees."""
+import os
+import uuid
 from datetime import date as Date
+from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.db import get_db
 from app.models import Employee, EmployeeStatus, Enrolment, EnrolmentStatus, Student, User
 from app.schemas.reception import (
@@ -27,6 +31,7 @@ from app.schemas.reception import (
     TeacherMeetingOut,
     TeacherMeetingRespond,
 )
+from app.services import rbac, scoping
 from app.services import reception as svc
 from app.services.rbac import require_permission
 
@@ -36,6 +41,7 @@ router = APIRouter(prefix="/admin/reception", tags=["admin-reception"])
 can_read_found = require_permission("reception.found_items.read", school_wide=True)
 can_write_found = require_permission("reception.found_items.write", school_wide=True)
 can_collect_found = require_permission("reception.found_items.collect", school_wide=True)
+can_upload_found = require_permission("reception.found_items.write", "reception.found_items.collect")
 
 can_read_passes = require_permission("reception.passes.read", school_wide=True)
 can_write_passes = require_permission("reception.passes.write", school_wide=True)
@@ -45,6 +51,7 @@ can_read_meetings = require_permission("reception.meetings.read", school_wide=Tr
 can_write_meetings = require_permission("reception.meetings.write", school_wide=True)
 can_respond_principal = require_permission("reception.meetings.respond_principal", school_wide=True)
 can_respond_teacher = require_permission("reception.meetings.respond_teacher")
+can_read_teacher_meetings = require_permission("reception.meetings.read", "reception.meetings.respond_teacher")
 
 can_read_directory = require_permission("reception.directory.read", school_wide=True)
 can_write_directory = require_permission("reception.directory.write", school_wide=True)
@@ -177,6 +184,59 @@ def collect_found_item(
     db: Session = Depends(get_db),
 ) -> FoundItemOut:
     return svc.collect_found_item(db, user.school_id, user, item_id, payload.model_dump())
+
+
+ALLOWED_IMAGE_MIMES = {
+    "image/jpeg": ".jpg",
+    "image/jpg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
+MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024  # 5MB
+
+
+@router.post("/upload")
+def upload_reception_image(
+    file: UploadFile = File(...),
+    user: User = Depends(can_upload_found),
+) -> dict[str, Any]:
+    content_type = (file.content_type or "").lower()
+    ext = ALLOWED_IMAGE_MIMES.get(content_type)
+    if not ext:
+        suffix = Path(file.filename or "").suffix.lower()
+        if suffix in {".jpg", ".jpeg"}:
+            ext = ".jpg"
+        elif suffix == ".png":
+            ext = ".png"
+        elif suffix == ".webp":
+            ext = ".webp"
+        else:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "Only image files (.jpg, .jpeg, .png, .webp) are accepted",
+            )
+
+    data = file.file.read()
+    if len(data) > MAX_IMAGE_SIZE_BYTES:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "Image file exceeds maximum allowed size of 5MB",
+        )
+
+    target_dir = Path(settings.STORAGE_LOCAL_PATH) / str(user.school_id) / "reception"
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    filename = f"{uuid.uuid4().hex}{ext}"
+    file_path = target_dir / filename
+    file_path.write_bytes(data)
+
+    rel_url = f"/documents/{user.school_id}/reception/{filename}"
+    return {
+        "url": rel_url,
+        "filename": file.filename or filename,
+        "size": len(data),
+        "content_type": content_type or "image/jpeg",
+    }
 
 
 # --- Student Passes & Authorized Persons -------------------------------------
@@ -320,14 +380,19 @@ def list_teacher_meetings(
     meeting_date: Date | None = None,
     status: str | None = None,
     search: str | None = None,
-    user: User = Depends(can_read_meetings),
+    user: User = Depends(can_read_teacher_meetings),
     db: Session = Depends(get_db),
 ) -> list[TeacherMeetingOut]:
-    # If a teacher is requesting, they can see their own meetings even if they don't have school_wide
+    effective_teacher_id = teacher_id
+    authz = rbac.authz_for(db, user)
+    if not authz.can("admin.settings.read") and not authz.is_school_wide("reception.meetings.read"):
+        emp = scoping.employee_for(db, user)
+        effective_teacher_id = emp.id
+
     return svc.list_teacher_meetings(
         db,
         user.school_id,
-        teacher_id=teacher_id,
+        teacher_id=effective_teacher_id,
         meeting_date=meeting_date,
         status_filter=status,
         search=search,
@@ -337,10 +402,16 @@ def list_teacher_meetings(
 @router.get("/meetings/teacher/{meeting_id}", response_model=TeacherMeetingOut)
 def get_teacher_meeting(
     meeting_id: int,
-    user: User = Depends(can_read_meetings),
+    user: User = Depends(can_read_teacher_meetings),
     db: Session = Depends(get_db),
 ) -> TeacherMeetingOut:
-    return svc.get_teacher_meeting(db, user.school_id, meeting_id)
+    meeting = svc.get_teacher_meeting(db, user.school_id, meeting_id)
+    authz = rbac.authz_for(db, user)
+    if not authz.can("admin.settings.read") and not authz.is_school_wide("reception.meetings.read"):
+        emp = scoping.employee_for(db, user)
+        if meeting.teacher_id != emp.id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Cannot access meeting slips for other teachers")
+    return meeting
 
 
 @router.post("/meetings/teacher", response_model=TeacherMeetingOut, status_code=status.HTTP_201_CREATED)
@@ -359,6 +430,12 @@ def respond_teacher_meeting(
     user: User = Depends(can_respond_teacher),
     db: Session = Depends(get_db),
 ) -> TeacherMeetingOut:
+    authz = rbac.authz_for(db, user)
+    if not authz.can("admin.settings.read") and not authz.is_school_wide("reception.meetings.read"):
+        emp = scoping.employee_for(db, user)
+        meeting = svc.get_teacher_meeting(db, user.school_id, meeting_id)
+        if meeting.teacher_id != emp.id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Cannot respond to meeting slips for other teachers")
     return svc.respond_teacher_meeting(db, user.school_id, user, meeting_id, payload.model_dump())
 
 

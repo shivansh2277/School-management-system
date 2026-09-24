@@ -218,6 +218,12 @@ export function NavDrawer({
           icon: "chatbubbles-outline",
           path: "/(teacher)/grievances",
         },
+        {
+          id: "t_meetings",
+          title: "Visitor Meetings",
+          icon: "people-outline",
+          path: "/(teacher)/meetings",
+        },
       ],
     });
     sections.push({

@@ -80,3 +80,92 @@ describe("an unregistered path", () => {
     vi.doUnmock("./auth/AuthContext");
   });
 });
+
+describe("Session 13: Direct URL Route Protection", () => {
+  const adminUser = {
+    ...makeMe(
+      [
+        "admin.settings.read",
+        "admission.cycle.read",
+        "admission.enquiry.read",
+        "admission.application.read",
+        "fees.invoice.read",
+        "reception.found_items.read",
+        "students.profile.read",
+      ],
+      ["admission", "fees", "students"],
+      "Administrator",
+    ),
+    roles: ["super_admin"],
+  };
+
+  const transportUser = {
+    ...makeMe(
+      ["transport.setup.read", "comms.notice.read"],
+      ["transport", "communication", "students"],
+      "Transport In-Charge",
+    ),
+    roles: ["transport_incharge"],
+  };
+
+  it("blocks Admin from accessing hidden admission operational screens via direct URL", async () => {
+    vi.resetModules();
+    vi.doMock("./auth/AuthContext", () => ({
+      useAuth: () => ({
+        me: adminUser,
+        loading: false,
+        login: vi.fn(),
+        logout: vi.fn(),
+        can: (p: string) => adminUser.permissions.includes(p),
+        hasModule: (c: string) => adminUser.modules.includes(c),
+      }),
+    }));
+    const { App: MockedApp } = await import("./App");
+    renderWithAuth(<MockedApp />, adminUser, "/admission/enquiries");
+
+    expect(await screen.findByText("Access Restricted")).toBeInTheDocument();
+    expect(await screen.findByText(/Access to Enquiries is restricted for your role/)).toBeInTheDocument();
+    vi.doUnmock("./auth/AuthContext");
+  });
+
+  it("blocks Admin from accessing Student Fees ledger via direct URL", async () => {
+    vi.resetModules();
+    vi.doMock("./auth/AuthContext", () => ({
+      useAuth: () => ({
+        me: adminUser,
+        loading: false,
+        login: vi.fn(),
+        logout: vi.fn(),
+        can: (p: string) => adminUser.permissions.includes(p),
+        hasModule: (c: string) => adminUser.modules.includes(c),
+      }),
+    }));
+    const { App: MockedApp } = await import("./App");
+    renderWithAuth(<MockedApp />, adminUser, "/fees/ledger");
+
+    expect(await screen.findByText("Access Restricted")).toBeInTheDocument();
+    expect(await screen.findByText(/Access to Student fees is restricted for your role/)).toBeInTheDocument();
+    vi.doUnmock("./auth/AuthContext");
+  });
+
+  it("blocks Transport In-Charge from accessing Students roster via direct URL", async () => {
+    vi.resetModules();
+    vi.doMock("./auth/AuthContext", () => ({
+      useAuth: () => ({
+        me: transportUser,
+        loading: false,
+        login: vi.fn(),
+        logout: vi.fn(),
+        can: (p: string) => transportUser.permissions.includes(p),
+        hasModule: (c: string) => transportUser.modules.includes(c),
+      }),
+    }));
+    const { App: MockedApp } = await import("./App");
+    renderWithAuth(<MockedApp />, transportUser, "/students");
+
+    expect(await screen.findByText("Access Restricted")).toBeInTheDocument();
+    expect(await screen.findByText(/Access to Students is restricted for your role/)).toBeInTheDocument();
+    vi.doUnmock("./auth/AuthContext");
+  });
+});
+

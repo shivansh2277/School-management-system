@@ -1,7 +1,7 @@
 # Sunrise School ERP — Single Source of Truth
 
-**Date:** 23 September 2026  
-**Status:** Authoritative — Session 10 Completed: Receptionist Operational Suite (Found & Lost, Student Gate Passes, Principal & Teacher Meeting Slips, Important Directory, Reception Fee Counter, and Admission Dossier Enhancement) & Strict Front-Desk Navigation Hardening.  
+**Date:** 24 September 2026  
+**Status:** Authoritative — Session 13 Completed: Role-Specific Sidebar & RBAC Restrictions for Admin and Transport In-Charge, with Full Preservation of Operational Staff Roles.  
 **Canonical Branch:** `slice/office-feedback` (strictly local per owner decision).  
 **Primary PDF Deliverables:**
 - [`docs/Sunrise-ERP-Admission-Demo-Guide.pdf`](docs/Sunrise-ERP-Admission-Demo-Guide.pdf) — Complete Digital Admission Dossier & Interactive Testing Guide for Application 360° with Aarav Sharma & Ananya Verma walkthroughs.
@@ -31,28 +31,30 @@
      - Vice Principal: `viceprincipal@sunrisepublic.edu`
      - Owner / Management: `owner@sunrisepublic.edu`
      - Academic Coordinator: `coordinator@sunrisepublic.edu`
-    - Fee counter clerk: `counter@sunrisepublic.edu` (`Admin@123`) — segregated duties (can read ledger, view defaulters, but cannot void payments or approve concessions).
-    - Admission officer: `admission@sunrisepublic.edu` (`Admin@123`) — owns the complete admission pipeline (enquiries, applications, merit ranking, waitlist, reports, and atomic fee collection). Navigation strictly hardened: `Students`, `Classes`, and `Notices` removed; direct URLs `#/students`, `#/classes`, `#/notices` protected with in-page refusal and backend HTTP 403 Forbidden.
-    - Front desk receptionist: `receptionist@sunrisepublic.edu` (`Admin@123`) — dedicated front desk operational suite. Owns Enquiries, Notices, and all Front Desk modules: Found & Lost, Student Gate Passes, Visitor Meeting Slips (Principal & Teacher), Important Directory, and Reception Fee Counter. Navigation strictly hardened: `Applications`, `Merit & selection`, `Waitlist`, `Admission reports`, and all admin fee management screens (`Fees`, `Defaulters`, `Fee setup`, `Period close`, `Student fees`) are completely removed; direct URLs protected with in-page refusal and backend HTTP 403 Forbidden.
+     - Fee counter clerk: `counter@sunrisepublic.edu` (`Admin@123`) — segregated duties (can read ledger, view defaulters, but cannot void payments or approve concessions).
+     - Admission officer: `admission@sunrisepublic.edu` (`Admin@123`) — owns the complete admission pipeline (enquiries, applications, merit ranking, waitlist, reports, and atomic fee collection). Navigation strictly hardened: `Students`, `Classes`, and `Notices` removed; direct URLs `#/students`, `#/classes`, `#/notices` protected with in-page refusal and backend HTTP 403 Forbidden.
+     - Front desk receptionist: `receptionist@sunrisepublic.edu` (`Admin@123`) — dedicated front desk operational suite. Owns Enquiries, Notices, and all Front Desk modules: Found & Lost, Student Gate Passes, Visitor Meeting Slips (Principal & Teacher), Important Directory, and Reception Fee Counter. Navigation strictly hardened: `Applications`, `Merit & selection`, `Waitlist`, `Admission reports`, and all admin fee management screens (`Fees`, `Defaulters`, `Fee setup`, `Period close`, `Student fees`) are completely removed; direct URLs protected with in-page refusal and backend HTTP 403 Forbidden.
+     - Transport In-Charge: `transport@sunrisepublic.edu` (`Admin@123`) — dedicated transport management role. Strictly hardened: People and Academics modules completely removed; sees only Transport & Logistics (`/transport`) and Notices (`/notices`); direct URLs protected with in-page refusal and backend HTTP 403 Forbidden (`students.profile.read` and `academics.class.read` removed). Transport rider stop assignment APIs operate independently.
+     - Accounts Officer: `accounts@sunrisepublic.edu` (`Admin@123`) — dedicated accounts department role. Owns financial operations (Fees overview, student ledger, defaulters, fee structure setup, periods close), payroll management, and Fee Reports. Strictly isolated via RBAC: zero access to Admin settings, Admissions, Transport, or Academic grading.
 4. **Git Protocol (Owner Directive)**:
    - **Continue building locally.** Do not push to GitHub or open a PR until explicitly approved.
    - Always display the exact file list and commit history before any hard-to-undo operation.
 
 ---
 
-## 2. Verified Technical State (Measured 23 Sep 2026 — Session 10 Verified)
+## 2. Verified Technical State (Measured 24 Sep 2026 — Session 13 Verified)
 
 | Layer | Metric | Verification Command | Result |
 |---|---|---|:---:|
-| **Backend Suite** | 736 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest -q` | **735 passed, 1 skipped, 0 failed** (100% green, 0 regressions) |
-| **Active Migration Head** | Revision `d4e5f6a7b8c9` | `alembic current` | **`d4e5f6a7b8c9 (head)` clean bidirectional (receptionist operations)** |
+| **Backend Suite** | 743 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest -q` | **743 passed, 1 skipped, 0 failed** (100% green, 0 regressions) |
+| **Active Migration Head** | Revision `e5f6a7b8c9d0` | `alembic current` | **`e5f6a7b8c9d0 (head)` clean bidirectional (pickup persons & photos)** |
 | **Web Typecheck** | TypeScript 5.5 | `cd web && npx tsc --noEmit` | **0 errors** |
-| **Web Unit Tests** | Vitest 2.1 | `cd web && npm test` | **84 passed, 2 skipped across 18 test files** (100% green) |
+| **Web Unit Tests** | Vitest 2.1 | `cd web && npm test` | **107 passed, 2 skipped across 19 test files** (100% green) |
 | **Mobile Typecheck** | React Native 0.86 / TS | `cd mobile && npx tsc --noEmit` | **0 errors (Expo SDK 57, clean compilation)** |
-| **Database Schema** | Migrations Synced | `alembic current` | **Head `d4e5f6a7b8c9` (reception tables active)** |
+| **Database Schema** | Migrations Synced | `alembic current` | **Head `e5f6a7b8c9d0` (application_authorized_persons active)** |
 | **Production Build** | Vite 5.4 | `cd web && npm run build` | **Clean build** |
-| **Declared Web Screens** | 31 Screens | Registered in `web/src/screens.ts` | **31/31 functional & gated (5 Front Desk screens added)** |
-| **Visual Verification Proofs** | Reception & Admin E2E | Puppeteer Headless Chrome | **47/48 E2E checks passed, 12/12 sidebar checks passed, 23+ screenshots saved in `docs/screenshots/`** |
+| **Declared Web Screens** | 31 Screens | Registered in `web/src/screens.ts` | **31/31 functional & gated (Role-specific excludeRoles & RBAC)** |
+| **Visual Verification Proofs** | Session 13 Suite | Puppeteer Headless Chrome | **74/74 checks passed, high-fidelity proofs in `docs/screenshots/`** |
 
 ### Local Stack Configuration
 - **FastAPI Backend API**: `http://127.0.0.1:8000` (LAN binding: `http://0.0.0.0:8000` / `http://192.168.29.227:8000`)
@@ -460,6 +462,81 @@ Delivered in direct response to the authoritative specification for Receptionist
 
 ---
 
+### 6.11 Session 11 — Modern Public-Facing Website & ERP Gateway Integration (Delivered & Verified 23 Sep 2026)
+
+Delivered in direct response to the requirement for a modern, polished, lightweight public-facing website for "Sunrise School", completely decoupled from internal ERP operational workflows while providing a prominent entry point to the ERP portal.
+
+1. **Architecture & Routing (`web/src/App.tsx`)**:
+   - **Public Website Routes**: Registered inside `PublicLayout`:
+     - `/` and `/home` → `HomePage.tsx`
+     - `/about` → `AboutPage.tsx`
+     - `/academics` → `AcademicsPage.tsx`
+     - `/admissions` → `AdmissionsPage.tsx`
+     - `/facilities` → `FacilitiesPage.tsx`
+   - **Root Dispatch Contract Preservation**:
+     - Maintained dual-dispatch behavior in `Home()`:
+       - If unauthenticated visitor: renders `HomePage.tsx` within the public shell.
+       - If authenticated staff member (`me` exists): immediately dispatches to the first authorized ERP screen (`visibleScreens(can, hasModule)[0].path`), preserving 100% compliance with `App.test.tsx` and internal staff deep-linking.
+   - **HashRouter Compatibility**: Fully compatible with client-side hash routing (`http://localhost:5173/#/`, `#/about`, `#/academics`, `#/admissions`, `#/facilities`, `#/login`, `#/apply`).
+   - **ERP Separation**: Public marketing and institutional information pages run completely without ERP authentication or API dependencies, remaining fast, lightweight, and resilient.
+
+2. **Prominent ERP Gateway (`web/src/components/public/PublicNavbar.tsx`, `HomePage.tsx`, `LoginPage.tsx`)**:
+   - High-visibility "Login to ERP" entry points:
+     - Prominent primary action button in the public navigation header (`PublicNavbar.tsx`) with lock icon and gold accent border, linking to `#/login`.
+     - Hero section dedicated "Staff & ERP Login" secondary action button on `HomePage.tsx`.
+     - Quick "ERP Staff Portal" access links in `PublicFooter.tsx`.
+   - ERP Return Link: Updated `web/src/auth/LoginPage.tsx` with a prominent return link (`← Back to Sunrise School Website` pointing to `#/`) so staff or visitors can smoothly transition back to the public site.
+
+3. **Centerpiece Campus Hero Integration (`web/src/pages/public/website/HomePage.tsx`)**:
+   - **Visual Centerpiece**: Utilizes the official Sunrise School campus visual asset (`web/src/assets/hero-campus.jpg` and `web/public/hero-campus.jpg`) featuring the modern multi-story academic complex, lush green grounds, and vibrant student community.
+   - **Non-Redundant Design**: Respects the typography already rendered in the campus asset ("Sunrise School", "Nurturing Brighter Tomorrows", "LEARN | GROW | BELONG | SUCCEED") without duplicate HTML overlay text.
+   - **Responsive Focal Alignment**: Uses `object-[32%_center] sm:object-center` with `object-cover` to keep the students and main entrance focal point perfectly framed across desktop, tablet, and mobile viewports.
+   - **Key Metrics Section**: Prominently highlights school credibility:
+     - 15+ Years of Academic Excellence (Est. 2011)
+     - 1,200+ Active Learners across 10 Grades
+     - 100% CBSE Board Examination Pass Rate
+     - 1:20 Teacher-Student Mentorship Ratio
+   - **Feature Previews & Leadership Welcome**:
+     - 3-tier academic wings preview and core facilities cards.
+     - Principal's Welcome message emphasizing holistic development, discipline, and modern innovation.
+
+4. **Five Dedicated Public Pages (`web/src/pages/public/website/`)**:
+   - **Home (`HomePage.tsx`)**: Hero banner centerpiece, school statistics grid, academic highlights, campus infrastructure preview, principal's vision message, and ERP access banner.
+   - **About Us (`AboutPage.tsx`)**:
+     - Founding narrative: Established in 2011 in Gomti Nagar, Lucknow, affiliated with CBSE (Affiliation No. 2130892).
+     - School Vision and Mission statements.
+     - *Panch Tattva* Core Values: *Satya* (Truth & Integrity), *Dharma* (Righteous Conduct), *Shanti* (Peace & Mindfulness), *Prema* (Compassion & Respect), and *Ahimsa* (Non-Violence & Ecological Harmony).
+     - Leadership profiles: Founder & Managing Trustee (Dr. Vikramaditya Singhania) and Principal (Mrs. Sunita Mehrotra).
+   - **Academics (`AcademicsPage.tsx`)**:
+     - NEP 2020 5+3+3+4 Curriculum Alignment: Foundational & Preparatory Wing (Classes I–V), Middle School Wing (Classes VI–VIII), Secondary School Wing (Classes IX–X).
+     - STEM & Innovation Focus: Coding, Robotics lab, AI workshops, experiential learning.
+     - Assessment Framework: Continuous and Comprehensive Evaluation (CCE) following CBSE guidelines, periodic formative assessments, and board examination preparedness.
+   - **Admissions (`AdmissionsPage.tsx`)**:
+     - 5-Step Admission Journey: Enquiry & Registration, Campus Tour & Interaction, Application Form Submission, Document Verification & Assessment, Fee Payment & Formal Enrolment.
+     - Age Eligibility Matrix: Standard age criteria from Nursery (3+ years) to Class X (15+ years) as of March 31st of the academic year.
+     - Document Checklist: Birth certificate, transfer certificate (TC), previous report cards, Aadhaar card copies, passport photographs, and immunization records.
+     - Direct CTA: Direct link to the existing online application portal (`#/apply`).
+   - **Campus & Facilities (`FacilitiesPage.tsx`)**:
+     - 9 Infrastructure Showcases: Smart Interactive Classrooms, Advanced Science Labs (Physics, Chemistry, Biology), High-Tech Computer & Robotics Lab, 15,000+ Volume Library, Multi-Sport Complex (cricket, basketball, badminton, athletics), GPS & CCTV-enabled Safe Transport Fleet, Hygienic Dining & RO Water, Full-Time Medical Infirmary, and 24x7 Security & CCTV Surveillance.
+
+5. **Brand Identity & Reusable Public Components (`web/src/components/public/`)**:
+   - `SchoolCrest.tsx`: Official scalable vector logo featuring radiating golden sun, open book, and royal navy shield representing illumination through education.
+   - `PublicNavbar.tsx`: Sticky navigation bar with school crest, page links with active indicators, quick phone/email links, mobile hamburger drawer, and high-visibility "Login to ERP" button. Responsive breakpoint tuned to `lg:` (1024px) to guarantee zero layout wrapping on tablets.
+   - `PublicFooter.tsx`: Rich institutional footer with CBSE affiliation data, complete address (Sector 12, Gomti Nagar, Lucknow, UP - 226010), emergency contact numbers, school working hours, quick links, and discrete ERP gateway.
+   - `PublicLayout.tsx`: Common page wrapper managing sticky navbar, main viewport content, and footer layout.
+
+6. **Verification & Quality Assurance**:
+   - **Vitest Unit Test Suite**: Added `web/src/pages/public/website/Website.test.tsx` (7 tests covering navigation rendering, page routing, ERP login links, return-to-website button, and responsiveness).
+   - **Test Results**: All **19 test files passed (91 tests passed, 2 skipped, 100% green)**.
+   - **Production Build**: `npm run build` completed cleanly in 10.25s with all chunks and hero image asset (`dist/assets/hero-campus-*.jpg`) generated without warnings.
+   - **Responsive Browser Visual Verification**: Puppeteer headless testing across 5 standard device viewports (1440px desktop, 1280px laptop, 768px tablet, 390px mobile, 360px small mobile):
+     - Zero horizontal scrollbar/overflow across all resolutions.
+     - Mobile navigation drawer opens and closes smoothly.
+     - Hero campus image remains centered with students and main entrance in focus.
+     - Zero regressions to ERP login, dashboard, or internal modules.
+
+---
+
 ## 7. Operational Traps & Hard-Won Lessons
 
 1. **Postgres vs SQLite**: SQLite returns naive datetimes and misses foreign key wipe order bugs. Always verify migrations and logic against native PostgreSQL.
@@ -489,3 +566,5 @@ Delivered in direct response to the authoritative specification for Receptionist
 25. **Reception Fee Counter vs Admin Fee Screens Gate Segregation**: The front desk fee counter endpoint `/admin/reception/fees/*` is gated strictly on `fees.payment.collect`. Granting `fees.invoice.read` to the receptionist causes admin-only billing screens (`/fees`, `/fees/defaulters`, `/fees/setup`, `/fees/periods`) to inadvertently appear in the receptionist's navigation sidebar. Omitting `fees.invoice.read` from the receptionist role and declaring only `fees.payment.collect` on `/reception/fee-counter` guarantees complete front-desk navigation hygiene while preserving counter fee collection capabilities.
 26. **Decoupled Authorized Pickup Roster from Single-Use Gate Passes**: Emergency or early student gate passes require recording the specific authorized person collecting the student. Coupling gate pass records directly to permanent authorized pickup lists creates friction when a pre-approved relative collects a child. Maintain a permanent roster table (`student_authorized_persons`) for authorized guardians/drivers alongside one-time transactional passes (`student_passes`), allowing the receptionist to either select from the roster or enter a verified single-use collector with relationship.
 27. **Complete-Month Fee Collection Invariant**: Receptionists at the front desk are prohibited from taking arbitrary partial fee amounts (e.g. ₹500 against a ₹5,400 bill). Fee collection logic at the reception counter enforces strict chronological FIFO settlement of complete billing periods (1 month, 2 months, ..., N months) to eliminate reconciliation discrepancies and prevent ledger tampering.
+28. **Public Website & ERP Root Dual-Dispatch Contract**: In a unified single-page application hosting both public school marketing pages and an authenticated ERP system, routing at the root (`/` or `#/`) must safely distinguish between anonymous public visitors and authenticated staff. Unconditional redirection of `/` to an ERP screen forces prospective parents into an ERP login page; conversely, unconditionally rendering the public homepage breaks existing automated tests (e.g. `App.test.tsx`) that assert a logged-in user navigating to `/` dispatches to their first permitted operational screen. Inspecting authentication state (`me`) within the root dispatcher preserves both user journeys seamlessly.
+29. **Responsive Hero Image Focal Offset on Aspect-Ratio Preserving Cards**: Fixed or banner-style hero containers using `object-cover` often default to center alignment (`object-center`), which clips subjects near the edges on tall vertical mobile viewports (e.g. 360px-390px). Applying responsive horizontal focal alignment (`object-[32%_center] sm:object-center`) ensures that critical compositional elements (e.g. student groups walking toward a campus entrance) stay framed across all phone, tablet, and widescreen display sizes.

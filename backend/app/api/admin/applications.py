@@ -18,6 +18,7 @@ from app.models import (
     AcademicYear,
     AdmissionCategory,
     Application,
+    ApplicationAuthorizedPerson,
     ApplicationGuardian,
     ApplicationMedical,
     ApplicationSibling,
@@ -128,9 +129,22 @@ class GuardianInput(BaseModel):
     is_primary: bool = False
     is_emergency_contact: bool = False
     is_authorised_for_pickup: bool = False
+    photo_url: str | None = None
     is_school_alumnus: bool = False
     is_school_staff: bool = False
     employee_id: int | None = None
+
+
+class AuthorizedPickupPersonInput(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    name: str
+    relationship: str
+    phone: str
+    id_proof_type: str | None = None
+    id_proof_number: str | None = None
+    photo_url: str | None = None
+    notes: str | None = None
 
 
 class SiblingInput(BaseModel):
@@ -182,6 +196,7 @@ def _guardian_out(g: ApplicationGuardian) -> dict:
         "is_primary": g.is_primary,
         "is_emergency_contact": g.is_emergency_contact,
         "is_authorised_for_pickup": g.is_authorised_for_pickup,
+        "photo_url": g.photo_url,
         "is_school_alumnus": g.is_school_alumnus,
         "is_school_staff": g.is_school_staff,
         "employee_id": g.employee_id,
@@ -259,6 +274,23 @@ def _detail(db: Session, a: Application) -> dict:
         "age_override_reason": a.age_override_reason,
         "previous_application_id": a.previous_application_id,
         "guardians": [_guardian_out(g) for g in svc.guardians(db, a.id)],
+        "authorized_pickup_persons": [
+            {
+                "id": p.id,
+                "name": p.name,
+                "relationship": p.relationship,
+                "phone": p.phone,
+                "id_proof_type": p.id_proof_type,
+                "id_proof_number": p.id_proof_number,
+                "photo_url": p.photo_url,
+                "notes": p.notes,
+            }
+            for p in db.scalars(
+                select(ApplicationAuthorizedPerson).where(
+                    ApplicationAuthorizedPerson.application_id == a.id
+                )
+            )
+        ],
         "siblings": [
             {
                 "id": s.id,
@@ -403,6 +435,34 @@ def set_guardians(
         )
     db.flush()
     svc.refresh_claims(db, app)
+    return _detail(db, app)
+
+
+@router.put("/applications/{application_id}/authorized-pickup-persons", dependencies=[writer])
+def set_authorized_pickup_persons(
+    application_id: int,
+    body: list[AuthorizedPickupPersonInput],
+    user: User = Depends(reader),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Sets or updates the authorized pickup persons list for an application."""
+    app = svc.get(db, user.school_id, application_id)
+    for existing in db.scalars(
+        select(ApplicationAuthorizedPerson).where(
+            ApplicationAuthorizedPerson.application_id == app.id
+        )
+    ):
+        db.delete(existing)
+    db.flush()
+    for p in body:
+        db.add(
+            ApplicationAuthorizedPerson(
+                school_id=user.school_id,
+                application_id=app.id,
+                **p.model_dump(),
+            )
+        )
+    db.commit()
     return _detail(db, app)
 
 

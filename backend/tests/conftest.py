@@ -138,6 +138,18 @@ def cashier(client):
 
 
 @pytest.fixture()
+def transport_incharge(client):
+    """Transport in-charge: transport operations only."""
+    return auth(_token(client, "admin", "transport@sunrisepublic.edu", "Admin@123"))
+
+
+@pytest.fixture()
+def accounts_user(client):
+    """Accounts team: fees and payroll finance operations."""
+    return auth(_token(client, "admin", "accounts@sunrisepublic.edu", "Admin@123"))
+
+
+@pytest.fixture()
 def teacher(client):
     """TCH001 — class teacher of 10-A and its Mathematics teacher."""
     return auth(_token(client, "teacher", "TCH001", "Teacher@123"))

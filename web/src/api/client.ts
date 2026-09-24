@@ -143,6 +143,25 @@ export const api = {
   // by FastAPI but not by every proxy in front of it.
   del: <P extends DeletePaths>(path: P, query?: string) =>
     request<Ok<paths[P]["delete"]>>(`${path}${query ?? ""}` as P, { method: "DELETE" }),
+  rawGet: <T = any>(path: string, query?: string) =>
+    request<T>(`${path}${query ?? ""}`),
+  rawPost: <T = any>(path: string, body?: any) =>
+    request<T>(path, { method: "POST", body: JSON.stringify(body ?? {}) }),
+  upload: async <T = any>(path: string, formData: FormData): Promise<T> => {
+    const token = tokenStore.get();
+    const res = await fetch(`${BASE}${path}`, {
+      method: "POST",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new ApiError(res.status, body.detail);
+    }
+    return (await res.json()) as T;
+  },
 };
 
 /**

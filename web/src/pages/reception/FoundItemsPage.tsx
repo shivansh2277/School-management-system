@@ -15,6 +15,16 @@ import {
   StatCard,
   inputClass,
 } from "../../components/ui";
+import { ImageUploader } from "../../components/reception/ImageUploader";
+
+function resolveImageUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
+    return url;
+  }
+  const base = import.meta.env.VITE_API_URL || "http://localhost:8000";
+  return `${base}${url.startsWith("/") ? "" : "/"}${url}`;
+}
 
 export interface FoundItem {
   id: number;
@@ -238,7 +248,7 @@ export function FoundItemsPage() {
                 <div className="flex items-center gap-3">
                   {row.photo_url ? (
                     <img
-                      src={row.photo_url}
+                      src={resolveImageUrl(row.photo_url) || ""}
                       alt={row.item_name}
                       className="w-10 h-10 rounded object-cover border border-rule"
                     />
@@ -440,18 +450,12 @@ export function FoundItemsPage() {
               </FormField>
             </div>
 
-            <FormField label="Photo Image URL / Storage Path">
-              <input
-                type="text"
-                placeholder="https://... or uploaded image URL"
-                value={createForm.photo_url}
-                onChange={(e) => setCreateForm({ ...createForm, photo_url: e.target.value })}
-                className={inputClass}
-              />
-              <span className="text-[11px] text-ink-faint">
-                Upload or link a photograph of the found object for student identification.
-              </span>
-            </FormField>
+            <ImageUploader
+              label="Found Object Photograph"
+              description="Upload or select a photograph of the found object for student identification."
+              value={createForm.photo_url}
+              onChange={(url) => setCreateForm({ ...createForm, photo_url: url })}
+            />
 
             <FormField label="Item Description & Identifying Marks">
               <textarea
@@ -577,18 +581,12 @@ export function FoundItemsPage() {
             </div>
 
             {/* Handover Photo & Notes */}
-            <FormField label="Handover Photo URL / Verification Snapshot">
-              <input
-                type="text"
-                placeholder="https://... photo of student receiving object"
-                value={claimForm.handover_photo_url}
-                onChange={(e) => setClaimForm({ ...claimForm, handover_photo_url: e.target.value })}
-                className={inputClass}
-              />
-              <span className="text-[11px] text-ink-faint">
-                Photo of the student receiving the object at the reception desk.
-              </span>
-            </FormField>
+            <ImageUploader
+              label="Handover Verification Photograph"
+              description="Photo of the student receiving the object at the reception desk."
+              value={claimForm.handover_photo_url}
+              onChange={(url) => setClaimForm({ ...claimForm, handover_photo_url: url })}
+            />
 
             <FormField label="Handover Notes / Verification Remarks">
               <textarea
@@ -663,7 +661,7 @@ export function FoundItemsPage() {
               <div>
                 <span className="text-ink-faint block text-[10px] uppercase mb-1">Found Object Photo</span>
                 <img
-                  src={viewDetailItem.photo_url}
+                  src={resolveImageUrl(viewDetailItem.photo_url) || ""}
                   alt={viewDetailItem.item_name}
                   className="w-full max-h-48 object-cover rounded border border-rule"
                 />
@@ -681,6 +679,16 @@ export function FoundItemsPage() {
                   <div>Handover By: {viewDetailItem.collected_by_staff_name}</div>
                   <div>Date: {viewDetailItem.collected_at ? new Date(viewDetailItem.collected_at).toLocaleString("en-IN") : "—"}</div>
                   {viewDetailItem.handover_notes && <div>Notes: {viewDetailItem.handover_notes}</div>}
+                  {viewDetailItem.handover_photo_url && (
+                    <div className="mt-2">
+                      <span className="text-[10px] text-emerald-800 uppercase block mb-1 font-semibold">Handover Verification Photo</span>
+                      <img
+                        src={resolveImageUrl(viewDetailItem.handover_photo_url) || ""}
+                        alt="Handover verification"
+                        className="w-full max-h-36 object-cover rounded border border-emerald-300"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             )}

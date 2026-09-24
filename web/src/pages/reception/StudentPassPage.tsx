@@ -47,6 +47,8 @@ export function StudentPassPage() {
   const [showRosterModal, setShowRosterModal] = useState(false);
   const [rosterStudent, setRosterStudent] = useState<{ id: number; name: string; admission_no: string } | null>(null);
 
+  const apiBase = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
   // Form states for creating a pass
   const [passForm, setPassForm] = useState({
     student_id: 0,
@@ -58,6 +60,7 @@ export function StudentPassPage() {
     pickup_person_relation: "Parent / Father",
     pickup_person_phone: "",
     pickup_person_id_proof: "",
+    pickup_person_photo_url: null as string | null,
     pass_date: new Date().toISOString().slice(0, 10),
     pass_time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
     remarks: "",
@@ -70,6 +73,7 @@ export function StudentPassPage() {
     phone: "",
     id_proof_type: "Aadhaar",
     id_proof_number: "",
+    photo_url: "",
     notes: "",
   });
 
@@ -137,7 +141,10 @@ export function StudentPassPage() {
     onSuccess: (newPass: StudentPassData) => {
       queryClient.invalidateQueries({ queryKey: ["student-passes"] });
       setShowCreateModal(false);
-      setActivePrintPass(newPass);
+      setActivePrintPass({
+        ...newPass,
+        pickup_person_photo_url: passForm.pickup_person_photo_url,
+      });
     },
   });
 
@@ -163,6 +170,7 @@ export function StudentPassPage() {
         phone: "",
         id_proof_type: "Aadhaar",
         id_proof_number: "",
+        photo_url: "",
         notes: "",
       });
     },
@@ -200,6 +208,7 @@ export function StudentPassPage() {
       pickup_person_id_proof: person.id_proof_number
         ? `${person.id_proof_type || "ID"}: ${person.id_proof_number}`
         : "",
+      pickup_person_photo_url: person.photo_url || null,
     }));
   };
 
@@ -228,6 +237,7 @@ export function StudentPassPage() {
                   pickup_person_relation: "Parent / Father",
                   pickup_person_phone: "",
                   pickup_person_id_proof: "",
+                  pickup_person_photo_url: null,
                   pass_date: new Date().toISOString().slice(0, 10),
                   pass_time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
                   remarks: "",
@@ -505,15 +515,32 @@ export function StudentPassPage() {
                         key={person.id}
                         type="button"
                         onClick={() => handleSelectAuthorizedPerson(person)}
-                        className="text-left p-2.5 rounded border border-rule hover:border-primary/50 hover:bg-primary/5 transition text-xs flex justify-between items-center"
+                        className="text-left p-2.5 rounded border border-rule hover:border-primary/50 hover:bg-primary/5 transition text-xs flex justify-between items-center gap-2"
                       >
-                        <div>
-                          <span className="font-bold text-ink block">{person.name}</span>
-                          <span className="text-ink-faint">
-                            {person.relationship} • {person.phone}
-                          </span>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {person.photo_url ? (
+                            <img
+                              src={
+                                person.photo_url.startsWith("http")
+                                  ? person.photo_url
+                                  : `${apiBase}${person.photo_url.startsWith("/") ? "" : "/"}${person.photo_url}`
+                              }
+                              alt={person.name}
+                              className="w-8 h-8 rounded-full object-cover border border-rule shadow-xs flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs flex-shrink-0">
+                              {person.name.charAt(0)}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <span className="font-bold text-ink block truncate">{person.name}</span>
+                            <span className="text-ink-faint truncate block text-[11px]">
+                              {person.relationship} • {person.phone}
+                            </span>
+                          </div>
                         </div>
-                        <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold uppercase">
+                        <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold uppercase flex-shrink-0">
                           Authorized
                         </span>
                       </button>
@@ -537,6 +564,24 @@ export function StudentPassPage() {
                   Invariant: Entering details here does NOT alter the student's permanent roster.
                 </span>
               </div>
+
+              {passForm.pickup_person_photo_url && (
+                <div className="flex items-center gap-3 p-2 bg-primary/5 border border-primary/20 rounded">
+                  <img
+                    src={
+                      passForm.pickup_person_photo_url.startsWith("http")
+                        ? passForm.pickup_person_photo_url
+                        : `http://localhost:8000${passForm.pickup_person_photo_url.startsWith("/") ? "" : "/"}${passForm.pickup_person_photo_url}`
+                    }
+                    alt={passForm.pickup_person_name || "Escort photo"}
+                    className="w-12 h-12 rounded object-cover border border-primary/30 shadow-sm shrink-0"
+                  />
+                  <div className="text-xs">
+                    <span className="font-bold text-ink block">Verified Escort Photo Attached</span>
+                    <span className="text-ink-faint">Included on printed student exit slip</span>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-3 gap-3">
                 <FormField label="Escort / Pickup Name">
@@ -663,19 +708,36 @@ export function StudentPassPage() {
               {rosterPersonsQuery.data && rosterPersonsQuery.data.length > 0 ? (
                 <div className="divide-y divide-rule border border-rule rounded bg-surface">
                   {rosterPersonsQuery.data.map((p) => (
-                    <div key={p.id} className="p-3 flex justify-between items-center text-xs">
-                      <div>
-                        <span className="font-bold text-ink block">{p.name}</span>
-                        <span className="text-ink-faint">
-                          {p.relationship} • Tel: {p.phone}
-                          {p.id_proof_number ? ` • ${p.id_proof_type || "ID"}: ${p.id_proof_number}` : ""}
-                        </span>
-                        {p.notes && <span className="block text-[10px] text-ink-faint mt-0.5">{p.notes}</span>}
+                    <div key={p.id} className="p-3 flex justify-between items-center text-xs gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {p.photo_url ? (
+                          <img
+                            src={
+                              p.photo_url.startsWith("http")
+                                ? p.photo_url
+                                : `${apiBase}${p.photo_url.startsWith("/") ? "" : "/"}${p.photo_url}`
+                            }
+                            alt={p.name}
+                            className="w-9 h-9 rounded-full object-cover border border-rule shadow-xs flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs flex-shrink-0">
+                            {p.name.charAt(0)}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <span className="font-bold text-ink block truncate">{p.name}</span>
+                          <span className="text-ink-faint">
+                            {p.relationship} • Tel: {p.phone}
+                            {p.id_proof_number ? ` • ${p.id_proof_type || "ID"}: ${p.id_proof_number}` : ""}
+                          </span>
+                          {p.notes && <span className="block text-[10px] text-ink-faint mt-0.5">{p.notes}</span>}
+                        </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => deleteRosterPersonMutation.mutate(p.id)}
-                        className="text-xs text-danger hover:bg-danger/10 px-2 py-1 rounded transition"
+                        className="text-xs text-danger hover:bg-danger/10 px-2 py-1 rounded transition flex-shrink-0"
                       >
                         Remove
                       </button>

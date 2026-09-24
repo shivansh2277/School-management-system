@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import { useAuth } from "./AuthContext";
-import { missingModule, missingPermission, type Screen } from "../screens";
+import { getUserRoles, isScreenAllowed, missingModule, missingPermission, type Screen } from "../screens";
 
 /**
  * The third gate. Hiding a menu item is not access control - typing /payroll in
@@ -15,7 +15,8 @@ import { missingModule, missingPermission, type Screen } from "../screens";
  * message that says only "not allowed" sends the reader to the source anyway.
  */
 export function RequirePermission({ screen, children }: { screen: Screen; children: ReactNode }) {
-  const { can, hasModule } = useAuth();
+  const { me, can, hasModule } = useAuth();
+  const userRoles = getUserRoles(me);
 
   const offModule = missingModule(screen, hasModule);
   if (offModule !== undefined) {
@@ -24,6 +25,17 @@ export function RequirePermission({ screen, children }: { screen: Screen; childr
         <p className="font-medium text-ink">Not enabled</p>
         <p className="text-sm text-ink-soft mt-1">
           The {offModule} module is not switched on for this school.
+        </p>
+      </div>
+    );
+  }
+
+  if (!isScreenAllowed(screen, userRoles)) {
+    return (
+      <div className="rounded-card bg-surface border border-rule p-8">
+        <p className="font-medium text-ink">Access Restricted</p>
+        <p className="text-sm text-ink-soft mt-1">
+          Access to {screen.label} is restricted for your role.
         </p>
       </div>
     );

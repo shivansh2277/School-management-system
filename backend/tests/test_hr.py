@@ -129,7 +129,7 @@ def test_reading_everything_does_not_include_reading_salary():
     # The Accountant joined this set when payroll landed: paying somebody needs
     # their bank account. Every holder is here because somebody decided it, not
     # because the permission happens to end in `.read`.
-    assert holders == {"super_admin", "principal", "accountant", "auditor"}
+    assert holders == {"super_admin", "principal", "accountant", "accounts", "auditor"}
     assert "admin_officer" not in holders
     assert "teacher" not in holders
 

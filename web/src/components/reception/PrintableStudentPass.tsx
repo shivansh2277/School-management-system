@@ -12,6 +12,7 @@ export interface StudentPassData {
   pickup_person_relation: string;
   pickup_person_phone: string;
   pickup_person_id_proof?: string | null;
+  pickup_person_photo_url?: string | null;
   pass_date: string;
   pass_time: string;
   issued_by_name: string;
@@ -37,6 +38,8 @@ export function PrintableStudentPass({
     month: "long",
     year: "numeric",
   });
+
+  const apiBase = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 overflow-y-auto">
@@ -144,25 +147,38 @@ export function PrintableStudentPass({
                 <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wider block border-b border-gray-200 pb-1 mb-1.5">
                   2. Authorized Escort / Pickup Person
                 </span>
-                <div className="space-y-1 text-[11px]">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Escort Name:</span>
-                    <span className="font-bold text-gray-900">{pass.pickup_person_name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Relationship:</span>
-                    <span className="font-semibold text-gray-900">{pass.pickup_person_relation}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Phone Number:</span>
-                    <span className="font-mono font-semibold text-gray-900">{pass.pickup_person_phone}</span>
-                  </div>
-                  {pass.pickup_person_id_proof && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">ID Proof:</span>
-                      <span className="font-semibold text-gray-800">{pass.pickup_person_id_proof}</span>
-                    </div>
+                <div className="flex gap-2.5">
+                  {pass.pickup_person_photo_url && (
+                    <img
+                      src={
+                        pass.pickup_person_photo_url.startsWith("http")
+                          ? pass.pickup_person_photo_url
+                          : `${apiBase}${pass.pickup_person_photo_url.startsWith("/") ? "" : "/"}${pass.pickup_person_photo_url}`
+                      }
+                      alt={pass.pickup_person_name}
+                      className="w-14 h-16 object-cover rounded border border-gray-300 shadow-xs flex-shrink-0"
+                    />
                   )}
+                  <div className="space-y-1 text-[11px] flex-1 min-w-0">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Escort Name:</span>
+                      <span className="font-bold text-gray-900 truncate ml-1">{pass.pickup_person_name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Relationship:</span>
+                      <span className="font-semibold text-gray-900">{pass.pickup_person_relation}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Phone Number:</span>
+                      <span className="font-mono font-semibold text-gray-900">{pass.pickup_person_phone}</span>
+                    </div>
+                    {pass.pickup_person_id_proof && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">ID Proof:</span>
+                        <span className="font-semibold text-gray-800">{pass.pickup_person_id_proof}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

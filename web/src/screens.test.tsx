@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { SCREENS, groupedNav, visibleScreens } from "./screens";
+import { SCREENS, groupedNav, isScreenAllowed, visibleScreens } from "./screens";
 
 /** The permissions the backend's fee_collector role holds (core/permissions.py). */
 const FEE_COLLECTOR = ["students.profile.read", "fees.invoice.read", "fees.payment.collect"];
@@ -35,8 +35,8 @@ const ALL_MODULES = [
 
 const can = (held: string[]) => (p: string) => held.includes(p);
 const hasModule = (on: string[]) => (c: string) => on.includes(c);
-const labelsFor = (held: string[], on: string[]) =>
-  visibleScreens(can(held), hasModule(on)).map((s) => s.label);
+const labelsFor = (held: string[], on: string[], roles?: string[]) =>
+  visibleScreens(can(held), hasModule(on), roles).map((s) => s.label);
 
 describe("the two gates", () => {
   it("shows a fee collector the fee screen and not the staff register", () => {
@@ -327,5 +327,232 @@ describe("Role navigation boundaries: Admission Officer and Receptionist", () =>
     expect(labels).not.toContain("Defaulters");
     expect(labels).not.toContain("Fee setup");
     expect(labels).not.toContain("Period close");
+  });
+});
+
+describe("Session 13: Role-Specific Sidebar & RBAC Restrictions", () => {
+  const ALL_PERMISSIONS = SCREENS.flatMap((s) => s.permissions);
+
+  describe("Admin role restrictions", () => {
+    const adminRoles = ["super_admin"];
+
+    it("shows only Admission Dashboard in Admission module (hides enquiries, applications, merit, waitlist, reports)", () => {
+      const labels = labelsFor(ALL_PERMISSIONS, ALL_MODULES, adminRoles);
+      // Retained
+      expect(labels).toContain("Admission dashboard");
+
+      // Hidden
+      expect(labels).not.toContain("Enquiries");
+      expect(labels).not.toContain("Applications");
+      expect(labels).not.toContain("Merit & selection");
+      expect(labels).not.toContain("Waitlist");
+      expect(labels).not.toContain("Admission reports");
+    });
+
+    it("removes Student Fees and Defaulters from Money module, while retaining Fees, Fee setup, and Period close", () => {
+      const labels = labelsFor(ALL_PERMISSIONS, ALL_MODULES, adminRoles);
+      // Retained
+      expect(labels).toContain("Fees");
+      expect(labels).toContain("Fee setup");
+      expect(labels).toContain("Period close");
+
+      // Hidden
+      expect(labels).not.toContain("Student fees");
+      expect(labels).not.toContain("Defaulters");
+    });
+
+    it("removes Found & Lost, Student Passes, and Fee Counter from Front Desk, while retaining Meeting Slips and Important Directory", () => {
+      const labels = labelsFor(ALL_PERMISSIONS, ALL_MODULES, adminRoles);
+      // Retained
+      expect(labels).toContain("Meeting Slips");
+      expect(labels).toContain("Important Directory");
+
+      // Hidden
+      expect(labels).not.toContain("Found & Lost");
+      expect(labels).not.toContain("Student Passes");
+      expect(labels).not.toContain("Fee Counter");
+    });
+
+    it("Admin retains other core modules (People, Academics, Communication, Operations, Administration, Analytics)", () => {
+      const labels = labelsFor(ALL_PERMISSIONS, ALL_MODULES, adminRoles);
+      expect(labels).toContain("Dashboard");
+      expect(labels).toContain("Students");
+      expect(labels).toContain("Staff");
+      expect(labels).toContain("Classes");
+      expect(labels).toContain("Attendance");
+      expect(labels).toContain("Exams");
+      expect(labels).toContain("Notices");
+      expect(labels).toContain("Transport");
+      expect(labels).toContain("Stock");
+      expect(labels).toContain("Configuration");
+      expect(labels).toContain("Settings");
+      expect(labels).toContain("Reports library");
+    });
+
+    it("isScreenAllowed returns false for restricted screens when role is super_admin or admin", () => {
+      const enquiries = SCREENS.find((s) => s.path === "/admission/enquiries")!;
+      const applications = SCREENS.find((s) => s.path === "/admission/applications")!;
+      const merit = SCREENS.find((s) => s.path === "/admission/merit")!;
+      const waitlist = SCREENS.find((s) => s.path === "/admission/waitlist")!;
+      const reports = SCREENS.find((s) => s.path === "/admission/reports")!;
+      const studentFees = SCREENS.find((s) => s.path === "/fees/ledger")!;
+      const defaulters = SCREENS.find((s) => s.path === "/fees/defaulters")!;
+      const foundItems = SCREENS.find((s) => s.path === "/reception/found-items")!;
+      const passes = SCREENS.find((s) => s.path === "/reception/passes")!;
+      const feeCounter = SCREENS.find((s) => s.path === "/reception/fee-counter")!;
+
+      for (const role of ["super_admin", "admin"]) {
+        expect(isScreenAllowed(enquiries, [role])).toBe(false);
+        expect(isScreenAllowed(applications, [role])).toBe(false);
+        expect(isScreenAllowed(merit, [role])).toBe(false);
+        expect(isScreenAllowed(waitlist, [role])).toBe(false);
+        expect(isScreenAllowed(reports, [role])).toBe(false);
+        expect(isScreenAllowed(studentFees, [role])).toBe(false);
+        expect(isScreenAllowed(defaulters, [role])).toBe(false);
+        expect(isScreenAllowed(foundItems, [role])).toBe(false);
+        expect(isScreenAllowed(passes, [role])).toBe(false);
+        expect(isScreenAllowed(feeCounter, [role])).toBe(false);
+      }
+    });
+  });
+
+  describe("Transport In-Charge role restrictions", () => {
+    const transportPermissions = [
+      "transport.setup.read",
+      "transport.setup.write",
+      "transport.assignment.read",
+      "transport.assignment.manage",
+      "comms.notice.read",
+      "comms.message.send",
+    ];
+    const transportRoles = ["transport_incharge"];
+
+    it("Transport In-Charge sees ONLY Transport and Notices", () => {
+      const labels = labelsFor(transportPermissions, ALL_MODULES, transportRoles);
+      expect(labels).toEqual(["Notices", "Transport"]);
+    });
+
+    it("completely removes People module screens from Transport In-Charge view", () => {
+      const labels = labelsFor(transportPermissions, ALL_MODULES, transportRoles);
+      expect(labels).not.toContain("Students");
+      expect(labels).not.toContain("Staff");
+      expect(labels).not.toContain("Staff leave");
+    });
+
+    it("completely removes Academics module screens from Transport In-Charge view", () => {
+      const labels = labelsFor(transportPermissions, ALL_MODULES, transportRoles);
+      expect(labels).not.toContain("Classes");
+      expect(labels).not.toContain("Attendance");
+      expect(labels).not.toContain("Exams");
+      expect(labels).not.toContain("Session rollover");
+    });
+
+    it("isScreenAllowed returns false for People and Academics screens for transport_incharge", () => {
+      const students = SCREENS.find((s) => s.path === "/students")!;
+      const teachers = SCREENS.find((s) => s.path === "/teachers")!;
+      const staffLeave = SCREENS.find((s) => s.path === "/staff-leave")!;
+      const classes = SCREENS.find((s) => s.path === "/classes")!;
+      const attendance = SCREENS.find((s) => s.path === "/attendance")!;
+      const exams = SCREENS.find((s) => s.path === "/exams")!;
+      const sessionRollover = SCREENS.find((s) => s.path === "/admin/session-rollover")!;
+
+      expect(isScreenAllowed(students, transportRoles)).toBe(false);
+      expect(isScreenAllowed(teachers, transportRoles)).toBe(false);
+      expect(isScreenAllowed(staffLeave, transportRoles)).toBe(false);
+      expect(isScreenAllowed(classes, transportRoles)).toBe(false);
+      expect(isScreenAllowed(attendance, transportRoles)).toBe(false);
+      expect(isScreenAllowed(exams, transportRoles)).toBe(false);
+      expect(isScreenAllowed(sessionRollover, transportRoles)).toBe(false);
+    });
+  });
+
+  describe("Preservation of access for other roles", () => {
+    it("Admission Officer accesses operational admission screens", () => {
+      const admissionOfficerRoles = ["admission_officer"];
+      const admissionOfficerPermissions = [
+        "admission.cycle.read",
+        "admission.enquiry.read",
+        "admission.enquiry.write",
+        "admission.application.read",
+        "admission.application.write",
+        "admission.document.verify",
+        "admission.assessment.enter",
+        "admission.interview.enter",
+        "admission.decision.make",
+        "admission.application.convert",
+        "fees.payment.collect",
+      ];
+      const labels = labelsFor(admissionOfficerPermissions, ALL_MODULES, admissionOfficerRoles);
+      expect(labels).toContain("Enquiries");
+      expect(labels).toContain("Applications");
+      expect(labels).toContain("Merit & selection");
+      expect(labels).toContain("Waitlist");
+      expect(labels).toContain("Admission reports");
+    });
+
+    it("Accounts Officer accesses fees ledger and defaulters", () => {
+      const accountsRoles = ["accounts"];
+      const accountsPermissions = [
+        "fees.setup.manage",
+        "fees.invoice.read",
+        "fees.invoice.generate",
+        "fees.payment.collect",
+        "fees.payment.void",
+        "fees.concession.approve",
+        "payroll.run.read",
+        "payroll.setup.manage",
+        "payroll.run.manage",
+        "hr.employee.read",
+        "hr.salary.read",
+        "students.profile.read",
+        "academics.class.read",
+        "reports.read",
+        "comms.notice.read",
+        "comms.message.send",
+      ];
+      const labels = labelsFor(accountsPermissions, ALL_MODULES, accountsRoles);
+      expect(labels).toContain("Fees");
+      expect(labels).toContain("Student fees");
+      expect(labels).toContain("Defaulters");
+      expect(labels).toContain("Fee setup");
+      expect(labels).toContain("Period close");
+      expect(labels).toContain("Payroll");
+      expect(labels).toContain("Reports library");
+    });
+
+    it("Fee Collector accesses fees ledger and defaulters", () => {
+      const feeCollectorRoles = ["fee_collector"];
+      const labels = labelsFor(FEE_COLLECTOR, ALL_MODULES, feeCollectorRoles);
+      expect(labels).toContain("Fees");
+      expect(labels).toContain("Student fees");
+      expect(labels).toContain("Defaulters");
+    });
+
+    it("Receptionist accesses all Front Desk operational screens and Enquiries", () => {
+      const receptionistRoles = ["receptionist"];
+      const receptionistPermissions = [
+        "admission.cycle.read",
+        "admission.enquiry.read",
+        "admission.enquiry.write",
+        "comms.notice.read",
+        "reception.found_items.read",
+        "reception.found_items.write",
+        "reception.found_items.collect",
+        "reception.passes.read",
+        "reception.passes.write",
+        "reception.authorized_persons.manage",
+        "reception.meetings.read",
+        "reception.meetings.write",
+        "reception.directory.read",
+        "fees.payment.collect",
+      ];
+      const labels = labelsFor(receptionistPermissions, ALL_MODULES, receptionistRoles);
+      expect(labels).toContain("Enquiries");
+      expect(labels).toContain("Found & Lost");
+      expect(labels).toContain("Student Passes");
+      expect(labels).toContain("Meeting Slips");
+      expect(labels).toContain("Important Directory");
+      expect(labels).toContain("Fee Counter");
+    });
   });
 });

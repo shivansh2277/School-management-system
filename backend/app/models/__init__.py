@@ -11,6 +11,7 @@ from app.models.assessment_admission import (
 )
 from app.models.application import (
     Application,
+    ApplicationAuthorizedPerson,
     ApplicationGuardian,
     ApplicationMedical,
     ApplicationSibling,

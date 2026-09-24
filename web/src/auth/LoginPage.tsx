@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 
 import { useAuth } from "./AuthContext";
 
@@ -72,6 +72,20 @@ export function LoginPage() {
         <p className="text-xs text-ink-faint">
           Demo admin / leadership: admin@sunrisepublic.edu — password in PASSWORDS.md
         </p>
+
+        <div className="pt-3 border-t border-rule text-center space-y-1.5">
+          <p className="text-xs text-ink-soft">
+            Prospective parent?{" "}
+            <Link to="/apply" className="text-primary font-semibold hover:underline">
+              Apply for Online Admission &rarr;
+            </Link>
+          </p>
+          <p className="text-xs">
+            <Link to="/" className="text-ink-soft hover:text-ink font-medium">
+              &larr; Back to Sunrise School Website
+            </Link>
+          </p>
+        </div>
       </form>
     </div>
   );

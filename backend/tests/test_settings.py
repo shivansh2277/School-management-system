@@ -6,10 +6,10 @@ import pytest
 def test_unset_settings_read_as_their_registry_default(client, admin):
     body = client.get("/admin/configuration", headers=admin).json()
     assert body["values"]["feature.homework"] is True
-    # `feature.hr` rather than `feature.transport`: both default to off, but
-    # the demo school now switches transport on explicitly, which makes it a
-    # stored value and no longer an example of an unset one.
-    assert body["values"]["feature.hr"] is False
+    # `comms.channel.sms` rather than `feature.transport`/`feature.hr`: they default
+    # to off, but the demo school now switches both transport and HR on explicitly,
+    # which makes them stored values and no longer examples of unset ones.
+    assert body["values"]["comms.channel.sms"] is False
     assert body["values"]["feature.transport"] is True
     # The screen is rendered from the vocabulary, not from a hardcoded form.
     assert {d["key"] for d in body["definitions"]} == set(body["values"])

@@ -108,6 +108,8 @@ ACADEMIC_YEAR = "2025-26"
 CASHIER_LOGIN = "counter@sunrisepublic.edu"
 RECEPTIONIST_LOGIN = "receptionist@sunrisepublic.edu"
 ADMISSION_OFFICER_LOGIN = "admission@sunrisepublic.edu"
+TRANSPORT_INCHARGE_LOGIN = "transport@sunrisepublic.edu"
+ACCOUNTS_LOGIN = "accounts@sunrisepublic.edu"
 SCHOOL_CODE = "SPS"
 TODAY = date(2026, 9, 1)  # deterministic "today" so the seeded window never drifts
 
@@ -589,6 +591,28 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
         phone="+91 522 400 1237",
     )
     db.add(admission_officer)
+
+    # Transport In-Charge: dedicated role for routes, vehicles, stops, and riders
+    transport_incharge = User(
+        role=UserRole.admin,
+        login_id=TRANSPORT_INCHARGE_LOGIN,
+        password_hash=hash_password(DEMO_PASSWORDS[UserRole.admin]),
+        full_name="Transport In-Charge",
+        email=TRANSPORT_INCHARGE_LOGIN,
+        phone="+91 522 400 1238",
+    )
+    db.add(transport_incharge)
+
+    # Accounts: dedicated role for fees, billing, defaulters, and payroll
+    accounts_user = User(
+        role=UserRole.admin,
+        login_id=ACCOUNTS_LOGIN,
+        password_hash=hash_password(DEMO_PASSWORDS[UserRole.admin]),
+        full_name="Accounts Officer",
+        email=ACCOUNTS_LOGIN,
+        phone="+91 522 400 1239",
+    )
+    db.add(accounts_user)
 
     teachers: list[Employee] = []
     departments = {}
@@ -1361,6 +1385,12 @@ def seed(db: Session) -> None:  # noqa: PLR0915 - linear script; splitting it wo
         )
     ) is None:
         db.add(Setting(school_id=school.id, key="feature.grievances", value=True))
+    if db.scalar(
+        select(Setting).where(
+            Setting.school_id == school.id, Setting.key == "feature.hr"
+        )
+    ) is None:
+        db.add(Setting(school_id=school.id, key="feature.hr", value=True))
     db.flush()
 
     _seed_inventory(db, school)
@@ -1933,6 +1963,10 @@ def _assign_roles(db: Session, roles: dict, sections: list) -> None:
             if user.login_id == RECEPTIONIST_LOGIN
             else "admission_officer"
             if user.login_id == ADMISSION_OFFICER_LOGIN
+            else "transport_incharge"
+            if user.login_id == TRANSPORT_INCHARGE_LOGIN
+            else "accounts"
+            if user.login_id == ACCOUNTS_LOGIN
             else "transport_manager"
             if user.login_id.startswith("TRM")
             else LEGACY_ROLE_MAP[user.role.value]

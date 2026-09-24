@@ -2,10 +2,11 @@ import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthContext";
-import { groupedNav } from "../screens";
+import { groupedNav, getUserRoles } from "../screens";
 
 export function Shell() {
   const { me, logout, can, hasModule } = useAuth();
+  const userRoles = getUserRoles(me);
   // Not persisted: this already survives navigation, because Shell is not
   // remounted between routes, and remembering it across sessions would be a
   // second decision to get wrong for no one who asked.
@@ -27,7 +28,7 @@ export function Shell() {
           <p className="text-xs text-white/70">Public School</p>
         </div>
         <nav className="space-y-4 flex-1">
-          {groupedNav(can, hasModule).map(({ group, screens }) => (
+          {groupedNav(can, hasModule, userRoles).map(({ group, screens }) => (
             <div key={group ?? "__ungrouped"}>
               {/* No heading for an ungrouped screen: Dashboard under a heading
                   reading "OVERVIEW" was a label repeating itself. */}

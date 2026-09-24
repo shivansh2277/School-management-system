@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from app.core.security import hash_password
 from app.models import (
     Application,
+    ApplicationAuthorizedPerson,
     ApplicationFeePurpose,
     ApplicationGuardian,
     ApplicationMedical,
@@ -32,6 +33,7 @@ from app.models import (
     OwnerType,
     PaymentStatus,
     Student,
+    StudentAuthorizedPerson,
     StudentGuardian,
     StudentStatus,
     User,
@@ -385,6 +387,46 @@ def _do_conversion(db: Session, app: Application, actor: User) -> dict:
                 is_primary=g.is_primary,
             )
         )
+
+    # Carry forward authorized pickup persons from the application into permanent StudentAuthorizedPerson roster
+    for ap in db.scalars(
+        select(ApplicationAuthorizedPerson).where(
+            ApplicationAuthorizedPerson.application_id == app.id
+        )
+    ):
+        db.add(
+            StudentAuthorizedPerson(
+                school_id=app.school_id,
+                student_id=student.id,
+                name=ap.name,
+                relationship=ap.relationship,
+                phone=ap.phone,
+                id_proof_type=ap.id_proof_type,
+                id_proof_number=ap.id_proof_number,
+                photo_url=ap.photo_url,
+                is_active=True,
+                notes=ap.notes,
+            )
+        )
+
+    # Also register guardians who are authorized for pickup as authorized persons
+    for g in guardians:
+        if g.is_authorised_for_pickup or g.is_primary:
+            rel_str = g.relation.value if hasattr(g.relation, "value") else str(g.relation)
+            db.add(
+                StudentAuthorizedPerson(
+                    school_id=app.school_id,
+                    student_id=student.id,
+                    name=g.full_name,
+                    relationship=rel_str.capitalize(),
+                    phone=g.mobile,
+                    id_proof_type="Guardian ID",
+                    id_proof_number=None,
+                    photo_url=g.photo_url,
+                    is_active=True,
+                    notes="Primary/Authorized Guardian from Admission",
+                )
+            )
 
     # The birth certificate the school verified belongs to the child, not to a
     # form that is now closed.

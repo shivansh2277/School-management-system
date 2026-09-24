@@ -88,6 +88,10 @@ export default function TeacherLayout() {
           name="leave"
           options={{ href: null, title: "Leaves" }}
         />
+        <Tabs.Screen
+          name="meetings"
+          options={{ href: null, title: "Visitor Meetings" }}
+        />
       </Tabs>
 
       {/* Hamburger Navigation Drawer */}

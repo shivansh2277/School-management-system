@@ -173,6 +173,7 @@ class ApplicationGuardian(TenantBase):
     is_authorised_for_pickup: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
     )
+    photo_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_school_alumnus: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     # A claim, until verified against `employees`.
     is_school_staff: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -216,3 +217,26 @@ class ApplicationMedical(TenantBase):
     consent_for_emergency_treatment: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
     )
+
+
+class ApplicationAuthorizedPerson(TenantBase):
+    """Repeatable: authorized pickup persons permitted to collect the student (§5.1.4 step 3).
+    Supports multiple people (parents, grandparents, drivers, relatives) with genuine photos.
+    """
+
+    __tablename__ = "application_authorized_persons"
+    __table_args__ = (
+        Index("ix_app_auth_persons_app", "school_id", "application_id"),
+    )
+
+    application_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("applications.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    relationship: Mapped[str] = mapped_column(String(60), nullable=False)
+    phone: Mapped[str] = mapped_column(String(30), nullable=False)
+    id_proof_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    id_proof_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    photo_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+

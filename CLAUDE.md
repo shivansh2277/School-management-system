@@ -2,12 +2,12 @@
 
 ## Read these first, in this order
 
-0. **`SINGLE_SOURCE_OF_TRUTH.md`**, **`SESSION-HANDOFF-9.md`**, & **`SESSION-HANDOFF-10.md`** — **start here.**
+0. **`SINGLE_SOURCE_OF_TRUTH.md`**, **`SESSION-HANDOFF-12.md`**, & **`SESSION-HANDOFF-13.md`** — **start here.**
    The canonical single source of truth and session handoffs for the ERP.
    Details current git status (`slice/office-feedback`), verified 31 live web screens,
-   18 active staff, database tables (reception tables added),
-   Alembic migration head `d4e5f6a7b8c9` (`receptionist_operations.py`), leadership credentials (`admin@sunrisepublic.edu` / `Admin@123`),
-   Session 10 completed & verified (735 passed backend tests, 1 skipped, 0 failed, 100% green; 84 passed web unit tests across 18 files; 0 TypeScript errors on web and mobile; clean Vite production build; 5 new Front Desk operational modules live: Found & Lost, Student Gate Passes, Meeting Slips, Important Directory, Reception Fee Counter; complete-month fee collection invariant; Admission Dossier print enhancement; Front-desk sidebar navigation leak cleanly resolved with 12/12 automated checks passing).
+   18 active staff, database tables (reception & authorized pickup tables added),
+   Alembic migration head `e5f6a7b8c9d0` (`application_authorized_pickup_persons.py`), leadership credentials (`admin@sunrisepublic.edu` / `Admin@123`),
+   Session 13 completed & verified (743 passed backend tests, 1 skipped, 0 failed, 100% green; 107 passed web unit tests across 19 files; 0 TypeScript errors on web and mobile; clean Vite production build; Admin role sidebar and direct URL route restrictions; Transport In-Charge isolation with People/Academics modules completely removed and backend `students.profile.read`/`academics.class.read` revoked; full preservation of operational staff roles; 74/74 automated visual verification checks passing).
    Supersedes all previous session handoffs.
 1. **`FRONTEND-HANDOFF.md`** — the brief for **Parts Two to Six**: the
    three contracts, what "clean and easy for a school office" means, the
@@ -34,8 +34,8 @@ on both jobs** — backend lint, 615 tests, migrations from an empty schema, see
 and worker; web typecheck, schema drift, 31 tests and build. CI runs on every
 push to `main` or `part-*`.
 
-Those two figures are `main`'s. On `slice/office-feedback` they are **735 passed
-backend (1 skipped, 736 total, 0 failed)** and **84 passed web unit tests (2 skipped in 18 files)**;
+Those two figures are `main`'s. On `slice/office-feedback` they are **743 passed
+backend (1 skipped, 744 total, 0 failed)** and **107 passed web unit tests (2 skipped in 19 files)**;
 CI has never run on that branch because it has never been pushed.
 
 **Nothing is deployed**, and one thing blocks that regardless of frontend work:
@@ -48,7 +48,7 @@ about how accounts are issued and has deliberately not been made.
 
 ```bash
 cd backend
-../.venv/Scripts/python.exe -m pytest -q          # 615 on main, 735 on slice/office-feedback
+../.venv/Scripts/python.exe -m pytest -q          # 615 on main, 743 on slice/office-feedback
 ../.venv/Scripts/python.exe -m pytest tests/test_rbac.py -q       # one file
 ../.venv/Scripts/python.exe -m alembic upgrade head
 ../.venv/Scripts/python.exe seed.py               # idempotent
@@ -62,7 +62,9 @@ cd mobile && npx tsc --noEmit && npx expo start --go --lan --port 8081
 
 ## Key Logins & Role Isolation (RBAC)
 
-- **Leadership / Admin**: `admin@sunrisepublic.edu` (`Admin@123`) — Full school-wide administrative access across all modules. Retains the executive **Admission Dashboard** (`/admission`) with cycle overview, conversion funnels, and class intake capacities. To keep the sidebar uncluttered, the 5 operational queues are segregated from the Admin sidebar.
+- **Leadership / Admin**: `admin@sunrisepublic.edu` (`Admin@123`) — Full school-wide administrative access across core governance modules (Students, Staff, Classes, Attendance, Exams, Rollover, Configuration). Executive Admission Dashboard (`/admission`) with cycle overview and conversion funnels; operational queues (enquiries, applications, merit, waitlist, reports), student fee ledger/defaulters, and reception passes/lost-items are excluded from sidebar and direct URLs (in-page refusal).
+- **Transport In-Charge**: `transport@sunrisepublic.edu` (`Admin@123`) — Dedicated transport management role. Hardened: People and Academics modules completely removed from sidebar and direct route access; sees only Transport & Logistics (`/transport`) and Notices (`/notices`); direct URLs protected with in-page refusal and backend HTTP 403 Forbidden (`students.profile.read` and `academics.class.read` removed). Transport rider stop assignment APIs operate independently.
+- **Accounts Officer**: `accounts@sunrisepublic.edu` (`Admin@123`) — Dedicated accounts department role. Owns financial operations (Fees overview, student ledger, defaulters, fee structure setup, periods close), payroll management, and Fee Reports. Strictly isolated via RBAC: zero access to Admin settings, Admissions, Transport, or Academic grading.
 - **Dedicated Receptionist**: `receptionist@sunrisepublic.edu` (`Admin@123`) — Dedicated front desk operational staff. Lands directly on `#/admission/enquiries`. Owns Enquiries, Notices, and all 5 Front Desk operational modules: Found & Lost (`/reception/found-items`), Student Gate Passes (`/reception/passes`), Meeting Slips (`/reception/meetings`), Important Directory (`/reception/directory`), and Reception Fee Counter (`/reception/fee-counter`). Navigation strictly hardened: `Applications`, `Merit & selection`, `Waitlist`, `Admission reports`, and all admin fee management screens (`Fees`, `Defaulters`, `Fee setup`, `Period close`, `Student fees`) are completely removed; direct URLs are protected with in-page refusal and backend HTTP 403 Forbidden.
 - **Admission Officer**: `admission@sunrisepublic.edu` (`Admin@123`) — Owns the complete admission pipeline: Enquiries, Applications, Merit Ranking, Waitlist, Admission Reports, and atomic fee payment enrollment. Navigation strictly hardened: `Students`, `Classes`, and `Notices` are completely removed from the sidebar; direct URLs `#/students`, `#/classes`, and `#/notices` are protected with in-page refusal and backend HTTP 403 Forbidden.
 - **Fee Counter Clerk**: `counter@sunrisepublic.edu` (`Admin@123`) — Read ledger, view defaulters; cannot void payments or alter concessions.

@@ -139,7 +139,8 @@ def test_fixing_todays_roll_is_not_a_correction(client, teacher, db, ids):
     """A teacher fixing a tap while the register is still open is not amending
     a record, and should not be made to justify it."""
     today = date.today()
-    if today.weekday() == 6:
+    school_id = db.get(Enrolment, 1).school_id
+    if today.weekday() == 6 or not svc.is_working_day(today, svc.holidays_between(db, school_id, today, today)):
         return
     mark(
         client,
