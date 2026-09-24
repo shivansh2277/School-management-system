@@ -155,6 +155,7 @@ class RouteStop(TenantBase):
     )
     sequence: Mapped[int] = mapped_column(nullable=False)
     name: Mapped[str] = mapped_column(String(80), nullable=False)
+    address: Mapped[str | None] = mapped_column(String(255))
     landmark: Mapped[str | None] = mapped_column(String(120))
     pickup_time: Mapped[time] = mapped_column(Time, nullable=False)
     drop_time: Mapped[time | None] = mapped_column(Time)

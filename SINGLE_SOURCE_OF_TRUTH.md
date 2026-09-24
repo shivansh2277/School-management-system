@@ -1,7 +1,7 @@
 # Sunrise School ERP — Single Source of Truth
 
 **Date:** 24 September 2026  
-**Status:** Authoritative — Session 13 Completed: Role-Specific Sidebar & RBAC Restrictions for Admin and Transport In-Charge, with Full Preservation of Operational Staff Roles.  
+**Status:** Authoritative — Session 14 Completed: Transport Module Upgrade — Plan 1 (Fleet & Route Setup Desk), Plan 2 (Student Transport Allocation Desk), and Address-Based Location System.  
 **Canonical Branch:** `slice/office-feedback` (strictly local per owner decision).  
 **Primary PDF Deliverables:**
 - [`docs/Sunrise-ERP-Admission-Demo-Guide.pdf`](docs/Sunrise-ERP-Admission-Demo-Guide.pdf) — Complete Digital Admission Dossier & Interactive Testing Guide for Application 360° with Aarav Sharma & Ananya Verma walkthroughs.
@@ -34,7 +34,7 @@
      - Fee counter clerk: `counter@sunrisepublic.edu` (`Admin@123`) — segregated duties (can read ledger, view defaulters, but cannot void payments or approve concessions).
      - Admission officer: `admission@sunrisepublic.edu` (`Admin@123`) — owns the complete admission pipeline (enquiries, applications, merit ranking, waitlist, reports, and atomic fee collection). Navigation strictly hardened: `Students`, `Classes`, and `Notices` removed; direct URLs `#/students`, `#/classes`, `#/notices` protected with in-page refusal and backend HTTP 403 Forbidden.
      - Front desk receptionist: `receptionist@sunrisepublic.edu` (`Admin@123`) — dedicated front desk operational suite. Owns Enquiries, Notices, and all Front Desk modules: Found & Lost, Student Gate Passes, Visitor Meeting Slips (Principal & Teacher), Important Directory, and Reception Fee Counter. Navigation strictly hardened: `Applications`, `Merit & selection`, `Waitlist`, `Admission reports`, and all admin fee management screens (`Fees`, `Defaulters`, `Fee setup`, `Period close`, `Student fees`) are completely removed; direct URLs protected with in-page refusal and backend HTTP 403 Forbidden.
-     - Transport In-Charge: `transport@sunrisepublic.edu` (`Admin@123`) — dedicated transport management role. Strictly hardened: People and Academics modules completely removed; sees only Transport & Logistics (`/transport`) and Notices (`/notices`); direct URLs protected with in-page refusal and backend HTTP 403 Forbidden (`students.profile.read` and `academics.class.read` removed). Transport rider stop assignment APIs operate independently.
+     - Transport In-Charge: `transport@sunrisepublic.edu` (`Admin@123`) — dedicated transport management role. Strictly hardened: People and Academics modules completely removed; sees only Transport & Logistics (`/transport`) and Notices (`/notices`); direct URLs protected with in-page refusal and backend HTTP 403 Forbidden (`students.profile.read` and `academics.class.read` removed). Upgraded with Plan 1 (Fleet & Route Setup Desk), Plan 2 (Student Transport Allocation Desk), and Address-First geocoding location system.
      - Accounts Officer: `accounts@sunrisepublic.edu` (`Admin@123`) — dedicated accounts department role. Owns financial operations (Fees overview, student ledger, defaulters, fee structure setup, periods close), payroll management, and Fee Reports. Strictly isolated via RBAC: zero access to Admin settings, Admissions, Transport, or Academic grading.
 4. **Git Protocol (Owner Directive)**:
    - **Continue building locally.** Do not push to GitHub or open a PR until explicitly approved.
@@ -42,19 +42,19 @@
 
 ---
 
-## 2. Verified Technical State (Measured 24 Sep 2026 — Session 13 Verified)
+## 2. Verified Technical State (Measured 24 Sep 2026 — Session 14 Verified)
 
 | Layer | Metric | Verification Command | Result |
 |---|---|---|:---:|
-| **Backend Suite** | 743 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest -q` | **743 passed, 1 skipped, 0 failed** (100% green, 0 regressions) |
-| **Active Migration Head** | Revision `e5f6a7b8c9d0` | `alembic current` | **`e5f6a7b8c9d0 (head)` clean bidirectional (pickup persons & photos)** |
+| **Backend Suite** | 749 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest -q` | **749 passed, 1 skipped, 0 failed** (100% green, 0 regressions) |
+| **Active Migration Head** | Revision `f6a7b8c9d0e1` | `alembic current` | **`f6a7b8c9d0e1 (head)` clean bidirectional (route stop address)** |
 | **Web Typecheck** | TypeScript 5.5 | `cd web && npx tsc --noEmit` | **0 errors** |
-| **Web Unit Tests** | Vitest 2.1 | `cd web && npm test` | **107 passed, 2 skipped across 19 test files** (100% green) |
+| **Web Unit Tests** | Vitest 2.1 | `cd web && npm test` | **109 passed, 2 skipped across 20 test files** (100% green) |
 | **Mobile Typecheck** | React Native 0.86 / TS | `cd mobile && npx tsc --noEmit` | **0 errors (Expo SDK 57, clean compilation)** |
-| **Database Schema** | Migrations Synced | `alembic current` | **Head `e5f6a7b8c9d0` (application_authorized_persons active)** |
+| **Database Schema** | Migrations Synced | `alembic current` | **Head `f6a7b8c9d0e1` (route_stops.address column active)** |
 | **Production Build** | Vite 5.4 | `cd web && npm run build` | **Clean build** |
 | **Declared Web Screens** | 31 Screens | Registered in `web/src/screens.ts` | **31/31 functional & gated (Role-specific excludeRoles & RBAC)** |
-| **Visual Verification Proofs** | Session 13 Suite | Puppeteer Headless Chrome | **74/74 checks passed, high-fidelity proofs in `docs/screenshots/`** |
+| **Visual Verification Proofs** | Session 14 Suite | Puppeteer Headless Chrome | **25/25 checks passed, high-fidelity proofs in `docs/screenshots/`** |
 
 ### Local Stack Configuration
 - **FastAPI Backend API**: `http://127.0.0.1:8000` (LAN binding: `http://0.0.0.0:8000` / `http://192.168.29.227:8000`)

@@ -4579,6 +4579,26 @@ export interface paths {
         patch: operations["vehicle_status_admin_transport_vehicles__vehicle_id__status_patch"];
         trace?: never;
     };
+    "/admin/transport/vehicles/{vehicle_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Vehicle
+         * @description Update vehicle specifications: make/model, capacity, ownership, and GPS tracker ID.
+         */
+        put: operations["update_vehicle_admin_transport_vehicles__vehicle_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/transport/slabs": {
         parameters: {
             query?: never;
@@ -4597,6 +4617,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/transport/slabs/{slab_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Slab */
+        patch: operations["update_slab_admin_transport_slabs__slab_id__patch"];
+        trace?: never;
+    };
     "/admin/transport/routes": {
         parameters: {
             query?: never;
@@ -4609,6 +4646,26 @@ export interface paths {
         put?: never;
         /** Add Route */
         post: operations["add_route_admin_transport_routes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/transport/routes/{route_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Route
+         * @description Update route code, name, or total distance.
+         */
+        put: operations["update_route_admin_transport_routes__route_id__put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4765,7 +4822,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete Assignment
+         * @description End a transport assignment with a mandatory reason.
+         */
+        delete: operations["delete_assignment_admin_transport_assignments__assignment_id__delete"];
         options?: never;
         head?: never;
         /** Assignment Status */
@@ -4842,6 +4903,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/transport/geocode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Geocode
+         * @description Address-first geocoder resolving addresses to internal coordinates.
+         */
+        get: operations["geocode_admin_transport_geocode_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/transport/crew": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Transport Crew
+         * @description Staff available to crew a bus (drivers and attendants) with document compliance status.
+         */
+        get: operations["transport_crew_admin_transport_crew_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/transport/students/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search Students
+         * @description Search enrolled students for transport allocation without exposing People module.
+         */
+        get: operations["search_students_admin_transport_students_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/transport/stops/nearby": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Nearby Stops
+         * @description Find and rank all active route stops by approximate distance from a student's address or coordinates.
+         */
+        get: operations["nearby_stops_admin_transport_stops_nearby_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/transport/assignments/{assignment_id}/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Transfer Assignment
+         * @description Transfer an existing transport assignment to a new stop/route with mandatory reason.
+         */
+        post: operations["transfer_assignment_admin_transport_assignments__assignment_id__transfer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/transport/routes/{route_id}/roster": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Route Roster
+         * @description Detailed A4 printable roster with stops, students, parent emergency contacts, and authorized pickup escorts.
+         */
+        get: operations["route_roster_admin_transport_routes__route_id__roster_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/transport/vehicles": {
         parameters: {
             query?: never;
@@ -4905,6 +5086,26 @@ export interface paths {
         patch: operations["vehicle_status_api_v1_admin_transport_vehicles__vehicle_id__status_patch"];
         trace?: never;
     };
+    "/api/v1/admin/transport/vehicles/{vehicle_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Vehicle
+         * @description Update vehicle specifications: make/model, capacity, ownership, and GPS tracker ID.
+         */
+        put: operations["update_vehicle_api_v1_admin_transport_vehicles__vehicle_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/transport/slabs": {
         parameters: {
             query?: never;
@@ -4923,6 +5124,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/transport/slabs/{slab_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Slab */
+        patch: operations["update_slab_api_v1_admin_transport_slabs__slab_id__patch"];
+        trace?: never;
+    };
     "/api/v1/admin/transport/routes": {
         parameters: {
             query?: never;
@@ -4935,6 +5153,26 @@ export interface paths {
         put?: never;
         /** Add Route */
         post: operations["add_route_api_v1_admin_transport_routes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/transport/routes/{route_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Route
+         * @description Update route code, name, or total distance.
+         */
+        put: operations["update_route_api_v1_admin_transport_routes__route_id__put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5091,7 +5329,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete Assignment
+         * @description End a transport assignment with a mandatory reason.
+         */
+        delete: operations["delete_assignment_api_v1_admin_transport_assignments__assignment_id__delete"];
         options?: never;
         head?: never;
         /** Assignment Status */
@@ -5160,6 +5402,126 @@ export interface paths {
          *     not less.
          */
         get: operations["expiring_api_v1_admin_transport_expiring_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/transport/geocode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Geocode
+         * @description Address-first geocoder resolving addresses to internal coordinates.
+         */
+        get: operations["geocode_api_v1_admin_transport_geocode_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/transport/crew": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Transport Crew
+         * @description Staff available to crew a bus (drivers and attendants) with document compliance status.
+         */
+        get: operations["transport_crew_api_v1_admin_transport_crew_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/transport/students/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search Students
+         * @description Search enrolled students for transport allocation without exposing People module.
+         */
+        get: operations["search_students_api_v1_admin_transport_students_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/transport/stops/nearby": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Nearby Stops
+         * @description Find and rank all active route stops by approximate distance from a student's address or coordinates.
+         */
+        get: operations["nearby_stops_api_v1_admin_transport_stops_nearby_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/transport/assignments/{assignment_id}/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Transfer Assignment
+         * @description Transfer an existing transport assignment to a new stop/route with mandatory reason.
+         */
+        post: operations["transfer_assignment_api_v1_admin_transport_assignments__assignment_id__transfer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/transport/routes/{route_id}/roster": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Route Roster
+         * @description Detailed A4 printable roster with stops, students, parent emergency contacts, and authorized pickup escorts.
+         */
+        get: operations["route_roster_api_v1_admin_transport_routes__route_id__roster_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5611,6 +5973,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/admission/applications/{application_id}/authorized-pickup-persons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Authorized Pickup Persons
+         * @description Sets or updates the authorized pickup persons list for an application.
+         */
+        put: operations["set_authorized_pickup_persons_admin_admission_applications__application_id__authorized_pickup_persons_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/admission/applications/{application_id}/siblings": {
         parameters: {
             query?: never;
@@ -5780,6 +6162,26 @@ export interface paths {
          *     reconciling a partial list is how a duplicate father appears.
          */
         put: operations["set_guardians_api_v1_admin_admission_applications__application_id__guardians_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/admission/applications/{application_id}/authorized-pickup-persons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Authorized Pickup Persons
+         * @description Sets or updates the authorized pickup persons list for an application.
+         */
+        put: operations["set_authorized_pickup_persons_api_v1_admin_admission_applications__application_id__authorized_pickup_persons_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -7444,6 +7846,770 @@ export interface paths {
         patch: operations["update_grievance_status_api_v1_admin_grievances__id__status_patch"];
         trace?: never;
     };
+    "/admin/reception/students/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Students */
+        get: operations["search_students_admin_reception_students_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reception/teachers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Teachers */
+        get: operations["list_teachers_admin_reception_teachers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reception/found-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Found Items */
+        get: operations["list_found_items_admin_reception_found_items_get"];
+        put?: never;
+        /** Create Found Item */
+        post: operations["create_found_item_admin_reception_found_items_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reception/found-items/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Found Item */
+        get: operations["get_found_item_admin_reception_found_items__item_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reception/found-items/{item_id}/broadcast": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Broadcast Found Item */
+        post: operations["broadcast_found_item_admin_reception_found_items__item_id__broadcast_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reception/found-items/{item_id}/collect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Collect Found Item */
+        post: operations["collect_found_item_admin_reception_found_items__item_id__collect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reception/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload Reception Image */
+        post: operations["upload_reception_image_admin_reception_upload_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reception/passes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Student Passes */
+        get: operations["list_student_passes_admin_reception_passes_get"];
+        put?: never;
+        /** Create Student Pass */
+        post: operations["create_student_pass_admin_reception_passes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reception/passes/{pass_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Student Pass */
+        get: operations["get_student_pass_admin_reception_passes__pass_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reception/passes/{pass_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Student Pass Status */
+        patch: operations["update_student_pass_status_admin_reception_passes__pass_id__status_patch"];
+        trace?: never;
+    };
+    "/admin/reception/students/{student_id}/authorized-persons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Student Authorized Persons */
+        get: operations["list_student_authorized_persons_admin_reception_students__student_id__authorized_persons_get"];
+        put?: never;
+        /** Add Authorized Person */
+        post: operations["add_authorized_person_admin_reception_students__student_id__authorized_persons_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reception/authorized-persons/{person_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Authorized Person */
+        put: operations["update_authorized_person_admin_reception_authorized_persons__person_id__put"];
+        post?: never;
+        /** Delete Authorized Person */
+        delete: operations["delete_authorized_person_admin_reception_authorized_persons__person_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reception/meetings/principal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Principal Meetings */
+        get: operations["list_principal_meetings_admin_reception_meetings_principal_get"];
+        put?: never;
+        /** Create Principal Meeting */
+        post: operations["create_principal_meeting_admin_reception_meetings_principal_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reception/meetings/principal/{meeting_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Principal Meeting */
+        get: operations["get_principal_meeting_admin_reception_meetings_principal__meeting_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reception/meetings/principal/{meeting_id}/respond": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Respond Principal Meeting */
+        post: operations["respond_principal_meeting_admin_reception_meetings_principal__meeting_id__respond_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reception/meetings/teacher": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Teacher Meetings */
+        get: operations["list_teacher_meetings_admin_reception_meetings_teacher_get"];
+        put?: never;
+        /** Create Teacher Meeting */
+        post: operations["create_teacher_meeting_admin_reception_meetings_teacher_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reception/meetings/teacher/{meeting_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Teacher Meeting */
+        get: operations["get_teacher_meeting_admin_reception_meetings_teacher__meeting_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reception/meetings/teacher/{meeting_id}/respond": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Respond Teacher Meeting */
+        post: operations["respond_teacher_meeting_admin_reception_meetings_teacher__meeting_id__respond_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reception/directory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Directory Contacts */
+        get: operations["list_directory_contacts_admin_reception_directory_get"];
+        put?: never;
+        /** Create Directory Contact */
+        post: operations["create_directory_contact_admin_reception_directory_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reception/directory/{contact_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Directory Contact */
+        put: operations["update_directory_contact_admin_reception_directory__contact_id__put"];
+        post?: never;
+        /** Delete Directory Contact */
+        delete: operations["delete_directory_contact_admin_reception_directory__contact_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reception/fees/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Fee Status */
+        get: operations["get_fee_status_admin_reception_fees_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/reception/fees/collect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Collect Fees */
+        post: operations["collect_fees_admin_reception_fees_collect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reception/students/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search Students */
+        get: operations["search_students_api_v1_admin_reception_students_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reception/teachers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Teachers */
+        get: operations["list_teachers_api_v1_admin_reception_teachers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reception/found-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Found Items */
+        get: operations["list_found_items_api_v1_admin_reception_found_items_get"];
+        put?: never;
+        /** Create Found Item */
+        post: operations["create_found_item_api_v1_admin_reception_found_items_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reception/found-items/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Found Item */
+        get: operations["get_found_item_api_v1_admin_reception_found_items__item_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reception/found-items/{item_id}/broadcast": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Broadcast Found Item */
+        post: operations["broadcast_found_item_api_v1_admin_reception_found_items__item_id__broadcast_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reception/found-items/{item_id}/collect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Collect Found Item */
+        post: operations["collect_found_item_api_v1_admin_reception_found_items__item_id__collect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reception/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload Reception Image */
+        post: operations["upload_reception_image_api_v1_admin_reception_upload_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reception/passes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Student Passes */
+        get: operations["list_student_passes_api_v1_admin_reception_passes_get"];
+        put?: never;
+        /** Create Student Pass */
+        post: operations["create_student_pass_api_v1_admin_reception_passes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reception/passes/{pass_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Student Pass */
+        get: operations["get_student_pass_api_v1_admin_reception_passes__pass_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reception/passes/{pass_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Student Pass Status */
+        patch: operations["update_student_pass_status_api_v1_admin_reception_passes__pass_id__status_patch"];
+        trace?: never;
+    };
+    "/api/v1/admin/reception/students/{student_id}/authorized-persons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Student Authorized Persons */
+        get: operations["list_student_authorized_persons_api_v1_admin_reception_students__student_id__authorized_persons_get"];
+        put?: never;
+        /** Add Authorized Person */
+        post: operations["add_authorized_person_api_v1_admin_reception_students__student_id__authorized_persons_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reception/authorized-persons/{person_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Authorized Person */
+        put: operations["update_authorized_person_api_v1_admin_reception_authorized_persons__person_id__put"];
+        post?: never;
+        /** Delete Authorized Person */
+        delete: operations["delete_authorized_person_api_v1_admin_reception_authorized_persons__person_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reception/meetings/principal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Principal Meetings */
+        get: operations["list_principal_meetings_api_v1_admin_reception_meetings_principal_get"];
+        put?: never;
+        /** Create Principal Meeting */
+        post: operations["create_principal_meeting_api_v1_admin_reception_meetings_principal_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reception/meetings/principal/{meeting_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Principal Meeting */
+        get: operations["get_principal_meeting_api_v1_admin_reception_meetings_principal__meeting_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reception/meetings/principal/{meeting_id}/respond": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Respond Principal Meeting */
+        post: operations["respond_principal_meeting_api_v1_admin_reception_meetings_principal__meeting_id__respond_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reception/meetings/teacher": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Teacher Meetings */
+        get: operations["list_teacher_meetings_api_v1_admin_reception_meetings_teacher_get"];
+        put?: never;
+        /** Create Teacher Meeting */
+        post: operations["create_teacher_meeting_api_v1_admin_reception_meetings_teacher_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reception/meetings/teacher/{meeting_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Teacher Meeting */
+        get: operations["get_teacher_meeting_api_v1_admin_reception_meetings_teacher__meeting_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reception/meetings/teacher/{meeting_id}/respond": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Respond Teacher Meeting */
+        post: operations["respond_teacher_meeting_api_v1_admin_reception_meetings_teacher__meeting_id__respond_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reception/directory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Directory Contacts */
+        get: operations["list_directory_contacts_api_v1_admin_reception_directory_get"];
+        put?: never;
+        /** Create Directory Contact */
+        post: operations["create_directory_contact_api_v1_admin_reception_directory_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reception/directory/{contact_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Directory Contact */
+        put: operations["update_directory_contact_api_v1_admin_reception_directory__contact_id__put"];
+        post?: never;
+        /** Delete Directory Contact */
+        delete: operations["delete_directory_contact_api_v1_admin_reception_directory__contact_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reception/fees/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Fee Status */
+        get: operations["get_fee_status_api_v1_admin_reception_fees_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/reception/fees/collect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Collect Fees */
+        post: operations["collect_fees_api_v1_admin_reception_fees_collect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/teacher/dashboard": {
         parameters: {
             query?: never;
@@ -8442,6 +9608,74 @@ export interface paths {
         head?: never;
         /** Mark Notification Read */
         patch: operations["mark_notification_read_api_v1_teacher_notifications__notification_id__read_patch"];
+        trace?: never;
+    };
+    "/teacher/meetings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Meetings */
+        get: operations["list_my_meetings_teacher_meetings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/teacher/meetings/{meeting_id}/respond": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Respond My Meeting */
+        post: operations["respond_my_meeting_teacher_meetings__meeting_id__respond_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teacher/meetings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Meetings */
+        get: operations["list_my_meetings_api_v1_teacher_meetings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teacher/meetings/{meeting_id}/respond": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Respond My Meeting */
+        post: operations["respond_my_meeting_api_v1_teacher_meetings__meeting_id__respond_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/student/dashboard": {
@@ -9726,6 +10960,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/{school_code}/admission/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Admission Photo
+         * @description Public photo upload for admission applications (applicant and authorized escorts).
+         *     Files are stored in local storage and served statically under /documents.
+         */
+        post: operations["upload_admission_photo_public__school_code__admission_upload_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/{school_code}/admission/open": {
         parameters: {
             query?: never;
@@ -9780,6 +11035,27 @@ export interface paths {
         get: operations["application_status_public__school_code__admission_status_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/{school_code}/admission/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Admission Photo
+         * @description Public photo upload for admission applications (applicant and authorized escorts).
+         *     Files are stored in local storage and served statically under /documents.
+         */
+        post: operations["upload_admission_photo_api_v1_public__school_code__admission_upload_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10224,6 +11500,23 @@ export interface components {
             /** Min Amount */
             min_amount?: number | null;
         };
+        /** AuthorizedPickupPersonInput */
+        AuthorizedPickupPersonInput: {
+            /** Name */
+            name: string;
+            /** Relationship */
+            relationship: string;
+            /** Phone */
+            phone: string;
+            /** Id Proof Type */
+            id_proof_type?: string | null;
+            /** Id Proof Number */
+            id_proof_number?: string | null;
+            /** Photo Url */
+            photo_url?: string | null;
+            /** Notes */
+            notes?: string | null;
+        };
         /** BandIn */
         BandIn: {
             /** Min Percent */
@@ -10239,6 +11532,16 @@ export interface components {
             decisions: {
                 [key: string]: unknown;
             }[];
+        };
+        /** Body_upload_admission_photo_api_v1_public__school_code__admission_upload_post */
+        Body_upload_admission_photo_api_v1_public__school_code__admission_upload_post: {
+            /** File */
+            file: string;
+        };
+        /** Body_upload_admission_photo_public__school_code__admission_upload_post */
+        Body_upload_admission_photo_public__school_code__admission_upload_post: {
+            /** File */
+            file: string;
         };
         /** Body_upload_document_admin_admission_applications__application_id__documents_post */
         Body_upload_document_admin_admission_applications__application_id__documents_post: {
@@ -10257,6 +11560,16 @@ export interface components {
              * @description Document type code, e.g. birth_certificate
              */
             code: string;
+            /** File */
+            file: string;
+        };
+        /** Body_upload_reception_image_admin_reception_upload_post */
+        Body_upload_reception_image_admin_reception_upload_post: {
+            /** File */
+            file: string;
+        };
+        /** Body_upload_reception_image_api_v1_admin_reception_upload_post */
+        Body_upload_reception_image_api_v1_admin_reception_upload_post: {
             /** File */
             file: string;
         };
@@ -10587,6 +11900,74 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** DirectoryContactIn */
+        DirectoryContactIn: {
+            /**
+             * Category
+             * @default Emergency
+             */
+            category?: string;
+            /** Name */
+            name: string;
+            /** Designation Or Department */
+            designation_or_department?: string | null;
+            /** Phone Primary */
+            phone_primary: string;
+            /** Phone Secondary */
+            phone_secondary?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Address */
+            address?: string | null;
+            /** Operating Hours */
+            operating_hours?: string | null;
+            /**
+             * Is Emergency
+             * @default false
+             */
+            is_emergency?: boolean;
+            /**
+             * Display Order
+             * @default 0
+             */
+            display_order?: number;
+            /** Notes */
+            notes?: string | null;
+        };
+        /** DirectoryContactOut */
+        DirectoryContactOut: {
+            /** Id */
+            id: number;
+            /** School Id */
+            school_id: number;
+            /** Category */
+            category: string;
+            /** Name */
+            name: string;
+            /** Designation Or Department */
+            designation_or_department?: string | null;
+            /** Phone Primary */
+            phone_primary: string;
+            /** Phone Secondary */
+            phone_secondary?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Address */
+            address?: string | null;
+            /** Operating Hours */
+            operating_hours?: string | null;
+            /** Is Emergency */
+            is_emergency: boolean;
+            /** Display Order */
+            display_order: number;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** EmployeeCreate */
         EmployeeCreate: {
             /** Full Name */
@@ -10783,6 +12164,99 @@ export interface components {
          * @enum {string}
          */
         FeeHeadType: "recurring" | "one_time" | "optional";
+        /** FoundItemCollect */
+        FoundItemCollect: {
+            /** Claimed By Student Id */
+            claimed_by_student_id?: number | null;
+            /** Claimed By Student Name */
+            claimed_by_student_name?: string | null;
+            /** Claimed By Admission No */
+            claimed_by_admission_no?: string | null;
+            /** Claimed By Class Name */
+            claimed_by_class_name?: string | null;
+            /** Handover Photo Url */
+            handover_photo_url?: string | null;
+            /** Handover Notes */
+            handover_notes?: string | null;
+        };
+        /** FoundItemCreate */
+        FoundItemCreate: {
+            /** Item Name */
+            item_name: string;
+            /**
+             * Category
+             * @default other
+             */
+            category?: string;
+            /** Description */
+            description?: string | null;
+            /** Found Location */
+            found_location: string;
+            /**
+             * Found Date
+             * Format: date
+             */
+            found_date: string;
+            /** Found Time */
+            found_time?: string | null;
+            /** Photo Url */
+            photo_url?: string | null;
+        };
+        /** FoundItemOut */
+        FoundItemOut: {
+            /** Id */
+            id: number;
+            /** School Id */
+            school_id: number;
+            /** Item Name */
+            item_name: string;
+            /** Category */
+            category: string;
+            /** Description */
+            description?: string | null;
+            /** Found Location */
+            found_location: string;
+            /**
+             * Found Date
+             * Format: date
+             */
+            found_date: string;
+            /** Found Time */
+            found_time?: string | null;
+            /** Recorded By Id */
+            recorded_by_id: number;
+            /** Recorded By Name */
+            recorded_by_name: string;
+            /** Photo Url */
+            photo_url?: string | null;
+            /** Status */
+            status: string;
+            /** Broadcasted At */
+            broadcasted_at?: string | null;
+            /** Claimed By Student Id */
+            claimed_by_student_id?: number | null;
+            /** Claimed By Student Name */
+            claimed_by_student_name?: string | null;
+            /** Claimed By Admission No */
+            claimed_by_admission_no?: string | null;
+            /** Claimed By Class Name */
+            claimed_by_class_name?: string | null;
+            /** Handover Photo Url */
+            handover_photo_url?: string | null;
+            /** Handover Notes */
+            handover_notes?: string | null;
+            /** Collected At */
+            collected_at?: string | null;
+            /** Collected By Staff Id */
+            collected_by_staff_id?: number | null;
+            /** Collected By Staff Name */
+            collected_by_staff_name?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /**
          * Gender
          * @enum {string}
@@ -11460,6 +12934,82 @@ export interface components {
              */
             opted_out?: boolean;
         };
+        /** PrincipalMeetingCreate */
+        PrincipalMeetingCreate: {
+            /** Visitor Name */
+            visitor_name: string;
+            /** Visitor Phone */
+            visitor_phone: string;
+            /** Visitor Organization */
+            visitor_organization?: string | null;
+            /** Student Name */
+            student_name?: string | null;
+            /** Student Admission No */
+            student_admission_no?: string | null;
+            /** Reason */
+            reason: string;
+            /**
+             * Meeting Date
+             * Format: date
+             */
+            meeting_date: string;
+            /** Meeting Time */
+            meeting_time: string;
+        };
+        /** PrincipalMeetingOut */
+        PrincipalMeetingOut: {
+            /** Id */
+            id: number;
+            /** School Id */
+            school_id: number;
+            /** Slip Code */
+            slip_code: string;
+            /** Visitor Name */
+            visitor_name: string;
+            /** Visitor Phone */
+            visitor_phone: string;
+            /** Visitor Organization */
+            visitor_organization?: string | null;
+            /** Student Name */
+            student_name?: string | null;
+            /** Student Admission No */
+            student_admission_no?: string | null;
+            /** Reason */
+            reason: string;
+            /**
+             * Meeting Date
+             * Format: date
+             */
+            meeting_date: string;
+            /** Meeting Time */
+            meeting_time: string;
+            /** Status */
+            status: string;
+            /** Wait Duration Minutes */
+            wait_duration_minutes?: number | null;
+            /** Response Notes */
+            response_notes?: string | null;
+            /** Responded At */
+            responded_at?: string | null;
+            /** Created By Id */
+            created_by_id: number;
+            /** Created By Name */
+            created_by_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** PrincipalMeetingRespond */
+        PrincipalMeetingRespond: {
+            /** Status */
+            status: string;
+            /** Wait Duration Minutes */
+            wait_duration_minutes?: number | null;
+            /** Response Notes */
+            response_notes?: string | null;
+        };
         /** PromotionRequest */
         PromotionRequest: {
             /** Class Section Id */
@@ -11532,6 +13082,11 @@ export interface components {
             } | null;
             /** Guardians */
             guardians: components["schemas"]["PublicGuardian"][];
+            /**
+             * Authorized Pickup Persons
+             * @default []
+             */
+            authorized_pickup_persons?: components["schemas"]["PublicAuthorizedPickupPerson"][];
             /** @default website */
             heard_about_us?: components["schemas"]["EnquirySource"];
             /**
@@ -11554,6 +13109,23 @@ export interface components {
             /** Website */
             website?: string | null;
         };
+        /** PublicAuthorizedPickupPerson */
+        PublicAuthorizedPickupPerson: {
+            /** Name */
+            name: string;
+            /** Relationship */
+            relationship: string;
+            /** Phone */
+            phone: string;
+            /** Id Proof Type */
+            id_proof_type?: string | null;
+            /** Id Proof Number */
+            id_proof_number?: string | null;
+            /** Photo Url */
+            photo_url?: string | null;
+            /** Notes */
+            notes?: string | null;
+        };
         /** PublicGuardian */
         PublicGuardian: {
             relation: components["schemas"]["GuardianRelation"];
@@ -11570,6 +13142,27 @@ export interface components {
              * @default false
              */
             is_primary?: boolean;
+            /** Photo Url */
+            photo_url?: string | null;
+            /**
+             * Is Authorised For Pickup
+             * @default true
+             */
+            is_authorised_for_pickup?: boolean;
+        };
+        /** ReceptionFeeCollectIn */
+        ReceptionFeeCollectIn: {
+            /** Enrolment Id */
+            enrolment_id: number;
+            /** Num Months */
+            num_months: number;
+            /**
+             * Payment Method
+             * @default cash
+             */
+            payment_method?: string;
+            /** Notes */
+            notes?: string | null;
         };
         /** RefreshRequest */
         RefreshRequest: {
@@ -11666,6 +13259,15 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** RouteUpdateIn */
+        RouteUpdateIn: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Distance Km */
+            distance_km?: number | string | null;
+        };
         /** RunIn */
         RunIn: {
             /** Year */
@@ -11734,6 +13336,18 @@ export interface components {
         };
         /** SlabIn */
         SlabIn: {
+            /** Name */
+            name: string;
+            /** Monthly Amount */
+            monthly_amount: number | string;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active?: boolean;
+        };
+        /** SlabUpdateIn */
+        SlabUpdateIn: {
             /** Name */
             name: string;
             /** Monthly Amount */
@@ -11992,6 +13606,8 @@ export interface components {
             sequence: number;
             /** Name */
             name: string;
+            /** Address */
+            address?: string | null;
             /** Landmark */
             landmark?: string | null;
             /**
@@ -12014,6 +13630,8 @@ export interface components {
             latitude: number;
             /** Longitude */
             longitude: number;
+            /** Address */
+            address?: string | null;
         };
         /** StructureIn */
         StructureIn: {
@@ -12032,6 +13650,58 @@ export interface components {
             } | null;
             /** Note */
             note?: string | null;
+        };
+        /** StudentAuthorizedPersonIn */
+        StudentAuthorizedPersonIn: {
+            /** Name */
+            name: string;
+            /** Relationship */
+            relationship: string;
+            /** Phone */
+            phone: string;
+            /** Id Proof Type */
+            id_proof_type?: string | null;
+            /** Id Proof Number */
+            id_proof_number?: string | null;
+            /** Photo Url */
+            photo_url?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active?: boolean;
+        };
+        /** StudentAuthorizedPersonOut */
+        StudentAuthorizedPersonOut: {
+            /** Id */
+            id: number;
+            /** School Id */
+            school_id: number;
+            /** Student Id */
+            student_id: number;
+            /** Name */
+            name: string;
+            /** Relationship */
+            relationship: string;
+            /** Phone */
+            phone: string;
+            /** Id Proof Type */
+            id_proof_type?: string | null;
+            /** Id Proof Number */
+            id_proof_number?: string | null;
+            /** Photo Url */
+            photo_url?: string | null;
+            /** Is Active */
+            is_active: boolean;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** StudentCreate */
         StudentCreate: {
@@ -12117,6 +13787,84 @@ export interface components {
             remarks?: string | null;
             /** Graded At */
             graded_at?: string | null;
+        };
+        /** StudentPassCreate */
+        StudentPassCreate: {
+            /** Student Id */
+            student_id: number;
+            /** Reason */
+            reason: string;
+            /** Pickup Person Name */
+            pickup_person_name: string;
+            /** Pickup Person Relation */
+            pickup_person_relation: string;
+            /** Pickup Person Phone */
+            pickup_person_phone: string;
+            /** Pickup Person Id Proof */
+            pickup_person_id_proof?: string | null;
+            /**
+             * Pass Date
+             * Format: date
+             */
+            pass_date: string;
+            /** Pass Time */
+            pass_time: string;
+            /** Remarks */
+            remarks?: string | null;
+        };
+        /** StudentPassOut */
+        StudentPassOut: {
+            /** Id */
+            id: number;
+            /** School Id */
+            school_id: number;
+            /** Pass Code */
+            pass_code: string;
+            /** Student Id */
+            student_id: number;
+            /** Student Name */
+            student_name: string;
+            /** Admission No */
+            admission_no: string;
+            /** Class Name */
+            class_name?: string | null;
+            /** Reason */
+            reason: string;
+            /** Pickup Person Name */
+            pickup_person_name: string;
+            /** Pickup Person Relation */
+            pickup_person_relation: string;
+            /** Pickup Person Phone */
+            pickup_person_phone: string;
+            /** Pickup Person Id Proof */
+            pickup_person_id_proof?: string | null;
+            /**
+             * Pass Date
+             * Format: date
+             */
+            pass_date: string;
+            /** Pass Time */
+            pass_time: string;
+            /** Issued By Id */
+            issued_by_id: number;
+            /** Issued By Name */
+            issued_by_name: string;
+            /** Status */
+            status: string;
+            /** Remarks */
+            remarks?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** StudentPassStatusUpdate */
+        StudentPassStatusUpdate: {
+            /** Status */
+            status: string;
+            /** Remarks */
+            remarks?: string | null;
         };
         /** StudentUpdate */
         StudentUpdate: {
@@ -12219,6 +13967,84 @@ export interface components {
              */
             is_half_day?: boolean;
         };
+        /** TeacherMeetingCreate */
+        TeacherMeetingCreate: {
+            /** Teacher Id */
+            teacher_id: number;
+            /** Visitor Name */
+            visitor_name: string;
+            /** Visitor Phone */
+            visitor_phone: string;
+            /** Visitor Relation */
+            visitor_relation?: string | null;
+            /** Student Name */
+            student_name?: string | null;
+            /** Student Admission No */
+            student_admission_no?: string | null;
+            /** Reason */
+            reason: string;
+            /**
+             * Meeting Date
+             * Format: date
+             */
+            meeting_date: string;
+            /** Meeting Time */
+            meeting_time: string;
+        };
+        /** TeacherMeetingOut */
+        TeacherMeetingOut: {
+            /** Id */
+            id: number;
+            /** School Id */
+            school_id: number;
+            /** Slip Code */
+            slip_code: string;
+            /** Teacher Id */
+            teacher_id: number;
+            /** Teacher Name */
+            teacher_name: string;
+            /** Visitor Name */
+            visitor_name: string;
+            /** Visitor Phone */
+            visitor_phone: string;
+            /** Visitor Relation */
+            visitor_relation?: string | null;
+            /** Student Name */
+            student_name?: string | null;
+            /** Student Admission No */
+            student_admission_no?: string | null;
+            /** Reason */
+            reason: string;
+            /**
+             * Meeting Date
+             * Format: date
+             */
+            meeting_date: string;
+            /** Meeting Time */
+            meeting_time: string;
+            /** Status */
+            status: string;
+            /** Response Notes */
+            response_notes?: string | null;
+            /** Responded At */
+            responded_at?: string | null;
+            /** Created By Id */
+            created_by_id: number;
+            /** Created By Name */
+            created_by_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** TeacherMeetingRespond */
+        TeacherMeetingRespond: {
+            /** Status */
+            status: string;
+            /** Response Notes */
+            response_notes?: string | null;
+        };
         /** TemplateIn */
         TemplateIn: {
             /** Code */
@@ -12245,6 +14071,20 @@ export interface components {
              */
             token_type?: string;
             user: components["schemas"]["UserOut"];
+        };
+        /** TransferIn */
+        TransferIn: {
+            /** New Route Stop Id */
+            new_route_stop_id: number;
+            /** Reason */
+            reason: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date?: string;
+            /** @default both */
+            direction?: components["schemas"]["TransportDirection"];
         };
         /**
          * TransportAssignmentStatus
@@ -12330,6 +14170,17 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** VehicleUpdateIn */
+        VehicleUpdateIn: {
+            /** Make Model */
+            make_model?: string | null;
+            /** Capacity */
+            capacity: number;
+            /** @default owned */
+            ownership?: components["schemas"]["VehicleOwnership"];
+            /** Gps Device Id */
+            gps_device_id?: string | null;
+        };
         /** Verdict */
         Verdict: {
             /** Approved */
@@ -12382,6 +14233,8 @@ export interface components {
              * @default false
              */
             is_authorised_for_pickup?: boolean;
+            /** Photo Url */
+            photo_url?: string | null;
             /**
              * Is School Alumnus
              * @default false
@@ -22313,6 +24166,43 @@ export interface operations {
             };
         };
     };
+    update_vehicle_admin_transport_vehicles__vehicle_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VehicleUpdateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     slabs_admin_transport_slabs_get: {
         parameters: {
             query?: never;
@@ -22370,6 +24260,43 @@ export interface operations {
             };
         };
     };
+    update_slab_admin_transport_slabs__slab_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slab_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SlabUpdateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     routes_admin_transport_routes_get: {
         parameters: {
             query?: never;
@@ -22407,6 +24334,43 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_route_admin_transport_routes__route_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                route_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RouteUpdateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -22676,6 +24640,41 @@ export interface operations {
             };
         };
     };
+    delete_assignment_admin_transport_assignments__assignment_id__delete: {
+        parameters: {
+            query: {
+                reason: string;
+            };
+            header?: never;
+            path: {
+                assignment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     assignment_status_admin_transport_assignments__assignment_id__patch: {
         parameters: {
             query?: never;
@@ -22789,6 +24788,199 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    geocode_admin_transport_geocode_get: {
+        parameters: {
+            query: {
+                address: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transport_crew_admin_transport_crew_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
+    search_students_admin_transport_students_search_get: {
+        parameters: {
+            query?: {
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    nearby_stops_admin_transport_stops_nearby_get: {
+        parameters: {
+            query?: {
+                address?: string | null;
+                lat?: number | null;
+                lon?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transfer_assignment_admin_transport_assignments__assignment_id__transfer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    route_roster_admin_transport_routes__route_id__roster_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                route_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -22929,6 +25121,43 @@ export interface operations {
             };
         };
     };
+    update_vehicle_api_v1_admin_transport_vehicles__vehicle_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VehicleUpdateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     slabs_api_v1_admin_transport_slabs_get: {
         parameters: {
             query?: never;
@@ -22986,6 +25215,43 @@ export interface operations {
             };
         };
     };
+    update_slab_api_v1_admin_transport_slabs__slab_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slab_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SlabUpdateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     routes_api_v1_admin_transport_routes_get: {
         parameters: {
             query?: never;
@@ -23023,6 +25289,43 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_route_api_v1_admin_transport_routes__route_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                route_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RouteUpdateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -23292,6 +25595,41 @@ export interface operations {
             };
         };
     };
+    delete_assignment_api_v1_admin_transport_assignments__assignment_id__delete: {
+        parameters: {
+            query: {
+                reason: string;
+            };
+            header?: never;
+            path: {
+                assignment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     assignment_status_api_v1_admin_transport_assignments__assignment_id__patch: {
         parameters: {
             query?: never;
@@ -23405,6 +25743,199 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    geocode_api_v1_admin_transport_geocode_get: {
+        parameters: {
+            query: {
+                address: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transport_crew_api_v1_admin_transport_crew_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
+    search_students_api_v1_admin_transport_students_search_get: {
+        parameters: {
+            query?: {
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    nearby_stops_api_v1_admin_transport_stops_nearby_get: {
+        parameters: {
+            query?: {
+                address?: string | null;
+                lat?: number | null;
+                lon?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transfer_assignment_api_v1_admin_transport_assignments__assignment_id__transfer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    route_roster_api_v1_admin_transport_routes__route_id__roster_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                route_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -24647,6 +27178,43 @@ export interface operations {
             };
         };
     };
+    set_authorized_pickup_persons_admin_admission_applications__application_id__authorized_pickup_persons_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthorizedPickupPersonInput"][];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     set_siblings_admin_admission_applications__application_id__siblings_put: {
         parameters: {
             query?: never;
@@ -25044,6 +27612,43 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["app__api__admin__applications__GuardianInput"][];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_authorized_pickup_persons_api_v1_admin_admission_applications__application_id__authorized_pickup_persons_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthorizedPickupPersonInput"][];
             };
         };
         responses: {
@@ -28314,6 +30919,1976 @@ export interface operations {
             };
         };
     };
+    search_students_admin_reception_students_search_get: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_teachers_admin_reception_teachers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
+    list_found_items_admin_reception_found_items_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                category?: string | null;
+                search?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoundItemOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_found_item_admin_reception_found_items_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FoundItemCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoundItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_found_item_admin_reception_found_items__item_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoundItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    broadcast_found_item_admin_reception_found_items__item_id__broadcast_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoundItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    collect_found_item_admin_reception_found_items__item_id__collect_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FoundItemCollect"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoundItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_reception_image_admin_reception_upload_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_reception_image_admin_reception_upload_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_student_passes_admin_reception_passes_get: {
+        parameters: {
+            query?: {
+                pass_date?: string | null;
+                student_id?: number | null;
+                search?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentPassOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_student_pass_admin_reception_passes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StudentPassCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentPassOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_student_pass_admin_reception_passes__pass_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pass_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentPassOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_student_pass_status_admin_reception_passes__pass_id__status_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pass_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StudentPassStatusUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentPassOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_student_authorized_persons_admin_reception_students__student_id__authorized_persons_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                student_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentAuthorizedPersonOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_authorized_person_admin_reception_students__student_id__authorized_persons_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                student_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StudentAuthorizedPersonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentAuthorizedPersonOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_authorized_person_admin_reception_authorized_persons__person_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StudentAuthorizedPersonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentAuthorizedPersonOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_authorized_person_admin_reception_authorized_persons__person_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_principal_meetings_admin_reception_meetings_principal_get: {
+        parameters: {
+            query?: {
+                meeting_date?: string | null;
+                status?: string | null;
+                search?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrincipalMeetingOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_principal_meeting_admin_reception_meetings_principal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrincipalMeetingCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrincipalMeetingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_principal_meeting_admin_reception_meetings_principal__meeting_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrincipalMeetingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    respond_principal_meeting_admin_reception_meetings_principal__meeting_id__respond_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrincipalMeetingRespond"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrincipalMeetingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_teacher_meetings_admin_reception_meetings_teacher_get: {
+        parameters: {
+            query?: {
+                teacher_id?: number | null;
+                meeting_date?: string | null;
+                status?: string | null;
+                search?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeacherMeetingOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_teacher_meeting_admin_reception_meetings_teacher_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeacherMeetingCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeacherMeetingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_teacher_meeting_admin_reception_meetings_teacher__meeting_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeacherMeetingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    respond_teacher_meeting_admin_reception_meetings_teacher__meeting_id__respond_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeacherMeetingRespond"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeacherMeetingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_directory_contacts_admin_reception_directory_get: {
+        parameters: {
+            query?: {
+                category?: string | null;
+                search?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectoryContactOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_directory_contact_admin_reception_directory_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectoryContactIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectoryContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_directory_contact_admin_reception_directory__contact_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectoryContactIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectoryContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_directory_contact_admin_reception_directory__contact_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_fee_status_admin_reception_fees_status_get: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    collect_fees_admin_reception_fees_collect_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReceptionFeeCollectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_students_api_v1_admin_reception_students_search_get: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_teachers_api_v1_admin_reception_teachers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
+    list_found_items_api_v1_admin_reception_found_items_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                category?: string | null;
+                search?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoundItemOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_found_item_api_v1_admin_reception_found_items_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FoundItemCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoundItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_found_item_api_v1_admin_reception_found_items__item_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoundItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    broadcast_found_item_api_v1_admin_reception_found_items__item_id__broadcast_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoundItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    collect_found_item_api_v1_admin_reception_found_items__item_id__collect_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FoundItemCollect"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoundItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_reception_image_api_v1_admin_reception_upload_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_reception_image_api_v1_admin_reception_upload_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_student_passes_api_v1_admin_reception_passes_get: {
+        parameters: {
+            query?: {
+                pass_date?: string | null;
+                student_id?: number | null;
+                search?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentPassOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_student_pass_api_v1_admin_reception_passes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StudentPassCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentPassOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_student_pass_api_v1_admin_reception_passes__pass_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pass_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentPassOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_student_pass_status_api_v1_admin_reception_passes__pass_id__status_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pass_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StudentPassStatusUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentPassOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_student_authorized_persons_api_v1_admin_reception_students__student_id__authorized_persons_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                student_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentAuthorizedPersonOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_authorized_person_api_v1_admin_reception_students__student_id__authorized_persons_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                student_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StudentAuthorizedPersonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentAuthorizedPersonOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_authorized_person_api_v1_admin_reception_authorized_persons__person_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StudentAuthorizedPersonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentAuthorizedPersonOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_authorized_person_api_v1_admin_reception_authorized_persons__person_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_principal_meetings_api_v1_admin_reception_meetings_principal_get: {
+        parameters: {
+            query?: {
+                meeting_date?: string | null;
+                status?: string | null;
+                search?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrincipalMeetingOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_principal_meeting_api_v1_admin_reception_meetings_principal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrincipalMeetingCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrincipalMeetingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_principal_meeting_api_v1_admin_reception_meetings_principal__meeting_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrincipalMeetingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    respond_principal_meeting_api_v1_admin_reception_meetings_principal__meeting_id__respond_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrincipalMeetingRespond"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrincipalMeetingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_teacher_meetings_api_v1_admin_reception_meetings_teacher_get: {
+        parameters: {
+            query?: {
+                teacher_id?: number | null;
+                meeting_date?: string | null;
+                status?: string | null;
+                search?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeacherMeetingOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_teacher_meeting_api_v1_admin_reception_meetings_teacher_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeacherMeetingCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeacherMeetingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_teacher_meeting_api_v1_admin_reception_meetings_teacher__meeting_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeacherMeetingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    respond_teacher_meeting_api_v1_admin_reception_meetings_teacher__meeting_id__respond_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeacherMeetingRespond"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeacherMeetingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_directory_contacts_api_v1_admin_reception_directory_get: {
+        parameters: {
+            query?: {
+                category?: string | null;
+                search?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectoryContactOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_directory_contact_api_v1_admin_reception_directory_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectoryContactIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectoryContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_directory_contact_api_v1_admin_reception_directory__contact_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectoryContactIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectoryContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_directory_contact_api_v1_admin_reception_directory__contact_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_fee_status_api_v1_admin_reception_fees_status_get: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    collect_fees_api_v1_admin_reception_fees_collect_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReceptionFeeCollectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     dashboard_teacher_dashboard_get: {
         parameters: {
             query?: never;
@@ -30333,6 +34908,116 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_meetings_teacher_meetings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeacherMeetingOut"][];
+                };
+            };
+        };
+    };
+    respond_my_meeting_teacher_meetings__meeting_id__respond_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeacherMeetingRespond"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeacherMeetingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_meetings_api_v1_teacher_meetings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeacherMeetingOut"][];
+                };
+            };
+        };
+    };
+    respond_my_meeting_api_v1_teacher_meetings__meeting_id__respond_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeacherMeetingRespond"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeacherMeetingOut"];
                 };
             };
             /** @description Validation Error */
@@ -32592,6 +37277,43 @@ export interface operations {
             };
         };
     };
+    upload_admission_photo_public__school_code__admission_upload_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                school_code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_admission_photo_public__school_code__admission_upload_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     open_cycle_public__school_code__admission_open_get: {
         parameters: {
             query?: never;
@@ -32675,6 +37397,43 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_admission_photo_api_v1_public__school_code__admission_upload_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                school_code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_admission_photo_api_v1_public__school_code__admission_upload_post"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

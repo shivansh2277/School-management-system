@@ -2,12 +2,12 @@
 
 ## Read these first, in this order
 
-0. **`SINGLE_SOURCE_OF_TRUTH.md`**, **`SESSION-HANDOFF-12.md`**, & **`SESSION-HANDOFF-13.md`** — **start here.**
+0. **`SINGLE_SOURCE_OF_TRUTH.md`**, **`SESSION-HANDOFF-13.md`**, & **`SESSION-HANDOFF-14.md`** — **start here.**
    The canonical single source of truth and session handoffs for the ERP.
    Details current git status (`slice/office-feedback`), verified 31 live web screens,
-   18 active staff, database tables (reception & authorized pickup tables added),
-   Alembic migration head `e5f6a7b8c9d0` (`application_authorized_pickup_persons.py`), leadership credentials (`admin@sunrisepublic.edu` / `Admin@123`),
-   Session 13 completed & verified (743 passed backend tests, 1 skipped, 0 failed, 100% green; 107 passed web unit tests across 19 files; 0 TypeScript errors on web and mobile; clean Vite production build; Admin role sidebar and direct URL route restrictions; Transport In-Charge isolation with People/Academics modules completely removed and backend `students.profile.read`/`academics.class.read` revoked; full preservation of operational staff roles; 74/74 automated visual verification checks passing).
+   18 active staff, database tables (reception, authorized pickup, and route stop address tables added),
+   Alembic migration head `f6a7b8c9d0e1` (`route_stop_address.py`), leadership credentials (`admin@sunrisepublic.edu` / `Admin@123`),
+   Session 14 completed & verified (749 passed backend tests, 1 skipped, 0 failed, 100% green; 109 passed web unit tests across 20 files; 0 TypeScript errors on web and mobile; clean Vite production build; Transport Upgrade Plan 1 Fleet & Route Setup Desk; Plan 2 Student Transport Allocation Desk; Address-Based Geocoding Location System; Printable A4 Route Manifest & Roster; 25/25 automated visual verification checks passing).
    Supersedes all previous session handoffs.
 1. **`FRONTEND-HANDOFF.md`** — the brief for **Parts Two to Six**: the
    three contracts, what "clean and easy for a school office" means, the

@@ -1,15 +1,14 @@
 /**
- * Transport — the routes, who rides them, and whether the buses are legal.
+ * Transport — the routes, fleet manager, student allocation desk, and compliance.
  *
- * The office's daily questions are "which children are on this bus" and "is
- * this bus allowed on the road". Everything else the router offers (adding
- * vehicles, fee slabs, editing stops, crew assignment, the assignment desk) is
- * setup done once a term, and is not built here - see reports/packet-5-transport.md.
- *
- * None of the transport routes declare a `response_model`, so the generated
- * schema types them `unknown` and the shapes below are hand-written assertions
- * checked against the service, not by the compiler. Each one names where it
- * was read from. This is the trap that put a live `₹NaN` on a fee screen.
+ * Implements Transport Upgrade Plan 1 & Plan 2:
+ * - Address-First Location System with auto-geocoded coordinates
+ * - Fleet Manager (add/edit vehicles, seat capacity guard, ownership, GPS tracker, grounding)
+ * - Route Builder (route code, name, distance, stops sequence with address geocoding)
+ * - Crew Dispatcher (driver, attendant, compliance indicators for licences and police verification)
+ * - Distance Fee Slabs Manager
+ * - Student Transport Allocation Desk (Admission queue, search & allocate, proximity stop ranking, transfers, end service)
+ * - Printable Route Roster (A4 format with parent emergency contacts and escort photos)
  */
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -29,7 +28,13 @@ import {
   StatCard,
   inputClass,
 } from "../components/ui";
+import { PrintableRouteRoster } from "./PrintableRouteRoster";
 import { RouteMap, type MapStop } from "./RouteMap";
+import { CrewDispatchModal } from "./transport/CrewDispatchModal";
+import { RouteBuilderModal, type RouteEditData } from "./transport/RouteBuilderModal";
+import { SlabsModal } from "./transport/SlabsModal";
+import { StudentAllocationDesk } from "./transport/StudentAllocationDesk";
+import { VehicleModal, type VehicleData } from "./transport/VehicleModal";
 
 /** api/admin/transport.py::_route_out, plus services/transport.py::seats. */
 type Route = {
@@ -38,21 +43,14 @@ type Route = {
   name: string;
   status: string;
   distance_km: number | null;
+  vehicle_id: number | null;
+  driver_id: number | null;
+  attendant_id: number | null;
   vehicle: string | null;
   capacity: number | null;
   taken: number;
   free: number | null;
   stops: MapStop[];
-};
-
-/** api/admin/transport.py::_vehicle_out. */
-type Vehicle = {
-  id: number;
-  registration_no: string;
-  make_model: string | null;
-  capacity: number;
-  ownership: string;
-  status: string;
 };
 
 /** services/transport.py::expiring_papers. */
@@ -77,25 +75,27 @@ type Rider = {
 };
 
 const asDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB");
-
-// transport.setup.write, read off api/admin/transport.py:49 - the `setup`
-// dependency both status routes declare.
 const SETUP_WRITE = "transport.setup.write";
 
 export function Transport() {
-  // Ids, not the row objects. Holding a Route in state freezes it: pinning a
-  // stop invalidates the routes query, the table refetches, and a modal built
-  // from a captured snapshot goes on showing "Not placed" for a stop that is
-  // now in the database. Deriving from the query data means one source of
-  // truth and no stale copy to keep in step.
   const [openRouteId, setOpenRouteId] = useState<number | null>(null);
   const [mapRouteId, setMapRouteId] = useState<number | null>(null);
-  // `to` is the union the PATCH body accepts, not `string`: the typed request
-  // body rejects anything else at compile time, which is the whole point of it.
+  const [rosterRouteId, setRosterRouteId] = useState<number | null>(null);
+
+  // Modals state
+  const [editingRoute, setEditingRoute] = useState<RouteEditData | null>(null);
+  const [isCreatingRoute, setIsCreatingRoute] = useState(false);
+  const [dispatchingRoute, setDispatchingRoute] = useState<Route | null>(null);
+  const [editingVehicle, setEditingVehicle] = useState<VehicleData | null>(null);
+  const [isCreatingVehicle, setIsCreatingVehicle] = useState(false);
+  const [showSlabsModal, setShowSlabsModal] = useState(false);
+  const [showAllocationDesk, setShowAllocationDesk] = useState(false);
+
+  // Status & Grounding
   const [routeStatus, setRouteStatus] = useState<{ route: Route; to: "active" | "suspended" } | null>(
     null,
   );
-  const [grounding, setGrounding] = useState<Vehicle | null>(null);
+  const [grounding, setGrounding] = useState<VehicleData | null>(null);
 
   const routes = useQuery({
     queryKey: ["transport-routes"],
@@ -103,7 +103,7 @@ export function Transport() {
   });
   const vehicles = useQuery({
     queryKey: ["transport-vehicles"],
-    queryFn: () => api.get("/admin/transport/vehicles") as Promise<Vehicle[]>,
+    queryFn: () => api.get("/admin/transport/vehicles") as Promise<VehicleData[]>,
   });
   const papers = useQuery({
     queryKey: ["transport-expiring"],
@@ -133,43 +133,137 @@ export function Transport() {
   const openRoute = (routes.data ?? []).find((r) => r.id === openRouteId) ?? null;
   const mapRoute = (routes.data ?? []).find((r) => r.id === mapRouteId) ?? null;
 
-  // Already lapsed, not merely lapsing. The service returns both and sorts by
-  // expiry, so a negative days_left is a bus on the road without valid papers
-  // - which is the one number on this screen worth putting above the fold.
   const lapsed = (papers.data ?? []).filter((p) => p.days_left < 0).length;
   const active = (routes.data ?? []).filter((r) => r.status === "active").length;
   const riding = (routes.data ?? []).reduce((n, r) => n + r.taken, 0);
+  const totalFleetCapacity = (vehicles.data ?? []).reduce((sum, v) => sum + v.capacity, 0);
 
   return (
-    <>
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Routes running" value={active} hint={`${routes.data?.length ?? 0} in total`} />
-        <StatCard label="Children riding" value={riding} />
+    <div className="space-y-6">
+      {/* Top Action Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-surface p-4 rounded-card border border-rule shadow-sm">
+        <div>
+          <h1 className="text-xl font-bold text-ink">Transport & Fleet Management Desk</h1>
+          <p className="text-xs text-ink-soft">
+            Manage routes, vehicles, address-first geocoded stops, crew compliance, and student allocations.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <ActionButton
+            permission={SETUP_WRITE}
+            onClick={() => setShowAllocationDesk(true)}
+            className="!px-3.5 !py-2 text-xs font-semibold shadow-sm flex items-center gap-1.5"
+          >
+            <span>🎒</span> Student Allocation Desk
+          </ActionButton>
+
+          <ActionButton
+            permission={SETUP_WRITE}
+            variant="secondary"
+            onClick={() => setShowSlabsModal(true)}
+            className="!px-3.5 !py-2 text-xs font-semibold border border-rule hover:bg-canvas"
+          >
+            Distance Fee Slabs
+          </ActionButton>
+
+          <ActionButton
+            permission={SETUP_WRITE}
+            variant="secondary"
+            onClick={() => setIsCreatingVehicle(true)}
+            className="!px-3.5 !py-2 text-xs font-semibold border border-rule hover:bg-canvas"
+          >
+            + Add Vehicle
+          </ActionButton>
+
+          <ActionButton
+            permission={SETUP_WRITE}
+            variant="primary"
+            onClick={() => setIsCreatingRoute(true)}
+            className="!px-3.5 !py-2 text-xs font-semibold"
+          >
+            + New Route
+          </ActionButton>
+        </div>
+      </div>
+
+      {/* Stat Cards */}
+      <div className="grid gap-4 sm:grid-cols-4">
+        <StatCard label="Routes running" value={active} hint={`${routes.data?.length ?? 0} configured`} />
+        <StatCard label="Children riding" value={riding} hint="Active assignments" />
+        <StatCard label="Fleet capacity" value={`${riding} / ${totalFleetCapacity}`} hint="Riders / Total seats" />
         <StatCard
           label="Papers lapsed"
           value={lapsed}
-          hint={lapsed > 0 ? "On the road without valid papers" : "Nothing overdue"}
+          hint={lapsed > 0 ? "On road without valid papers" : "All papers compliant"}
         />
       </div>
 
-      <Card title="Routes">
+      {/* Routes Card */}
+      <Card
+        title="Bus Routes & Operation"
+        action={
+          <ActionButton
+            permission={SETUP_WRITE}
+            onClick={() => setIsCreatingRoute(true)}
+            className="!px-3 !py-1 text-xs"
+          >
+            + New Route
+          </ActionButton>
+        }
+      >
         <DataTable<Route>
           rows={routes.data ?? []}
           loading={routes.isLoading}
           error={routes.error}
           onRowClick={(r) => setOpenRouteId(r.id)}
-          empty="No routes set up yet. Add one in the transport office."
+          empty="No routes configured yet. Create a route using the button above."
           columns={[
-            { key: "code", header: "Code", render: (r) => r.code },
-            { key: "name", header: "Route", render: (r) => r.name },
-            { key: "bus", header: "Bus", render: (r) => r.vehicle ?? "Not assigned" },
+            { key: "code", header: "Code", render: (r) => <strong className="font-mono">{r.code}</strong> },
+            {
+              key: "name",
+              header: "Route Name",
+              render: (r) => (
+                <div>
+                  <div className="font-medium">{r.name}</div>
+                  {r.distance_km && <div className="text-[11px] text-ink-faint">{r.distance_km} km</div>}
+                </div>
+              ),
+            },
+            {
+              key: "bus",
+              header: "Assigned Bus",
+              render: (r) =>
+                r.vehicle ? (
+                  <span className="font-mono text-xs bg-ground px-2 py-0.5 rounded border border-rule">
+                    {r.vehicle}
+                  </span>
+                ) : (
+                  <span className="text-danger text-xs font-medium">No bus</span>
+                ),
+            },
             {
               key: "seats",
-              header: "Seats",
-              align: "right",
-              // No capacity means no bus on the route, which is not "0 free".
-              render: (r) =>
-                r.capacity === null ? "No bus" : `${r.taken} of ${r.capacity}`,
+              header: "Seats Occupied",
+              render: (r) => {
+                if (r.capacity === null) return <span className="text-ink-faint">No bus</span>;
+                const percent = Math.min(100, Math.round((r.taken / r.capacity) * 100));
+                return (
+                  <div className="w-32">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span>{r.taken}/{r.capacity}</span>
+                      <span className="text-[10px] text-ink-soft">{percent}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-ground rounded-full overflow-hidden border border-rule">
+                      <div
+                        className={`h-full ${
+                          percent >= 95 ? "bg-danger" : percent >= 75 ? "bg-amber-500" : "bg-primary"
+                        }`}
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              },
             },
             { key: "stops", header: "Stops", align: "right", render: (r) => r.stops.length },
             {
@@ -178,58 +272,162 @@ export function Transport() {
               render: (r) => <Pill status={r.status}>{r.status}</Pill>,
             },
             {
-              key: "map",
-              header: "",
+              key: "actions",
+              header: "Desk Actions",
               render: (r) => (
-                <button
-                  type="button"
-                  // No permission: drawing the route you can already read is a
-                  // read, and gating it on a write would hide the map from the
-                  // setup reader this screen exists for.
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setMapRouteId(r.id);
-                  }}
-                  className="rounded-input border border-rule px-3 py-1 text-xs hover:bg-canvas"
-                >
-                  Route map
-                </button>
-              ),
-            },
-            {
-              key: "act",
-              header: "",
-              render: (r) =>
-                r.status === "closed" ? null : (
+                <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    title="Interactive Route Map"
+                    onClick={() => setMapRouteId(r.id)}
+                    className="rounded-input border border-rule px-2.5 py-1 text-xs hover:bg-canvas font-medium"
+                  >
+                    Map
+                  </button>
+
+                  <button
+                    type="button"
+                    title="Print A4 Daily Manifest & Roster"
+                    onClick={() => setRosterRouteId(r.id)}
+                    className="rounded-input border border-primary text-primary px-2.5 py-1 text-xs hover:bg-primary/5 font-medium"
+                  >
+                    Roster 🖨️
+                  </button>
+
                   <ActionButton
                     permission={SETUP_WRITE}
-                    variant={r.status === "active" ? "danger" : "primary"}
-                    className="!px-3 !py-1 text-xs"
-                    onClick={() =>
-                      setRouteStatus({ route: r, to: r.status === "active" ? "suspended" : "active" })
-                    }
+                    onClick={() => setDispatchingRoute(r)}
+                    className="!px-2.5 !py-1 text-xs font-medium"
                   >
-                    {r.status === "active" ? "Suspend" : "Make active"}
+                    Crew
                   </ActionButton>
-                ),
+
+                  <ActionButton
+                    permission={SETUP_WRITE}
+                    variant="secondary"
+                    onClick={() =>
+                      setEditingRoute({
+                        id: r.id,
+                        code: r.code,
+                        name: r.name,
+                        distance_km: r.distance_km,
+                        stops: r.stops,
+                      })
+                    }
+                    className="!px-2.5 !py-1 text-xs font-medium border border-rule hover:bg-canvas"
+                  >
+                    Stops
+                  </ActionButton>
+
+                  {r.status !== "closed" && (
+                    <ActionButton
+                      permission={SETUP_WRITE}
+                      variant={r.status === "active" ? "danger" : "primary"}
+                      className="!px-2.5 !py-1 text-xs font-medium"
+                      onClick={() =>
+                        setRouteStatus({
+                          route: r,
+                          to: r.status === "active" ? "suspended" : "active",
+                        })
+                      }
+                    >
+                      {r.status === "active" ? "Suspend" : "Activate"}
+                    </ActionButton>
+                  )}
+                </div>
+              ),
             },
           ]}
         />
       </Card>
 
-      <Card title="Papers expiring">
+      {/* Fleet & Vehicles Card */}
+      <Card
+        title="Fleet & Vehicles"
+        action={
+          <ActionButton
+            permission={SETUP_WRITE}
+            onClick={() => setIsCreatingVehicle(true)}
+            className="!px-3 !py-1 text-xs"
+          >
+            + Add Bus
+          </ActionButton>
+        }
+      >
+        <DataTable<VehicleData>
+          rows={vehicles.data ?? []}
+          loading={vehicles.isLoading}
+          error={vehicles.error}
+          empty="No vehicles in the fleet registry."
+          columns={[
+            {
+              key: "reg",
+              header: "Registration",
+              render: (v) => <strong className="font-mono">{v.registration_no}</strong>,
+            },
+            { key: "model", header: "Make & Model", render: (v) => v.make_model ?? "-" },
+            { key: "cap", header: "Seating Capacity", align: "right", render: (v) => v.capacity },
+            { key: "own", header: "Ownership", render: (v) => <span className="capitalize">{v.ownership}</span> },
+            {
+              key: "gps",
+              header: "GPS Device",
+              render: (v) =>
+                v.gps_device_id ? (
+                  <span className="font-mono text-xs bg-ground px-2 py-0.5 rounded border border-rule">
+                    {v.gps_device_id}
+                  </span>
+                ) : (
+                  <span className="text-ink-faint text-xs">Uninstalled</span>
+                ),
+            },
+            {
+              key: "status",
+              header: "Status",
+              render: (v) => <Pill status={v.status}>{v.status.replace("_", " ")}</Pill>,
+            },
+            {
+              key: "act",
+              header: "",
+              render: (v) => (
+                <div className="flex gap-1.5 justify-end">
+                  <ActionButton
+                    permission={SETUP_WRITE}
+                    className="!px-2.5 !py-1 text-xs"
+                    onClick={() => setEditingVehicle(v)}
+                  >
+                    Edit
+                  </ActionButton>
+                  {v.status === "active" && (
+                    <ActionButton
+                      permission={SETUP_WRITE}
+                      variant="danger"
+                      className="!px-2.5 !py-1 text-xs"
+                      onClick={() => setGrounding(v)}
+                    >
+                      Ground
+                    </ActionButton>
+                  )}
+                </div>
+              ),
+            },
+          ]}
+        />
+      </Card>
+
+      {/* Compliance & Expiring Papers */}
+      <Card title="Compliance & Expiring Papers">
         <DataTable<Paper>
           rows={papers.data ?? []}
           loading={papers.isLoading}
           error={papers.error}
-          empty="No vehicle or driver papers are due in the next 30 days."
+          empty="All vehicle fitness certificates, permits, and crew driving licences are compliant."
           columns={[
-            { key: "owner", header: "Bus or driver", render: (p) => p.owner },
-            { key: "doc", header: "Document", render: (p) => p.document },
-            { key: "on", header: "Expires", render: (p) => asDate(p.expires_on) },
+            { key: "owner", header: "Bus or Driver", render: (p) => p.owner },
+            { key: "doc", header: "Document / Certificate", render: (p) => p.document },
+            { key: "on", header: "Expiry Date", render: (p) => asDate(p.expires_on) },
             {
               key: "left",
-              header: "",
+              header: "Status",
               render: (p) =>
                 p.days_left < 0 ? (
                   <Pill status="overdue">Lapsed {Math.abs(p.days_left)}d ago</Pill>
@@ -241,43 +439,7 @@ export function Transport() {
         />
       </Card>
 
-      <Card title="Buses">
-        <DataTable<Vehicle>
-          rows={vehicles.data ?? []}
-          loading={vehicles.isLoading}
-          error={vehicles.error}
-          empty="No buses on the books yet."
-          columns={[
-            { key: "reg", header: "Registration", render: (v) => v.registration_no },
-            { key: "model", header: "Model", render: (v) => v.make_model ?? "-" },
-            { key: "cap", header: "Seats", align: "right", render: (v) => v.capacity },
-            { key: "own", header: "Ownership", render: (v) => v.ownership },
-            {
-              key: "status",
-              header: "Status",
-              render: (v) => <Pill status={v.status}>{v.status.replace("_", " ")}</Pill>,
-            },
-            {
-              key: "act",
-              header: "",
-              render: (v) =>
-                // Grounding a grounded or retired bus is a no-op the API would
-                // accept; offering it invites a pointless audit row.
-                v.status === "active" ? (
-                  <ActionButton
-                    permission={SETUP_WRITE}
-                    variant="danger"
-                    className="!px-3 !py-1 text-xs"
-                    onClick={() => setGrounding(v)}
-                  >
-                    Ground
-                  </ActionButton>
-                ) : null,
-            },
-          ]}
-        />
-      </Card>
-
+      {/* Riders Drilldown Modal */}
       {openRoute && (
         <Riders
           route={openRoute}
@@ -286,9 +448,14 @@ export function Transport() {
             setMapRouteId(openRoute.id);
             setOpenRouteId(null);
           }}
+          onPrintRoster={() => {
+            setRosterRouteId(openRoute.id);
+            setOpenRouteId(null);
+          }}
         />
       )}
 
+      {/* Interactive Leaflet Map Modal */}
       {mapRoute && (
         <RouteMap
           code={mapRoute.code}
@@ -299,6 +466,64 @@ export function Transport() {
         />
       )}
 
+      {/* Printable Route Roster Modal */}
+      {rosterRouteId !== null && (
+        <PrintableRouteRoster
+          routeId={rosterRouteId}
+          onClose={() => setRosterRouteId(null)}
+        />
+      )}
+
+      {/* Student Transport Allocation Desk Modal */}
+      {showAllocationDesk && (
+        <StudentAllocationDesk onClose={() => setShowAllocationDesk(false)} />
+      )}
+
+      {/* Distance Fee Slabs Modal */}
+      {showSlabsModal && (
+        <SlabsModal onClose={() => setShowSlabsModal(false)} />
+      )}
+
+      {/* Vehicle Add / Edit Modal */}
+      {(isCreatingVehicle || editingVehicle) && (
+        <VehicleModal
+          vehicle={editingVehicle}
+          onClose={() => {
+            setIsCreatingVehicle(false);
+            setEditingVehicle(null);
+          }}
+          onSaved={() => {
+            vehicles.refetch();
+          }}
+        />
+      )}
+
+      {/* Route & Stop Builder Modal */}
+      {(isCreatingRoute || editingRoute) && (
+        <RouteBuilderModal
+          route={editingRoute}
+          onClose={() => {
+            setIsCreatingRoute(false);
+            setEditingRoute(null);
+          }}
+          onSaved={() => {
+            routes.refetch();
+          }}
+        />
+      )}
+
+      {/* Crew & Vehicle Dispatch Modal */}
+      {dispatchingRoute && (
+        <CrewDispatchModal
+          route={dispatchingRoute}
+          onClose={() => setDispatchingRoute(null)}
+          onSaved={() => {
+            routes.refetch();
+          }}
+        />
+      )}
+
+      {/* Confirm Dialog: Suspend / Activate Route */}
       {routeStatus && (
         <ConfirmDialog
           title={`${routeStatus.to === "suspended" ? "Suspend" : "Make active"} route ${routeStatus.route.code}`}
@@ -308,14 +533,12 @@ export function Transport() {
           intent={
             routeStatus.to === "suspended" ? (
               <p>
-                {routeStatus.route.taken} child(ren) ride {routeStatus.route.name}. Suspending it
-                stops the bus running; their assignments are kept, so it can be restarted without
-                re-entering anyone. Say why — this is the only record of it.
+                {routeStatus.route.taken} child(ren) ride {routeStatus.route.name}. Suspending it stops
+                the bus running; their assignments are preserved. A mandatory reason is required.
               </p>
             ) : (
               <p>
-                The API refuses this unless the route has stops and a roadworthy bus, so a refusal
-                here is a real compliance problem and not a form error.
+                The route will become active and roadworthy if stops and valid vehicle papers are present.
               </p>
             )
           }
@@ -327,6 +550,7 @@ export function Transport() {
         />
       )}
 
+      {/* Confirm Dialog: Ground Vehicle */}
       {grounding && (
         <ConfirmDialog
           title={`Ground ${grounding.registration_no}`}
@@ -334,16 +558,10 @@ export function Transport() {
           busy={ground.busy}
           error={ground.error}
           intent={
-            <>
-              <p>
-                The bus stops being roadworthy immediately. Routes it is on are left exactly as they
-                are and simply stop being able to go active, rather than being rewritten for you.
-              </p>
-              <p className="mt-2 text-xs text-ink-faint">
-                Use this for a bus that must not carry children today. Sending it for service or
-                retiring it are different facts and are not set from this screen.
-              </p>
-            </>
+            <p>
+              The bus stops being roadworthy immediately. Routes it is assigned to will not be able to
+              carry students until resolved. Enter a mandatory reason for grounding.
+            </p>
           }
           onConfirm={(reason) => ground.run(reason)}
           onClose={() => {
@@ -352,26 +570,23 @@ export function Transport() {
           }}
         />
       )}
-    </>
+    </div>
   );
 }
 
 /**
  * Who is on this bus, in the order it reaches them.
- *
- * Behind `Can` rather than declared on the screen: the riders come from
- * transport.assignment.read, which the setup reader does not necessarily hold,
- * and hiding the whole screen over one drill-down costs that role more than
- * the missing list does.
  */
 function Riders({
   route,
   onClose,
   onShowMap,
+  onPrintRoster,
 }: {
   route: Route;
   onClose: () => void;
   onShowMap: () => void;
+  onPrintRoster: () => void;
 }) {
   const riders = useQuery({
     queryKey: ["transport-riders", route.id],
@@ -384,18 +599,27 @@ function Riders({
   const placed = route.stops.filter((s) => s.latitude !== null).length;
 
   return (
-    <Modal title={`${route.code} — ${route.name}`} onClose={onClose}>
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <Modal title={`${route.code} — ${route.name}`} onClose={onClose} wide>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-ink-faint">
           {placed} of {route.stops.length} stop(s) placed on the map
         </p>
-        <button
-          type="button"
-          onClick={onShowMap}
-          className="rounded-input border border-rule px-3 py-1.5 text-sm hover:bg-canvas"
-        >
-          View map
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onPrintRoster}
+            className="rounded-input border border-primary text-primary px-3 py-1.5 text-xs font-medium hover:bg-primary/5"
+          >
+            Print Manifest 🖨️
+          </button>
+          <button
+            type="button"
+            onClick={onShowMap}
+            className="rounded-input border border-rule px-3 py-1.5 text-xs font-medium hover:bg-canvas"
+          >
+            View map
+          </button>
+        </div>
       </div>
 
       <Stops route={route} />
@@ -416,7 +640,7 @@ function Riders({
             { key: "name", header: "Child", render: (r) => r.name },
             { key: "adm", header: "Admission No.", render: (r) => r.admission_no },
             { key: "class", header: "Class", render: (r) => r.class_label },
-            { key: "dir", header: "Rides", render: (r) => r.direction },
+            { key: "dir", header: "Rides", render: (r) => <span className="capitalize">{r.direction}</span> },
           ]}
         />
       </Can>
@@ -425,27 +649,41 @@ function Riders({
 }
 
 /**
- * The stops, and where each one is.
- *
- * Coordinates are entered here because there is nowhere else yet: route setup
- * has no UI, and `PUT /routes/{id}/stops` cannot be used to add them to a route
- * anyone rides (see the note on the backend route). This writes one stop at a
- * time through `PATCH /admin/transport/stops/{id}/location`, which leaves the
- * stop row - and every assignment pointing at it - exactly where it was.
+ * The stops, with address-first location display and quick pin adjustment.
  */
 function Stops({ route }: { route: Route }) {
   const [editing, setEditing] = useState<number | null>(null);
-  const [form, setForm] = useState({ latitude: "", longitude: "" });
+  const [form, setForm] = useState({ latitude: "", longitude: "", address: "" });
 
   const pin = useWrite({
     write: () =>
       api.patch(
         `/admin/transport/stops/${editing}/location` as "/admin/transport/stops/{stop_id}/location",
-        { latitude: Number(form.latitude), longitude: Number(form.longitude) },
+        {
+          latitude: Number(form.latitude),
+          longitude: Number(form.longitude),
+          address: form.address.trim() || undefined,
+        },
       ),
     invalidates: [["transport-routes"]],
     onDone: () => setEditing(null),
   });
+
+  const geocodeAddress = async () => {
+    if (!form.address.trim()) return;
+    try {
+      const res = (await api.get(
+        `/admin/transport/geocode?address=${encodeURIComponent(form.address)}` as "/admin/transport/geocode",
+      )) as { latitude: number; longitude: number };
+      setForm((prev) => ({
+        ...prev,
+        latitude: String(res.latitude),
+        longitude: String(res.longitude),
+      }));
+    } catch {
+      // Ignored
+    }
+  };
 
   const ordered = [...route.stops].sort((a, b) => a.sequence - b.sequence);
 
@@ -459,13 +697,18 @@ function Stops({ route }: { route: Route }) {
           { key: "seq", header: "#", align: "right", render: (s) => s.sequence },
           { key: "name", header: "Stop", render: (s) => s.name },
           {
+            key: "addr",
+            header: "Physical Address",
+            render: (s) => (s as any).address || <span className="text-ink-faint">None</span>,
+          },
+          {
             key: "at",
             header: "Location",
             render: (s) =>
               s.latitude === null || s.longitude === null ? (
                 <span className="text-ink-faint">Not placed</span>
               ) : (
-                `${s.latitude.toFixed(5)}, ${s.longitude.toFixed(5)}`
+                <span className="font-mono text-xs">{`${s.latitude.toFixed(5)}, ${s.longitude.toFixed(5)}`}</span>
               ),
           },
           {
@@ -481,6 +724,7 @@ function Stops({ route }: { route: Route }) {
                   setForm({
                     latitude: s.latitude?.toString() ?? "",
                     longitude: s.longitude?.toString() ?? "",
+                    address: (s as any).address ?? "",
                   });
                 }}
               >
@@ -492,12 +736,30 @@ function Stops({ route }: { route: Route }) {
       />
 
       {editing !== null && (
-        <div className="mt-3 rounded-input border border-rule p-3">
-          <p className="text-xs text-ink-soft mb-2">
-            Latitude and longitude for{" "}
-            <strong>{ordered.find((s) => s.id === editing)?.name}</strong>. Read them off a map
-            rather than estimating — a pin in the wrong street sends a parent to the wrong kerb.
+        <div className="mt-3 rounded-input border border-rule p-3 bg-ground/50 space-y-3">
+          <p className="text-xs text-ink-soft">
+            Address-first location for{" "}
+            <strong>{ordered.find((s) => s.id === editing)?.name}</strong>. Enter an address or fine-tune coordinates.
           </p>
+
+          <FormField label="Physical Address">
+            <div className="flex gap-2">
+              <input
+                className={inputClass}
+                placeholder="e.g. Vibhuti Khand, Gomti Nagar, Lucknow"
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+              />
+              <button
+                type="button"
+                onClick={geocodeAddress}
+                className="shrink-0 px-3 py-1.5 rounded-input border border-primary text-primary text-xs font-medium hover:bg-primary/5"
+              >
+                Auto-Geocode 📍
+              </button>
+            </div>
+          </FormField>
+
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Latitude" error={pin.fields.latitude}>
               <input
@@ -519,7 +781,7 @@ function Stops({ route }: { route: Route }) {
             </FormField>
           </div>
           <FormError error={pin.error} />
-          <div className="mt-3 flex gap-2">
+          <div className="flex gap-2">
             <ActionButton
               permission={SETUP_WRITE}
               onClick={() => pin.run()}

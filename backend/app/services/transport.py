@@ -309,20 +309,32 @@ def set_stops(db: Session, route: Route, stops: list[dict], actor: User) -> Rout
         if spec.get("fee_slab_id") is not None and spec["fee_slab_id"] not in slabs:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Fee slab not found")
 
-    route.stops = [
-        RouteStop(
-            school_id=route.school_id,
-            sequence=spec["sequence"],
-            name=spec["name"],
-            landmark=spec.get("landmark"),
-            pickup_time=spec["pickup_time"],
-            drop_time=spec.get("drop_time"),
-            fee_slab_id=spec.get("fee_slab_id"),
-            latitude=spec.get("latitude"),
-            longitude=spec.get("longitude"),
+    from app.services.geocoding import geocode_address
+
+    new_stops = []
+    for spec in ordered:
+        lat = spec.get("latitude")
+        lon = spec.get("longitude")
+        addr = spec.get("address")
+        if (lat is None or lon is None) and (addr or spec.get("name")):
+            geo = geocode_address(addr or spec["name"])
+            lat = geo["latitude"]
+            lon = geo["longitude"]
+        new_stops.append(
+            RouteStop(
+                school_id=route.school_id,
+                sequence=spec["sequence"],
+                name=spec["name"],
+                address=addr,
+                landmark=spec.get("landmark"),
+                pickup_time=spec["pickup_time"],
+                drop_time=spec.get("drop_time"),
+                fee_slab_id=spec.get("fee_slab_id"),
+                latitude=lat,
+                longitude=lon,
+            )
         )
-        for spec in ordered
-    ]
+    route.stops = new_stops
     db.flush()
 
     clashes = vehicle_clashes(db, route)
@@ -633,18 +645,30 @@ def awaiting_assignment(db: Session, school_id: int) -> list[dict]:
         )
         .order_by(Application.id)
     ).all()
-    return [
-        {
-            "enrolment_id": enrolment.id,
-            "student_id": student.id,
-            "name": student.user.full_name,
-            "admission_no": student.admission_no,
-            "application_no": application.application_no,
-            # The only thing the system knows that helps choose a stop.
-            "address": student.address,
-        }
-        for application, student, enrolment in rows
-    ]
+    from app.services.common import section_labels
+    from app.services.geocoding import geocode_address
+
+    labels = section_labels(db, school_id)
+    out = []
+    for application, student, enrolment in rows:
+        addr = student.address or student.user.address or ""
+        geo = geocode_address(addr) if addr else None
+        out.append(
+            {
+                "enrolment_id": enrolment.id,
+                "student_id": student.id,
+                "name": student.user.full_name,
+                "admission_no": student.admission_no,
+                "application_no": application.application_no,
+                "class_label": labels.get(enrolment.class_section_id, ""),
+                "address": addr,
+                "phone": student.user.phone,
+                "latitude": geo["latitude"] if geo else None,
+                "longitude": geo["longitude"] if geo else None,
+                "is_approximate": geo["is_approximate"] if geo else True,
+            }
+        )
+    return out
 
 
 # --- what it costs ----------------------------------------------------------
