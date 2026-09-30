@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -176,3 +177,9 @@ class Notice(TenantBase):
     # column rather than a second notice-shaped concept living beside this one
     # with its own audience enum and its own delivery record.
     message_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("messages.id"))
+    category: Mapped[str] = mapped_column(String(50), nullable=False, default="General")
+    is_public: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    summary: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    expiry_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    attachment_url: Mapped[str | None] = mapped_column(String(255), nullable=True)

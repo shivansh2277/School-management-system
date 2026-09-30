@@ -85,9 +85,12 @@ function ParentCustomHeader({
   );
 }
 
-export default function ParentLayout() {
+import { I18nProvider, useTranslation } from "../../src/i18n/I18nContext";
+
+function ParentLayoutContent() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { me, loading } = useAuth();
+  const { t } = useTranslation();
 
   if (loading) return <Loading />;
   if (!me) return <Redirect href="/" />;
@@ -112,47 +115,59 @@ export default function ParentLayout() {
         {/* Strictly 4 Visible Bottom Tabs */}
         <Tabs.Screen
           name="dashboard"
-          options={{ title: "Home", tabBarIcon: tabIcon("home-outline") }}
+          options={{ title: t("nav_home"), tabBarIcon: tabIcon("home-outline") }}
         />
         <Tabs.Screen
           name="child"
-          options={{ title: "Child", tabBarIcon: tabIcon("person-circle-outline") }}
+          options={{ title: t("nav_child"), tabBarIcon: tabIcon("person-circle-outline") }}
         />
         <Tabs.Screen
           name="fees"
-          options={{ title: "Fees", tabBarIcon: tabIcon("card-outline") }}
+          options={{ title: t("nav_fees"), tabBarIcon: tabIcon("card-outline") }}
         />
         <Tabs.Screen
           name="profile"
-          options={{ title: "Profile", tabBarIcon: tabIcon("person-outline") }}
+          options={{ title: t("nav_profile"), tabBarIcon: tabIcon("person-outline") }}
         />
 
         {/* Hidden Stack Routes (href: null) - accessible via Drawer and router.push */}
         <Tabs.Screen
+          name="timetable"
+          options={{ href: null, title: t("nav_timetable") }}
+        />
+        <Tabs.Screen
           name="attendance"
-          options={{ href: null, title: "Attendance" }}
+          options={{ href: null, title: t("nav_attendance") }}
         />
         <Tabs.Screen
           name="homework"
-          options={{ href: null, title: "Homework" }}
+          options={{ href: null, title: t("nav_homework") }}
         />
         <Tabs.Screen
           name="results"
-          options={{ href: null, title: "Results" }}
+          options={{ href: null, title: t("nav_results") }}
         />
         <Tabs.Screen
           name="grievances"
-          options={{ href: null, title: "Grievances" }}
+          options={{ href: null, title: t("nav_grievances") }}
         />
         <Tabs.Screen
           name="notices"
-          options={{ href: null, title: "Notices" }}
+          options={{ href: null, title: t("nav_notices") }}
         />
       </Tabs>
 
       {/* Hamburger Navigation Drawer */}
       <NavDrawer visible={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </View>
+  );
+}
+
+export default function ParentLayout() {
+  return (
+    <I18nProvider>
+      <ParentLayoutContent />
+    </I18nProvider>
   );
 }
 

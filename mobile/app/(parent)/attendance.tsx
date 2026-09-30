@@ -5,6 +5,7 @@ import { Pressable, Text, TextInput, View } from "react-native";
 import { api, formatDate } from "../../src/api/client";
 import { useAuth } from "../../src/auth/AuthContext";
 import { Button, Card, Empty, Loading, Pill, Row, Screen, s } from "../../src/components/ui";
+import { useTranslation } from "../../src/i18n/I18nContext";
 import { statusColor, theme } from "../../src/theme";
 
 type AttendanceMonth = {
@@ -30,6 +31,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }>
 };
 
 export default function ParentAttendance() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const { selectedChildId, me, selectChild } = useAuth();
   const children = me?.children ?? [];
@@ -126,10 +128,10 @@ export default function ParentAttendance() {
           }}
         >
           <Text style={{ fontSize: 13, fontWeight: "700", color: theme.danger }}>
-            ⚠️ Attendance Shortage Alert: {percent}%
+            ⚠️ {t("att_shortage_alert")}: {percent}%
           </Text>
           <Text style={{ fontSize: 12, color: theme.ink, marginTop: 2 }}>
-            CBSE norms mandate a minimum of 75% attendance to be eligible for terminal examinations.
+            {t("att_cbSE_norm")}
           </Text>
         </View>
       )}
@@ -138,18 +140,18 @@ export default function ParentAttendance() {
       <Card>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           <Pressable onPress={() => setMonth((m) => (m === 1 ? 12 : m - 1))}>
-            <Text style={{ color: theme.primary, fontWeight: "600" }}>‹ Previous</Text>
+            <Text style={{ color: theme.primary, fontWeight: "600" }}>{t("att_prev_month")}</Text>
           </Pressable>
           <Text style={{ fontWeight: "700", fontSize: 15, color: theme.ink }}>
             {new Date(year, month - 1).toLocaleString("en", { month: "long" })} {year}
           </Text>
           <Pressable onPress={() => setMonth((m) => (m === 12 ? 1 : m + 1))}>
-            <Text style={{ color: theme.primary, fontWeight: "600" }}>Next ›</Text>
+            <Text style={{ color: theme.primary, fontWeight: "600" }}>{t("att_next_month")}</Text>
           </Pressable>
         </View>
 
         {byDay.size === 0 ? (
-          <Empty text="No attendance recorded for this month." />
+          <Empty text={t("att_no_records")} />
         ) : (
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
             {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => {
@@ -181,31 +183,31 @@ export default function ParentAttendance() {
 
         {/* Legend */}
         <View style={{ flexDirection: "row", gap: 12, marginTop: 12, paddingTop: 8, borderTopWidth: 1, borderTopColor: theme.rule }}>
-          <Text style={{ fontSize: 11, color: "#16A34A" }}>● Present (P)</Text>
-          <Text style={{ fontSize: 11, color: "#EF4444" }}>● Absent (A)</Text>
-          <Text style={{ fontSize: 11, color: "#F59E0B" }}>● Late (L)</Text>
-          <Text style={{ fontSize: 11, color: "#8B5CF6" }}>● Medical (M)</Text>
+          <Text style={{ fontSize: 11, color: "#16A34A" }}>{t("att_legend_present")}</Text>
+          <Text style={{ fontSize: 11, color: "#EF4444" }}>{t("att_legend_absent")}</Text>
+          <Text style={{ fontSize: 11, color: "#F59E0B" }}>{t("att_legend_late")}</Text>
+          <Text style={{ fontSize: 11, color: "#8B5CF6" }}>{t("att_legend_leave")}</Text>
         </View>
       </Card>
 
       {/* Summary Card */}
       {data && (
-        <Card title="Monthly Summary">
+        <Card title={t("att_monthly_summary")}>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             <View style={{ alignItems: "center", flex: 1 }}>
-              <Text style={s.meta}>Present</Text>
+              <Text style={s.meta}>{t("status_present")}</Text>
               <Text style={{ fontSize: 18, fontWeight: "700", color: "#16A34A" }}>{data.summary.present}</Text>
             </View>
             <View style={{ alignItems: "center", flex: 1 }}>
-              <Text style={s.meta}>Absent</Text>
+              <Text style={s.meta}>{t("status_absent")}</Text>
               <Text style={{ fontSize: 18, fontWeight: "700", color: "#EF4444" }}>{data.summary.absent}</Text>
             </View>
             <View style={{ alignItems: "center", flex: 1 }}>
-              <Text style={s.meta}>Leave</Text>
+              <Text style={s.meta}>{t("status_leave")}</Text>
               <Text style={{ fontSize: 18, fontWeight: "700", color: "#8B5CF6" }}>{data.summary.leave}</Text>
             </View>
             <View style={{ alignItems: "center", flex: 1 }}>
-              <Text style={s.meta}>Overall</Text>
+              <Text style={s.meta}>{t("att_overall")}</Text>
               <Text style={{ fontSize: 18, fontWeight: "700", color: isShortage ? theme.danger : theme.ink }}>
                 {percent === null ? "-" : `${percent}%`}
               </Text>
@@ -217,15 +219,15 @@ export default function ParentAttendance() {
       {/* Apply for Leave Action */}
       <View style={{ marginVertical: 8 }}>
         <Button
-          label={showLeaveModal ? "Cancel Leave Application" : "+ Apply for Student Leave"}
+          label={showLeaveModal ? t("att_cancel_leave_btn") : t("att_apply_leave_btn")}
           tone={showLeaveModal ? "ghost" : "primary"}
           onPress={() => setShowLeaveModal(!showLeaveModal)}
         />
       </View>
 
       {showLeaveModal && (
-        <Card title="Apply for Leave">
-          <Text style={s.meta}>From Date (YYYY-MM-DD)</Text>
+        <Card title={t("att_apply_leave_title")}>
+          <Text style={s.meta}>{t("att_from_date")}</Text>
           <TextInput
             style={s.input}
             value={leaveForm.from_date}
@@ -233,7 +235,7 @@ export default function ParentAttendance() {
             placeholder="YYYY-MM-DD"
           />
 
-          <Text style={s.meta}>To Date (YYYY-MM-DD)</Text>
+          <Text style={s.meta}>{t("att_to_date")}</Text>
           <TextInput
             style={s.input}
             value={leaveForm.to_date}
@@ -241,39 +243,43 @@ export default function ParentAttendance() {
             placeholder="YYYY-MM-DD"
           />
 
-          <Text style={s.meta}>Leave Type</Text>
+          <Text style={s.meta}>{t("att_leave_type")}</Text>
           <View style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
-            {["sick", "casual", "medical"].map((t) => (
+            {[
+              { key: "sick", label: t("att_sick") },
+              { key: "casual", label: t("att_casual") },
+              { key: "medical", label: t("att_medical") },
+            ].map(({ key, label }) => (
               <Pressable
-                key={t}
-                onPress={() => setLeaveForm({ ...leaveForm, type: t })}
+                key={key}
+                onPress={() => setLeaveForm({ ...leaveForm, type: key })}
                 style={{
                   paddingHorizontal: 12,
                   paddingVertical: 6,
                   borderRadius: theme.radius.pill,
-                  backgroundColor: leaveForm.type === t ? theme.primary : theme.ground,
+                  backgroundColor: leaveForm.type === key ? theme.primary : theme.ground,
                 }}
               >
-                <Text style={{ fontSize: 12, color: leaveForm.type === t ? "#fff" : theme.inkSoft, textTransform: "capitalize" }}>
-                  {t}
+                <Text style={{ fontSize: 12, color: leaveForm.type === key ? "#fff" : theme.inkSoft, textTransform: "capitalize" }}>
+                  {label}
                 </Text>
               </Pressable>
             ))}
           </View>
 
-          <Text style={s.meta}>Reason for Absence</Text>
+          <Text style={s.meta}>{t("att_reason_for_absence")}</Text>
           <TextInput
             style={[s.input, { minHeight: 60, textAlignVertical: "top" }]}
             multiline
             value={leaveForm.reason}
             onChangeText={(v) => setLeaveForm({ ...leaveForm, reason: v })}
-            placeholder="Detailed reason for absence..."
+            placeholder={t("att_reason_placeholder")}
           />
 
           {note ? <Text style={{ color: theme.danger, marginBottom: 8 }}>{note}</Text> : null}
 
           <Button
-            label={applyLeave.isPending ? "Submitting..." : "Submit Application"}
+            label={applyLeave.isPending ? t("att_submitting") : t("att_submit_application")}
             onPress={() => applyLeave.mutate()}
             disabled={applyLeave.isPending || leaveForm.reason.length < 3}
           />
@@ -282,7 +288,7 @@ export default function ParentAttendance() {
 
       {/* Leave History */}
       {(leaveRequests.data ?? []).length > 0 && (
-        <Card title="Recent Leave Applications">
+        <Card title={t("att_recent_leaves")}>
           {leaveRequests.data!.map((req) => (
             <Row
               key={req.id}

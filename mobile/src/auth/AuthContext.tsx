@@ -62,7 +62,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
     });
     await tokenStore.set(res.access_token);
-    adopt(await api.get<Me>("/auth/me"));
+    try {
+      adopt(await api.get<Me>("/auth/me"));
+    } catch (meErr) {
+      // Token was stored but profile fetch failed — clean up so the user
+      // isn't stuck with a token but no `me` on next app load.
+      await tokenStore.clear();
+      throw meErr;
+    }
   };
 
   const logout = async () => {

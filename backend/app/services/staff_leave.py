@@ -20,7 +20,7 @@ Two smaller rules, both §5.3.9:
   request rather than inferred from the numbers not adding up.
 """
 
-from datetime import UTC, date as Date, datetime, timedelta
+from datetime import UTC, date as Date, datetime, time as Time, timedelta
 from decimal import Decimal
 
 from fastapi import HTTPException, status
@@ -29,12 +29,16 @@ from sqlalchemy.orm import Session
 
 from app.models import (
     AuditAction,
+    ClassSection,
+    ClassSubjectTeacher,
     DayOfWeek,
     Employee,
+    EmployeeStatus,
     LeaveBalance,
     LeaveStatus,
     LeaveTypeDef,
     StaffLeaveRequest,
+    Subject,
     Substitution,
     SubstitutionStatus,
     TimetableSlot,
@@ -517,6 +521,223 @@ def used_from_requests(
 # --- Teacher Leave Management (Mobile App & Timetable Substitution Gate) ---
 
 
+def is_casual_leave(leave_type: LeaveTypeDef | None) -> bool:
+    if leave_type is None:
+        return False
+    code = (leave_type.code or "").strip().upper()
+    name = (leave_type.name or "").lower()
+    return code == "CL" or "casual" in name
+
+
+def ranked_substitutes_for_slot(
+    db: Session, school_id: int, slot: TimetableSlot, on_date: Date, absent_teacher_id: int
+) -> list[dict]:
+    """Computes available substitute teachers for a slot on a given date, ranked by:
+    1. Same subject & grade/class
+    2. Same subject (other classes)
+    3. Same grade/class (other subjects)
+    4. Other eligible, available teachers
+    """
+    # 1. Teachers busy teaching in that period on that day of week
+    busy_teaching = set(
+        db.scalars(
+            select(TimetableSlot.teacher_id).where(
+                TimetableSlot.school_id == school_id,
+                TimetableSlot.day_of_week == slot.day_of_week,
+                TimetableSlot.period_id == slot.period_id,
+            )
+        )
+    )
+
+    # 2. Teachers busy substituting in that period on on_date (not rejected)
+    busy_substituting = set(
+        db.scalars(
+            select(Substitution.substitute_teacher_id)
+            .join(TimetableSlot, TimetableSlot.id == Substitution.timetable_slot_id)
+            .where(
+                Substitution.date == on_date,
+                TimetableSlot.period_id == slot.period_id,
+                Substitution.substitute_teacher_id.is_not(None),
+                Substitution.status.in_((
+                    SubstitutionStatus.pending,
+                    SubstitutionStatus.provisional,
+                    SubstitutionStatus.assigned,
+                    SubstitutionStatus.completed,
+                )),
+            )
+        )
+    )
+
+    # 3. All active employees in service for this school (excluding absent teacher)
+    all_teachers = list(
+        db.scalars(
+            select(Employee).where(
+                Employee.school_id == school_id,
+                Employee.status == EmployeeStatus.active,
+                Employee.exited_on.is_(None),
+                Employee.id != absent_teacher_id,
+            )
+        )
+    )
+
+    # Filter available: not busy teaching, not busy substituting, not on approved leave, and app access not blocked
+    available: list[Employee] = []
+    for emp in all_teachers:
+        if emp.id in busy_teaching:
+            continue
+        if emp.id in busy_substituting:
+            continue
+        if on_leave(db, emp.id, on_date) is not None:
+            continue
+        if emp.user and emp.user.app_access_blocked:
+            continue
+        available.append(emp)
+
+    if not available:
+        return []
+
+    available_ids = [e.id for e in available]
+
+    cst_rows = list(
+        db.execute(
+            select(
+                ClassSubjectTeacher.teacher_id,
+                ClassSubjectTeacher.subject_id,
+                ClassSubjectTeacher.class_section_id,
+                ClassSection.class_name,
+            )
+            .join(ClassSection, ClassSection.id == ClassSubjectTeacher.class_section_id)
+            .where(ClassSubjectTeacher.teacher_id.in_(available_ids))
+        ).all()
+    )
+
+    cst_by_teacher: dict[int, list[tuple[int, int, str]]] = {}
+    for teacher_id, subject_id, class_section_id, class_name in cst_rows:
+        cst_by_teacher.setdefault(teacher_id, []).append((subject_id, class_section_id, class_name))
+
+    slot_class_name = slot.class_section.class_name if slot.class_section else None
+    slot_subject_id = slot.subject_id
+
+    ranked = []
+    for emp in available:
+        assignments = cst_by_teacher.get(emp.id, [])
+        # Each item is (sub_id, sec_id, cls_name)
+        same_subject_and_grade = any(
+            sub_id == slot_subject_id
+            and (sec_id == slot.class_section_id or (slot_class_name and cls_name == slot_class_name))
+            for sub_id, sec_id, cls_name in assignments
+        )
+        same_subject = any(sub_id == slot_subject_id for sub_id, sec_id, cls_name in assignments)
+        same_grade = any(
+            sec_id == slot.class_section_id or (slot_class_name and cls_name == slot_class_name)
+            for sub_id, sec_id, cls_name in assignments
+        )
+
+        subject_name = slot.subject.name if slot.subject else "Subject"
+        grade_name = slot_class_name or (slot.class_section.label if slot.class_section else "Grade")
+
+        if same_subject_and_grade:
+            rank = 1
+            rank_label = "Same Subject & Grade"
+            reason_str = f"Teaches {subject_name} in Class {grade_name}"
+        elif same_subject:
+            rank = 2
+            rank_label = "Same Subject"
+            reason_str = f"Teaches {subject_name}"
+        elif same_grade:
+            rank = 3
+            rank_label = "Same Grade"
+            reason_str = f"Teaches other subjects in Class {grade_name}"
+        else:
+            rank = 4
+            rank_label = "Available Teacher"
+            reason_str = "Free in this period"
+
+        emp_name = emp.user.full_name if emp.user else f"Employee {emp.id}"
+        ranked.append({
+            "teacher_id": emp.id,
+            "teacher_name": emp_name,
+            "employee_code": emp.employee_code or "",
+            "rank": rank,
+            "rank_label": rank_label,
+            "reason": reason_str,
+        })
+
+    ranked.sort(key=lambda r: (r["rank"], r["teacher_name"]))
+    return ranked
+
+
+def inspect_affected_periods(
+    db: Session,
+    employee: Employee,
+    *,
+    from_date: Date,
+    to_date: Date,
+    is_half_day: bool = False,
+    half_day_period: str | None = None,
+) -> dict:
+    """Walks the teacher's timetable across dates and returns every period affected
+    along with ranked substitute recommendations.
+    """
+    if to_date < from_date:
+        raise _bad("The last day cannot precede the first")
+
+    holidays = att.holidays_between(db, employee.school_id, from_date, to_date)
+    working_dates = [
+        d for d in dates_in(from_date, to_date)
+        if att.is_working_day(d, holidays)
+    ]
+
+    slots = list(
+        db.scalars(
+            select(TimetableSlot)
+            .where(TimetableSlot.teacher_id == employee.id)
+            .order_by(TimetableSlot.period_id)
+        )
+    )
+
+    by_day: dict[DayOfWeek, list[TimetableSlot]] = {}
+    for slot in slots:
+        by_day.setdefault(slot.day_of_week, []).append(slot)
+
+    periods_out = []
+    for day in working_dates:
+        dow = DAY_BY_WEEKDAY.get(day.weekday())
+        day_slots = by_day.get(dow, [])
+        for slot in day_slots:
+            if is_half_day and half_day_period:
+                if half_day_period.lower() == "morning" and slot.period.start_time.hour >= 13:
+                    continue
+                if half_day_period.lower() == "afternoon" and slot.period.start_time.hour < 12:
+                    continue
+
+            ranked = ranked_substitutes_for_slot(db, employee.school_id, slot, day, employee.id)
+            periods_out.append({
+                "date": str(day),
+                "slot_id": slot.id,
+                "period_id": slot.period_id,
+                "period_no": slot.period.period_no,
+                "start_time": f"{slot.period.start_time:%H:%M}",
+                "end_time": f"{slot.period.end_time:%H:%M}",
+                "time": f"{slot.period.start_time:%H:%M} - {slot.period.end_time:%H:%M}",
+                "class_section_id": slot.class_section_id,
+                "class_label": slot.class_section.label if slot.class_section else "",
+                "subject_id": slot.subject_id,
+                "subject_name": slot.subject.name if slot.subject else "",
+                "room": slot.room,
+                "ranked_substitutes": ranked,
+            })
+
+    return {
+        "from_date": str(from_date),
+        "to_date": str(to_date),
+        "is_half_day": is_half_day,
+        "half_day_period": half_day_period,
+        "total_periods": len(periods_out),
+        "periods": periods_out,
+    }
+
+
 def apply_teacher_leave(
     db: Session,
     employee: Employee,
@@ -525,10 +746,17 @@ def apply_teacher_leave(
     to_date: Date,
     reason: str,
     is_half_day: bool = False,
+    half_day_period: str | None = None,
+    leave_type_id: int | None = None,
+    substitutions: list[dict] | None = None,
 ) -> StaffLeaveRequest:
     """Teacher applies for personal leave from the mobile app.
 
-    No leave types or balance consumption. Cannot be withdrawn or cancelled by teacher.
+    If leave type is Casual Leave (CL):
+      - 100% of affected periods across dates must have proposed substitutes.
+      - Proposed substitutes receive notifications and can Accept / Reject.
+    If non-casual leave (SL, EL, etc.):
+      - Submitted directly without substitutions.
     """
     if to_date < from_date:
         raise _bad("The last day cannot precede the first")
@@ -556,10 +784,53 @@ def apply_teacher_leave(
     if year is None:
         raise _bad("No active academic year configured")
 
+    leave_type: LeaveTypeDef | None = None
+    if leave_type_id is not None:
+        leave_type = db.get(LeaveTypeDef, leave_type_id)
+        if leave_type is None or leave_type.school_id != employee.school_id:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Leave type not found")
+
+    is_cl = is_casual_leave(leave_type)
+    sub_inputs = substitutions or []
+    periods = []
+    sub_dict: dict[tuple[str, int], int] = {}
+
+    if is_cl:
+        # Check affected periods
+        inspected = inspect_affected_periods(
+            db,
+            employee,
+            from_date=from_date,
+            to_date=to_date,
+            is_half_day=is_half_day,
+            half_day_period=half_day_period,
+        )
+        periods = inspected["periods"]
+        if periods:
+            sub_dict = {
+                (str(s.get("date")), int(s.get("slot_id"))): int(s.get("substitute_teacher_id"))
+                for s in sub_inputs
+                if s.get("substitute_teacher_id") is not None
+            }
+            missing = [p for p in periods if (p["date"], p["slot_id"]) not in sub_dict]
+            if missing:
+                raise HTTPException(
+                    status.HTTP_400_BAD_REQUEST,
+                    f"Casual Leave requires a substitute for every affected period. Missing {len(missing)} period(s).",
+                )
+
+            for p in periods:
+                sub_id = sub_dict[(p["date"], p["slot_id"])]
+                sub_emp = db.get(Employee, sub_id)
+                if sub_emp is None or sub_emp.school_id != employee.school_id:
+                    raise HTTPException(status.HTTP_404_NOT_FOUND, f"Substitute teacher {sub_id} not found")
+                if sub_emp.id == employee.id:
+                    raise _bad("The absent teacher cannot substitute for themselves")
+
     row = StaffLeaveRequest(
         school_id=employee.school_id,
         employee_id=employee.id,
-        leave_type_id=None,
+        leave_type_id=leave_type.id if leave_type else None,
         academic_year_id=year.id,
         from_date=from_date,
         to_date=to_date,
@@ -571,6 +842,65 @@ def apply_teacher_leave(
     db.add(row)
     db.flush()
 
+    if is_cl and periods:
+        for p in periods:
+            sub_id = sub_dict[(p["date"], p["slot_id"])]
+            sub_emp = db.get(Employee, sub_id)
+            sub_row = Substitution(
+                school_id=employee.school_id,
+                timetable_slot_id=p["slot_id"],
+                date=Date.fromisoformat(p["date"]),
+                absent_teacher_id=employee.id,
+                substitute_teacher_id=sub_emp.id,
+                leave_request_id=row.id,
+                reason=f"Cover for {employee.user.full_name} ({leave_type.name if leave_type else 'Casual Leave'})",
+                status=SubstitutionStatus.pending,
+            )
+            db.add(sub_row)
+            if sub_emp.user_id:
+                notify_user(
+                    db,
+                    school_id=employee.school_id,
+                    user_id=sub_emp.user_id,
+                    title="Substitution Request",
+                    message=(
+                        f"{employee.user.full_name} has requested you to cover {p['class_label']} "
+                        f"(Period {p['period_no']}, {p['time']}) on {p['date']}."
+                    ),
+                    category="substitution_request",
+                )
+    elif sub_inputs:
+        # Non-casual leave, but substitutions were provided
+        for s in sub_inputs:
+            sub_id = s.get("substitute_teacher_id")
+            if not sub_id:
+                continue
+            sub_emp = db.get(Employee, int(sub_id))
+            if not sub_emp or sub_emp.school_id != employee.school_id:
+                continue
+            sub_date = Date.fromisoformat(str(s["date"])) if isinstance(s["date"], str) else s["date"]
+            sub_row = Substitution(
+                school_id=employee.school_id,
+                timetable_slot_id=int(s["slot_id"]),
+                date=sub_date,
+                absent_teacher_id=employee.id,
+                substitute_teacher_id=sub_emp.id,
+                leave_request_id=row.id,
+                reason=f"Cover for {employee.user.full_name}",
+                status=SubstitutionStatus.pending,
+            )
+            db.add(sub_row)
+            if sub_emp.user_id:
+                notify_user(
+                    db,
+                    school_id=employee.school_id,
+                    user_id=sub_emp.user_id,
+                    title="Substitution Request",
+                    message=f"{employee.user.full_name} has requested you to cover a period on {sub_date}.",
+                    category="substitution_request",
+                )
+
+    db.flush()
     notify_user(
         db,
         school_id=employee.school_id,
@@ -822,8 +1152,13 @@ def approve_teacher_leave_with_substitutions(
                 Substitution.date == day,
             )
         )
-        if sub is None or sub.substitute_teacher_id is None:
-            missing.append(f"{day} P{slot.period.period_no} ({slot.class_section.label})")
+        if (
+            sub is None
+            or sub.substitute_teacher_id is None
+            or sub.status in (SubstitutionStatus.pending, SubstitutionStatus.rejected)
+        ):
+            status_desc = "unassigned" if (sub is None or sub.substitute_teacher_id is None) else sub.status.value
+            missing.append(f"{day} P{slot.period.period_no} ({slot.class_section.label}) [{status_desc}]")
 
     if missing:
         raise HTTPException(

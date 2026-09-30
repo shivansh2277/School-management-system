@@ -15,6 +15,7 @@ import {
 import { api, formatDate } from "../../src/api/client";
 import { useAuth } from "../../src/auth/AuthContext";
 import { Button, Card, Empty, Loading, Pill, Row, Screen, s } from "../../src/components/ui";
+import { useTranslation } from "../../src/i18n/I18nContext";
 import { theme } from "../../src/theme";
 
 type Grievance = {
@@ -51,6 +52,7 @@ type GrievanceReply = {
 };
 
 export default function ParentGrievances() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { me, selectedChildId } = useAuth();
   const children = me?.children ?? [];
@@ -128,6 +130,21 @@ export default function ParentGrievances() {
 
   if (isLoading) return <Loading />;
 
+  const categoryOptions = [
+    { key: "transport", label: t("griev_cat_transport") },
+    { key: "fees", label: t("griev_cat_fees") },
+    { key: "academic", label: t("griev_cat_academic") },
+    { key: "facilities", label: t("griev_cat_facilities") },
+    { key: "general", label: t("griev_cat_general") },
+  ];
+
+  const priorityOptions = [
+    { key: "low", label: t("griev_pri_low") },
+    { key: "medium", label: t("griev_pri_medium") },
+    { key: "high", label: t("griev_pri_high") },
+    { key: "urgent", label: t("griev_pri_urgent") },
+  ] as const;
+
   return (
     <Screen>
       {/* Header Info & Submit Action */}
@@ -135,10 +152,10 @@ export default function ParentGrievances() {
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <View style={{ flex: 1, paddingRight: 8 }}>
             <Text style={{ fontSize: 16, fontWeight: "700", color: theme.ink }}>
-              Helpdesk & Grievances
+              {t("griev_title")}
             </Text>
             <Text style={s.meta}>
-              Submit concerns regarding transport, fees, academics, or facilities directly to school leadership.
+              {t("griev_helpdesk_desc")}
             </Text>
           </View>
           <Pressable
@@ -148,7 +165,7 @@ export default function ParentGrievances() {
             }}
             style={styles.newBtn}
           >
-            <Text style={styles.newBtnText}>+ New Problem</Text>
+            <Text style={styles.newBtnText}>{t("griev_new_problem_btn")}</Text>
           </Pressable>
         </View>
       </Card>
@@ -156,7 +173,7 @@ export default function ParentGrievances() {
       {/* Grievances List */}
       {grievances.length === 0 ? (
         <Card>
-          <Empty text="You haven't submitted any grievances yet." />
+          <Empty text={t("griev_no_submitted")} />
         </Card>
       ) : (
         grievances.map((g) => (
@@ -172,7 +189,13 @@ export default function ParentGrievances() {
                         ? "leave"
                         : "present"
                     }
-                    label={g.status.replace("_", " ")}
+                    label={
+                      g.status === "open"
+                        ? t("status_open")
+                        : g.status === "in_progress"
+                        ? t("status_in_progress")
+                        : t("status_resolved")
+                    }
                   />
                   <Text style={[styles.priorityTag, { color: g.priority === "urgent" ? theme.danger : theme.inkSoft }]}>
                     {g.priority.toUpperCase()}
@@ -188,10 +211,10 @@ export default function ParentGrievances() {
 
               <View style={styles.cardFooter}>
                 <Text style={{ fontSize: 11, color: theme.inkFaint }}>
-                  {g.student_name ? `Child: ${g.student_name}` : `Category: ${g.category}`}
+                  {g.student_name ? `${t("child_details")}: ${g.student_name}` : `${t("griev_category")}: ${g.category}`}
                 </Text>
                 <Text style={{ fontSize: 11, color: theme.primary, fontWeight: "600" }}>
-                  {g.replies_count > 0 ? `${g.replies_count} messages` : "View Details"} &rarr;
+                  {g.replies_count > 0 ? `${g.replies_count} ${t("griev_messages")}` : t("griev_view_details")} &rarr;
                 </Text>
               </View>
             </Pressable>
@@ -206,8 +229,8 @@ export default function ParentGrievances() {
             <View style={styles.modalContent}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <View style={{ flex: 1, paddingRight: 8 }}>
-                  <Text style={styles.modalTitle}>Submit Concern / Grievance</Text>
-                  <Text style={styles.modalSubtitle}>Direct communication with school administrators</Text>
+                  <Text style={styles.modalTitle}>{t("griev_submit_concern")}</Text>
+                  <Text style={styles.modalSubtitle}>{t("griev_direct_comm")}</Text>
                 </View>
                 <Pressable
                   onPress={() => setShowCreateModal(false)}
@@ -220,7 +243,7 @@ export default function ParentGrievances() {
                   }}
                   hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                   accessibilityRole="button"
-                  accessibilityLabel="Close"
+                  accessibilityLabel={t("btn_close")}
                 >
                   <Ionicons name="close" size={22} color="#ef4444" />
                 </Pressable>
@@ -230,7 +253,7 @@ export default function ParentGrievances() {
                 {/* Child selector if multiple children */}
                 {children.length > 0 && (
                   <View>
-                    <Text style={styles.inputLabel}>Relates to Child</Text>
+                    <Text style={styles.inputLabel}>{t("griev_relates_to_child")}</Text>
                     <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
                       {children.map((c) => (
                         <Pressable
@@ -248,10 +271,10 @@ export default function ParentGrievances() {
                 )}
 
                 <View>
-                  <Text style={styles.inputLabel}>Subject</Text>
+                  <Text style={styles.inputLabel}>{t("griev_subject")}</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="Brief description of the problem"
+                    placeholder={t("griev_placeholder_subject")}
                     placeholderTextColor={theme.inkFaint}
                     value={newTitle}
                     onChangeText={setNewTitle}
@@ -259,16 +282,16 @@ export default function ParentGrievances() {
                 </View>
 
                 <View>
-                  <Text style={styles.inputLabel}>Category</Text>
+                  <Text style={styles.inputLabel}>{t("griev_category")}</Text>
                   <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
-                    {["transport", "fees", "academic", "facilities", "general"].map((cat) => (
+                    {categoryOptions.map((cat) => (
                       <Pressable
-                        key={cat}
-                        onPress={() => setNewCategory(cat)}
-                        style={[styles.chip, newCategory === cat && styles.chipActive]}
+                        key={cat.key}
+                        onPress={() => setNewCategory(cat.key)}
+                        style={[styles.chip, newCategory === cat.key && styles.chipActive]}
                       >
-                        <Text style={[styles.chipText, newCategory === cat && styles.chipTextActive]}>
-                          {cat}
+                        <Text style={[styles.chipText, newCategory === cat.key && styles.chipTextActive]}>
+                          {cat.label}
                         </Text>
                       </Pressable>
                     ))}
@@ -276,16 +299,16 @@ export default function ParentGrievances() {
                 </View>
 
                 <View>
-                  <Text style={styles.inputLabel}>Urgency</Text>
+                  <Text style={styles.inputLabel}>{t("griev_urgency")}</Text>
                   <View style={{ flexDirection: "row", gap: 6 }}>
-                    {(["low", "medium", "high", "urgent"] as const).map((pri) => (
+                    {priorityOptions.map((pri) => (
                       <Pressable
-                        key={pri}
-                        onPress={() => setNewPriority(pri)}
-                        style={[styles.chip, newPriority === pri && styles.chipActive, { flex: 1, alignItems: "center" }]}
+                        key={pri.key}
+                        onPress={() => setNewPriority(pri.key)}
+                        style={[styles.chip, newPriority === pri.key && styles.chipActive, { flex: 1, alignItems: "center" }]}
                       >
-                        <Text style={[styles.chipText, newPriority === pri && styles.chipTextActive]}>
-                          {pri}
+                        <Text style={[styles.chipText, newPriority === pri.key && styles.chipTextActive]}>
+                          {pri.label}
                         </Text>
                       </Pressable>
                     ))}
@@ -293,10 +316,10 @@ export default function ParentGrievances() {
                 </View>
 
                 <View>
-                  <Text style={styles.inputLabel}>Description of Problem</Text>
+                  <Text style={styles.inputLabel}>{t("griev_desc_of_problem")}</Text>
                   <TextInput
                     style={[styles.input, { height: 80, textAlignVertical: "top" }]}
-                    placeholder="Please explain the details of the issue..."
+                    placeholder={t("griev_placeholder_desc")}
                     placeholderTextColor={theme.inkFaint}
                     multiline={true}
                     value={newDescription}
@@ -309,7 +332,7 @@ export default function ParentGrievances() {
                     onPress={() => setShowCreateModal(false)}
                     style={[styles.actionBtn, { backgroundColor: theme.ground }]}
                   >
-                    <Text style={{ color: theme.inkSoft, fontWeight: "600" }}>Cancel</Text>
+                    <Text style={{ color: theme.inkSoft, fontWeight: "600" }}>{t("btn_cancel")}</Text>
                   </Pressable>
                   <Pressable
                     onPress={handleCreate}
@@ -317,7 +340,7 @@ export default function ParentGrievances() {
                     style={[styles.actionBtn, { backgroundColor: theme.primary, flex: 2 }]}
                   >
                     <Text style={{ color: "#fff", fontWeight: "700" }}>
-                      {createMutation.isPending ? "Submitting..." : "Submit Concern"}
+                      {createMutation.isPending ? t("att_submitting") : t("griev_submit")}
                     </Text>
                   </Pressable>
                 </View>
@@ -336,8 +359,8 @@ export default function ParentGrievances() {
                 <View style={{ flex: 1, paddingRight: 8 }}>
                   <Text style={styles.modalTitle}>{selectedGrievance.title}</Text>
                   <Text style={styles.modalSubtitle}>
-                    Category: {selectedGrievance.category}
-                    {selectedGrievance.student_name ? ` • Child: ${selectedGrievance.student_name}` : ""}
+                    {t("griev_category")}: {selectedGrievance.category}
+                    {selectedGrievance.student_name ? ` • ${t("child_details")}: ${selectedGrievance.student_name}` : ""}
                   </Text>
                 </View>
                 <Pressable
@@ -351,7 +374,7 @@ export default function ParentGrievances() {
                   }}
                   hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                   accessibilityRole="button"
-                  accessibilityLabel="Close"
+                  accessibilityLabel={t("btn_close")}
                 >
                   <Ionicons name="close" size={22} color="#ef4444" />
                 </Pressable>
@@ -365,7 +388,7 @@ export default function ParentGrievances() {
                   {selectedGrievance.resolution_notes ? (
                     <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: theme.rule }}>
                       <Text style={{ fontSize: 11, fontWeight: "700", color: theme.success }}>
-                        School Resolution:
+                        {t("griev_school_resolution")}
                       </Text>
                       <Text style={{ fontSize: 12, color: theme.inkSoft }}>
                         {selectedGrievance.resolution_notes}
@@ -376,7 +399,7 @@ export default function ParentGrievances() {
               </ScrollView>
 
               {/* Messages Thread */}
-              <Text style={[styles.inputLabel, { marginTop: 12, marginBottom: 4 }]}>Communication Thread</Text>
+              <Text style={[styles.inputLabel, { marginTop: 12, marginBottom: 4 }]}>{t("griev_comm_thread")}</Text>
               <ScrollView style={{ maxHeight: 140, flexGrow: 0 }}>
                 {selectedGrievance.replies && selectedGrievance.replies.length > 0 ? (
                   selectedGrievance.replies.map((r) => (
@@ -402,7 +425,7 @@ export default function ParentGrievances() {
                   ))
                 ) : (
                   <Text style={{ fontSize: 12, color: theme.inkFaint, fontStyle: "italic", paddingVertical: 6 }}>
-                    No messages yet. School staff will review your submission shortly.
+                    {t("griev_no_messages_yet")}
                   </Text>
                 )}
               </ScrollView>
@@ -411,7 +434,7 @@ export default function ParentGrievances() {
               <View style={{ flexDirection: "row", gap: 8, marginTop: 10, alignItems: "center" }}>
                 <TextInput
                   style={[styles.input, { flex: 1, height: 40 }]}
-                  placeholder="Send a response..."
+                  placeholder={t("griev_send_response_ph")}
                   placeholderTextColor={theme.inkFaint}
                   value={replyText}
                   onChangeText={setReplyText}
@@ -429,7 +452,7 @@ export default function ParentGrievances() {
                   style={[styles.actionBtn, { backgroundColor: theme.primary, paddingHorizontal: 16 }]}
                 >
                   <Text style={{ color: "#fff", fontWeight: "700", fontSize: 12 }}>
-                    {replyMutation.isPending ? "..." : "Send"}
+                    {replyMutation.isPending ? "..." : t("griev_send_btn")}
                   </Text>
                 </Pressable>
               </View>

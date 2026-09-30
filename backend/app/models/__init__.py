@@ -161,13 +161,12 @@ from app.models.settings import CustomField, Setting
 from app.models.tenancy import AcademicYear, School
 from app.models.inventory import StockItem, StockRequest
 from app.models.grievance import Grievance, GrievanceReply
-from app.models.notification import InAppNotification
+from app.models.notification import AlertView, InAppNotification
 from app.models.reception import (
     DirectoryContact,
     FoundItem,
     PrincipalMeetingRequest,
     StudentAuthorizedPerson,
     StudentPass,
-    TeacherMeetingRequest,
 )
 

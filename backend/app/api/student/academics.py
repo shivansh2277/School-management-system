@@ -14,7 +14,7 @@ from app.schemas.common import (
     StudentHomeworkOut,
     SubmitRequest,
 )
-from app.services import assessment, attendance, homework, scoping
+from app.services import alerts as alerts_svc, assessment, attendance, homework, scoping
 from app.services.common import require_current_enrolment
 from app.services.school_settings import module_enabled
 
@@ -31,6 +31,8 @@ def my_attendance(
 ) -> AttendanceMonth:
     today = Date.today()
     s = scoping.student_for(db, user)
+    alerts_svc.mark_attendance_viewed(db, user.school_id, user.id, s.id)
+    db.commit()
     return attendance.student_month(db, s.id, month or today.month, year or today.year)
 
 
@@ -74,6 +76,8 @@ def upcoming_exams(
 def my_results(user: User = Depends(student_only), db: Session = Depends(get_db)) -> list[dict]:
     """Exams this student actually has marks for."""
     s = scoping.student_for(db, user)
+    alerts_svc.mark_results_viewed(db, user.school_id, user.id, s.id)
+    db.commit()
     exams = db.scalars(
         select(Exam)
         .join(ExamSchedule, ExamSchedule.exam_id == Exam.id)
@@ -97,4 +101,8 @@ def my_results(user: User = Depends(student_only), db: Session = Depends(get_db)
 def report_card(
     exam_id: int, user: User = Depends(student_only), db: Session = Depends(get_db)
 ) -> ReportCard:
-    return assessment.report_card(db, scoping.student_id_for(db, user), exam_id)
+    st_id = scoping.student_id_for(db, user)
+    alerts_svc.mark_exam_viewed(db, user.school_id, user.id, st_id, exam_id)
+    db.commit()
+    return assessment.report_card(db, st_id, exam_id)
+

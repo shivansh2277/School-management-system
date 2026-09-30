@@ -4,6 +4,7 @@ import { Linking, Pressable, Text, View } from "react-native";
 
 import { api, formatDate } from "../../src/api/client";
 import { Card, Empty, Loading, Pill, Screen, s } from "../../src/components/ui";
+import { useTranslation } from "../../src/i18n/I18nContext";
 import { theme } from "../../src/theme";
 
 type Notice = {
@@ -19,10 +20,17 @@ type Notice = {
   attachment_url?: string | null;
 };
 
-const CATEGORIES = ["All", "Urgent", "Academic", "Holiday", "General"] as const;
-
 export default function ParentNotices() {
+  const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
+
+  const categories = [
+    { key: "All", label: t("notice_all") },
+    { key: "Urgent", label: t("notice_urgent") },
+    { key: "Academic", label: t("notice_academic") },
+    { key: "Holiday", label: t("notice_holiday") },
+    { key: "General", label: t("notice_general") },
+  ];
 
   const { data, isLoading } = useQuery({
     queryKey: ["parent-notices"],
@@ -48,12 +56,12 @@ export default function ParentNotices() {
     <Screen>
       {/* Category Tabs */}
       <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-        {CATEGORIES.map((cat) => {
-          const on = selectedCategory === cat;
+        {categories.map((cat) => {
+          const on = selectedCategory === cat.key;
           return (
             <Pressable
-              key={cat}
-              onPress={() => setSelectedCategory(cat)}
+              key={cat.key}
+              onPress={() => setSelectedCategory(cat.key)}
               style={{
                 paddingHorizontal: 12,
                 paddingVertical: 6,
@@ -70,7 +78,7 @@ export default function ParentNotices() {
                   color: on ? "#fff" : theme.inkSoft,
                 }}
               >
-                {cat}
+                {cat.label}
               </Text>
             </Pressable>
           );
@@ -90,7 +98,7 @@ export default function ParentNotices() {
           }}
         >
           <Text style={{ fontSize: 13, fontWeight: "700", color: theme.danger }}>
-            🚨 URGENT NOTICE: {urgentNotices[0].title}
+            {t("notice_urgent_banner")} {urgentNotices[0].title}
           </Text>
           <Text style={{ fontSize: 12, color: theme.ink, marginTop: 3 }}>
             {urgentNotices[0].body}
@@ -101,7 +109,7 @@ export default function ParentNotices() {
       {/* Notices Feed */}
       {filtered.length === 0 ? (
         <Card>
-          <Empty text={`No ${selectedCategory !== "All" ? selectedCategory.toLowerCase() : ""} notices found.`} />
+          <Empty text={t("notice_no_items")} />
         </Card>
       ) : (
         filtered.map((n) => {
@@ -113,7 +121,7 @@ export default function ParentNotices() {
                 <Text style={{ fontWeight: "700", fontSize: 15, color: theme.ink, flex: 1 }}>
                   {n.title}
                 </Text>
-                {isUrgent && <Pill status="overdue" label="Urgent" />}
+                {isUrgent && <Pill status="overdue" label={t("notice_urgent")} />}
                 {n.category && !isUrgent && <Pill label={n.category} />}
               </View>
 
@@ -137,14 +145,14 @@ export default function ParentNotices() {
                   }}
                 >
                   <Text style={{ fontSize: 12, color: theme.primary, fontWeight: "600" }}>
-                    📎 View Circular / Attachment PDF
+                    {t("notice_view_pdf")}
                   </Text>
                 </Pressable>
               )}
 
               <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
                 <Text style={s.meta}>
-                  Audience: {n.audience} {n.class_label ? `(${n.class_label})` : ""}
+                  {t("notice_audience")}: {n.audience} {n.class_label ? `(${n.class_label})` : ""}
                 </Text>
                 <Text style={s.meta}>{formatDate(n.published_at)}</Text>
               </View>

@@ -27,9 +27,6 @@ from app.schemas.reception import (
     StudentPassCreate,
     StudentPassOut,
     StudentPassStatusUpdate,
-    TeacherMeetingCreate,
-    TeacherMeetingOut,
-    TeacherMeetingRespond,
 )
 from app.services import rbac, scoping
 from app.services import reception as svc
@@ -50,8 +47,6 @@ can_manage_roster = require_permission("reception.authorized_persons.manage", sc
 can_read_meetings = require_permission("reception.meetings.read", school_wide=True)
 can_write_meetings = require_permission("reception.meetings.write", school_wide=True)
 can_respond_principal = require_permission("reception.meetings.respond_principal", school_wide=True)
-can_respond_teacher = require_permission("reception.meetings.respond_teacher")
-can_read_teacher_meetings = require_permission("reception.meetings.read", "reception.meetings.respond_teacher")
 
 can_read_directory = require_permission("reception.directory.read", school_wide=True)
 can_write_directory = require_permission("reception.directory.write", school_wide=True)
@@ -369,74 +364,6 @@ def respond_principal_meeting(
     db: Session = Depends(get_db),
 ) -> PrincipalMeetingOut:
     return svc.respond_principal_meeting(db, user.school_id, user, meeting_id, payload.model_dump())
-
-
-# --- Teacher Meetings --------------------------------------------------------
-
-
-@router.get("/meetings/teacher", response_model=list[TeacherMeetingOut])
-def list_teacher_meetings(
-    teacher_id: int | None = None,
-    meeting_date: Date | None = None,
-    status: str | None = None,
-    search: str | None = None,
-    user: User = Depends(can_read_teacher_meetings),
-    db: Session = Depends(get_db),
-) -> list[TeacherMeetingOut]:
-    effective_teacher_id = teacher_id
-    authz = rbac.authz_for(db, user)
-    if not authz.can("admin.settings.read") and not authz.is_school_wide("reception.meetings.read"):
-        emp = scoping.employee_for(db, user)
-        effective_teacher_id = emp.id
-
-    return svc.list_teacher_meetings(
-        db,
-        user.school_id,
-        teacher_id=effective_teacher_id,
-        meeting_date=meeting_date,
-        status_filter=status,
-        search=search,
-    )
-
-
-@router.get("/meetings/teacher/{meeting_id}", response_model=TeacherMeetingOut)
-def get_teacher_meeting(
-    meeting_id: int,
-    user: User = Depends(can_read_teacher_meetings),
-    db: Session = Depends(get_db),
-) -> TeacherMeetingOut:
-    meeting = svc.get_teacher_meeting(db, user.school_id, meeting_id)
-    authz = rbac.authz_for(db, user)
-    if not authz.can("admin.settings.read") and not authz.is_school_wide("reception.meetings.read"):
-        emp = scoping.employee_for(db, user)
-        if meeting.teacher_id != emp.id:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, "Cannot access meeting slips for other teachers")
-    return meeting
-
-
-@router.post("/meetings/teacher", response_model=TeacherMeetingOut, status_code=status.HTTP_201_CREATED)
-def create_teacher_meeting(
-    payload: TeacherMeetingCreate,
-    user: User = Depends(can_write_meetings),
-    db: Session = Depends(get_db),
-) -> TeacherMeetingOut:
-    return svc.create_teacher_meeting(db, user.school_id, user, payload.model_dump())
-
-
-@router.post("/meetings/teacher/{meeting_id}/respond", response_model=TeacherMeetingOut)
-def respond_teacher_meeting(
-    meeting_id: int,
-    payload: TeacherMeetingRespond,
-    user: User = Depends(can_respond_teacher),
-    db: Session = Depends(get_db),
-) -> TeacherMeetingOut:
-    authz = rbac.authz_for(db, user)
-    if not authz.can("admin.settings.read") and not authz.is_school_wide("reception.meetings.read"):
-        emp = scoping.employee_for(db, user)
-        meeting = svc.get_teacher_meeting(db, user.school_id, meeting_id)
-        if meeting.teacher_id != emp.id:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, "Cannot respond to meeting slips for other teachers")
-    return svc.respond_teacher_meeting(db, user.school_id, user, meeting_id, payload.model_dump())
 
 
 # --- Important Directory -----------------------------------------------------

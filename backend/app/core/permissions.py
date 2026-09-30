@@ -141,6 +141,7 @@ PERMISSIONS: list[tuple[str, str]] = [
     ("admin.settings.write", "Change school settings"),
     ("admin.role.read", "View roles and permissions"),
     ("admin.role.write", "Change roles and permissions"),
+    ("admin.user_access.manage", "Manage app access, block/unblock, and reset passwords for users"),
     ("admin.year.write", "Open, close and switch academic years"),
     ("admin.audit.read", "Read the audit log"),
 
@@ -156,9 +157,8 @@ PERMISSIONS: list[tuple[str, str]] = [
     ("reception.passes.write", "Issue one-time student gate passes"),
     ("reception.authorized_persons.manage", "Manage permanent authorized pickup roster for students"),
     ("reception.meetings.read", "View visitor meeting slips"),
-    ("reception.meetings.write", "Create visitor meeting requests for Principal and Teachers"),
+    ("reception.meetings.write", "Create visitor meeting requests for Principal"),
     ("reception.meetings.respond_principal", "Respond to Principal meeting requests"),
-    ("reception.meetings.respond_teacher", "Respond to Teacher meeting requests"),
     ("reception.directory.read", "View important emergency and school directory contacts"),
     ("reception.directory.write", "Manage important directory contacts"),
 
@@ -294,6 +294,7 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "admission.cycle.write",
             "admission.application.write",
             "admin.settings.write",
+            "admin.user_access.manage",
             "inventory.item.write",
             "inventory.request.create",
             "inventory.request.approve",
@@ -464,8 +465,6 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "grievance.submit",
             "teacher.leave.apply",
             "teacher.leave.view",
-            "reception.meetings.read",
-            "reception.meetings.respond_teacher",
         ],
     ),
     (

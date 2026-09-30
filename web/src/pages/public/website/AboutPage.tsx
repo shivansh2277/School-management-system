@@ -1,79 +1,119 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import { AdmissionEnquiryModal } from "../../../components/public/AdmissionEnquiryModal";
 
 export function AboutPage() {
+  const [enquiryModalOpen, setEnquiryModalOpen] = useState(false);
+
   return (
     <div className="space-y-16 sm:space-y-20 pb-16">
       {/* 1. HERO BANNER */}
-      <section className="bg-gradient-to-b from-indigo-50/80 via-ground to-white py-14 sm:py-20 border-b border-rule">
+      <section className="bg-gradient-to-b from-indigo-50/80 via-white to-white py-14 sm:py-20 border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-          <span className="text-xs font-bold uppercase tracking-wider text-primary bg-primary-soft px-3 py-1 rounded-full">
-            Our Identity & Heritage
+          <span className="text-xs font-bold uppercase tracking-wider text-primary bg-amber-100/80 border border-amber-200 px-3.5 py-1 rounded-full">
+            Institutional Identity & Heritage • Estd. 2011
           </span>
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight font-serif">
             About Sunrise School
           </h1>
-          <p className="text-base sm:text-lg text-ink-soft max-w-2xl mx-auto leading-relaxed">
-            Fostering intellectual vigor, moral purpose, and creative curiosity since 2011 in Lucknow, Uttar Pradesh.
+          <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
+            Fostering intellectual vigor, moral purpose, and creative curiosity since 2011 in Gomti Nagar, Lucknow, Uttar Pradesh.
           </p>
         </div>
       </section>
 
-      {/* 2. THE SCHOOL STORY */}
+      {/* 2. THE SCHOOL STORY & JOURNEY */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-6 space-y-4">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-700 bg-amber-100 px-3 py-1 rounded-full">
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-3 py-1 rounded-full">
               Our Journey
             </span>
-            <h2 className="text-3xl font-bold text-slate-900 tracking-tight">
-              A Legacy of Child-Centric Learning
+            <h2 className="text-3xl font-bold text-slate-900 tracking-tight font-serif">
+              A Legacy of Child-Centric Academic Excellence
             </h2>
-            <p className="text-sm sm:text-base text-ink-soft leading-relaxed">
-              Founded in 2011 by a consortium of visionary educationists in Lucknow, Sunrise School began with a humble conviction: that modern education must nurture both the analytical mind and the compassionate heart.
+            <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+              Founded in 2011 in the heart of Gomti Nagar, Lucknow, Sunrise School was established with a singular conviction: that modern schooling must harmonize rigorous academic preparation with deep-rooted Indian values (<em className="font-serif">Sanskaar</em>).
             </p>
-            <p className="text-sm sm:text-base text-ink-soft leading-relaxed">
-              Over the past decade and a half, Sunrise School has grown from a fledgling primary academy into one of Lucknow's most respected CBSE-affiliated institutions, serving over 1,200 learners across Pre-Primary to Class XII.
+            <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+              Over the past 15 years, Sunrise School has evolved from a visionary primary academy into a premier CBSE-affiliated K-12 institution. Today, our 5-acre landscaped campus serves over 1,200 scholars across Science, Commerce, and Humanities streams.
             </p>
-            <p className="text-sm sm:text-base text-ink-soft leading-relaxed">
-              Our campus in Gomti Nagar provides an idyllic sanctuary from urban frenzy—equipped with expansive sports grounds, advanced STEM labs, and creative studios where students discover their authentic callings.
+            <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+              Our tranquil academic quadrangle features interactive smart classrooms, composite science laboratories, an Atal Tinkering STEM hub, and all-weather athletic grounds designed to ignite every student's potential.
             </p>
+
+            {/* Campus Photography Duo */}
+            <div className="pt-2 grid grid-cols-2 gap-3">
+              <div className="rounded-xl overflow-hidden shadow-xs h-36 bg-slate-900 border border-slate-200">
+                <img
+                  src="/images/school/school_entrance_gate.jpg"
+                  alt="Sunrise School Main Entrance Gate"
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              </div>
+              <div className="rounded-xl overflow-hidden shadow-xs h-36 bg-slate-900 border border-slate-200">
+                <img
+                  src="/images/school/main_reception_lobby.jpg"
+                  alt="Sunrise School Reception Lobby"
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="lg:col-span-6">
-            <div className="bg-surface rounded-2xl border border-rule shadow-card p-6 sm:p-8 space-y-6">
-              <h3 className="font-bold text-lg text-slate-900 border-b border-rule pb-3">
-                Key Institutional Milestones
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+              <h3 className="font-bold text-lg text-slate-900 border-b border-slate-100 pb-3 font-serif">
+                Institutional Milestones Timeline
               </h3>
               <div className="space-y-4">
                 <div className="flex gap-4">
                   <span className="w-12 font-mono font-bold text-sm text-primary shrink-0">2011</span>
                   <div>
                     <h4 className="font-bold text-sm text-slate-900">Foundation Stone Laid</h4>
-                    <p className="text-xs text-ink-soft mt-0.5">Commenced with 150 foundational students and 12 devoted educators.</p>
+                    <p className="text-xs text-slate-600 mt-0.5">Established in Sector 4, Gomti Nagar with 150 foundational scholars and 12 dedicated faculty.</p>
                   </div>
                 </div>
 
                 <div className="flex gap-4">
-                  <span className="w-12 font-mono font-bold text-sm text-primary shrink-0">2016</span>
+                  <span className="w-12 font-mono font-bold text-sm text-primary shrink-0">2014</span>
                   <div>
-                    <h4 className="font-bold text-sm text-slate-900">CBSE Secondary Affiliation</h4>
-                    <p className="text-xs text-ink-soft mt-0.5">Expanded to Class X with state-of-the-art physics, chemistry, and biology labs.</p>
+                    <h4 className="font-bold text-sm text-slate-900">High School CBSE Affiliation</h4>
+                    <p className="text-xs text-slate-600 mt-0.5">Granted secondary affiliation; inaugurated physics, chemistry, and biology laboratories.</p>
                   </div>
                 </div>
 
                 <div className="flex gap-4">
-                  <span className="w-12 font-mono font-bold text-sm text-primary shrink-0">2019</span>
+                  <span className="w-12 font-mono font-bold text-sm text-primary shrink-0">2017</span>
                   <div>
                     <h4 className="font-bold text-sm text-slate-900">Senior Secondary Accreditation</h4>
-                    <p className="text-xs text-ink-soft mt-0.5">Inaugurated dedicated Science, Commerce, and Humanities wings for Classes XI & XII.</p>
+                    <p className="text-xs text-slate-600 mt-0.5">Launched Class XI & XII in Science, Commerce, and Humanities streams with career counseling cell.</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <span className="w-12 font-mono font-bold text-sm text-primary shrink-0">2020</span>
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900">Atal Tinkering & STEM Robotics Hub</h4>
+                    <p className="text-xs text-slate-600 mt-0.5">Established 3D printing, microcontroller, and IoT robotics laboratory for student innovation.</p>
                   </div>
                 </div>
 
                 <div className="flex gap-4">
                   <span className="w-12 font-mono font-bold text-sm text-primary shrink-0">2023</span>
                   <div>
-                    <h4 className="font-bold text-sm text-slate-900">Smart Campus & ERP Integration</h4>
-                    <p className="text-xs text-ink-soft mt-0.5">Deployed interactive digital panels in all classrooms and unified ERP for transparency.</p>
+                    <h4 className="font-bold text-sm text-slate-900">Excellence Award in Pedagogy</h4>
+                    <p className="text-xs text-slate-600 mt-0.5">Recognized for outstanding 100% board examination pass record and holistic sports infrastructure.</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <span className="w-12 font-mono font-bold text-sm text-primary shrink-0">2026</span>
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900">Smart Campus & Unified ERP</h4>
+                    <p className="text-xs text-slate-600 mt-0.5">Complete digital transformation with interactive panels in all classrooms and real-time parent portals.</p>
                   </div>
                 </div>
               </div>
@@ -82,195 +122,222 @@ export function AboutPage() {
         </div>
       </section>
 
-      {/* 3. VISION & MISSION */}
-      <section className="bg-ground py-16 border-y border-rule">
+      {/* 3. OUR FOUNDER SECTION */}
+      <section className="bg-slate-900 text-white py-16 sm:py-20 border-y border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Vision */}
-            <div className="bg-white rounded-2xl p-8 sm:p-10 border border-rule shadow-sm space-y-4">
-              <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center text-2xl font-bold">
-                👁️
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+            {/* Founder Portrait Image */}
+            <div className="lg:col-span-5 flex justify-center">
+              <div className="relative rounded-2xl overflow-hidden shadow-2xl border-4 border-slate-800 bg-slate-950 max-w-sm w-full">
+                <img
+                  src="/images/school/founder_portrait.jpg"
+                  alt="Dr. Anand Mohan Shukla, Founder & Chairman of Sunrise School"
+                  className="w-full h-auto object-cover"
+                />
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent p-5 text-center">
+                  <h3 className="text-xl font-bold font-serif text-white">Dr. Anand Mohan Shukla</h3>
+                  <p className="text-xs text-amber-300 font-semibold mt-0.5">Founder & Chairman, Board of Trustees</p>
+                  <p className="text-[11px] text-slate-400">M.A., Ph.D. (Education), D.Lit.</p>
+                </div>
               </div>
-              <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 block">
-                Our Vision
-              </span>
-              <h3 className="text-2xl font-bold text-slate-900">
-                Cultivating Visionary & Empathetic Global Citizens
-              </h3>
-              <p className="text-sm text-ink-soft leading-relaxed">
-                To be an inspiring lighthouse of holistic education that nurtures intellectually fearless, morally grounded, and culturally rooted individuals equipped to navigate and enrich a complex global society.
+            </div>
+
+            {/* Founder Bio & Philosophy */}
+            <div className="lg:col-span-7 space-y-6">
+              <div className="space-y-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 border border-amber-400/30 px-3.5 py-1 rounded-full">
+                  Founding Trustee Profile
+                </span>
+                <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight font-serif text-white">
+                  Meet Our Visionary Founder
+                </h2>
+              </div>
+
+              <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
+                Dr. Anand Mohan Shukla, a distinguished educationist and social reformer with over four decades of service in Indian academia, founded Sunrise School in 2011 to redefine schooling for the 21st century.
+              </p>
+              <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
+                His founding philosophy rests on the conviction that true education must go beyond rote textbook memorization. Under his leadership, Sunrise School introduced experiential science labs, mandatory sports participation, and moral shloka assemblies to cultivate balanced, self-disciplined human beings.
+              </p>
+
+              {/* Founder's Inspiring Quote Card */}
+              <div className="bg-slate-800/90 rounded-2xl p-6 border-l-4 border-amber-400 border-slate-700 shadow-lg space-y-2">
+                <p className="text-base sm:text-lg font-serif italic text-amber-200 leading-snug">
+                  "The true purpose of education is not merely to prepare a child for examinations, but to kindle curiosity, instill unyielding character, and empower them to build confident futures."
+                </p>
+                <div className="text-xs font-semibold text-slate-400 text-right">
+                  — Dr. Anand Mohan Shukla, Founder's Convocation Address
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. THE 7-C EDUCATIONAL PHILOSOPHY */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+        <div className="text-center max-w-3xl mx-auto space-y-3">
+          <span className="text-xs font-bold uppercase tracking-wider text-primary bg-amber-100 px-3.5 py-1 rounded-full">
+            Educational Framework
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight font-serif">
+            The 7-C Educational Philosophy
+          </h2>
+          <p className="text-sm text-slate-600 leading-relaxed">
+            Our holistic curriculum is built around seven core pillars designed to prepare scholars for life, leadership, and lifelong learning.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { title: "Curiosity", icon: "🔍", desc: "Instilling a lifelong passion for questioning, scientific inquiry, and self-directed exploration." },
+            { title: "Critical Thinking", icon: "🧠", desc: "Empowering learners to analyze data, evaluate evidence, and solve complex real-world problems." },
+            { title: "Character", icon: "⚖️", desc: "Anchoring academic achievement in moral integrity, honesty, and ethical responsibility." },
+            { title: "Creativity", icon: "🎨", desc: "Nurturing artistic expression, inventive design, and original thinking across all disciplines." },
+            { title: "Collaboration", icon: "🤝", desc: "Fostering teamwork, house camaraderie, and mutual respect in group problem-solving." },
+            { title: "Communication", icon: "🗣️", desc: "Developing articulate oratory and persuasive writing skills in both English and Hindi." },
+            { title: "Confidence", icon: "🌟", desc: "Building self-assurance to speak boldly, embrace challenges, and lead with humility." },
+            { title: "Compassion", icon: "💖", desc: "Cultivating empathy, environmental stewardship, and community service toward others." },
+          ].map((item) => (
+            <div
+              key={item.title}
+              className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs hover:shadow-md transition-shadow space-y-3"
+            >
+              <div className="text-3xl p-2 bg-slate-50 rounded-xl border border-slate-200 inline-block">
+                {item.icon}
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 font-serif">{item.title}</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 5. CORE INSTITUTIONAL VALUES */}
+      <section className="bg-slate-50 py-16 border-y border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+          <div className="text-center max-w-2xl mx-auto space-y-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-3 py-1 rounded-full">
+              Guiding Ethos
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight font-serif">
+              Core Institutional Values
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-2 text-center">
+              <div className="text-3xl">🛡️</div>
+              <h3 className="font-bold text-base text-slate-900 font-serif">Integrity</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Uncompromising honesty, moral clarity, and ethical courage in thought, word, and deed.
               </p>
             </div>
 
-            {/* Mission */}
-            <div className="bg-white rounded-2xl p-8 sm:p-10 border border-rule shadow-sm space-y-4">
-              <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center text-2xl font-bold">
-                🎯
-              </div>
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-600 block">
-                Our Mission
-              </span>
-              <h3 className="text-2xl font-bold text-slate-900">
-                Empowering Every Learner to Excel with Integrity
-              </h3>
-              <ul className="text-sm text-ink-soft space-y-2.5">
-                <li className="flex items-start gap-2">
-                  <span className="text-primary font-bold">•</span>
-                  <span>Deliver engaging, experiential pedagogy aligned with NEP 2020 guidelines.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-primary font-bold">•</span>
-                  <span>Foster physical vitality, artistic expression, and ethical character alongside academics.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-primary font-bold">•</span>
-                  <span>Provide an inclusive, emotionally secure learning sanctuary that values every child's voice.</span>
-                </li>
-              </ul>
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-2 text-center">
+              <div className="text-3xl">🏆</div>
+              <h3 className="font-bold text-base text-slate-900 font-serif">Excellence</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Striving constantly for highest standards in scholarship, co-curriculars, and conduct.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-2 text-center">
+              <div className="text-3xl">🌐</div>
+              <h3 className="font-bold text-base text-slate-900 font-serif">Inclusivity</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Welcoming every background, valuing diverse perspectives, and creating a supportive space.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-2 text-center">
+              <div className="text-3xl">🌱</div>
+              <h3 className="font-bold text-base text-slate-900 font-serif">Empathy</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Compassionate awareness of others, service to community, and environmental stewardship.
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 4. CORE VALUES (PANCH TATTVA) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-12 space-y-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-primary bg-primary-soft px-3 py-1 rounded-full">
-            Our Guiding Compass
+      {/* 6. CAMPUS VISUAL SHOWCASE */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <div className="text-center max-w-2xl mx-auto space-y-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-primary bg-amber-100 px-3 py-1 rounded-full">
+            Campus Experience
           </span>
-          <h2 className="text-3xl font-bold text-slate-900 tracking-tight">
-            The Five Core Values of Sunrise
+          <h2 className="text-3xl font-bold text-slate-900 tracking-tight font-serif">
+            A Glimpse into Sunrise Campus Life
           </h2>
-          <p className="text-sm text-ink-soft">
-            These foundational principles shape every morning assembly, classroom interaction, and sports field endeavor.
-          </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-          <div className="bg-surface rounded-card p-5 border border-rule shadow-sm space-y-2 text-center">
-            <div className="text-2xl">⚖️</div>
-            <h3 className="font-bold text-base text-slate-900">Satya (Integrity)</h3>
-            <p className="text-xs text-ink-soft leading-relaxed">
-              Uncompromising honesty, moral clarity, and ethical courage in thought, word, and deed.
-            </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="rounded-2xl overflow-hidden h-48 border border-slate-200 shadow-xs bg-slate-900">
+            <img
+              src="/images/school/modern_classroom_learning.jpg"
+              alt="Smart Classroom at Sunrise School"
+              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+            />
           </div>
-
-          <div className="bg-surface rounded-card p-5 border border-rule shadow-sm space-y-2 text-center">
-            <div className="text-2xl">🌱</div>
-            <h3 className="font-bold text-base text-slate-900">Karmanya (Diligence)</h3>
-            <p className="text-xs text-ink-soft leading-relaxed">
-              Sincere dedication to duty, perseverance through setbacks, and pride in honest labor.
-            </p>
+          <div className="rounded-2xl overflow-hidden h-48 border border-slate-200 shadow-xs bg-slate-900">
+            <img
+              src="/images/school/science_lab_practical.jpg"
+              alt="Science Practical Lab"
+              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+            />
           </div>
-
-          <div className="bg-surface rounded-card p-5 border border-rule shadow-sm space-y-2 text-center">
-            <div className="text-2xl">🤝</div>
-            <h3 className="font-bold text-base text-slate-900">Karuna (Empathy)</h3>
-            <p className="text-xs text-ink-soft leading-relaxed">
-              Compassionate awareness of others, service to community, and respect for all life.
-            </p>
+          <div className="rounded-2xl overflow-hidden h-48 border border-slate-200 shadow-xs bg-slate-900">
+            <img
+              src="/images/school/central_library_reading.jpg"
+              alt="Central Library Reading Hub"
+              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+            />
           </div>
-
-          <div className="bg-surface rounded-card p-5 border border-rule shadow-sm space-y-2 text-center">
-            <div className="text-2xl">🏆</div>
-            <h3 className="font-bold text-base text-slate-900">Utkarsh (Excellence)</h3>
-            <p className="text-xs text-ink-soft leading-relaxed">
-              Striving constantly for highest standards in scholarship, creativity, and conduct.
-            </p>
-          </div>
-
-          <div className="bg-surface rounded-card p-5 border border-rule shadow-sm space-y-2 text-center">
-            <div className="text-2xl">🔍</div>
-            <h3 className="font-bold text-base text-slate-900">Jigyasa (Curiosity)</h3>
-            <p className="text-xs text-ink-soft leading-relaxed">
-              Lifelong passion for questioning, scientific inquiry, and adventurous learning.
-            </p>
+          <div className="rounded-2xl overflow-hidden h-48 border border-slate-200 shadow-xs bg-slate-900">
+            <img
+              src="/images/school/sports_field_athletics.jpg"
+              alt="Outdoor Athletic Grounds"
+              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+            />
           </div>
         </div>
       </section>
 
-      {/* 5. LEADERSHIP SECTION */}
+      {/* 7. FINAL CALL TO ACTION */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-12 space-y-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-primary bg-primary-soft px-3 py-1 rounded-full">
-            School Governance
-          </span>
-          <h2 className="text-3xl font-bold text-slate-900 tracking-tight">
-            Academic Leadership & Mentorship
-          </h2>
-          <p className="text-sm text-ink-soft">
-            Guided by dedicated educators with decades of frontline experience in leading national and international curricula.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-surface rounded-2xl border border-rule p-6 shadow-sm text-center space-y-4">
-            <div className="w-20 h-20 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center mx-auto text-2xl font-bold font-serif">
-              AS
-            </div>
-            <div>
-              <h3 className="font-bold text-base text-slate-900">Dr. Ananya Sengupta</h3>
-              <p className="text-xs text-primary font-semibold">Principal & Head of School</p>
-              <p className="text-[11px] text-ink-faint mt-1">M.Sc., B.Ed., Ph.D. in Education</p>
-            </div>
-            <p className="text-xs text-ink-soft leading-relaxed">
-              Passionate educationist with 22 years of experience championing progressive CBSE pedagogy, faculty development, and value-based schooling.
+        <div className="bg-slate-900 text-white rounded-2xl p-8 sm:p-12 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 border border-slate-800">
+          <div className="space-y-2 text-center md:text-left max-w-xl">
+            <h3 className="text-2xl font-bold tracking-tight font-serif text-white">
+              Ready to Discover the Sunrise Difference?
+            </h3>
+            <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+              Connect with our admissions desk, book a personalized campus tour, or initiate an online application today.
             </p>
           </div>
 
-          <div className="bg-surface rounded-2xl border border-rule p-6 shadow-sm text-center space-y-4">
-            <div className="w-20 h-20 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center mx-auto text-2xl font-bold font-serif">
-              RK
-            </div>
-            <div>
-              <h3 className="font-bold text-base text-slate-900">Prof. R. K. Srivastava</h3>
-              <p className="text-xs text-amber-700 font-semibold">Dean of Academics</p>
-              <p className="text-[11px] text-ink-faint mt-1">M.A., M.Ed., Former CBSE Regional Advisor</p>
-            </div>
-            <p className="text-xs text-ink-soft leading-relaxed">
-              Guides curriculum integration, continuous assessment frameworks, and senior secondary stream specializations across science and commerce.
-            </p>
-          </div>
-
-          <div className="bg-surface rounded-2xl border border-rule p-6 shadow-sm text-center space-y-4">
-            <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto text-2xl font-bold font-serif">
-              SM
-            </div>
-            <div>
-              <h3 className="font-bold text-base text-slate-900">Mrs. Shalini Mishra</h3>
-              <p className="text-xs text-emerald-700 font-semibold">Head of Student Welfare</p>
-              <p className="text-[11px] text-ink-faint mt-1">M.Sc. (Child Psychology), B.Ed.</p>
-            </div>
-            <p className="text-xs text-ink-soft leading-relaxed">
-              Leads pastoral care, inclusive education, adolescent counseling, and parent-teacher collaboration initiatives.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 6. CALL TO ACTION STRIP */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-ground border border-rule rounded-2xl p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="space-y-1 text-center sm:text-left">
-            <h3 className="font-bold text-xl text-slate-900">Want to see our classrooms in action?</h3>
-            <p className="text-sm text-ink-soft">We welcome parents for personalized campus tours on all working days.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link
-              to="/facilities"
-              className="bg-white border border-rule hover:bg-slate-50 text-slate-800 text-sm font-semibold px-5 py-2.5 rounded-lg shadow-xs transition-all"
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button
+              onClick={() => setEnquiryModalOpen(true)}
+              className="bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold px-6 py-3 rounded-lg text-xs sm:text-sm shadow-md transition-all cursor-pointer"
             >
-              Explore Campus Facilities
-            </Link>
+              Admission Enquiry
+            </button>
             <Link
-              to="/admissions"
-              className="bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-5 py-2.5 rounded-lg shadow-sm transition-all"
+              to="/apply"
+              className="bg-white hover:bg-slate-100 text-slate-900 font-bold px-6 py-3 rounded-lg text-xs sm:text-sm shadow-md transition-all"
             >
-              Admissions Info
+              Apply Online &rarr;
             </Link>
           </div>
         </div>
       </section>
+
+      <AdmissionEnquiryModal isOpen={enquiryModalOpen} onClose={() => setEnquiryModalOpen(false)} />
     </div>
   );
 }

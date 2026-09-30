@@ -425,6 +425,15 @@ export const SCREENS: Screen[] = [
     element: lazy(() => import("./pages/Settings").then((m) => ({ default: m.Settings }))),
   },
   {
+    path: "/admin/users",
+    label: "User Access",
+    group: "Administration",
+    permissions: ["admin.settings.read"],
+    element: lazy(() =>
+      import("./pages/UserAccessPage").then((m) => ({ default: m.UserAccessPage })),
+    ),
+  },
+  {
     path: "/reports",
     label: "Reports library",
     group: "Analytics",

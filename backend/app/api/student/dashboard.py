@@ -8,8 +8,8 @@ from app.core.db import get_db
 from app.services import timetable as timetable_svc
 from app.services.rbac import require_permission
 from app.models import ExamSchedule, Student, User
-from app.schemas.common import SlotOut
-from app.services import assessment, attendance, homework, notices, scoping
+from app.schemas.common import AlertViewRequest, SlotOut
+from app.services import alerts as alerts_svc, assessment, attendance, homework, notices, scoping
 from app.services.common import (
     current_enrolment,
     require_current_enrolment,
@@ -19,6 +19,28 @@ from app.services.stats import DAY_KEYS
 
 router = APIRouter(prefix="/student", tags=["student"])
 student_only = require_permission("attendance.record.read")
+
+
+@router.post("/alerts/view")
+def view_alert(
+    body: AlertViewRequest,
+    user: User = Depends(student_only),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Record an alert as viewed by the student.
+    Fee alerts are strictly excluded from dismissal.
+    """
+    s = scoping.student_for(db, user)
+    alerts_svc.record_alert_view(
+        db,
+        school_id=user.school_id,
+        user_id=user.id,
+        student_id=s.id,
+        alert_type=body.alert_type,
+        event_key=body.event_key,
+    )
+    db.commit()
+    return {"ok": True}
 
 
 def _slots(db: Session, student: Student, day_key: str | None) -> list[SlotOut]:
@@ -34,6 +56,7 @@ def _slots(db: Session, student: Student, day_key: str | None) -> list[SlotOut]:
 @router.get("/dashboard")
 def dashboard(user: User = Depends(student_only), db: Session = Depends(get_db)) -> dict:
     s = scoping.student_for(db, user)
+    alert_info = alerts_svc.get_student_alerts(db, s.id, user_id=user.id)
     exam = assessment.latest_exam_with_marks(
         db, s.school_id, require_current_enrolment(db, s.id).class_section_id
     )
@@ -49,7 +72,7 @@ def dashboard(user: User = Depends(student_only), db: Session = Depends(get_db))
         .limit(1)
     ).first()
     return {
-        "attendance_percent": attendance.student_percent(db, s.id),
+        "attendance_percent": alert_info["attendance_percent"],
         "homework_pending": homework.pending_count(db, s.id),
         "next_exam": (
             {
@@ -63,6 +86,10 @@ def dashboard(user: User = Depends(student_only), db: Session = Depends(get_db))
         "latest_result_percent": (
             assessment.student_average_percent(db, s.id, exam.id) if exam else None
         ),
+        "fee_due_amount": alert_info["fee_due_amount"],
+        "latest_report_card": alert_info["latest_report_card"],
+        "latest_periodic_test": alert_info["latest_periodic_test"],
+        "alerts": alert_info["alerts"],
         "recent_notices": notices.visible_to(db, user)[:5],
         "today_schedule": _slots(db, s, DAY_KEYS[Date.today().weekday()]),
     }

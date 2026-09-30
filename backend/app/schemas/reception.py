@@ -160,47 +160,6 @@ class PrincipalMeetingOut(BaseModel):
     created_at: datetime
 
 
-class TeacherMeetingCreate(BaseModel):
-    teacher_id: int
-    visitor_name: str = Field(..., max_length=120)
-    visitor_phone: str = Field(..., max_length=30)
-    visitor_relation: str | None = Field(default=None, max_length=60)
-    student_name: str | None = Field(default=None, max_length=120)
-    student_admission_no: str | None = Field(default=None, max_length=50)
-    reason: str
-    meeting_date: Date
-    meeting_time: str = Field(..., max_length=20)
-
-
-class TeacherMeetingRespond(BaseModel):
-    status: str  # accepted, declined, completed, cancelled
-    response_notes: str | None = None
-
-
-class TeacherMeetingOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    school_id: int
-    slip_code: str
-    teacher_id: int
-    teacher_name: str
-    visitor_name: str
-    visitor_phone: str
-    visitor_relation: str | None = None
-    student_name: str | None = None
-    student_admission_no: str | None = None
-    reason: str
-    meeting_date: Date
-    meeting_time: str
-    status: str
-    response_notes: str | None = None
-    responded_at: datetime | None = None
-    created_by_id: int
-    created_by_name: str
-    created_at: datetime
-
-
 class DirectoryContactIn(BaseModel):
     category: str = Field(default="Emergency", max_length=60)
     name: str = Field(..., max_length=150)

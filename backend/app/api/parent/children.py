@@ -24,9 +24,9 @@ from app.models import (
     User,
 )
 from app.pdf.report_card import build_report_card_pdf
-from app.schemas.common import AttendanceMonth, ReportCard, StudentHomeworkOut
-from app.services import assessment, attendance, fees, homework, leave, notices, scoping
-from app.services.common import current_enrolment, enrolment_map
+from app.schemas.common import AttendanceMonth, ParentAlertViewRequest, ReportCard, SlotOut, StudentHomeworkOut
+from app.services import alerts as alerts_svc, assessment, attendance, fees, homework, leave, notices, scoping, timetable as timetable_svc
+from app.services.common import current_enrolment, enrolment_map, require_current_enrolment
 
 router = APIRouter(prefix="/parent", tags=["parent"])
 parent_only = require_permission("students.profile.read")
@@ -50,11 +50,42 @@ def children(user: User = Depends(parent_only), db: Session = Depends(get_db)) -
     ]
 
 
+@router.get("/alerts")
+def parent_alerts(
+    user: User = Depends(parent_only), db: Session = Depends(get_db)
+) -> list[dict]:
+    """All active important alerts across all of this parent's children."""
+    return alerts_svc.get_parent_alerts(db, user)
+
+
+@router.post("/alerts/view")
+def view_parent_alert(
+    body: ParentAlertViewRequest,
+    user: User = Depends(parent_only),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Record an alert as viewed by the parent for a specific child.
+    Fee alerts are strictly excluded from dismissal.
+    """
+    scoping.assert_can_read_student(db, user, body.child_id)
+    alerts_svc.record_alert_view(
+        db,
+        school_id=user.school_id,
+        user_id=user.id,
+        student_id=body.child_id,
+        alert_type=body.alert_type,
+        event_key=body.event_key,
+    )
+    db.commit()
+    return {"ok": True}
+
+
 @router.get("/children/{student_id}/summary")
 def summary(
     student_id: int, user: User = Depends(parent_only), db: Session = Depends(get_db)
 ) -> dict:
     s = scoping.assert_can_read_student(db, user, student_id)
+    alert_info = alerts_svc.get_student_alerts(db, s.id, user_id=user.id)
     enrolment = current_enrolment(db, s.id)
     exam = assessment.latest_exam_with_marks(
         db, s.school_id, enrolment.class_section_id if enrolment else None
@@ -64,7 +95,7 @@ def summary(
         "student_id": s.id,
         "name": s.user.full_name,
         "class_label": (e.class_section.label if (e := current_enrolment(db, s.id)) else ""),
-        "attendance_percent": attendance.student_percent(db, s.id),
+        "attendance_percent": alert_info["attendance_percent"],
         "homework_submitted": sum(1 for h in hw if h.submitted),
         "homework_pending": sum(1 for h in hw if not h.submitted),
         "latest_result_percent": (
@@ -86,6 +117,10 @@ def summary(
             )
             if i["balance"] > 0
         ),
+        "fee_due_amount": alert_info["fee_due_amount"],
+        "latest_report_card": alert_info["latest_report_card"],
+        "latest_periodic_test": alert_info["latest_periodic_test"],
+        "alerts": alert_info["alerts"],
         "recent_notices": notices.visible_to(db, user)[:5],
     }
 
@@ -99,6 +134,8 @@ def child_attendance(
     db: Session = Depends(get_db),
 ) -> AttendanceMonth:
     scoping.assert_can_read_student(db, user, student_id)
+    alerts_svc.mark_attendance_viewed(db, user.school_id, user.id, student_id)
+    db.commit()
     today = Date.today()
     if isinstance(month, str) and "-" in month:
         parts = month.split("-")
@@ -157,6 +194,8 @@ def child_results(
     student_id: int, user: User = Depends(parent_only), db: Session = Depends(get_db)
 ) -> list[dict]:
     scoping.assert_can_read_student(db, user, student_id)
+    alerts_svc.mark_results_viewed(db, user.school_id, user.id, student_id)
+    db.commit()
     exams = db.scalars(
         select(Exam)
         .join(ExamSchedule, ExamSchedule.exam_id == Exam.id)
@@ -184,7 +223,10 @@ def child_report_card(
     db: Session = Depends(get_db),
 ) -> ReportCard:
     scoping.assert_can_read_student(db, user, student_id)
+    alerts_svc.mark_exam_viewed(db, user.school_id, user.id, student_id, exam_id)
+    db.commit()
     return assessment.report_card(db, student_id, exam_id)
+
 
 
 @router.get("/children/{student_id}/report-card/{exam_id}")
@@ -242,6 +284,19 @@ def child_profile(
             else None
         ),
     }
+
+
+@router.get("/children/{student_id}/timetable", response_model=list[SlotOut])
+def child_timetable(
+    student_id: int, user: User = Depends(parent_only), db: Session = Depends(get_db)
+) -> list[SlotOut]:
+    s = scoping.assert_can_read_student(db, user, student_id)
+    enrolment = require_current_enrolment(db, s.id)
+    return timetable_svc.grid(
+        db,
+        s.school_id,
+        class_section_id=enrolment.class_section_id,
+    )
 
 
 @router.get("/profile")

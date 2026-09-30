@@ -165,6 +165,7 @@ class SubstitutionStatus(StrEnum):
     pending = "pending"
     provisional = "provisional"
     assigned = "assigned"
+    rejected = "rejected"
     unfilled = "unfilled"
     completed = "completed"
 

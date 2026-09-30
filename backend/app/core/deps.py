@@ -21,6 +21,11 @@ def get_current_user(
     user = db.get(User, int(payload["sub"]))
     if user is None or not user.is_active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired token")
+    if getattr(user, "app_access_blocked", False):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "App access has been blocked by administrator")
+    token_ver = payload.get("ver")
+    if token_ver is not None and token_ver != getattr(user, "token_version", 1):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Session expired or password changed. Please log in again.")
     return user
 
 

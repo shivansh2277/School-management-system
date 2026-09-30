@@ -60,6 +60,11 @@ def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenPair:
     # tab are rejected (BLUEPRINT §9).
     if user is None or user.role != body.role or not user.is_active:
         raise _BAD_CREDS
+    if getattr(user, "app_access_blocked", False):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Your mobile app access has been blocked by the school administrator.",
+        )
     school = db.get(School, user.school_id)
     if school is None or school.status is not SchoolStatus.active:
         raise HTTPException(
@@ -68,8 +73,8 @@ def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenPair:
     if not verify_password(body.password, user.password_hash):
         raise _BAD_CREDS
     return TokenPair(
-        access_token=create_access_token(user.id, user.role),
-        refresh_token=create_refresh_token(user.id, user.role),
+        access_token=create_access_token(user.id, user.role, getattr(user, "token_version", 1)),
+        refresh_token=create_refresh_token(user.id, user.role, getattr(user, "token_version", 1)),
         user=UserOut.model_validate(user, from_attributes=True),
     )
 
@@ -82,7 +87,12 @@ def refresh(body: RefreshRequest, db: Session = Depends(get_db)) -> AccessToken:
     user = db.get(User, int(payload["sub"]))
     if user is None or not user.is_active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired refresh token")
-    return AccessToken(access_token=create_access_token(user.id, user.role))
+    if getattr(user, "app_access_blocked", False):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "App access has been blocked by administrator")
+    token_ver = payload.get("ver")
+    if token_ver is not None and token_ver != getattr(user, "token_version", 1):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Refresh token invalidated. Please log in again.")
+    return AccessToken(access_token=create_access_token(user.id, user.role, getattr(user, "token_version", 1)))
 
 
 @router.get("/me", response_model=MeOut)
@@ -152,5 +162,6 @@ def change_password(
     if not verify_password(body.old_password, user.password_hash):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Current password is incorrect")
     user.password_hash = hash_password(body.new_password)
+    user.token_version = (user.token_version or 1) + 1
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -95,7 +95,7 @@ def grants_for(db: Session, user: User) -> list[Grant]:
             UserRoleAssignment.school_id == user.school_id,
         )
     ).all()
-    if not rows and user.role == UserRole.admin:
+    if not rows and user.role == UserRole.admin and (user.login_id.startswith("admin@") or user.login_id == "admin"):
         super_admin_role = db.scalar(
             select(Role).where(Role.school_id == user.school_id, Role.code == "super_admin")
         )

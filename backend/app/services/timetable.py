@@ -215,20 +215,34 @@ def save_slot(
     return slot
 
 
-def slot_out(db: Session, slot: TimetableSlot) -> dict:
+def slot_out(
+    db: Session,
+    slot: TimetableSlot,
+    active_substitutions: dict[int, Substitution] | None = None,
+) -> dict:
+    sub = active_substitutions.get(slot.id) if active_substitutions else None
+    relief_name = (
+        sub.substitute_teacher.user.full_name
+        if sub and sub.substitute_teacher and sub.substitute_teacher.user
+        else None
+    )
+    subj = db.get(Subject, slot.subject_id)
+    emp = db.get(Employee, slot.teacher_id)
     return {
         "id": slot.id,
         "class_section_id": slot.class_section_id,
-        "class_label": slot.class_section.label,
-        "day_of_week": slot.day_of_week,
-        "period": slot.period.period_no,
-        "start_time": slot.period.start_time,
-        "end_time": slot.period.end_time,
-        "subject": db.get(Subject, slot.subject_id).name,
+        "class_label": slot.class_section.label if slot.class_section else "",
+        "day_of_week": slot.day_of_week.value if hasattr(slot.day_of_week, "value") else str(slot.day_of_week),
+        "period": slot.period.period_no if slot.period else 0,
+        "start_time": slot.period.start_time if slot.period else None,
+        "end_time": slot.period.end_time if slot.period else None,
+        "subject": subj.name if subj else "",
         "subject_id": slot.subject_id,
-        "teacher": db.get(Employee, slot.teacher_id).user.full_name,
+        "teacher": emp.user.full_name if emp and emp.user else "",
         "teacher_id": slot.teacher_id,
         "room": slot.room,
+        "is_relief": bool(relief_name),
+        "relief_teacher": relief_name,
     }
 
 
@@ -237,20 +251,67 @@ def grid(
     school_id: int,
     class_section_id: int | None = None,
     teacher_id: int | None = None,
-    day_of_week: DayOfWeek | None = None,
+    day_of_week: DayOfWeek | str | None = None,
+    target_date: Date | None = None,
 ) -> list[dict]:
+    today = target_date or Date.today()
     q = select(TimetableSlot).where(TimetableSlot.school_id == school_id)
     if class_section_id is not None:
         q = q.where(TimetableSlot.class_section_id == class_section_id)
     if teacher_id is not None:
         q = q.where(TimetableSlot.teacher_id == teacher_id)
     if day_of_week is not None:
-        q = q.where(TimetableSlot.day_of_week == day_of_week)
-    rows = db.scalars(q).all()
-    return [
-        slot_out(db, s)
-        for s in sorted(rows, key=lambda s: (list(DayOfWeek).index(s.day_of_week), s.period.period_no))
-    ]
+        dow_enum = DayOfWeek(day_of_week) if isinstance(day_of_week, str) else day_of_week
+        q = q.where(TimetableSlot.day_of_week == dow_enum)
+    rows = list(db.scalars(q).all())
+
+    slot_ids = [s.id for s in rows]
+    sub_map: dict[int, Substitution] = {}
+    if slot_ids:
+        subs = db.scalars(
+            select(Substitution).where(
+                Substitution.timetable_slot_id.in_(slot_ids),
+                Substitution.date == today,
+                Substitution.status.in_(
+                    [SubstitutionStatus.assigned, SubstitutionStatus.completed]
+                ),
+            )
+        ).all()
+        for sub in subs:
+            sub_map[sub.timetable_slot_id] = sub
+
+    relief_slots: list[dict] = []
+    if teacher_id is not None:
+        sub_as_relief = db.scalars(
+            select(Substitution).where(
+                Substitution.substitute_teacher_id == teacher_id,
+                Substitution.date == today,
+                Substitution.status.in_(
+                    [SubstitutionStatus.assigned, SubstitutionStatus.completed]
+                ),
+            )
+        ).all()
+        covering_emp = db.get(Employee, teacher_id)
+        covering_name = covering_emp.user.full_name if covering_emp and covering_emp.user else ""
+        for sub in sub_as_relief:
+            r_slot = sub.slot
+            if r_slot and (day_of_week is None or r_slot.day_of_week == day_of_week):
+                if r_slot.id not in slot_ids:
+                    s_dict = slot_out(db, r_slot)
+                    s_dict["is_relief"] = True
+                    s_dict["relief_teacher"] = covering_name
+                    relief_slots.append(s_dict)
+
+    out = [slot_out(db, s, active_substitutions=sub_map) for s in rows]
+    out.extend(relief_slots)
+    days_order = [d.value for d in DayOfWeek]
+    return sorted(
+        out,
+        key=lambda s: (
+            days_order.index(s["day_of_week"]) if s["day_of_week"] in days_order else 0,
+            s["period"],
+        ),
+    )
 
 
 def completeness(db: Session, school_id: int, academic_year_id: int) -> list[dict]:

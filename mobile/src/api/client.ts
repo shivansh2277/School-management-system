@@ -5,7 +5,12 @@ import { Platform } from "react-native";
 export function resolveApiBaseUrl(): string {
   const envUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 
-  // 1. Web browser: respect explicit env or use current browser host
+  // 1. Explicit remote cloud URL (e.g. Render / staging / production)
+  if (envUrl && envUrl.startsWith("https://")) {
+    return envUrl;
+  }
+
+  // 2. Web browser: respect explicit env or use current browser host
   if (Platform.OS === "web") {
     if (envUrl) return envUrl;
     if (typeof window !== "undefined" && window.location?.hostname) {
@@ -14,13 +19,9 @@ export function resolveApiBaseUrl(): string {
     return "http://127.0.0.1:8000";
   }
 
-  // 2. Explicit custom non-loopback env URL (e.g. production/staging or specific LAN override)
-  if (envUrl && !envUrl.includes("127.0.0.1") && !envUrl.includes("localhost")) {
-    return envUrl;
-  }
-
   // 3. Dynamic Expo packager host detection for physical devices & emulators
-  // Expo sets hostUri (e.g. "192.168.29.227:8081") during development
+  // When running in Expo Go or dev client, hostUri (e.g. "10.109.197.170:8081") is the
+  // exact IP of the machine serving the app bundle. The device is already connected to it.
   const hostUri =
     Constants.expoConfig?.hostUri ??
     (Constants as any).manifest2?.extra?.expoGo?.debuggerHost ??
@@ -44,8 +45,8 @@ export function resolveApiBaseUrl(): string {
     } catch {}
   }
 
-  // 5. Explicit env if provided (even if loopback)
-  if (envUrl) {
+  // 5. Explicit custom LAN or emulator override if provided
+  if (envUrl && !envUrl.includes("127.0.0.1") && !envUrl.includes("localhost")) {
     return envUrl;
   }
 
@@ -54,8 +55,13 @@ export function resolveApiBaseUrl(): string {
     return "http://10.0.2.2:8000";
   }
 
-  // 7. Default loopback (iOS simulator or local desktop)
-  return "http://127.0.0.1:8000";
+  // 7. Explicit env if provided (even if loopback)
+  if (envUrl) {
+    return envUrl;
+  }
+
+  // 8. Default cloud fallback so physical devices without local packager never hang on dead loopback
+  return "https://school-management-system-12ks.onrender.com";
 }
 
 const BASE = resolveApiBaseUrl();
@@ -85,15 +91,38 @@ export class ApiError extends Error {
   }
 }
 
+/** Default request timeout in milliseconds (15 s). */
+const REQUEST_TIMEOUT_MS = 15_000;
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(memoryToken ? { Authorization: `Bearer ${memoryToken}` } : {}),
-      ...(init.headers ?? {}),
-    },
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      ...init,
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        ...(memoryToken ? { Authorization: `Bearer ${memoryToken}` } : {}),
+        ...(init.headers ?? {}),
+      },
+    });
+  } catch (err: any) {
+    clearTimeout(timer);
+    if (err?.name === "AbortError") {
+      throw new ApiError(0, `Request timed out — could not reach ${BASE}. Is the backend running?`);
+    }
+    // Network error (unreachable host, DNS failure, etc.)
+    throw new ApiError(
+      0,
+      `Network error — could not connect to ${BASE}. Check that the backend is running and reachable. (${err?.message ?? err})`,
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+
   if (!res.ok) {
     const detail = await res.json().catch(() => ({ detail: res.statusText }));
     throw new ApiError(res.status, detail.detail ?? res.statusText);

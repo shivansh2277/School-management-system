@@ -8,7 +8,7 @@ export function AdmissionsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Admissions Open for Academic Session 2025–26</span>
+            <span>Admissions Open for Academic Session 2026–27</span>
           </div>
           <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
             Admissions at Sunrise School
@@ -45,7 +45,7 @@ export function AdmissionsPage() {
               A Transparent, Child-Friendly Admission Process
             </h2>
             <p className="text-sm sm:text-base text-ink-soft leading-relaxed">
-              We welcome prospective parents and guardians to explore admissions for Nursery through Class XI for the 2025–26 academic year. Our admission criteria are fair, merit-guided, and in full compliance with CBSE and Right to Education (RTE) guidelines.
+              We welcome prospective parents and guardians to explore admissions for Nursery through Class XI for the 2026–27 academic year. Our admission criteria are fair, merit-guided, and in full compliance with CBSE and Right to Education (RTE) guidelines.
             </p>
             <p className="text-sm sm:text-base text-ink-soft leading-relaxed">
               For foundational classes (Nursery to Class 2), there is <strong>no formal entrance exam</strong>. Instead, we arrange an informal interactive session with parents and the child to understand their developmental milestones and ensure a harmonious transition.
@@ -61,30 +61,45 @@ export function AdmissionsPage() {
           </div>
 
           <div className="lg:col-span-5">
-            <div className="bg-surface rounded-2xl border border-rule shadow-card p-6 sm:p-8 space-y-4">
-              <div className="flex items-center justify-between border-b border-rule pb-3">
-                <h3 className="font-bold text-base text-slate-900">Online Admission Portal</h3>
-                <span className="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded">
-                  Live
-                </span>
+            <div className="bg-surface rounded-2xl border border-rule overflow-hidden shadow-card">
+              <div className="h-44 w-full bg-slate-900 relative">
+                <img
+                  src="/images/school/main_reception_lobby.jpg"
+                  alt="Sunrise School Admission & Reception Lobby"
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+                <div className="absolute top-3 right-3">
+                  <span className="text-xs bg-emerald-500 text-white font-semibold px-2.5 py-0.5 rounded-full shadow-xs">
+                    Admissions Desk Active
+                  </span>
+                </div>
               </div>
-              <p className="text-xs text-ink-soft leading-relaxed">
-                Parents can submit admission applications, upload student details, and track application status entirely online through our admissions engine.
-              </p>
-              <div className="space-y-2.5 pt-2">
-                <Link
-                  to="/apply"
-                  className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white font-semibold py-2.5 px-4 rounded-input text-xs shadow-sm transition-all"
-                >
-                  <span>Start New Application</span>
-                  <span>&rarr;</span>
-                </Link>
-                <Link
-                  to="/apply"
-                  className="w-full flex items-center justify-center gap-2 bg-ground hover:bg-slate-100 text-slate-700 font-semibold py-2.5 px-4 rounded-input text-xs border border-rule transition-all"
-                >
-                  <span>Track Application Status</span>
-                </Link>
+              <div className="p-6 sm:p-7 space-y-4">
+                <div className="flex items-center justify-between border-b border-rule pb-2">
+                  <h3 className="font-bold text-base text-slate-900">Online Admission Portal</h3>
+                  <span className="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded">
+                    Live
+                  </span>
+                </div>
+                <p className="text-xs text-ink-soft leading-relaxed">
+                  Parents can submit admission applications, upload student details, and track application status entirely online through our admissions engine.
+                </p>
+                <div className="space-y-2.5 pt-1">
+                  <Link
+                    to="/apply"
+                    className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white font-semibold py-2.5 px-4 rounded-input text-xs shadow-sm transition-all"
+                  >
+                    <span>Start New Application</span>
+                    <span>&rarr;</span>
+                  </Link>
+                  <Link
+                    to="/apply"
+                    className="w-full flex items-center justify-center gap-2 bg-ground hover:bg-slate-100 text-slate-700 font-semibold py-2.5 px-4 rounded-input text-xs border border-rule transition-all"
+                  >
+                    <span>Track Application Status</span>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
@@ -174,7 +189,7 @@ export function AdmissionsPage() {
               <span className="text-xs font-bold uppercase tracking-wider text-primary bg-primary-soft px-3 py-1 rounded-full">
                 Eligibility Guidelines
               </span>
-              <h3 className="text-2xl font-bold text-slate-900">Age Criteria (as of 31st March 2025)</h3>
+              <h3 className="text-2xl font-bold text-slate-900">Age Criteria (as of 31st March 2026)</h3>
               <p className="text-xs text-ink-soft">Calculated strictly in accordance with NEP & Uttar Pradesh government regulations.</p>
             </div>
 

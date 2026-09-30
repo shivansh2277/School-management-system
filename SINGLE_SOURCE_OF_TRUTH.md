@@ -1,8 +1,12 @@
 # Sunrise School ERP — Single Source of Truth
 
-**Date:** 24 September 2026  
-**Status:** Authoritative — Session 15 Completed: Responsive Design (Mobile 390px, Tablet 768px, Laptop 1280px, Desktop 1440px), Neon Tech Serverless Database Architecture, Oracle Cloud Production Readiness, and N+1 Latency Elimination.  
-**Canonical Branch:** `slice/office-feedback` (strictly local per owner decision).  
+**Date:** 29 September 2026  
+**Status:** Authoritative — Session 22 Verified: Central Academy Reference Website Study & Comprehensive Institutional Public Website Upgrade. Upgraded public navigation to 11 institutional menu items (Home, About, Academics, Admissions, Campus & Facilities, School Life, Events, Gallery, Public Disclosure, Resources, Contact) plus prominent "Admission Enquiry / Apply Now" CTA button. Desktop top utility micro-strip permanently removed (main nav is the topmost element). Zero public ERP login links anywhere on public views (no Sign In, Student/Parent/Teacher portals, or Branches). Mandatory Public Disclosure portal (`/public-disclosure`) with 6 CBSE Appendix-IX tabs (General, Documents, Results, Staff, Infrastructure, Grievance) with demo disclaimers and zero invented affiliation numbers. Resources & Downloads Hub (`/resources`) with approved 1-page A4 PDFs (strictly excludes Parent Info PDF). End-to-end Announcements & Circulars system with backend migration `d5e6f7a8b9c0` adding public fields to `notices`, public endpoint `/public/{school_code}/announcements`, ERP publishing controls with public checkboxes and pin badges, live ticker, listing (`/announcements`), and detail view (`/announcements/:id`). All 10 demo single-page A4 PDFs generated and verified. Full test suite: 776 backend tests passed (1 skipped), 125 web unit tests passed (2 skipped across 21 files), 0 TypeScript errors on web and mobile, and clean Vite production build.  
+**Canonical Branch:** `slice/office-feedback` (synced with `origin/main` and `origin/slice/office-feedback`).  
+**Live Cloud Deployment:**
+- **Web Frontend (Vercel):** `https://school-management-system-blush-iota.vercel.app`
+- **Backend API (Render):** `https://school-management-system-12ks.onrender.com`
+- **Database (Neon Tech):** Serverless PostgreSQL (`postgresql+psycopg://`)
 **Primary PDF Deliverables:**
 - [`docs/Sunrise-ERP-Admission-Demo-Guide.pdf`](docs/Sunrise-ERP-Admission-Demo-Guide.pdf) — Complete Digital Admission Dossier & Interactive Testing Guide for Application 360° with Aarav Sharma & Ananya Verma walkthroughs.
 - [`docs/Sunrise-ERP-Operational-Data-Flows.pdf`](docs/Sunrise-ERP-Operational-Data-Flows.pdf) — Simple Database Data-Flow Guide showing TABLE → TABLE → TABLE flows, PK/FK connections, Student ID vs Enrollment ID rules, and the final student data journey.
@@ -20,7 +24,8 @@
 1. **Multi-Tenant Architecture**: Built as an ERP sold to **separate, independent schools** (each school is an isolated tenant with its own `school_id`, branding, and configuration), not branches of one school.
 2. **Platform Focus (Owner Directive)**:
    - **The Admin Web ERP is the primary focus.**
-   - **Mobile app operational depth complete**: Teacher Attendance Roll-Call, Homework Management, Marks Keypad, Parent Fee Ledger & Receipt, Parent CBSE Report Card & Dues Gate, Student Timetable & Digital Turn-in.
+   - **Public Website Modernization & Institutional Upgrade Complete (Session 21 & Session 22)**: 12 distinct public views, polished PublicNavbar (11 items, no top utility micro-strip, prominent CTA) & PublicFooter, seamless /apply routing to live admission engine, Public Disclosure portal, Resources & Downloads Hub, and end-to-end Announcements system.
+   - **Mobile app operational depth complete**: Teacher Attendance Roll-Call, Homework Management, Marks Keypad, Parent Fee Ledger & Receipt, Parent CBSE Report Card & Dues Gate, Student Timetable & Digital Turn-in, and Important Alerts Engine.
    - Counter fee collection forms remain off the web for now (the web keeps the complete financial ledger, student accounts, and payment reversal contra-entries).
 3. **Unified Leadership Authentication (Owner Directive)**:
    - **Principal, Vice Principal, Administration, Owner/Management, and Coordinator** can all use the **same unified login** and **same password** for the admin website:
@@ -33,34 +38,43 @@
      - Academic Coordinator: `coordinator@sunrisepublic.edu`
      - Fee counter clerk: `counter@sunrisepublic.edu` (`Admin@123`) — segregated duties (can read ledger, view defaulters, but cannot void payments or approve concessions).
      - Admission officer: `admission@sunrisepublic.edu` (`Admin@123`) — owns the complete admission pipeline (enquiries, applications, merit ranking, waitlist, reports, and atomic fee collection). Navigation strictly hardened: `Students`, `Classes`, and `Notices` removed; direct URLs `#/students`, `#/classes`, `#/notices` protected with in-page refusal and backend HTTP 403 Forbidden.
-     - Front desk receptionist: `receptionist@sunrisepublic.edu` (`Admin@123`) — dedicated front desk operational suite. Owns Enquiries, Notices, and all Front Desk modules: Found & Lost, Student Gate Passes, Visitor Meeting Slips (Principal & Teacher), Important Directory, and Reception Fee Counter. Navigation strictly hardened: `Applications`, `Merit & selection`, `Waitlist`, `Admission reports`, and all admin fee management screens (`Fees`, `Defaulters`, `Fee setup`, `Period close`, `Student fees`) are completely removed; direct URLs protected with in-page refusal and backend HTTP 403 Forbidden.
+     - Front desk receptionist: `receptionist@sunrisepublic.edu` (`Admin@123`) — dedicated front desk operational suite. Owns Enquiries, Notices, and all Front Desk modules: Found & Lost, Student Gate Passes, Visitor Meeting Slips (Principal only), Important Directory, and Reception Fee Counter. Navigation strictly hardened: `Applications`, `Merit & selection`, `Waitlist`, `Admission reports`, and all admin fee management screens (`Fees`, `Defaulters`, `Fee setup`, `Period close`, `Student fees`) are completely removed; direct URLs protected with in-page refusal and backend HTTP 403 Forbidden.
      - Transport In-Charge: `transport@sunrisepublic.edu` (`Admin@123`) — dedicated transport management role. Strictly hardened: People and Academics modules completely removed; sees only Transport & Logistics (`/transport`) and Notices (`/notices`); direct URLs protected with in-page refusal and backend HTTP 403 Forbidden (`students.profile.read` and `academics.class.read` removed). Upgraded with Plan 1 (Fleet & Route Setup Desk), Plan 2 (Student Transport Allocation Desk), and Address-First geocoding location system.
      - Accounts Officer: `accounts@sunrisepublic.edu` (`Admin@123`) — dedicated accounts department role. Owns financial operations (Fees overview, student ledger, defaulters, fee structure setup, periods close), payroll management, and Fee Reports. Strictly isolated via RBAC: zero access to Admin settings, Admissions, Transport, or Academic grading.
 4. **Git Protocol (Owner Directive)**:
-   - **Continue building locally.** Do not push to GitHub or open a PR until explicitly approved.
+   - Remote repository origin configured at `https://github.com/shivansh2277/School-management-system.git`.
+   - Branch `slice/office-feedback` pushed to origin and synced to `main` for Vercel/Render automatic deployments.
    - Always display the exact file list and commit history before any hard-to-undo operation.
 
 ---
 
-## 2. Verified Technical State (Measured 24 Sep 2026 — Session 15 Verified)
+## 2. Verified Technical State (Measured 29 Sep 2026 — Session 22 Verified)
 
 | Layer | Metric | Verification Command | Result |
 |---|---|---|:---:|
-| **Backend Suite** | 749 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest -q` | **749 passed, 1 skipped, 0 failed** (100% green, 0 regressions) |
-| **Active Migration Head** | Revision `f6a7b8c9d0e1` | `alembic current` | **`f6a7b8c9d0e1 (head)` clean bidirectional (route stop address)** |
+| **Backend Suite** | 777 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest -q` | **776 passed, 1 skipped, 0 failed** (100% green, 0 regressions) |
+| **Public Announcements API** | 5 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest tests/test_public_announcements.py -q` | **5 passed, 0 failed** (100% green) |
+| **Public Admission Workflow** | 5 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest tests/test_public_admission_workflow.py -q` | **5 passed, 0 failed** (100% green) |
+| **Backend Alerts Engine** | 10 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest tests/test_alerts.py -q` | **10 passed, 0 failed** (100% green) |
+| **Backend RBAC** | 13 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest tests/test_rbac.py -q` | **13 passed, 0 failed** (100% green) |
+| **Backend Auth** | 8 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest tests/test_auth.py -q` | **8 passed, 0 failed** (100% green) |
+| **Admin User Access** | 6 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest tests/test_admin_user_access.py -q` | **6 passed, 0 failed** (100% green) |
+| **Teacher Leave & Substitutions** | 6 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest tests/test_teacher_leave_ranked_substitutions.py -q` | **6 passed, 0 failed** (100% green) |
+| **Active Migration Head** | Revision `d5e6f7a8b9c0` | `alembic current` | **`d5e6f7a8b9c0 (head)` clean bidirectional** |
 | **Web Typecheck** | TypeScript 5.5 | `cd web && npx tsc --noEmit` | **0 errors** |
-| **Web Unit Tests** | Vitest 2.1 | `cd web && npm test` | **109 passed, 2 skipped across 20 test files** (100% green) |
-| **Mobile Typecheck** | React Native 0.86 / TS | `cd mobile && npx tsc --noEmit` | **0 errors (Expo SDK 57, clean compilation)** |
-| **Database Schema** | Migrations Synced | `alembic current` | **Head `f6a7b8c9d0e1` (route_stops.address column active)** |
-| **Production Build** | Vite 5.4 | `cd web && npm run build` | **Clean build** |
-| **Declared Web Screens** | 31 Screens | Registered in `web/src/screens.ts` | **31/31 functional & gated (Role-specific excludeRoles & RBAC)** |
-| **Responsive Verification** | 4 Breakpoints | `node verify_responsive_visual.mjs` in `web/` | **8/8 viewports passed (390px, 768px, 1280px, 1440px), 0 horizontal scroll** |
+| **Web Unit Tests** | Vitest 2.1 | `cd web && npm test` | **125 passed, 2 skipped across 21 test files** (100% green) |
+| **Mobile Typecheck** | React Native 0.86 / TS | `cd mobile && npx tsc --noEmit` | **0 errors (clean compilation, Expo SDK 57)** |
+| **Production Build** | Vite 5.4 | `cd web && npm run build` | **Clean build (14.60s)** |
+| **Public Pages Live** | 12 Views + /apply | `/`, `/about`, `/academics`, `/admissions`, `/facilities`, `/school-life`, `/events`, `/gallery`, `/public-disclosure`, `/resources`, `/announcements`, `/announcements/:id`, `/apply` | **13/13 functional, responsive & integrated** |
+| **Declared Web Screens** | 32 Screens | Registered in `web/src/screens.ts` | **32/32 functional & gated** |
+| **Visual Verification Suite** | 17 Screenshots | Puppeteer automated verification | **17/17 passed in `docs/screenshots/session21/`** |
 
-### Local Stack Configuration
-- **FastAPI Backend API**: `http://127.0.0.1:8000` (LAN binding: `http://0.0.0.0:8000` / `http://192.168.29.227:8000`)
-- **Vite Web Dashboard**: `http://localhost:5173`
-- **Expo Mobile Server**: `exp://192.168.29.227:8081` (Metro on `http://localhost:8081`)
-- **Database**: Native PostgreSQL on `localhost:5432`, database `sunrise_test`
+### Stack Configuration
+- **FastAPI Backend API**: `http://127.0.0.1:8000` (LAN binding: `http://0.0.0.0:8000` / `http://10.109.197.170:8000`)
+- **Render Cloud Backend**: `https://school-management-system-12ks.onrender.com` (`/healthz` 200 OK)
+- **Vercel Web Dashboard**: `https://school-management-system-blush-iota.vercel.app`
+- **Expo Mobile Server**: `exp://10.109.197.170:8081` (Metro on `http://localhost:8081`)
+- **Database**: Native PostgreSQL on `localhost:5432` (`sunrise_test`) + Neon Tech Serverless PostgreSQL in cloud
 - **Python Runtime**: 3.13.7 in `.venv/` at workspace root
 - **Node Runtime**: v24.19.0
 
@@ -568,3 +582,348 @@ Delivered in direct response to the requirement for a modern, polished, lightwei
 27. **Complete-Month Fee Collection Invariant**: Receptionists at the front desk are prohibited from taking arbitrary partial fee amounts (e.g. ₹500 against a ₹5,400 bill). Fee collection logic at the reception counter enforces strict chronological FIFO settlement of complete billing periods (1 month, 2 months, ..., N months) to eliminate reconciliation discrepancies and prevent ledger tampering.
 28. **Public Website & ERP Root Dual-Dispatch Contract**: In a unified single-page application hosting both public school marketing pages and an authenticated ERP system, routing at the root (`/` or `#/`) must safely distinguish between anonymous public visitors and authenticated staff. Unconditional redirection of `/` to an ERP screen forces prospective parents into an ERP login page; conversely, unconditionally rendering the public homepage breaks existing automated tests (e.g. `App.test.tsx`) that assert a logged-in user navigating to `/` dispatches to their first permitted operational screen. Inspecting authentication state (`me`) within the root dispatcher preserves both user journeys seamlessly.
 29. **Responsive Hero Image Focal Offset on Aspect-Ratio Preserving Cards**: Fixed or banner-style hero containers using `object-cover` often default to center alignment (`object-center`), which clips subjects near the edges on tall vertical mobile viewports (e.g. 360px-390px). Applying responsive horizontal focal alignment (`object-[32%_center] sm:object-center`) ensures that critical compositional elements (e.g. student groups walking toward a campus entrance) stay framed across all phone, tablet, and widescreen display sizes.
+30. **Employee Service Querying (`in_service` property trap)**: In SQLAlchemy ORM queries, never filter by `Employee.in_service == True` because `in_service` is an unmapped Python `@property` (`status == active and exited_on is None`), not a database column. Attempting to use it in a `where(...)` clause yields an invalid column error. Always filter explicitly with `Employee.status == EmployeeStatus.active, Employee.exited_on.is_(None)`.
+31. **ClassSection Join Requirement for ClassSubjectTeacher**: In teacher assignment queries, `ClassSubjectTeacher` does not declare a relationship attribute back to `ClassSection`. When querying subjects or sections taught by a teacher, explicitly join `ClassSection` via `select(...).join(ClassSection, ClassSection.id == ClassSubjectTeacher.class_section_id)`.
+32. **Immediate Token Invalidation via `token_version`**: Merely flagging an account as blocked in the database does not prevent continued access if client JWT tokens are cached and valid. Carrying a `token_version` integer in the user record and encoding it into JWT payloads allows both active sessions to be invalidated immediately upon block or password reset (by incrementing `token_version`), while returning HTTP 403 for blocked accounts and HTTP 401 for stale tokens.
+33. **Multi-Day Leave Inspection and Clash Creation Ordering**: When applying for Casual Leave with affected periods and substitutions, period inspection and substitution validation must execute *before* the `StaffLeaveRequest` is flushed to the database. Flushing the leave application prematurely registers the teacher as on leave for those dates, causing self-clash detection issues during substitution eligibility evaluation.
+34. **Parent-App-Only Multilingual Boundary**: To preserve developer ergonomics and administrative consistency, i18n support is restricted strictly to the Parent mobile app. Only static copy (labels, tab titles, headers, status strings, modal messages) is localized via translation dictionaries. Dynamic database entities (student names, descriptions, currency amounts, formatted dates) remain unadulterated to prevent translation corruption.
+35. **Attendance Shortage Test Lifecycle via Record Mutation**: In unit tests verifying attendance shortage thresholds (< 75%), inserting duplicate `Attendance` rows for students who already have seed records will trigger `IntegrityError` on the `uq_attendance_enrolment_date` unique constraint. The reliable way to test shortage triggering and clearing is to query existing attendance records for the student's active enrollment, mutate a portion of them to `absent` to drive attendance strictly below 75%, assert the alert appears, and then restore them to `present` to assert the alert disappears.
+36. **Multi-Child Alert Context Switch Invariant**: When parents tap an alert for Child B while Child A is currently selected, the app MUST invoke `selectChild(alert.child_id)` synchronously before executing `router.push(alert.route)`. Without this synchronous context switch, destination screens (such as Fees, Attendance, or Results) load the currently selected child's data rather than the child to whom the alert belongs.
+
+---
+
+## 8. Session 18 Features & Architectural Deliverables (26 Sep 2026)
+
+### 1. Removal of Teacher Meeting Slip
+- **Alembic Migration `a1b2c3d4e5f8`**: Dropped `teacher_meeting_requests` table.
+- **Backend Purge**: Removed `TeacherMeetingRequest` model from `app/models/reception.py` and `app/models/__init__.py`. Deleted schemas (`TeacherMeetingSlipCreate`, `TeacherMeetingSlipOut`), permissions (`reception.meetings.teacher`), and API endpoint file `app/api/teacher/meetings.py`.
+- **Frontend & Mobile Purge**: Removed `PrintableTeacherMeetingSlip.tsx` and simplified `web/src/pages/reception/MeetingsPage.tsx` to handle only Principal Meeting Slips. Deleted `mobile/app/(teacher)/meetings.tsx` and removed Teacher meetings tab from `mobile/app/(teacher)/_layout.tsx`.
+- **Existing Workflows Intact**: Principal Meeting Slip workflow (`POST /admin/reception/meetings`, status tracking, and printable slips) verified with 100% test pass rate in `tests/test_receptionist_operations.py`.
+
+### 2. Admin User Access Management
+- **Database Schema**: Added `app_access_blocked` (boolean, default False) and `token_version` (integer, default 1) to `User` model (`app/models/user.py`).
+- **Auth Enforcement Layer**:
+  - `app/core/security.py`: JWT payload embeds `token_version`.
+  - `app/core/deps.py`: `get_current_user` rejects blocked users with HTTP 403 Forbidden ("App access has been blocked by school administrator") and rejects tokens with stale `token_version` with HTTP 401 Unauthorized ("Token has been invalidated; please log in again").
+  - `app/api/auth.py`: Login endpoint rejects blocked users with HTTP 403 Forbidden.
+- **Admin Management API (`app/api/admin/users.py`)**:
+  - `GET /admin/users`: Search, filter by role (teacher, parent, student) and blocked status, returns user list with app access flags.
+  - `POST /admin/users/{user_id}/block`: Sets `app_access_blocked = True`, increments `token_version` (immediate session kill), logs audit trail.
+  - `POST /admin/users/{user_id}/unblock`: Unblocks app access, logs audit trail.
+  - `POST /admin/users/{user_id}/reset-password`: Resets password, increments `token_version` (revoking all active tokens), logs audit trail.
+- **Web UI (`web/src/pages/UserAccessPage.tsx`)**:
+  - Registered in `web/src/screens.ts` at `/admin/users` under Administration (`settings.general.read`).
+  - Search by name/email/phone, filter by role chips (All, Teacher, Parent, Student), toggle block/unblock with confirmation dialogs, reset password with temporary password generation.
+
+### 3. Timetable End-to-End & Menu Consistency
+- **Active Relief Substitution State**:
+  - Updated `SlotOut` schema with `id`, `is_relief`, and `relief_teacher`.
+  - `app/services/timetable.py`: Dynamically checks active substitutions for class slots on the queried weekday. When a substitute is assigned, returns `is_relief = True` and the substitute's full name.
+- **Parent Timetable Access**:
+  - Added endpoint `GET /parent/children/{student_id}/timetable` verifying parent guardianship.
+  - Added screen `mobile/app/(parent)/timetable.tsx` with weekly day switcher (Mon–Sat), period cards with start/end times, room numbers, teacher names, and dynamic "🔄 Relief Substitute Cover" badge with covered-by details.
+- **Mobile Navigation Drawer Synchronization**:
+  - `mobile/src/components/NavDrawer.tsx`: Synchronized all 4 bottom tabs under a dedicated `NAVIGATION` category for Teacher, Parent, and Student roles, ensuring complete parity between bottom tabs and the hamburger drawer menu.
+
+### 4. Teacher Leave System & Ranked Substitutions
+- **Configurable Leave Types**:
+  - Leave types dynamically read from school leave configuration (not hardcoded to CL).
+  - Helper `is_casual_leave(leave_type)` identifies casual leave for period inspection and substitution enforcement.
+- **4-Tier Ranked Substitute Suggestions Algorithm**:
+  - When inspecting affected slots for a casual leave application, candidates are ranked into 4 tiers:
+    1. **Tier 1 (Priority 1)**: Teachers who teach the *same subject* to the *same grade/class*.
+    2. **Tier 2 (Priority 2)**: Teachers who teach the *same subject* to other grades.
+    3. **Tier 3 (Priority 3)**: Teachers who teach the *same grade* (any subject).
+    4. **Tier 4 (Priority 4)**: Any other active teacher in service at the school.
+  - **Availability Filtering**: Candidates are excluded if they have a scheduled teaching period at that time, already have an active substitution assignment, are on approved leave, or are not in active service.
+- **Workflow & 100% Cover Gate**:
+  - Multi-day range inspection (`POST /teacher/leave/inspect`): identifies all timetable clashes across the requested date span and returns ranked available candidates for each period.
+  - Application with substitutions (`POST /teacher/leave/apply`): creates pending substitutions and sends in-app notifications to requested substitute colleagues.
+  - Colleague response (`POST /teacher/substitutions/{id}/respond`): colleagues can accept or decline requests.
+  - Reassignment (`POST /teacher/leave/applications/{id}/reassign`): if a colleague declines, the applicant teacher can select another available candidate.
+  - Admin approval locked gate: `approve_teacher_leave_with_substitutions` enforces that for Casual Leave, 100% of affected periods must have assigned or accepted substitutions before admin approval is permitted. Non-casual leaves can be applied for and approved directly.
+- **Mobile Teacher Leave UI (`mobile/app/(teacher)/leave.tsx`)**:
+  - Interactive multi-tab layout ("Apply", "My Requests", "My Leaves").
+  - Dynamically displays affected periods, ranked candidate pickers with priority tags, coverage summary, and status cards.
+
+### 5. Parent App Multiple Languages (i18n)
+- **Localization Infrastructure**:
+  - `mobile/src/i18n/translations.ts`: Complete English and Hindi dictionaries covering all static labels, navigation titles, buttons, statuses, alerts, and placeholders.
+  - `mobile/src/i18n/I18nContext.tsx`: `I18nProvider` context providing `locale`, `setLocale`, and `t(key)`.
+  - Persistence: Automatically persists language preference to device storage via `@parent_language_pref` (`AsyncStorage`).
+- **Complete Static Copy Coverage**:
+  - Localized across all 10 Parent mobile screens and navigation:
+    1. `mobile/app/(parent)/_layout.tsx`: Localized bottom tab bar labels.
+    2. `mobile/src/components/NavDrawer.tsx`: Localized parent navigation items, logout, and added a quick `[ EN | हिन्दी ]` language switcher header toggle.
+    3. `mobile/app/(parent)/profile.tsx`: Dedicated App Settings card with Language Preference picker (`English` vs `हिन्दी (Hindi)`).
+    4. `mobile/app/(parent)/dashboard.tsx`: Localized greeting, quick navigation cards, summaries, and action links.
+    5. `mobile/app/(parent)/child.tsx`: Localized student details labels (Class, Section, Roll No, Admission No, Blood Group, Emergency Contact).
+    6. `mobile/app/(parent)/fees.tsx`: Localized outstanding balance, invoiced, paid, dues, invoice rows, receipt download, and payment confirmation dialogs.
+    7. `mobile/app/(parent)/attendance.tsx`: Localized shortage alerts, monthly calendar navigation, legends, summaries, and leave application forms.
+    8. `mobile/app/(parent)/homework.tsx`: Localized status counters, assignment list, and read-only student submission notes.
+    9. `mobile/app/(parent)/results.tsx`: Localized exam list, fee withholding banner, scorecard details, marks table, and official PDF download trigger.
+    10. `mobile/app/(parent)/grievances.tsx`: Localized helpdesk headers, status pills, category chips, priority chips, new grievance modal, message thread, and reply composer.
+    11. `mobile/app/(parent)/notices.tsx`: Localized category filter chips (All, Urgent, Academic, Holiday, General), urgent alert banner, circular attachments, and audience tags.
+    12. `mobile/app/(parent)/timetable.tsx`: Localized day switcher (सोम, मंगल, बुध, etc.), period indicators, teacher labels, and relief substitute badges.
+- **Scope & Data Integrity**:
+  - Translations restricted exclusively to the Parent app (Teacher and Student apps remain in standard English).
+  - Dynamic database data (student names, descriptions, dates, amounts) remains untouched, guaranteeing zero translation corruption or financial display errors.
+
+---
+
+## 9. Session 19 Features & Architectural Deliverables (27 Sep 2026)
+
+### 1. Website Sidebar Section Headings Redesign (`web/src/layout/Shell.tsx`)
+- **Visual Hierarchy & Styling**:
+  - Transformed faint grey text (`text-white/50`) into high-contrast, polished section headings (`text-[11px] font-bold text-white/90 uppercase tracking-wider`).
+  - Added vertical branding accent pill (`w-1 h-3 rounded-full bg-blue-300/80 mr-2 shrink-0`) to visually anchor each section group.
+  - Added hairline divider rule (`flex-1 h-px bg-white/10 ml-2`) providing subtle horizontal separation between logical ERP domains.
+  - Adjusted spacing (`pt-5 pb-1 px-3`) for optimal vertical rhythm across all 32 declared ERP screens.
+- **Structural Integrity**:
+  - Retained strict non-clickable structural role (`role="presentation"`). Zero modifications to routing, permissions, or screen definitions in `web/src/screens.ts`.
+  - Verified across multiple role sidebars (Office Administrator, Front Desk Receptionist) with zero visual regressions.
+
+### 2. Mobile Future Feature Placeholders (`mobile/src/components/NavDrawer.tsx`)
+- **Non-Interactive Roadmap Items with "Coming Soon" Badges**:
+  - **Parent Role**:
+    - `Call Class Teacher` (under `COMMUNICATION`)
+    - `Message Class Teacher` (under `COMMUNICATION`)
+  - **Teacher Role**:
+    - `Today's Class` (under `ACADEMICS`)
+    - `Parent Messages` (under `COMMUNICATION`)
+  - **Student Role**:
+    - `Today's Class` (under `ACADEMICS`)
+    - Strictly preserves child safety policy: **Students never have direct teacher messaging**.
+- **UX & Accessibility**:
+  - Rendered with disabled visual cues (`opacity: 0.55`, grey text and icons).
+  - Tapping disabled items has no effect (`disabled={true}`).
+  - Equipped with rounded pill badge (`comingSoonBadge`: `bg-indigo-50`, `border-indigo-100`, text `Coming Soon` in `indigo-600`).
+  - Multilingual support: fully translated for Parent app in `mobile/src/i18n/translations.ts` (`en: "Coming Soon"`, `hi: "जल्द आ रहा है"`).
+
+### 3. Student & Parent Home Important Alerts System
+### 3. Student & Parent Home Important Alerts System & Persistent Lifecycle
+- **Alert Types & Thresholds**:
+  1. **Attendance Shortage Alert**: Strict condition `attendance_pct < 75.0`. Severity `danger` (`#dc2626`), emoji `⚠️`. Tapping navigates to `/(role)/attendance`.
+  2. **Fee Due Alert**: Condition `fee_due > 0.0`. Severity `warning` (`#d97706`), emoji `💰`. Formatted as `₹X,XXX.XX outstanding`. Tapping navigates to `/(role)/fees` (or modal on student).
+  3. **Report Card Available Alert**: Condition `latest_report_card` published. Severity `info` (`#4f46e5`), emoji `📄`. Tapping navigates to `/(role)/results`.
+  4. **Periodic Test Result Available Alert**: Condition `latest_periodic_test` published. Severity `info` (`#0284c7`), emoji `📊`. Tapping navigates to `/(role)/results`.
+- **Persistent Alert Lifecycle Rules (`backend/app/models/notification.py`, `backend/app/services/alerts.py`)**:
+  1. **Attendance Shortage**: Disappears after the student or parent views it. Stored in `alert_views` with dynamic event key `att-{absent_count}-{latest_absent_date}`. If a new absence occurs or absence count increments while still below 75%, the event key advances and a new alert reappears.
+  2. **Report Card**: Disappears after viewing (via alert tap or direct navigation to results/report card screen). Does not show again for that exam.
+  3. **Periodic Test Result**: Disappears after viewing (via alert tap or direct navigation to results screen). Does not show again for that exam.
+  4. **Fee Alert — STRICT EXCEPTION**: Fee alerts **MUST remain visible until the outstanding fee is fully paid**. Simply viewing/tapping the alert does **NOT** dismiss it. Automatically clears once outstanding balance reaches zero.
+  5. **Parent Multi-Child Independence**: Viewed state is tracked independently per user and per child (`user_id`, `student_id`). Viewing an alert for Child A never dismisses Child B's alert.
+  6. **Persistence**: Backed by `alert_views` table with tenant isolation (`school_id`), persisting across devices, sessions, and page reloads.
+- **Backend API Endpoints**:
+  - `GET /student/dashboard`: Enriched with alerts array filtered against current user's viewed alerts.
+  - `GET /parent/alerts`: Aggregates active unviewed alerts across all children in `me.children` for multi-child parents, with child attribution (`child_id`, `child_name`).
+  - `POST /student/alerts/view`: Records viewed state for student (strictly refuses fee alert dismissal).
+  - `POST /parent/alerts/view`: Records viewed state for parent with `child_id` (strictly refuses fee alert dismissal).
+- **Mobile Component (`mobile/src/components/ImportantAlerts.tsx`)**:
+  - Color-coded alert cards with left accent border (`borderLeftWidth: 4`), emoji icon, title, description, and chevron navigation indicator.
+  - Header section with red accent bar and count badge.
+  - **Zero Empty Container Invariant**: If 0 alerts apply, the container renders `null` with no empty cards or borders.
+- **Parent Multi-Child Integration (`mobile/app/(parent)/dashboard.tsx`)**:
+  - Queries `GET /parent/alerts` to aggregate alerts across all children.
+  - Titles display clear child attribution (e.g. `Fee Due — Aarav Sharma`, `Report Card Available — Ishita Sharma`).
+  - **Context Switch Invariant**: On tap, calls `selectChild(alert.child_id)` before calling `router.push(alert.route)` so the destination screen immediately displays the correct child's context.
+
+### 4. Website — Redesigned Solid Dark-Blue Navigation Sidebar (Akkhor Theme Pattern)
+- **Visual Design & Palette (`web/src/layout/Shell.tsx`, `web/src/layout/NavIcons.tsx`)**:
+  - **Sidebar Panel**: Solid dark-blue vertical navigation panel (`#042954`), replacing previous purple `bg-primary`.
+  - **Brand Header Bar**: Vibrant amber/orange banner (`bg-gradient-to-r from-[#ffa726] to-[#fb8c00]`, `h-14`) with a circular white crest badge (`w-8 h-8 rounded-full bg-white flex items-center justify-center`), bold white uppercase "SUNRISE" header, and "PUBLIC SCHOOL" subtitle. (The hamburger toggle button is located cleanly in the main top header bar across all roles, with the sidepanel header kept clean and dedicated solely to school branding on mobile, tablet, and desktop).
+  - **Navigation Items**:
+    - **Icons**: Custom golden-amber SVG icons (`text-[#ffa726]`, `18x18px`) for every screen route in [`NavIcons.tsx`](file:///c:/Users/SHIVANSH/OneDrive/Documents/AGENTS/school-management-system/web/src/layout/NavIcons.tsx).
+    - **Labels**: High-contrast, clean typography (`text-[#c2d0e2]`, hovering to `text-white`).
+    - **Right-Facing Chevrons `>`**: Displayed on items with expandable/sub-navigation or multi-view hubs (`screenHasChevron(path)`), matching the Akkhor template reference pattern.
+    - **Item Separators**: Hairline horizontal dividers (`border-b border-white/[0.03]`) and section boundaries for a structured, professional vertical rhythm.
+    - **Active / Highlighted State**: Active route highlighted with deep navy background (`bg-[#021b38]`), vibrant amber text (`text-[#ffa726] font-semibold`), amber chevron, and a solid left accent border (`border-l-4 border-l-[#ffa726] pl-[10px]`).
+  - **Section Headings**: Visually distinct, non-clickable structural headers (`text-[10px] font-bold text-blue-200/50 uppercase tracking-widest`) with amber vertical pill accent (`w-1 h-2.5 rounded-full bg-[#ffa726]/80`) and hairline horizontal rule.
+  - **Responsive Behavior**: Desktop collapsible rail/drawer (`w-60` vs `w-0 invisible`), mobile off-canvas drawer with dark backdrop overlay (`bg-black/60`), and synchronized toggles.
+  - **Role & Route Integrity**: Zero changes to permissions, screens registry, or RBAC routing.
+
+### 5. Automated Verification & Artifacts
+- **Backend Test Suite**: 769 passed, 2 skipped (100% green).
+- **Backend Alert Unit Tests (`backend/tests/test_alerts.py`)**: 10 passed in 21s (100% green).
+- **Web Unit Tests (`npm test` in `web/`)**: 109 passed, 2 skipped in Vitest (100% green across 20 test files).
+- **Typecheck**: 0 errors across web and mobile TypeScript suites.
+- **Redesigned Sidebar Visual Verification Suite (`docs/screenshots/session20/` and persistent artifact directory)**:
+  1. `session20_sidebar_admin_expanded.png` — Desktop Admin view showing solid dark-blue `#042954` sidebar, amber brand bar, white circular emblem, hamburger toggle, golden icons, chevrons, and active Dashboard state.
+  2. `session20_sidebar_active_page.png` — Active page state on `/students` with amber text, active bed, and left border accent.
+  3. `session20_sidebar_admin_collapsed.png` — Desktop collapsed state after clicking hamburger toggle.
+  4. `session20_sidebar_admin_reopened.png` — Desktop reopened state after toggling again.
+  5. `session20_sidebar_receptionist.png` — Role-specific Front Desk & Receptionist sidebar view.
+  6. `session20_sidebar_mobile_drawer.png` — Mobile view showing responsive drawer with backdrop overlay.
+- **Previous Session 19 Visual Verification Suite (`docs/screenshots/session19/`)**:
+  1. `session19_web_admin_sidebar.png`
+  2. `session19_web_receptionist_sidebar.png`
+  3. `session19_mobile_student_dashboard.png`
+  4. `session19_mobile_student_drawer.png`
+  5. `session19_mobile_parent_dashboard.png`
+  6. `session19_mobile_parent_drawer.png`
+  7. `session19_mobile_teacher_drawer.png`
+
+### 6. Network Auto-Detection & 1-Click Dev Server Automation
+- **Root Cause Resolution**: Resolved dual-point failure mode where developer machine IP changes dynamically upon switching Wi-Fi networks (e.g. `10.109.197.170` to `192.168.29.227`) and agent sub-processes terminate upon system sleep or runner restarts.
+- **Auto-Discovery Engine (`scripts/generate_qr.py`)**:
+  - Dynamically probes default gateway routing socket to discover the active LAN IPv4 address.
+  - Synchronously rewrites `mobile/.env` with `EXPO_PUBLIC_API_URL=http://<ACTIVE_IP>:8000`.
+  - Generates Expo QR code image for `exp://<ACTIVE_IP>:8081` saved to `expo_qr_code.png` and `web/public/expo_qr_code.png`.
+  - Windows cp1252 safe console reporting.
+- **1-Click Launchers**:
+  - `start_dev.bat`: Launches Backend (`uvicorn app.main:app --host 0.0.0.0 --port 8000`), Web ERP (`npm run dev -- --host`), and Expo Metro (`npx expo start --lan -c`) in three independent Windows command windows that persist across IDE reloads, and opens the QR code image for instant phone scanning.
+  - `show_qr.bat`: Instant utility to re-detect IP, update `.env`, and display the latest QR code without restarting running servers.
+
+### 7. Session 21 Directives — Public-Facing CBSE School Website Modernization
+- **Institutional Identity**: Sunrise School, Gomti Nagar, Lucknow, CBSE Affiliated, Estd. 2011.
+- **Core Architecture**: Upgraded the 9-page public website (`PublicLayout.tsx` in `web/src/pages/public/website/`) while preserving the internal ERP shell (`web/src/layout/Shell.tsx`) and mobile app completely untouched.
+- **Navigation & Routing**:
+  - `/` & `/home` — `HomePage.tsx`
+  - `/about` — `AboutPage.tsx`
+  - `/academics` — `AcademicsPage.tsx`
+  - `/admissions` — `AdmissionsPage.tsx` (all "Apply Online" CTAs route to real `/apply`)
+  - `/facilities` — `FacilitiesPage.tsx`
+  - `/school-life` — `SchoolLifePage.tsx` (Clubs, sports, arts, houses)
+  - `/events` — `EventsPage.tsx` (Calendar & highlights)
+  - `/gallery` — `GalleryPage.tsx` (Categorized media showcase with high-res Lightbox)
+  - `/contact` — `ContactPage.tsx` (Gomti Nagar campus, enquiries, visiting hours)
+
+### 8. Session 21 Phase 2 — Visual Storytelling & Master Photography Integration
+- **Photorealistic Coherent Photography Set**:
+  - Generated and integrated a 13-image branded master photography set captured specifically for Sunrise School, Gomti Nagar, Lucknow.
+  - Assets persisted in `web/public/images/school/` and `web/src/assets/school/`.
+  - Typed metadata registry: `web/src/pages/public/website/schoolPhotos.ts`.
+- **Strict Visual Identity Enforcement**:
+  - *Architecture:* Warm red terracotta stone and buff sandstone institutional facade with louvers, Ashoka trees, and landscaped gardens.
+  - *Uniform:* Crisp white collared shirts, navy blue ties with subtle diagonal gold stripes, navy trousers/skirts, embroidered crest.
+  - *Signage:* Authentic campus branding reading *"SUNRISE SCHOOL, GOMTI NAGAR, LUCKNOW"*, *"ATAL TINKERING LAB"*, and *"SPORTS COMPLEX"*.
+- **Page-by-Page Integration**:
+  - `HomePage.tsx`: Exterior hero, academic stage wing photos, 4 facilities preview photos, campus life in motion row.
+  - `AboutPage.tsx`: Entrance gate, reception lobby, and faculty mentorship spotlight.
+  - `AcademicsPage.tsx`: Smart classroom, robotics lab, composite science lab, and computing lab photos.
+  - `AdmissionsPage.tsx`: Reception welcome rotunda on the admissions portal card.
+  - `FacilitiesPage.tsx`: Photo banners across all major facilities + Gate No. 1 security checkpoint.
+  - `SchoolLifePage.tsx`: Sports complex showcase (outdoor turf & indoor arena) and co-curricular club photos.
+  - `EventsPage.tsx`: Event banners for Science Expo, PTM, Tarang Sports Meet, and Udaan Cultural Fest.
+  - `GalleryPage.tsx`: Complete real photography grid across 5 categories + interactive Lightbox with prev/next navigation.
+  - `ContactPage.tsx`: Main entrance gate visual backdrop in the Gomti Nagar campus locator.
+- **Verification Gates (100% Green)**:
+  - Web unit tests: `114 passed, 2 skipped` (`Website.test.tsx` 12/12 passing).
+  - Web TypeScript: `0 errors` (`npx tsc --noEmit`).
+  - Mobile TypeScript: `0 errors` (`npm run typecheck`).
+  - Backend tests: `770 passed, 1 skipped` (`pytest -q`).
+  - Vite production build: Clean build in 7.03s (`npm run build`).
+  - Visual verification: 17 screenshots captured in `docs/screenshots/session21/`.
+
+### 9. Session 22 — Central Academy Reference Website Study & Institutional Public Website Upgrade
+- **Reference Site Analysis**: Evaluated `https://inr.centralacademyschool.com/` (Central Academy, Indira Nagar, Lucknow) to understand authentic institutional CBSE structure, mandatory public disclosures, downloads architecture, and circular broadcasting.
+- **Top Utility Micro-Strip Removal**:
+  - Permanently eliminated desktop micro-bar (`Admissions Guide | Session 2026-27 | info@...`).
+  - Main institutional navbar is now the topmost element on desktop and mobile.
+- **Zero Public ERP Login Links**:
+  - Strictly purged all login links ("Login to ERP", "Sign In", "Parent Portal", "Student Portal", "Teacher Portal", "Branches") from the public website header, mobile drawer, homepage callouts, and footer.
+  - The public site serves prospective families, parents, and community members exclusively; internal staff and enrolled users access the ERP via direct `/login` or mobile apps.
+- **11-Link Institutional Navigation (`web/src/components/public/PublicNavbar.tsx`)**:
+  - Navigation links: `Home`, `About`, `Academics`, `Admissions`, `Campus & Facilities`, `School Life`, `Events`, `Gallery`, `Public Disclosure`, `Resources`, `Contact`.
+  - Prominent CTA: `Admission Enquiry / Apply Now` routing directly to `/apply`.
+  - Accessible mobile drawer with `tel:+915222990000` tap-to-dial link and quick application button.
+- **Mandatory Public Disclosure Section (`/public-disclosure`)**:
+  - Implements CBSE Appendix-IX disclosure mandate across 6 structured tabs:
+    1. *A. General Information:* School name, Affiliation status, Principal details, School email & contact.
+    2. *B. Documents & Information:* Download links for Society Registration, No Objection Certificate (NOC), Recognition Certificate, Building Safety, Fire Safety, Water/Sanitation, and Fee Structure (all 1-page A4 PDFs).
+    3. *C. Results & Academics:* Annual academic calendar, fee schedule, and 3-year Class X & XII board examination results table (100% pass rate).
+    4. *D. Staff & Faculty:* Principal profile, PGT/TGT/PRT faculty breakdown (52 total teachers, 1:18 teacher-student ratio), Special Educator, and Wellness Counselor.
+    5. *E. Infrastructure:* 5-acre campus details, 42 smart classrooms, composite science labs, computer lab, library (12,000+ volumes), and fire safety compliance.
+    6. *F. Student Support & Grievance:* POSH Committee, POCSO Committee, Anti-Bullying Cell, and Parent Grievance redressal officers.
+  - Prominent yellow demo information notice: *"Demonstration Disclosure Notice: Sunrise School is a demonstration CBSE institution portal. Official certificates and affiliation records are sample representations."*
+  - Zero invented credentials: Affiliation number and school code explicitly state `"To be configured (Demo information)"`.
+- **Resources & Downloads Hub (`/resources`)**:
+  - Card-based download center for official school documents.
+  - Approved downloadable resources:
+    1. School Prospectus 2026–27 (`/documents/school-prospectus.pdf`)
+    2. Academic Calendar 2026–27 (`/documents/academic-calendar.pdf`)
+    3. Admission Guidelines & Age Norms (`/documents/admission-guidelines.pdf`)
+    4. Approved Annual Fee Structure (`/documents/fee-structure.pdf`)
+    5. Curriculum & Syllabus Overview (`/documents/syllabus-overview.pdf`)
+    6. Mandatory Public Disclosure Summary (`/documents/public-disclosure-summary.pdf`)
+  - Prohibited document policy enforced: "Parent Information PDF" strictly excluded.
+- **One-Page PDF Generation Engine (`scripts/generate_one_page_demo_pdfs.py`)**:
+  - Python ReportLab generator with custom `NumberedCanvas` enforcing strict programmatic assertion: `assert canvas.page_count == 1`.
+  - Produces clean single-page A4 documents with institutional headers, tables, demo disclaimers, and signature blocks in `web/public/documents/`.
+- **Announcements & Circulars Architecture**:
+  - *Database & Model:* Migration `d5e6f7a8b9c0_public_announcements_fields.py` added `category`, `is_public`, `is_pinned`, `summary`, `expiry_date`, and `attachment_url` to `notices` table.
+  - *Backend API:* Public endpoints `GET /public/{school_code}/announcements` (filtered by `is_public=True`, active expiry, pinned first) and `GET /public/{school_code}/announcements/{id}` in `backend/app/api/public/announcements.py`.
+  - *ERP Publishing:* Admin/Principal Notices screen (`web/src/pages/Notices.tsx`) updated with category dropdown, "Publish to Public School Website" checkbox, "Pin as Featured Announcement" checkbox, short summary field, and visibility pills.
+  - *Public UI:*
+    - Homepage marquee/ticker with live announcements count, pinned badges, and circular links.
+    - Official Announcements catalog (`/announcements`) with category filtering, search input, and pinned cards.
+    - Dedicated Announcement detail circular page (`/announcements/:id`) with back navigation and application CTA.
+  - *Initial Live Seed:* 6 official announcements seeded via `scripts/seed_public_announcements.py` (Board results 100%, Admissions Open, STEM Expo, Career Counselling, Autumn Break, PTM).
+- **Consolidated 4-Column Footer (`web/src/components/public/PublicFooter.tsx`)**:
+  - Column 1: School Identity, Crest, Gomti Nagar story, CBSE affiliation text.
+  - Column 2: Consolidated Explore links (all public pages including Public Disclosure, Resources, and Announcements).
+  - Column 3: Academic Wings, NEP 2020 5+3+3+4 stages, and streams.
+  - Column 4: Admissions & Hours, direct link to `/apply`, campus address, clickable phone helpline (`tel:+915222990000`).
+  - Bottom bar: Copyright, demo disclaimer, and quick links to Mandatory Public Disclosures and Downloads.
+- **Verification Gates (100% Green)**:
+  - Backend pytest: `776 passed, 1 skipped, 0 failed` across entire suite (`pytest -q` in 337s).
+  - Web unit tests: `125 passed, 2 skipped` across 21 test files (`npm test -- --run` in 28.9s).
+  - TypeScript typecheck: `0 errors` on web (`npx tsc --noEmit`) and mobile (`npx tsc --noEmit`).
+  - Vite production build: Clean build in 14.60s (`npm run build`).
+
+### 10. Session 23 - Institutional Refinement Pass: Public Admission Enquiry Integration, Merged School Life & Gallery, Global Announcement Strip, Expanded About Story, and 4 Hero Photos
+- **Primary Institutional Navigation & ERP Login CTA (`web/src/components/public/PublicNavbar.tsx`)**:
+  - Refined to 9 primary links: `Home`, `About`, `Academics`, `Admissions`, `Campus & Facilities`, `School Life`, `Events`, `Public Disclosure`, `Resources`.
+  - Header right action is **`ERP Login →`** (`/login`) using the existing Sunrise ERP login route (clean primary button on desktop and compact header/drawer button on mobile).
+  - Purged `Contact` (contact details permanently anchored in the 4-column footer).
+  - Purged `Gallery` from navbar (photographic gallery merged directly into `School Life` at `/school-life#gallery`).
+  - Mobile drawer provides direct access to the 9 views, `ERP Login →`, and `Apply Online Portal`.
+- **Persistent Admission Enquiry Side CTA (`web/src/components/public/AdmissionSideCTA.tsx`)**:
+  - Persistent, non-intrusive Admission Enquiry block rendered via `PublicLayout.tsx` across all public informational pages.
+  - *Desktop / Tablet:* Subtle, premium vertical tab flush against the right edge with dark slate container, amber gold accents, pen icon, vertical tracking, and `26–27` session badge.
+  - *Mobile:* Compact, non-intrusive floating pill docked at `bottom-5 right-4` with amber gold gradient, icon, and pulsing live badge.
+  - *Workflow Isolation:* Strictly excluded from the `/apply` admission application portal and `/login`.
+  - *Unified Backend Flow:* Clicking opens the existing `AdmissionEnquiryModal`, submitting directly to `POST /public/{school_code}/admission/enquiry` and appearing in the front-desk ERP enquiry workflow without duplicate systems.
+- **School Life & Photo Gallery Merged (`web/src/pages/public/website/SchoolLifePage.tsx`)**:
+  - Integrated high-quality editorial gallery section at the bottom of School Life (`#gallery`).
+  - 5 category filter tabs: `All`, `Campus`, `Classrooms & Labs`, `Sports & Athletics`, `Arts & Culture`.
+  - Full-featured Lightbox overlay with smooth next/previous navigation, photo index, category tags, and captions.
+- **Public Admission Enquiry Connected Directly to ERP Backend**:
+  - Direct integration into ERP `enquiries` table (`backend/app/models/reception.py`) without duplicate models, tables, or workflows.
+  - API endpoint: `POST /public/{school_code}/admission/enquiry` in `backend/app/api/public/admission.py`.
+  - Schema (`PublicEnquiryCreate`): `parent_name`, `student_name`, `phone`, `email`, `target_class`, `notes`.
+  - Invariants enforced:
+    - Auto-resolves active cycle via `admission.open_cycle(db, school.id)`.
+    - `source = EnquirySource.website`, `status = EnquiryStatus.new`.
+    - Duplicate phone handling: If an enquiry with the same mobile exists in the active cycle, appends notes as a new `EnquiryInteraction` with `occurred_at=datetime.now(UTC)` and returns reference ID without duplicating records.
+    - Reference code returned: `ENQ-{enquiry.id:04d}`.
+  - Frontend modal (`web/src/components/public/AdmissionEnquiryModal.tsx`):
+    - Clean modal dialog accessible from persistent side CTA, hero CTA, and floating triggers.
+    - Fields: Guardian name, Student name, Mobile, Email, Grade Applying For, Inquiries/Questions.
+    - Success state displays unique `ENQ-XXXX` reference number and admissions office contact details.
+- **Global Announcement Strip (`web/src/components/public/GlobalAnnouncementStrip.tsx`)**:
+  - Rendered globally directly beneath `PublicNavbar` across all public pages in `PublicLayout.tsx`.
+  - Excluded strictly from the `/apply` admission application workflow to preserve an undistracted, focused application experience.
+  - Deep blue institutional ticker with gold `ANNOUNCEMENT` badge, animated circular headline, and "View All" link routing to `/announcements`.
+- **News & Announcements Fallback & Seeding**:
+  - Comprehensive demo circulars covering all 7 categories: `Admission`, `Academic`, `Achievement`, `Event`, `Holiday`, `Notice`, `General`.
+  - Client-side fallback (`DEFAULT_ANNOUNCEMENTS` in `AnnouncementsPage.tsx` and `AnnouncementDetailPage.tsx`) guaranteeing announcements and circular detail pages are never blank even in offline/empty states.
+- **Expanded About Page Institutional Narrative (`web/src/pages/public/website/AboutPage.tsx`)**:
+  - Comprehensive institutional history detailing Sunrise School's journey from 2011 to 2026.
+  - Fictional Founder Section: Dr. Anand Mohan Shukla (Founding Trustee, Estd. 2011) with portrait (`/images/school/founder_portrait.jpg`), biography, and founding philosophy.
+  - Founder's Quote Card: *"Education is not the filling of a vessel, but the kindling of a flame..."*
+  - Institutional Milestones Timeline (2011 Foundation, 2014 Secondary Affiliation, 2017 Senior Secondary, 2020 STEM Labs, 2023 Sports Complex, 2026 Innovation Hub).
+  - 7-C Educational Philosophy: Curiosity, Critical Thinking, Character, Creativity, Collaboration, Communication, and Confidence.
+  - Core institutional values and campus visual showcase.
+- **Homepage Photography & Principal Welcome Matching Reference**:
+  - Hero and feature cards updated with 4 authentic Sunrise School photographs matching the visual reference: Modern Classroom, Composite Science Lab, Teacher Mentorship, and Athletics/Sports Field.
+  - Principal welcome message from Dr. Meera Sharma with institutional quote card.
+- **Verification Gates (100% Green)**:
+  - Backend pytest: `778 passed, 1 skipped, 0 failed` across entire suite (`backend/tests/test_public_enquiry.py` 2/2 passed).
+  - Web unit tests: `125 passed, 2 skipped` across 21 test files (`npm test -- --run` in 15.8s).
+  - TypeScript typecheck: `0 errors` on web (`npx tsc --noEmit`).
+  - Vite production build: Clean build in 10.21s (`npm run build`).
+  - Visual verification: 15 screenshots captured across Desktop (1440x900), Tablet (768x1024), and Mobile (390x844) in `docs/screenshots/session23/`.
+
+
+

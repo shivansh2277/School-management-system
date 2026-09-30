@@ -11,8 +11,16 @@ import { PublicApplyPage } from "./pages/public/PublicApplyPage";
 import { AboutPage } from "./pages/public/website/AboutPage";
 import { AcademicsPage } from "./pages/public/website/AcademicsPage";
 import { AdmissionsPage } from "./pages/public/website/AdmissionsPage";
+import { AnnouncementDetailPage } from "./pages/public/website/AnnouncementDetailPage";
+import { AnnouncementsPage } from "./pages/public/website/AnnouncementsPage";
+import { ContactPage } from "./pages/public/website/ContactPage";
+import { EventsPage } from "./pages/public/website/EventsPage";
 import { FacilitiesPage } from "./pages/public/website/FacilitiesPage";
+import { GalleryPage } from "./pages/public/website/GalleryPage";
 import { HomePage } from "./pages/public/website/HomePage";
+import { PublicDisclosurePage } from "./pages/public/website/PublicDisclosurePage";
+import { ResourcesPage } from "./pages/public/website/ResourcesPage";
+import { SchoolLifePage } from "./pages/public/website/SchoolLifePage";
 import { SCREENS, getUserRoles, visibleScreens } from "./screens";
 
 /**
@@ -82,6 +90,14 @@ export function App() {
         <Route path="/academics" element={<AcademicsPage />} />
         <Route path="/admissions" element={<AdmissionsPage />} />
         <Route path="/facilities" element={<FacilitiesPage />} />
+        <Route path="/school-life" element={<SchoolLifePage />} />
+        <Route path="/events" element={<EventsPage />} />
+        <Route path="/gallery" element={<GalleryPage />} />
+        <Route path="/public-disclosure" element={<PublicDisclosurePage />} />
+        <Route path="/resources" element={<ResourcesPage />} />
+        <Route path="/announcements" element={<AnnouncementsPage />} />
+        <Route path="/announcements/:id" element={<AnnouncementDetailPage />} />
+        <Route path="/contact" element={<ContactPage />} />
       </Route>
 
       {/* Protected ERP Screens for Authorized School Staff */}

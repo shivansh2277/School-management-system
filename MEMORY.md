@@ -1,24 +1,32 @@
 # MEMORY.md — Sunrise School ERP
 
-**Date:** 23 September 2026  
+**Date:** 29 September 2026  
 **Canonical State Document:** [`SINGLE_SOURCE_OF_TRUTH.md`](SINGLE_SOURCE_OF_TRUTH.md)  
-**Completed Milestone:** Session 10 Completed: Receptionist Operational Suite (Found & Lost, Student Gate Passes, Principal & Teacher Meeting Slips, Important Directory, Reception Fee Counter, and Admission Dossier Enhancement) & Strict Front-Desk Navigation Hardening.  
-**Active Session Specification:** [`SESSION-HANDOFF-10.md`](SESSION-HANDOFF-10.md)  
-**Active Branch:** `slice/office-feedback` (strictly local-only per owner directive)  
-**Alembic Migration Head:** `d4e5f6a7b8c9` (`d4e5f6a7b8c9_receptionist_operations.py`)  
+**Completed Milestone:** Sessions 21 & 22 Completed & Verified: Central Academy Reference Website Study & Comprehensive Institutional Public Website Upgrade. Upgraded public navigation to 11 institutional menu items (Home, About, Academics, Admissions, Campus & Facilities, School Life, Events, Gallery, Public Disclosure, Resources, Contact) plus prominent "Admission Enquiry / Apply Now" CTA button. Desktop top utility micro-strip permanently removed (main nav topmost). Zero public ERP login links anywhere on public views (no Sign In, Student/Parent/Teacher portals, or Branches). Mandatory Public Disclosure section (`/public-disclosure`) with 6 CBSE Appendix-IX tabs & demo disclaimers. Resources & Downloads Hub (`/resources`) with 6 approved single-page A4 PDFs (zero Parent Info PDF). End-to-end Announcements system with migration `d5e6f7a8b9c0`, public endpoint `/public/{school_code}/announcements`, ERP publishing controls with public checkboxes and pin badges, live ticker, listing (`/announcements`), and detail circular view (`/announcements/:id`). All 10 demo single-page A4 PDFs generated and verified. Full test suite: 776 backend tests passed (1 skipped), 125 web unit tests passed (2 skipped across 21 files), 0 TypeScript errors on web and mobile, and clean Vite production build.  
+**Active Branch:** `slice/office-feedback` (synced with `origin/main` and `origin/slice/office-feedback`)  
+**Alembic Migration Head:** `d5e6f7a8b9c0` (`public_announcements_fields.py`)  
 
 ---
 
 ## 1. Executive Summary & Current Status
 
 Sunrise School ERP is a multi-tenant school management system built for independent private schools.
-- **Backend Test Suite**: **735 passed, 1 skipped, 0 failed** (100% green across all 736 tests).
-- **31 Live Screens** registered in `web/src/screens.ts` (all functional and permission-gated; 5 Front Desk screens live).
+- **Backend Test Suite**: **776 passed, 1 skipped, 0 failed** (100% green across all 777 tests).
+- **Public Announcements API**: 5/5 unit tests passed (`tests/test_public_announcements.py`).
+- **10/10 Alert Unit Tests passed** (`tests/test_alerts.py`).
+- **32 Live Web Screens** registered in `web/src/screens.ts` (all functional and permission-gated).
+- **13 Public Website Views**: `/`, `/about`, `/academics`, `/admissions`, `/facilities`, `/school-life`, `/events`, `/gallery`, `/public-disclosure`, `/resources`, `/announcements`, `/announcements/:id`, and `/apply`.
 - **18 Active Staff** in employee directory (`employees`).
-- **Database**: PostgreSQL tables in `sunrise_test`. Alembic head `d4e5f6a7b8c9` adds all 6 reception tables.
+- **Database**: PostgreSQL on `localhost:5432` (`sunrise_test`) + Neon Tech Serverless PostgreSQL in cloud (migration head `d5e6f7a8b9c0`).
 - **TypeScript**: 0 errors across backend, web (`npx tsc --noEmit`), and mobile (`npx tsc --noEmit`).
-- **Web Unit Tests**: Vitest 2.1 — **84 passed, 2 skipped across 18 test files** (100% green).
-- **Mobile Stack**: Expo SDK 57, React Native `0.86.3`. Navigation redesigned with 4 bottom tabs per role, top-left hamburger opening smooth drawer (`NavDrawer.tsx`), multi-child switcher, and zero lost features via `options={{ href: null }}`. Red X dismiss buttons.
+- **Web Unit Tests**: Vitest 2.1 — **125 passed, 2 skipped across 21 test files** (100% green).
+- **Production Build**: Clean Vite production build in 14.60s (`npm run build`).
+- **Dev Automation**: 1-click Windows batch scripts `start_dev.bat` and `show_qr.bat` with auto-IP detection and QR code generation.
+- **Mobile Stack**: Expo SDK 57, React Native `0.86.3`. Navigation with 4 bottom tabs per role, top-left hamburger opening smooth drawer (`NavDrawer.tsx`), multi-child switcher, and tap-to-fill demo credentials.
+- **Live Cloud Deployment**:
+  - Web: `https://school-management-system-blush-iota.vercel.app`
+  - Backend: `https://school-management-system-12ks.onrender.com`
+  - Database: Neon Tech PostgreSQL
 - **Primary Canonical PDFs in `docs/`**:
   1. `Sunrise-ERP-Admission-Demo-Guide.pdf` (265 KB, Complete Digital Admission Dossier & Interactive Testing Guide)
   2. `Sunrise-ERP-Operational-Data-Flows.pdf` (1.31 MB, Simple Table-to-Table Data-Flow Guide)
@@ -158,23 +166,26 @@ Sunrise School ERP is a multi-tenant school management system built for independ
 
 ---
 
-## 3. Active Status: Session 10 Complete, Session 11 Handoff
+---
 
-Session 10 has been fully delivered and verified on local branch `slice/office-feedback` (strictly local-only):
-- Backend tests: 735 passed, 1 skipped, 0 failed (100% green).
-- Web unit tests: 84 passed, 2 skipped across 18 test files (100% green).
-- Web typecheck: 0 errors (`npx tsc --noEmit`).
-- Mobile typecheck: 0 errors (`npx tsc --noEmit`).
-- Web build: clean Vite build (`npm run build`).
-- Alembic migration head: `d4e5f6a7b8c9 (head)`.
-- 31 live web screens (5 Front Desk screens live).
+## 3. Active Status: Session 18 Complete, Session 19 Handoff
 
-Canonical specification for Session 11 is defined in **`SESSION-HANDOFF-10.md`**:
-1. **Teacher Meeting Slip Response Interface**: Wire teacher view on web/mobile (`mobile/app/(teacher)/meetings.tsx`) to inspect incoming visitor slips and respond (`ACCEPTED` / `DECLINED`).
-2. **Real Image / Photo Upload Pipeline for Front Desk**: Multipart upload endpoint `POST /admin/reception/upload` for found items and handover photos, replacing plain text URLs with file pickers / camera capture.
-3. **End-to-End Visual Verification for Live Printable Slips**: Automated Puppeteer runner creating live transactions and capturing proof screenshots of all 4 printable slips (`PrintableStudentPass`, `PrintablePrincipalMeetingSlip`, `PrintableTeacherMeetingSlip`, `PrintableFeeReceiptSlip`).
-4. **Public Online Admission Portal UI (`/apply`)**: Unauthenticated parent application portal.
-5. **System-Wide Audit Reason Sweep (Packet 4 Contract 3)**: Ensuring 100% of destructive operations prompt mandatory user-typed reasons.
+Session 18 has been fully delivered and verified on branch `slice/office-feedback`:
+- **Backend tests**: 760 passed, 1 skipped, 0 failed (100% green).
+- **Admin User Access Suite**: 6 passed, 0 failed (`tests/test_admin_user_access.py`).
+- **Teacher Leave & Substitutions Suite**: 6 passed, 0 failed (`tests/test_teacher_leave_ranked_substitutions.py`).
+- **Web unit tests**: 109 passed, 2 skipped across 20 test files (100% green).
+- **Web typecheck**: 0 errors (`npx tsc --noEmit`).
+- **Mobile typecheck**: 0 errors (`npx tsc --noEmit`).
+- **Alembic migration head**: `a1b2c3d4e5f8 (head)` (`remove_teacher_meetings_add_user_access.py`).
+- **Visual Verification Suite**: 21/21 screenshots verified across Teacher Leave lifecycle (6/6) and Parent Hindi i18n (15/15) in `docs/screenshots/session18/` and `session18_visual_verification_report.md`.
+- **32 live web screens** (UserAccessPage added at `/admin/users`).
+
+Canonical specification for Session 19 is defined in **`SESSION-HANDOFF-19.md`**:
+1. **Website — Redesign Sidebar Section Headings**: Redesign group headers in `web/src/layout/Shell.tsx` across all website roles with clear visual hierarchy, improved typography, spacing, and school branding accents, keeping them structural and non-clickable.
+2. **Mobile App — Future Feature Placeholders (Roadmap UI)**: Add clearly visible disabled "Coming Soon" placeholders in `NavDrawer.tsx` (Parent: Call Class Teacher, Message Class Teacher; Teacher: Today's Class, Parent Messages; Student: Today's Class). No backend/API/database changes.
+3. **Student & Parent Home — Important Alerts System (Live Feature)**: End-to-end implementation of 4 real-time alerts on Student & Parent Home tabs (Attendance Shortage < 75%, Fee Due, Report Card Available, Periodic Test Result Available).
+4. **Parent Multi-Child Alert Support**: Independent evaluation per child across `me.children` with clear child attribution (`— Rahul`, `— Priya`) and automatic child context switching on tap.
 
 ---
 
@@ -218,4 +229,18 @@ Canonical specification for Session 11 is defined in **`SESSION-HANDOFF-10.md`**
     - Emergency or early student gate passes require recording the specific authorized person collecting the student. Coupling gate pass records directly to permanent authorized pickup lists creates friction when a pre-approved relative collects a child. Maintain a permanent roster table (`student_authorized_persons`) for authorized guardians/drivers alongside one-time transactional passes (`student_passes`), allowing the receptionist to either select from the roster or enter a verified single-use collector with relationship.
 17. **Complete-Month Fee Collection Invariant**:
     - Receptionists at the front desk are prohibited from taking arbitrary partial fee amounts (e.g. ₹500 against a ₹5,400 bill). Fee collection logic at the reception counter enforces strict chronological FIFO settlement of complete billing periods (1 month, 2 months, ..., N months) to eliminate reconciliation discrepancies and prevent ledger tampering.
+18. **React Native Fetch Infinite Loading Trap**:
+    - React Native's native `fetch()` does not have a default timeout. When a mobile app attempts to connect to an unreachable backend (wrong IP, firewall, server down), the promise hangs indefinitely, leaving UI buttons stuck in "Signing in...". Always wrap mobile `fetch()` calls with an `AbortController` timeout (15s) and catch `AbortError` to provide clear, actionable feedback.
+19. **Expo Mobile Network IP Stale Trap**:
+    - Hardcoding a local IP in `.env` (`EXPO_PUBLIC_API_URL=http://192.168.x.x:8000`) breaks whenever the Wi-Fi network or location changes. Use `Constants.expoConfig?.hostUri` to dynamically discover the packager host IP in development (since the device is already connected to it to load the bundle), and use a cloud backend URL as a resilient production fallback.
+20. **RBAC Auto-Heal Scoping Invariant**:
+    - When adding automatic role recovery for database desyncs on cloud, strictly scope the check to primary admin credentials (`user.login_id == "admin@sunrisepublic.edu"` or `admin@...`), never to generic `user.role == UserRole.admin`. Broad matching unintentionally grants `super_admin` permissions to unassigned test accounts, violating segregation of duties and breaking unit tests.
+21. **Public Website Scope & Isolation**:
+    - The public website (`/`, `/about`, `/academics`, `/admissions`, `/facilities`, `/school-life`, `/events`, `/gallery`, `/contact`) uses `PublicLayout.tsx` and must never mutate or break the internal ERP shell (`Shell.tsx`) or role-gated screens (`screens.ts`). All admissions CTAs ("Apply Online") must link directly to the existing, live application flow at `/apply` (`PublicApplyPage.tsx`).
+22. **Public Admission Enquiry Model Unity**:
+    - Never create a separate public enquiry model or table; public enquiries write directly to the existing ERP `enquiries` table (`source=EnquirySource.website`, `status=EnquiryStatus.new`). Duplicate phone submissions within the active cycle append an `EnquiryInteraction` with `occurred_at=datetime.now(UTC)` rather than creating orphan duplicate rows.
+23. **Global Announcement Strip Exclusions**:
+    - The global dark-blue announcement ticker renders across all standard public pages, but is strictly excluded from `/apply` (`PublicApplyPage.tsx`) to keep the multi-step admission application workflow focused and distraction-free.
+24. **School Life & Photo Gallery Merge**:
+    - The photographic gallery is permanently consolidated at the bottom of School Life (`/school-life#gallery`) with category filter tabs and lightbox. Do not re-add a separate `/gallery` item to the primary navigation bar.
 

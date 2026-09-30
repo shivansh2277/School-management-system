@@ -2,12 +2,14 @@
 
 ## Read these first, in this order
 
-0. **`SINGLE_SOURCE_OF_TRUTH.md`** & **`SESSION-HANDOFF-15.md`** — **start here.**
-   The canonical single source of truth and session handoffs for the ERP.
-   Details current git status (`slice/office-feedback`), verified 31 live web screens,
-   18 active staff, database tables (reception, authorized pickup, and route stop address tables added),
-   Alembic migration head `f6a7b8c9d0e1` (`route_stop_address.py`), leadership credentials (`admin@sunrisepublic.edu` / `Admin@123`),
-   Session 15 completed & verified (749 passed backend tests, 1 skipped, 0 failed, 100% green; 109 passed web unit tests across 20 files; 0 TypeScript errors on web and mobile; clean Vite production build; Responsive Design across 390px, 768px, 1280px, 1440px with off-canvas mobile drawer and 0 horizontal scroll; Neon Tech cloud database configuration with Psycopg 3 dialect auto-normalization; production seed safety guards; centralized API and media URLs; N+1 fee query batching; 8/8 automated visual responsive verification checks passing).
+0. **`SINGLE_SOURCE_OF_TRUTH.md`** & **`SESSION-HANDOFF-21.md`** — **start here.**
+   The canonical single source of truth and active session handoff for the ERP.
+   Details current git status (`slice/office-feedback` synced with `origin/main`), verified 32 live web screens,
+   18 active staff, database tables (reception, authorized pickup, route stop address, and user access fields added),
+   Alembic migration head `d5e6f7a8b9c0`, leadership credentials (`admin@sunrisepublic.edu` / `Admin@123`),
+   Session 22 completed & verified: Central Academy reference study & comprehensive public website institutional upgrade:
+   11 institutional menu items (Home, About, Academics, Admissions, Campus & Facilities, School Life, Events, Gallery, Public Disclosure, Resources, Contact) plus prominent "Admission Enquiry / Apply Now" CTA button; desktop top utility micro-bar permanently removed (main nav topmost); zero public ERP login links anywhere (no Sign In, Student/Parent/Teacher portals, or Branches); Mandatory Public Disclosure section (`/public-disclosure`) with 6 CBSE Appendix-IX tabs & demo disclaimers; Resources & Downloads Hub (`/resources`) with 6 approved single-page A4 PDFs (zero Parent Info PDF); full Announcements & Circulars system with backend migration `d5e6f7a8b9c0`, public endpoint `/public/{school_code}/announcements`, ERP publishing controls, live ticker, listing (`/announcements`), and detail circular view (`/announcements/:id`); 10 generated single-page A4 PDFs in `web/public/documents/`.
+   Full test suite passes 100% green: 776 backend tests (1 skipped, 0 failed), 125 web unit tests across 21 test files (2 skipped, 0 failed), 0 TypeScript errors on web and mobile, clean Vite production build in 14.60s.
    Supersedes all previous session handoffs.
 1. **`FRONTEND-HANDOFF.md`** — the brief for **Parts Two to Six**: the
    three contracts, what "clean and easy for a school office" means, the
@@ -21,7 +23,7 @@
 
 `docs/BLUEPRINT.md` is the original v0 build contract. Still useful for the
 reasoning behind the original design, but superseded wherever the ERP blueprint
-disagrees.
+disagree.
 
 ## What this is
 
@@ -34,15 +36,14 @@ on both jobs** — backend lint, 615 tests, migrations from an empty schema, see
 and worker; web typecheck, schema drift, 31 tests and build. CI runs on every
 push to `main` or `part-*`.
 
-Those two figures are `main`'s. On `slice/office-feedback` they are **743 passed
-backend (1 skipped, 744 total, 0 failed)** and **107 passed web unit tests (2 skipped in 19 files)**;
-CI has never run on that branch because it has never been pushed.
+Those two figures are `main`'s. On `slice/office-feedback` they are **776 passed
+backend (1 skipped, 777 total, 0 failed)** and **125 passed web unit tests (2 skipped in 21 files)**;
+Branch is synced to `origin/main` and `origin/slice/office-feedback`.
 
-**Nothing is deployed**, and one thing blocks that regardless of frontend work:
-every account the ERP creates gets a fixed default password with no forced
-change on first login (`students.py`, `teachers.py`, `services/conversion.py`;
-recorded as a gap in `ERP_BLUEPRINT` §§5 and 11). That is a product decision
-about how accounts are issued and has deliberately not been made.
+**Live Cloud Deployment**:
+- **Frontend (Vercel)**: `https://school-management-system-blush-iota.vercel.app`
+- **Backend (Render)**: `https://school-management-system-12ks.onrender.com`
+- **Database (Neon Tech)**: Serverless PostgreSQL (`postgresql+psycopg://`)
 
 ## Commands
 
@@ -228,6 +229,13 @@ Postgres runs natively on this machine, not in Docker. `make testdb` uses
 - **Dynamic enrollment resolution on application detail**: When an applicant is enrolled, `application.student_id` links to the lifetime `students` row, but class, section, and roll number exist on the annual `enrolments` row. Always resolve `enrolled_student` dynamically via `db.get(Student, app.student_id)` and the active enrolment record.
 - **`Enrolment` academic year relationship trap**: The `Enrolment` model has `academic_year_id` (`BIGINT`), NOT an `academic_year` ORM relationship. Accessing `enrolment.academic_year.code` raises `AttributeError`. Safely resolve via `db.get(AcademicYear, enrolment.academic_year_id)` or fallback to `application.cycle.academic_year.code`.
 - **ActionButton form submission**: Using `<ActionButton>` inside a `<form onSubmit={...}>` with an explicit `type="submit"` requires that `ActionButton` pass `type="submit"` through to the underlying `<button>` and allow `onClick` to be optional; otherwise, the browser does not fire the synthetic form submit event.
+- **Public Website vs ERP Shell Isolation**: Public school website components live strictly under `web/src/pages/public/website/` and `web/src/components/public/` using `PublicLayout.tsx`. Never modify or intertwine public website routes with the internal ERP shell (`web/src/layout/Shell.tsx`) or role-gated screens (`web/src/screens.ts`).
+- **Real Admission Portal Linkage**: The public website's "Apply Online" CTAs must route to `/apply` (`web/src/pages/public/PublicApplyPage.tsx`), which interacts with the live backend endpoints (`/public/{school_code}/admission-enquiries` and `/public/{school_code}/admission-applications`). Never build a mock or fake frontend-only application submission.
+- **No Verifiable Institutional Claims**: The school's public identity is Sunrise School, Gomti Nagar, Lucknow, CBSE Affiliated, Estd. 2011. Never fabricate real CBSE affiliation numbers, government recognition IDs, or fictitious national rankings.
+- **1-Click Dev Server Automation**: To prevent server termination on laptop sleep or dynamic IP mismatches across Wi-Fi networks, run `start_dev.bat` (launches Backend, Web, and Expo in dedicated persistent windows) or `show_qr.bat` (auto-detects IP via `scripts/generate_qr.py`, rewrites `mobile/.env`, and displays the latest Expo QR code).
+- **Public Admission Enquiry Model Unity**: Never create a separate public enquiry model or table; public enquiries write directly to the existing ERP `enquiries` table (`source=EnquirySource.website`, `status=EnquiryStatus.new`). Duplicate phone submissions within the active cycle append an `EnquiryInteraction` with `occurred_at=datetime.now(UTC)` rather than creating orphan duplicate rows.
+- **Global Announcement Strip Exclusions**: The global dark-blue announcement ticker renders across all standard public pages, but is strictly excluded from `/apply` (`PublicApplyPage.tsx`) to keep the multi-step admission application workflow focused and distraction-free.
+- **School Life & Photo Gallery Merge**: The photographic gallery is permanently consolidated at the bottom of School Life (`/school-life#gallery`) with category filter tabs and lightbox. Do not re-add a separate `/gallery` item to the primary navigation bar.
 
 ## Working style for this project
 

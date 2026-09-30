@@ -4,6 +4,7 @@ import { Text } from "react-native";
 import { api } from "../../src/api/client";
 import { useAuth } from "../../src/auth/AuthContext";
 import { Card, Loading, Row, Screen, s } from "../../src/components/ui";
+import { useTranslation } from "../../src/i18n/I18nContext";
 
 type Profile = {
   full_name: string;
@@ -19,6 +20,8 @@ type Profile = {
 
 export default function ChildProfile() {
   const { selectedChildId } = useAuth();
+  const { t } = useTranslation();
+
   const { data, isLoading } = useQuery({
     queryKey: ["child-profile", selectedChildId],
     queryFn: () => api.get<Profile>(`/parent/children/${selectedChildId}/profile`),
@@ -31,16 +34,16 @@ export default function ChildProfile() {
 
   return (
     <Screen>
-      <Card title="Student">
+      <Card title={t("child_details")}>
         {(
           [
-            ["Name", data.full_name],
-            ["Admission No.", data.admission_no],
-            ["Class", data.class_label],
-            ["Roll No.", data.roll_no],
-            ["Date of birth", data.dob],
-            ["Gender", data.gender],
-            ["Address", data.address],
+            [t("prof_name"), data.full_name],
+            [t("child_admission_no"), data.admission_no],
+            [t("child_class"), data.class_label],
+            [t("child_roll_no"), data.roll_no],
+            [t("child_dob"), data.dob],
+            [t("child_gender"), data.gender],
+            [t("prof_address"), data.address],
             ["Admitted on", data.admission_date],
           ] as [string, unknown][]
         ).map(([label, value]) => (
@@ -52,7 +55,7 @@ export default function ChildProfile() {
         ))}
       </Card>
 
-      <Card title="Class teacher">
+      <Card title="Class Teacher">
         {data.class_teacher ? (
           <Row
             left={<Text style={s.title}>{data.class_teacher.full_name}</Text>}

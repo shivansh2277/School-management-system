@@ -1,5 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Redirect } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -9,24 +9,21 @@ import { Button, Loading, s } from "../src/components/ui";
 import { theme } from "../src/theme";
 
 /**
- * Demo login ids are printed on the login screen so a reviewer gets in
- * unaided. The passwords are not: a password on a login screen is a password
- * in every screenshot of it, and this file is public. They are in the
- * gitignored PASSWORDS.md.
- *
- * `SPS2024001` was prefilled here until 9 September 2026 and had not existed
- * for some time - admission numbers became `YYYY` plus a six-digit counter
- * (ERP_BLUEPRINT section 0.21), so the demo student login was simply wrong.
+ * Demo login ids and role-specific passwords from backend/seed.py (DEMO_PASSWORDS).
+ * Student: 2024000001 / Student@123
+ * Parent: 9876500001 / Parent@123
+ * Teacher: TCH001 / Teacher@123
  */
-const DEMO: Record<Role, { loginId: string; hint: string }> = {
-  student: { loginId: "2024000001", hint: "Admission number" },
-  parent: { loginId: "9876500001", hint: "Registered mobile number" },
-  teacher: { loginId: "TCH001", hint: "Employee ID" },
+const DEMO: Record<Role, { loginId: string; hint: string; defaultPassword: string }> = {
+  student: { loginId: "2024000001", hint: "Admission number", defaultPassword: "Student@123" },
+  parent: { loginId: "9876500001", hint: "Registered mobile number", defaultPassword: "Parent@123" },
+  teacher: { loginId: "TCH001", hint: "Employee ID", defaultPassword: "Teacher@123" },
 };
 
 const ROLES: Role[] = ["student", "parent", "teacher"];
 
 export default function Login() {
+  const router = useRouter();
   const { me, loading, login } = useAuth();
   const [role, setRole] = useState<Role>("student");
   const [loginId, setLoginId] = useState(DEMO.student.loginId);
@@ -51,6 +48,8 @@ export default function Login() {
     setError(null);
     try {
       await login(role, loginId.trim(), password);
+      // Imperative router replace ensures immediate transition
+      router.replace(`/(${role})/dashboard` as any);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -126,7 +125,7 @@ export default function Login() {
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
               autoCapitalize="none"
-              placeholder="Password"
+              placeholder={`Password (${DEMO[role].defaultPassword})`}
               placeholderTextColor={theme.inkFaint}
             />
             <Pressable
@@ -148,18 +147,38 @@ export default function Login() {
               />
             </Pressable>
           </View>
+          <Pressable
+            onPress={() => setPassword(DEMO[role].defaultPassword)}
+            hitSlop={{ top: 8, bottom: 8 }}
+          >
+            <Text style={{ fontSize: 12, color: theme.primary, fontWeight: "600" }}>
+              Auto-fill demo password ({DEMO[role].defaultPassword})
+            </Text>
+          </Pressable>
         </View>
 
         {error ? <Text style={{ color: theme.danger }}>{error}</Text> : null}
 
         <Button label={busy ? "Signing in..." : "Sign in"} onPress={submit} disabled={busy} />
 
-        <View style={{ gap: 2 }}>
-          <Text style={s.meta}>Demo accounts</Text>
+        <View style={{ gap: 4, marginTop: 4 }}>
+          <Text style={[s.meta, { fontWeight: "600" }]}>Demo Accounts (Tap to auto-fill)</Text>
           {ROLES.map((r) => (
-            <Text key={r} style={s.meta}>
-              {r}: {DEMO[r].loginId}
-            </Text>
+            <Pressable
+              key={r}
+              onPress={() => {
+                pickRole(r);
+                setPassword(DEMO[r].defaultPassword);
+              }}
+              style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 3 }}
+            >
+              <Text style={s.meta}>
+                {r}: <Text style={{ color: theme.ink, fontWeight: "500" }}>{DEMO[r].loginId}</Text>
+              </Text>
+              <Text style={[s.meta, { color: theme.primary, fontWeight: "600" }]}>
+                {DEMO[r].defaultPassword}
+              </Text>
+            </Pressable>
           ))}
           <Text style={[s.meta, { marginTop: 6 }]}>
             Admin signs in on the web dashboard, not this app.

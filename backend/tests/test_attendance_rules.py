@@ -29,9 +29,12 @@ from app.services import rbac
 from tests.conftest import auth
 
 
-def last_working_day(days_back: int = 1) -> date:
+def last_working_day(days_back: int = 1, db=None) -> date:
     day = date.today() - timedelta(days=days_back)
-    while day.weekday() == 6:
+    holidays = set()
+    if db is not None:
+        holidays = set(db.scalars(select(Holiday.date)).all())
+    while day.weekday() == 6 or day in holidays:
         day -= timedelta(days=1)
     return day
 
@@ -66,7 +69,7 @@ def test_a_working_day_count_skips_sundays_and_holidays(db, ids):
 
 
 def test_attendance_cannot_be_marked_on_a_holiday(client, teacher, admin, db, ids):
-    day = last_working_day(2)
+    day = last_working_day(2, db)
     added = client.post(
         "/admin/attendance/holidays",
         json={"date": day.isoformat(), "name": "Founder's Day (test)"},
@@ -91,7 +94,7 @@ def test_attendance_cannot_be_marked_on_a_holiday(client, teacher, admin, db, id
 def test_correcting_an_earlier_day_requires_a_reason_and_is_audited(
     client, teacher, db, ids
 ):
-    day = last_working_day(3)
+    day = last_working_day(3, db)
     first = mark(
         client,
         teacher,
@@ -162,7 +165,7 @@ def test_fixing_todays_roll_is_not_a_correction(client, teacher, db, ids):
 
 def test_resubmitting_the_same_roster_changes_nothing(client, teacher, db, ids):
     """The mobile app on a poor connection sends the same roster twice."""
-    day = last_working_day(4)
+    day = last_working_day(4, db)
     entries = [{"student_id": ids["student_1"], "status": "present"}]
     mark(client, teacher, ids["section_10a"], day, entries)
     db.expire_all()
@@ -205,7 +208,7 @@ def test_approved_leave_is_reported_apart_from_absence(db):
 def test_the_absentee_list_separates_leave_from_unexplained_absence(
     client, teacher, admin, db, ids
 ):
-    day = last_working_day(5)
+    day = last_working_day(5, db)
     roster_rows = client.get(
         f"/admin/attendance?class_section_id={ids['section_10a']}&date={day}", headers=admin
     ).json()
@@ -307,7 +310,7 @@ def test_approving_leave_does_not_overwrite_a_day_already_marked(
     client, teacher, parent, admin, db, ids
 ):
     """If the teacher recorded the child as present, the child was there."""
-    day = last_working_day(6)
+    day = last_working_day(6, db)
     child = ids["student_1"]
     mark(
         client,
@@ -363,7 +366,7 @@ def test_the_attendance_roll_is_gated_on_the_attendance_permission_not_the_exam_
     denied anyone who held only `attendance.record.read`, the exact case the
     screen registry exists to prevent. The route now checks the permission it
     was always supposed to."""
-    day = last_working_day(1)
+    day = last_working_day(1, db)
     params = f"?class_section_id={ids['section_10a']}&date={day}"
 
     exam_controller = User(

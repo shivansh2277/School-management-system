@@ -12,21 +12,48 @@ import { useClasses } from "./useClasses";
 // api/admin/notices.py, where POST and DELETE both depend on it.
 const PUBLISH = "comms.notice.publish";
 
-type Notice = { id: number; title: string };
+type Notice = {
+  id: number;
+  title: string;
+  body?: string;
+  audience: string;
+  class_label?: string | null;
+  published_by: string;
+  published_at: string;
+  category?: string;
+  is_public?: boolean;
+  is_pinned?: boolean;
+  summary?: string | null;
+};
 
 // `as const` so the state below is the union the API accepts rather than
 // `string`: the typed request body catches a value this list does not hold.
 const AUDIENCES = ["all", "students", "parents", "teachers", "class"] as const;
 type Audience = (typeof AUDIENCES)[number];
 
+const CATEGORIES = [
+  "Notice",
+  "Admission",
+  "Academic",
+  "Event",
+  "Holiday",
+  "Achievement",
+  "General",
+] as const;
+type Category = (typeof CATEGORIES)[number];
+
 export function Notices() {
   const classes = useClasses();
   const [deleting, setDeleting] = useState<Notice | null>(null);
   const [form, setForm] = useState({
     title: "",
+    summary: "",
     body: "",
     audience: "all" as Audience,
     class_section_id: "",
+    category: "General" as Category,
+    is_public: false,
+    is_pinned: false,
   });
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm({ ...form, [k]: e.target.value });
@@ -43,9 +70,23 @@ export function Notices() {
         body: form.body,
         audience: form.audience,
         class_section_id: form.audience === "class" ? Number(form.class_section_id) : null,
+        category: form.category,
+        is_public: form.is_public,
+        is_pinned: form.is_pinned,
+        summary: form.summary.trim() ? form.summary.trim() : null,
       }),
     invalidates: [["notices"]],
-    onDone: () => setForm({ title: "", body: "", audience: "all", class_section_id: "" }),
+    onDone: () =>
+      setForm({
+        title: "",
+        summary: "",
+        body: "",
+        audience: "all",
+        class_section_id: "",
+        category: "General",
+        is_public: false,
+        is_pinned: false,
+      }),
   });
 
   const remove = useWrite<string>({
@@ -63,12 +104,44 @@ export function Notices() {
       <Card title="Compose notice">
         <div className="space-y-3">
           <FormField label="Title" error={publish.fields.title}>
-            <input className={inputClass} value={form.title} onChange={set("title")} />
+            <input
+              className={inputClass}
+              value={form.title}
+              onChange={set("title")}
+              placeholder="e.g. Admissions Open for Academic Session 2026-27"
+            />
           </FormField>
-          <FormField label="Body" error={publish.fields.body}>
-            <textarea className={inputClass} rows={3} value={form.body} onChange={set("body")} />
+
+          <FormField label="Short Summary (Optional for website banner & cards)">
+            <input
+              className={inputClass}
+              value={form.summary}
+              onChange={set("summary")}
+              placeholder="1-sentence executive summary displayed in public cards & news ticker"
+            />
           </FormField>
-          <div className="grid grid-cols-2 gap-3">
+
+          <FormField label="Full Notice / Announcement Content" error={publish.fields.body}>
+            <textarea
+              className={inputClass}
+              rows={4}
+              value={form.body}
+              onChange={set("body")}
+              placeholder="Provide complete details, dates, venue, and instructions..."
+            />
+          </FormField>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <FormField label="Category">
+              <select className={inputClass} value={form.category} onChange={set("category")}>
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+
             <FormField label="Audience">
               <select className={inputClass} value={form.audience} onChange={set("audience")}>
                 {AUDIENCES.map((a) => (
@@ -78,14 +151,15 @@ export function Notices() {
                 ))}
               </select>
             </FormField>
+
             {form.audience === "class" && (
-              <FormField label="Class">
+              <FormField label="Class Section">
                 <select
                   className={inputClass}
                   value={form.class_section_id}
                   onChange={set("class_section_id")}
                 >
-                  <option value="">Select</option>
+                  <option value="">Select section</option>
                   {classes.data?.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.class_label}
@@ -95,6 +169,35 @@ export function Notices() {
               </FormField>
             )}
           </div>
+
+          {/* Public Website Publishing Options */}
+          <div className="rounded-input border border-rule bg-surface p-3 space-y-2">
+            <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-ink select-none">
+              <input
+                type="checkbox"
+                className="rounded border-rule text-primary focus:ring-primary w-4 h-4 cursor-pointer"
+                checked={form.is_public}
+                onChange={(e) => setForm({ ...form, is_public: e.target.checked })}
+              />
+              <span>Publish to Public School Website</span>
+              <span className="text-xs text-ink-soft font-normal">
+                (Visible to prospective parents & public visitors on the website)
+              </span>
+            </label>
+
+            {form.is_public && (
+              <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-ink select-none pl-6">
+                <input
+                  type="checkbox"
+                  className="rounded border-rule text-amber-500 focus:ring-amber-500 w-4 h-4 cursor-pointer"
+                  checked={form.is_pinned}
+                  onChange={(e) => setForm({ ...form, is_pinned: e.target.checked })}
+                />
+                <span className="text-amber-800">Pin as Featured Announcement (Top of website ticker & announcements)</span>
+              </label>
+            )}
+          </div>
+
           <FormError error={publish.error} />
           <ActionButton
             permission={PUBLISH}
@@ -106,14 +209,55 @@ export function Notices() {
         </div>
       </Card>
 
-      <Card title="Published notices">
+      <Card title="Published notices & announcements">
         <DataTable
           rows={list.data ?? []}
           loading={list.isLoading}
           error={list.error}
           empty="Nothing published yet."
           columns={[
-            { key: "title", header: "Title", render: (n) => n.title },
+            {
+              key: "title",
+              header: "Title & Details",
+              render: (n) => (
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-semibold text-ink text-sm">{n.title}</span>
+                    {n.is_pinned && (
+                      <span className="rounded-pill bg-amber-100 text-amber-800 border border-amber-300 px-1.5 py-0.2 text-[10px] font-bold">
+                        PINNED
+                      </span>
+                    )}
+                  </div>
+                  {n.summary && (
+                    <p className="text-xs text-ink-soft line-clamp-1">{n.summary}</p>
+                  )}
+                </div>
+              ),
+            },
+            {
+              key: "category",
+              header: "Category",
+              render: (n) => (
+                <span className="rounded-pill bg-slate-100 text-slate-700 px-2 py-0.5 text-xs font-medium">
+                  {n.category || "General"}
+                </span>
+              ),
+            },
+            {
+              key: "visibility",
+              header: "Visibility",
+              render: (n) =>
+                n.is_public ? (
+                  <span className="rounded-pill bg-emerald-100 text-emerald-800 px-2 py-0.5 text-xs font-semibold">
+                    Public Website
+                  </span>
+                ) : (
+                  <span className="rounded-pill bg-slate-100 text-slate-600 px-2 py-0.5 text-xs">
+                    Internal
+                  </span>
+                ),
+            },
             {
               key: "aud",
               header: "Audience",

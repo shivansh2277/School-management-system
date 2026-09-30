@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "../auth/AuthContext";
+import { useTranslation } from "../i18n/I18nContext";
 import { theme } from "../theme";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -25,6 +26,8 @@ type MenuItem = {
   icon: keyof typeof Ionicons.glyphMap;
   path?: string;
   action?: () => void;
+  disabled?: boolean;
+  badge?: string;
 };
 
 type MenuSection = {
@@ -49,6 +52,7 @@ export function NavDrawer({
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { me, logout, selectedChildId, selectChild } = useAuth();
+  const { language, setLanguage, t } = useTranslation();
   const role = me?.user.role ?? "student";
 
   const handleNavigate = (path?: string, action?: () => void) => {
@@ -75,7 +79,7 @@ export function NavDrawer({
             router.replace("/");
           },
         },
-      ],
+      ]
     );
   };
 
@@ -100,48 +104,91 @@ export function NavDrawer({
 
   if (role === "parent") {
     sections.push({
-      title: "ACADEMICS",
+      title: t("nav_navigation"),
       items: [
         {
-          id: "p_timetable",
-          title: "Timetable & Schedule",
-          icon: "calendar-outline",
+          id: "p_home",
+          title: t("nav_home"),
+          icon: "home-outline",
+          path: "/(parent)/dashboard",
+        },
+        {
+          id: "p_child",
+          title: t("nav_child"),
+          icon: "person-circle-outline",
           path: "/(parent)/child",
         },
         {
+          id: "p_fees",
+          title: t("nav_fees"),
+          icon: "card-outline",
+          path: "/(parent)/fees",
+        },
+        {
+          id: "p_profile",
+          title: t("nav_profile"),
+          icon: "person-outline",
+          path: "/(parent)/profile",
+        },
+      ],
+    });
+    sections.push({
+      title: t("nav_academic"),
+      items: [
+        {
+          id: "p_timetable",
+          title: t("nav_timetable"),
+          icon: "calendar-outline",
+          path: "/(parent)/timetable",
+        },
+        {
           id: "p_homework",
-          title: "Homework",
+          title: t("nav_homework"),
           icon: "book-outline",
           path: "/(parent)/homework",
         },
         {
           id: "p_attendance",
-          title: "Attendance History",
+          title: t("nav_attendance"),
           icon: "checkbox-outline",
           path: "/(parent)/attendance",
         },
         {
           id: "p_results",
-          title: "Results & Report Cards",
+          title: t("nav_results"),
           icon: "school-outline",
           path: "/(parent)/results",
         },
       ],
     });
     sections.push({
-      title: "COMMUNICATION",
+      title: t("nav_communication"),
       items: [
         {
           id: "p_notices",
-          title: "School Notices",
+          title: t("nav_notices"),
           icon: "notifications-outline",
           path: "/(parent)/notices",
         },
         {
           id: "p_grievances",
-          title: "Grievances & Helpdesk",
+          title: t("nav_grievances"),
           icon: "chatbubbles-outline",
           path: "/(parent)/grievances",
+        },
+        {
+          id: "p_call_teacher",
+          title: t("call_teacher_coming_soon"),
+          icon: "call-outline",
+          disabled: true,
+          badge: t("coming_soon_badge"),
+        },
+        {
+          id: "p_message_teacher",
+          title: t("message_teacher_coming_soon"),
+          icon: "chatbubble-ellipses-outline",
+          disabled: true,
+          badge: t("coming_soon_badge"),
         },
       ],
     });
@@ -164,6 +211,35 @@ export function NavDrawer({
     });
   } else if (role === "teacher") {
     sections.push({
+      title: "NAVIGATION",
+      items: [
+        {
+          id: "t_home",
+          title: "Home",
+          icon: "home-outline",
+          path: "/(teacher)/dashboard",
+        },
+        {
+          id: "t_classes",
+          title: "My Classes",
+          icon: "people-outline",
+          path: "/(teacher)/classes",
+        },
+        {
+          id: "t_attendance",
+          title: "Attendance",
+          icon: "checkbox-outline",
+          path: "/(teacher)/attendance",
+        },
+        {
+          id: "t_profile",
+          title: "Faculty Profile",
+          icon: "person-outline",
+          path: "/(teacher)/profile",
+        },
+      ],
+    });
+    sections.push({
       title: "ACADEMICS",
       items: [
         {
@@ -183,6 +259,13 @@ export function NavDrawer({
           title: "Marks Entry & Results",
           icon: "school-outline",
           path: "/(teacher)/results",
+        },
+        {
+          id: "t_todays_class",
+          title: "Today's Class",
+          icon: "create-outline",
+          disabled: true,
+          badge: "Coming Soon",
         },
       ],
     });
@@ -219,10 +302,11 @@ export function NavDrawer({
           path: "/(teacher)/grievances",
         },
         {
-          id: "t_meetings",
-          title: "Visitor Meetings",
-          icon: "people-outline",
-          path: "/(teacher)/meetings",
+          id: "t_parent_messages",
+          title: "Parent Messages",
+          icon: "chatbubbles-outline",
+          disabled: true,
+          badge: "Coming Soon",
         },
       ],
     });
@@ -246,6 +330,35 @@ export function NavDrawer({
   } else {
     // Student
     sections.push({
+      title: "NAVIGATION",
+      items: [
+        {
+          id: "s_home",
+          title: "Home",
+          icon: "home-outline",
+          path: "/(student)/dashboard",
+        },
+        {
+          id: "s_timetable",
+          title: "Weekly Timetable",
+          icon: "calendar-outline",
+          path: "/(student)/timetable",
+        },
+        {
+          id: "s_homework",
+          title: "Homework",
+          icon: "book-outline",
+          path: "/(student)/homework",
+        },
+        {
+          id: "s_profile",
+          title: "Student Profile",
+          icon: "person-outline",
+          path: "/(student)/profile",
+        },
+      ],
+    });
+    sections.push({
       title: "ACADEMICS",
       items: [
         {
@@ -259,6 +372,13 @@ export function NavDrawer({
           title: "Exam Results & Scorecard",
           icon: "school-outline",
           path: "/(student)/results",
+        },
+        {
+          id: "s_todays_class",
+          title: "Today's Class",
+          icon: "newspaper-outline",
+          disabled: true,
+          badge: "Coming Soon",
         },
       ],
     });
@@ -395,32 +515,77 @@ export function NavDrawer({
             {sections.map((section) => (
               <View key={section.title} style={styles.section}>
                 <Text style={styles.sectionTitle}>{section.title}</Text>
-                {section.items.map((item) => (
-                  <Pressable
-                    key={item.id}
-                    onPress={() => handleNavigate(item.path, item.action)}
-                    style={({ pressed }) => [
-                      styles.menuItem,
-                      pressed && styles.menuItemPressed,
-                    ]}
-                  >
-                    <View style={styles.itemIconBox}>
-                      <Ionicons name={item.icon} size={20} color={theme.primary} />
-                    </View>
-                    <Text style={styles.itemTitle}>{item.title}</Text>
-                    <Ionicons
-                      name="chevron-forward-outline"
-                      size={16}
-                      color={theme.inkFaint}
-                    />
-                  </Pressable>
-                ))}
+                {section.items.map((item) => {
+                  const isDisabled = Boolean(item.disabled);
+                  return (
+                    <Pressable
+                      key={item.id}
+                      disabled={isDisabled}
+                      onPress={isDisabled ? undefined : () => handleNavigate(item.path, item.action)}
+                      style={({ pressed }) => [
+                        styles.menuItem,
+                        isDisabled && styles.menuItemDisabled,
+                        pressed && !isDisabled && styles.menuItemPressed,
+                      ]}
+                      accessibilityState={{ disabled: isDisabled }}
+                    >
+                      <View style={[styles.itemIconBox, isDisabled && styles.itemIconBoxDisabled]}>
+                        <Ionicons
+                          name={item.icon}
+                          size={20}
+                          color={isDisabled ? theme.inkFaint : theme.primary}
+                        />
+                      </View>
+                      <Text
+                        style={[styles.itemTitle, isDisabled && styles.itemTitleDisabled]}
+                        numberOfLines={1}
+                      >
+                        {item.title}
+                      </Text>
+                      {item.badge ? (
+                        <View style={styles.comingSoonBadge}>
+                          <Text style={styles.comingSoonText}>{item.badge}</Text>
+                        </View>
+                      ) : (
+                        <Ionicons
+                          name="chevron-forward-outline"
+                          size={16}
+                          color={theme.inkFaint}
+                        />
+                      )}
+                    </Pressable>
+                  );
+                })}
               </View>
             ))}
           </ScrollView>
 
-          {/* Drawer Footer with App Version and Red Logout */}
+          {/* Drawer Footer with Language Switcher, App Version and Red Logout */}
           <View style={styles.footer}>
+            {role === "parent" && (
+              <View style={styles.langSwitchContainer}>
+                <Text style={styles.langSwitchLabel}>{t("prof_language")}</Text>
+                <View style={styles.langSwitchPills}>
+                  <Pressable
+                    onPress={() => setLanguage("en")}
+                    style={[styles.langPill, language === "en" && styles.langPillActive]}
+                  >
+                    <Text style={[styles.langPillText, language === "en" && styles.langPillTextActive]}>
+                      English
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setLanguage("hi")}
+                    style={[styles.langPill, language === "hi" && styles.langPillActive]}
+                  >
+                    <Text style={[styles.langPillText, language === "hi" && styles.langPillTextActive]}>
+                      हिन्दी
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
+
             <Pressable
               onPress={handleLogout}
               style={({ pressed }) => [
@@ -431,7 +596,7 @@ export function NavDrawer({
               accessibilityLabel="Logout"
             >
               <Ionicons name="log-out-outline" size={20} color="#ef4444" />
-              <Text style={styles.logoutText}>Logout</Text>
+              <Text style={styles.logoutText}>{role === "parent" ? t("nav_sign_out") : "Logout"}</Text>
             </Pressable>
 
             <Text style={styles.versionText}>Sunrise ERP • v1.0.0</Text>
@@ -443,6 +608,41 @@ export function NavDrawer({
 }
 
 const styles = StyleSheet.create({
+  langSwitchContainer: {
+    marginBottom: 10,
+    gap: 4,
+  },
+  langSwitchLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: theme.inkFaint,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  langSwitchPills: {
+    flexDirection: "row",
+    backgroundColor: theme.ground,
+    borderRadius: theme.radius.input,
+    padding: 3,
+    gap: 4,
+  },
+  langPill: {
+    flex: 1,
+    paddingVertical: 5,
+    alignItems: "center",
+    borderRadius: theme.radius.input - 2,
+  },
+  langPillActive: {
+    backgroundColor: theme.primary,
+  },
+  langPillText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: theme.inkSoft,
+  },
+  langPillTextActive: {
+    color: "#fff",
+  },
   overlay: {
     flex: 1,
     flexDirection: "row",
@@ -594,6 +794,9 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     gap: 12,
   },
+  menuItemDisabled: {
+    opacity: 0.55,
+  },
   menuItemPressed: {
     backgroundColor: theme.ground,
   },
@@ -602,11 +805,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  itemIconBoxDisabled: {
+    opacity: 0.8,
+  },
   itemTitle: {
     flex: 1,
     fontSize: 14,
     fontWeight: "500",
     color: theme.ink,
+  },
+  itemTitleDisabled: {
+    color: theme.inkFaint,
+  },
+  comingSoonBadge: {
+    backgroundColor: `${theme.primary}18`,
+    borderWidth: 1,
+    borderColor: `${theme.primary}33`,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: theme.radius.pill,
+  },
+  comingSoonText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: theme.primary,
   },
   footer: {
     borderTopWidth: StyleSheet.hairlineWidth,

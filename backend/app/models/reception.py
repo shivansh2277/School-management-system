@@ -139,38 +139,6 @@ class PrincipalMeetingRequest(TenantBase):
     created_by_name: Mapped[str] = mapped_column(String(120), nullable=False)
 
 
-class TeacherMeetingRequest(TenantBase):
-    """Visitor meeting slips/requests for any School Teacher."""
-
-    __tablename__ = "teacher_meeting_requests"
-    __table_args__ = (
-        Index("ix_teacher_meetings_school_status", "school_id", "status"),
-        Index("ix_teacher_meetings_teacher", "school_id", "teacher_id"),
-    )
-
-    slip_code: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
-    teacher_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("employees.id"), nullable=False, index=True
-    )
-    teacher_name: Mapped[str] = mapped_column(String(120), nullable=False)
-
-    visitor_name: Mapped[str] = mapped_column(String(120), nullable=False)
-    visitor_phone: Mapped[str] = mapped_column(String(30), nullable=False)
-    visitor_relation: Mapped[str | None] = mapped_column(String(60), nullable=True)
-    student_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
-    student_admission_no: Mapped[str | None] = mapped_column(String(50), nullable=True)
-
-    reason: Mapped[str] = mapped_column(Text, nullable=False)
-    meeting_date: Mapped[date] = mapped_column(Date, nullable=False)
-    meeting_time: Mapped[str] = mapped_column(String(20), nullable=False)
-
-    status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")  # pending, accepted, declined, completed, cancelled
-    response_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-
-    created_by_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
-    created_by_name: Mapped[str] = mapped_column(String(120), nullable=False)
-
 
 class DirectoryContact(TenantBase):
     """Important emergency and administrative contacts for the school."""

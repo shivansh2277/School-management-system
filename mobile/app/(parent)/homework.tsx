@@ -4,6 +4,7 @@ import { Text, View } from "react-native";
 import { api } from "../../src/api/client";
 import { useAuth } from "../../src/auth/AuthContext";
 import { Card, Empty, Loading, Pill, Row, Screen, Stat, s } from "../../src/components/ui";
+import { useTranslation } from "../../src/i18n/I18nContext";
 
 type Item = {
   id: number;
@@ -15,6 +16,7 @@ type Item = {
 };
 
 export default function ParentHomework() {
+  const { t } = useTranslation();
   const { selectedChildId } = useAuth();
   const { data, isLoading } = useQuery({
     queryKey: ["parent-homework", selectedChildId],
@@ -30,15 +32,15 @@ export default function ParentHomework() {
     <Screen>
       <Card>
         <View style={{ flexDirection: "row" }}>
-          <Stat label="Submitted" value={submitted} />
-          <Stat label="Pending" value={data.length - submitted} />
+          <Stat label={t("hw_submitted")} value={submitted} />
+          <Stat label={t("hw_pending")} value={data.length - submitted} />
         </View>
-        <Text style={s.meta}>Read only. Homework is submitted by the student.</Text>
+        <Text style={s.meta}>{t("hw_readonly_note")}</Text>
       </Card>
 
-      <Card title="Assignments">
+      <Card title={t("hw_assignments")}>
         {data.length === 0 ? (
-          <Empty text="No homework assigned." />
+          <Empty text={t("hw_no_homework")} />
         ) : (
           data.map((item) => (
             <Row
@@ -47,15 +49,15 @@ export default function ParentHomework() {
                 <>
                   <Text style={s.title}>{item.title}</Text>
                   <Text style={s.meta}>
-                    {item.subject} - due {item.due_date}
+                    {item.subject} - {t("hw_due")} {item.due_date}
                   </Text>
                 </>
               }
               right={
                 item.submitted ? (
-                  <Pill status="submitted" label={item.late ? "Late" : "Submitted"} />
+                  <Pill status="submitted" label={item.late ? t("hw_late") : t("hw_submitted")} />
                 ) : (
-                  <Pill status="pending" label="Pending" />
+                  <Pill status="pending" label={t("hw_pending")} />
                 )
               }
             />
@@ -65,3 +67,4 @@ export default function ParentHomework() {
     </Screen>
   );
 }
+

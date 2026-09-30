@@ -7,6 +7,7 @@ import { Pressable, Text, View } from "react-native";
 import { api, money, tokenStore } from "../../src/api/client";
 import { useAuth } from "../../src/auth/AuthContext";
 import { Button, Card, Empty, Loading, Pill, Row, Screen, s } from "../../src/components/ui";
+import { useTranslation } from "../../src/i18n/I18nContext";
 import { theme } from "../../src/theme";
 
 type ExamHeader = {
@@ -42,6 +43,7 @@ type FeeSummary = {
 };
 
 export default function ParentResults() {
+  const { t } = useTranslation();
   const { selectedChildId, me, selectChild } = useAuth();
   const children = me?.children ?? [];
   const [openExam, setOpenExam] = useState<number | null>(null);
@@ -139,10 +141,10 @@ export default function ParentResults() {
           }}
         >
           <Text style={{ fontSize: 13, fontWeight: "700", color: theme.danger }}>
-            ⚠️ Report Card Withheld — Fee Dues Pending: {money(dues)}
+            ⚠️ {t("res_withheld_alert")}: {money(dues)}
           </Text>
           <Text style={{ fontSize: 12, color: theme.ink, marginTop: 2 }}>
-            Official CBSE report cards are withheld pending settlement of outstanding dues. Please clear dues in the Fees tab to unlock downloads.
+            {t("res_withheld_desc")}
           </Text>
         </View>
       )}
@@ -153,9 +155,9 @@ export default function ParentResults() {
         </Card>
       ) : null}
 
-      <Card title="Completed Examinations">
+      <Card title={t("res_completed_exams")}>
         {(exams.data ?? []).length === 0 ? (
-          <Empty text="No results published yet." />
+          <Empty text={t("res_no_results")} />
         ) : (
           exams.data!.map((e) => (
             <Pressable
@@ -176,7 +178,7 @@ export default function ParentResults() {
                       {e.overall_percent === null ? "-" : `${e.overall_percent}%`}
                     </Text>
                     <Text style={{ fontSize: 11, color: theme.primary }}>
-                      {openExam === e.exam_id ? "Hide Details" : "View Scorecard ›"}
+                      {openExam === e.exam_id ? t("res_hide_details") : t("res_view_scorecard")}
                     </Text>
                   </View>
                 }
@@ -187,10 +189,10 @@ export default function ParentResults() {
       </Card>
 
       {openExam !== null && card.data && (
-        <Card title={`${card.data.exam_name} — Scorecard`}>
+        <Card title={`${card.data.exam_name} — ${t("res_scorecard")}`}>
           <View style={{ marginBottom: 8, paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: theme.rule }}>
             <Text style={s.meta}>
-              Roll {card.data.roll_no} • {card.data.class_label} • Adm: {card.data.admission_no}
+              {t("res_roll")} {card.data.roll_no} • {card.data.class_label} • {t("res_adm")}: {card.data.admission_no}
             </Text>
           </View>
 
@@ -202,7 +204,7 @@ export default function ParentResults() {
                   <Text style={s.title}>{r.subject}</Text>
                   <Text style={s.meta}>
                     {r.marks_obtained === null
-                      ? "Absent (excluded from total)"
+                      ? t("res_absent_excluded")
                       : `${Number(r.marks_obtained)} / ${Number(r.max_marks)} marks`}
                   </Text>
                 </>
@@ -219,7 +221,7 @@ export default function ParentResults() {
 
           <View style={{ marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: theme.rule }}>
             <Row
-              left={<Text style={{ fontWeight: "700", fontSize: 15 }}>Total Score</Text>}
+              left={<Text style={{ fontWeight: "700", fontSize: 15 }}>{t("res_total_score")}</Text>}
               right={
                 <Text style={{ fontWeight: "700", fontSize: 15, color: theme.ink }}>
                   {Number(card.data.total_obtained)} / {Number(card.data.total_max)}
@@ -235,14 +237,14 @@ export default function ParentResults() {
           <View style={{ marginTop: 14 }}>
             {isWithheld ? (
               <Button
-                label={`🔒 Report Card Locked (Dues: ${money(dues)})`}
+                label={`${t("res_report_card_locked")} (${money(dues)})`}
                 tone="ghost"
                 disabled
                 onPress={() => {}}
               />
             ) : (
               <Button
-                label={downloading ? "Preparing Official PDF..." : "📄 Download CBSE A4 Report Card PDF"}
+                label={downloading ? t("res_preparing_pdf") : t("res_download_pdf")}
                 onPress={() => downloadReportCard(openExam)}
                 disabled={downloading}
               />

@@ -7,6 +7,7 @@ import { Pressable, Text, View } from "react-native";
 import { api, formatDate, money, tokenStore } from "../../src/api/client";
 import { useAuth } from "../../src/auth/AuthContext";
 import { Button, Card, Empty, Loading, Pill, Row, Screen, s } from "../../src/components/ui";
+import { useTranslation } from "../../src/i18n/I18nContext";
 import { theme } from "../../src/theme";
 
 type Invoice = {
@@ -40,6 +41,7 @@ const MONTHS = [
 ];
 
 export default function ParentFees() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const { selectedChildId, me, selectChild } = useAuth();
   const children = me?.children ?? [];
@@ -129,24 +131,24 @@ export default function ParentFees() {
       <Card>
         <View style={{ gap: 4 }}>
           <Text style={{ fontSize: 12, color: theme.inkFaint, textTransform: "uppercase", letterSpacing: 0.5 }}>
-            Total Outstanding Fee Balance
+            {t("fees_total_outstanding_balance")}
           </Text>
           <Text style={{ fontSize: 28, fontWeight: "800", color: totalDues > 0 ? theme.danger : theme.success }}>
             {money(totalDues)}
           </Text>
           <View style={{ flexDirection: "row", gap: 16, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: theme.rule }}>
             <View>
-              <Text style={s.meta}>Total Invoiced</Text>
+              <Text style={s.meta}>{t("fees_total_invoiced")}</Text>
               <Text style={{ fontWeight: "600", color: theme.ink }}>{money(summary.data?.total_invoiced ?? 0)}</Text>
             </View>
             <View>
-              <Text style={s.meta}>Total Paid</Text>
+              <Text style={s.meta}>{t("fees_paid_to_date")}</Text>
               <Text style={{ fontWeight: "600", color: "#16A34A" }}>{money(summary.data?.total_paid ?? 0)}</Text>
             </View>
             <View>
-              <Text style={s.meta}>Net Dues</Text>
+              <Text style={s.meta}>{t("fees_net_dues")}</Text>
               <Text style={{ fontWeight: "700", color: totalDues > 0 ? theme.danger : theme.success }}>
-                {totalDues > 0 ? "Pending" : "Cleared"}
+                {totalDues > 0 ? t("status_pending") : t("fees_cleared")}
               </Text>
             </View>
           </View>
@@ -159,11 +161,11 @@ export default function ParentFees() {
         </Card>
       ) : null}
 
-      <Text style={[s.title, { marginVertical: 8 }]}>Fee Invoices</Text>
+      <Text style={[s.title, { marginVertical: 8 }]}>{t("fees_invoices")}</Text>
 
       {invoiceList.length === 0 ? (
         <Card>
-          <Empty text="No invoices raised yet." />
+          <Empty text={t("fees_no_invoices")} />
         </Card>
       ) : (
         invoiceList.map((invoice) => {
@@ -183,10 +185,10 @@ export default function ParentFees() {
                     <Text style={s.title}>
                       {MONTHS[invMonth - 1]} {invYear}
                     </Text>
-                    <Text style={s.meta}>Due {formatDate(invoice.due_date)}</Text>
+                    <Text style={s.meta}>{t("fees_due_date")} {formatDate(invoice.due_date)}</Text>
                     {invBalance > 0 && isPaid ? null : invBalance > 0 ? (
                       <Text style={{ fontSize: 12, color: theme.danger, fontWeight: "600" }}>
-                        Remaining due: {money(invBalance)}
+                        {t("fees_remaining_due")}: {money(invBalance)}
                       </Text>
                     ) : null}
                   </>
@@ -197,18 +199,18 @@ export default function ParentFees() {
                       {money(invBalance)}
                     </Text>
                     <Text style={{ fontSize: 11, color: theme.inkFaint }}>
-                      Total: {money(invTotal)}
+                      {t("fees_total")}: {money(invTotal)}
                     </Text>
-                    <Pill status={isPaid ? "paid" : "overdue"} label={isPaid ? "Paid" : "Pending"} />
+                    <Pill status={isPaid ? "paid" : "overdue"} label={isPaid ? t("status_paid") : t("status_pending")} />
                   </View>
                 }
               />
 
               {isPaid ? (
                 <View style={{ marginTop: 8, gap: 6 }}>
-                  {invoice.receipt_no ? <Text style={s.meta}>Receipt: {invoice.receipt_no}</Text> : null}
+                  {invoice.receipt_no ? <Text style={s.meta}>{t("fees_receipt")}: {invoice.receipt_no}</Text> : null}
                   <Button
-                    label={downloading === invoice.id ? "Opening Receipt..." : "📄 Download 2-Copy Receipt PDF"}
+                    label={downloading === invoice.id ? t("fees_opening_receipt") : t("fees_download_receipt_btn")}
                     tone="ghost"
                     onPress={() => openReceipt(invoice)}
                     disabled={downloading === invoice.id}
@@ -217,18 +219,18 @@ export default function ParentFees() {
               ) : confirming?.id === invoice.id ? (
                 <View style={{ gap: 8, marginTop: 8 }}>
                   <Text style={s.meta}>
-                    Confirm payment of {money(invBalance > 0 ? invBalance : invTotal)}.
+                    {t("fees_confirm_payment_prefix")} {money(invBalance > 0 ? invBalance : invTotal)}.
                   </Text>
                   <Button
-                    label={pay.isPending ? "Processing..." : "Confirm Payment"}
+                    label={pay.isPending ? t("fees_processing") : t("fees_confirm_payment_btn")}
                     onPress={() => pay.mutate(invoice.id)}
                     disabled={pay.isPending}
                   />
-                  <Button label="Cancel" tone="ghost" onPress={() => setConfirming(null)} />
+                  <Button label={t("btn_cancel")} tone="ghost" onPress={() => setConfirming(null)} />
                 </View>
               ) : (
                 <View style={{ marginTop: 8 }}>
-                  <Button label="Pay Now" onPress={() => setConfirming(invoice)} />
+                  <Button label={t("btn_pay_now")} onPress={() => setConfirming(invoice)} />
                 </View>
               )}
             </Card>

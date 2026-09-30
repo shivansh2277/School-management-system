@@ -23,22 +23,23 @@ def verify_password(raw: str, hashed: str) -> bool:
     return _pwd.verify(raw, hashed)
 
 
-def _token(sub: int, role: str, delta: timedelta, kind: str) -> str:
+def _token(sub: int, role: str, delta: timedelta, kind: str, token_version: int = 1) -> str:
     payload = {
         "sub": str(sub),
         "role": role,
         "typ": kind,
+        "ver": token_version,
         "exp": datetime.now(UTC) + delta,
     }
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 
-def create_access_token(user_id: int, role: str) -> str:
-    return _token(user_id, role, timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES), "access")
+def create_access_token(user_id: int, role: str, token_version: int = 1) -> str:
+    return _token(user_id, role, timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES), "access", token_version)
 
 
-def create_refresh_token(user_id: int, role: str) -> str:
-    return _token(user_id, role, timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS), "refresh")
+def create_refresh_token(user_id: int, role: str, token_version: int = 1) -> str:
+    return _token(user_id, role, timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS), "refresh", token_version)
 
 
 def decode_token(token: str) -> dict | None:

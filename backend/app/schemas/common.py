@@ -246,6 +246,12 @@ class NoticeCreate(BaseModel):
     # Off by default: publishing to the board and mailing four hundred families
     # are different acts, and the second should be asked for.
     notify: bool = False
+    category: str = "General"
+    is_public: bool = False
+    is_pinned: bool = False
+    summary: str | None = None
+    expiry_date: date | None = None
+    attachment_url: str | None = None
 
 
 class AnnouncementCreate(BaseModel):
@@ -267,12 +273,19 @@ class NoticeOut(BaseModel):
     # None when nothing was sent — either it was not asked for, or this
     # audience has no email route. Saying so beats letting the office assume.
     message_id: int | None = None
+    category: str = "General"
+    is_public: bool = False
+    is_pinned: bool = False
+    summary: str | None = None
+    expiry_date: date | None = None
+    attachment_url: str | None = None
 
 
 # --- timetable --------------------------------------------------------------
 
 
 class SlotOut(BaseModel):
+    id: int | None = None
     period: int
     day_of_week: str
     start_time: time
@@ -281,7 +294,25 @@ class SlotOut(BaseModel):
     class_label: str
     subject: str
     teacher: str
-    room: str | None
+    room: str | None = None
+    is_relief: bool = False
+    relief_teacher: str | None = None
 
 
 # --- fees -------------------------------------------------------------------
+
+
+# --- alerts -----------------------------------------------------------------
+
+
+class AlertViewRequest(BaseModel):
+    alert_type: str
+    event_key: str
+    exam_id: int | None = None
+
+
+class ParentAlertViewRequest(BaseModel):
+    child_id: int
+    alert_type: str
+    event_key: str
+    exam_id: int | None = None

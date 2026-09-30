@@ -44,6 +44,12 @@ def to_out(db: Session, items: list[Notice]) -> list[NoticeOut]:
             published_by=authors.get(n.published_by, ""),
             published_at=n.published_at,
             message_id=n.message_id,
+            category=getattr(n, "category", "General") or "General",
+            is_public=bool(getattr(n, "is_public", False)),
+            is_pinned=bool(getattr(n, "is_pinned", False)),
+            summary=getattr(n, "summary", None),
+            expiry_date=getattr(n, "expiry_date", None),
+            attachment_url=getattr(n, "attachment_url", None),
         )
         for n in items
     ]
@@ -118,6 +124,12 @@ def publish(db: Session, user: User, body: NoticeCreate) -> NoticeOut:
         class_section_id=body.class_section_id if body.audience == NoticeAudience.class_ else None,
         published_by=user.id,
         published_at=datetime.now(UTC),
+        category=body.category or "General",
+        is_public=body.is_public,
+        is_pinned=body.is_pinned,
+        summary=body.summary,
+        expiry_date=body.expiry_date,
+        attachment_url=body.attachment_url,
     )
     db.add(notice)
     db.flush()

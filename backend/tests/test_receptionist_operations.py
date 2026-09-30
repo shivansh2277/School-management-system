@@ -181,50 +181,6 @@ def test_principal_meeting_slip_lifecycle(client, receptionist, admin, teacher):
     assert responded["responded_at"] is not None
 
 
-def test_teacher_meeting_slip_lifecycle(client, receptionist, teacher, admin):
-    # Fetch teachers list
-    res = client.get("/admin/reception/teachers", headers=receptionist)
-    assert res.status_code == status.HTTP_200_OK
-    teachers = res.json()
-    assert len(teachers) > 0
-    target_teacher = teachers[0]
-    teacher_id = target_teacher["id"]
-
-    # 1. Receptionist creates a Teacher Meeting Slip
-    meeting_payload = {
-        "teacher_id": teacher_id,
-        "visitor_name": "Meena Agarwal",
-        "visitor_phone": "+91 9811223344",
-        "visitor_relation": "Mother",
-        "student_name": "Karan Agarwal",
-        "student_admission_no": "2024000045",
-        "reason": "Quarterly progress review in Science and project submission",
-        "meeting_date": str(date.today()),
-        "meeting_time": "02:30 PM",
-    }
-    res = client.post("/admin/reception/meetings/teacher", json=meeting_payload, headers=receptionist)
-    assert res.status_code == status.HTTP_201_CREATED, res.text
-    slip = res.json()
-    meeting_id = slip["id"]
-    assert slip["slip_code"].startswith("TR/")
-    assert slip["status"] == "pending"
-
-    # 2. Teacher responds to meeting slip
-    respond_payload = {
-        "status": "accepted",
-        "response_notes": "Accepted. Please send parent to Room 104 during the free period.",
-    }
-    res = client.post(
-        f"/admin/reception/meetings/teacher/{meeting_id}/respond",
-        json=respond_payload,
-        headers=teacher,
-    )
-    assert res.status_code == status.HTTP_200_OK, res.text
-    responded = res.json()
-    assert responded["status"] == "accepted"
-    assert responded["response_notes"] == respond_payload["response_notes"]
-
-
 def test_important_directory_role_enforcement(client, receptionist, admin):
     contact_payload = {
         "category": "Medical",

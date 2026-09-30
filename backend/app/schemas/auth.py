@@ -22,6 +22,7 @@ class UserOut(BaseModel):
     email: str | None = None
     phone: str | None = None
     photo_url: str | None = None
+    app_access_blocked: bool = False
 
 
 class TokenPair(BaseModel):
