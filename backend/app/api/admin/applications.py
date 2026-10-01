@@ -6,7 +6,7 @@ so it has its own endpoint and its own permission — a receptionist who can see
 an application must not thereby learn about a child's epilepsy.
 """
 
-from datetime import date as Date
+from datetime import UTC, date as Date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -19,10 +19,12 @@ from app.models import (
     AdmissionCategory,
     Application,
     ApplicationAuthorizedPerson,
+    ApplicationDocumentOverride,
     ApplicationGuardian,
     ApplicationMedical,
     ApplicationSibling,
     ApplicationStatus,
+    AuditAction,
     Employee,
     Enrolment,
     EnrolmentStatus,
@@ -33,7 +35,7 @@ from app.models import (
     Student,
     User,
 )
-from app.services import admission
+from app.services import admission, audit
 from app.services import applications as svc
 from app.services.rbac import require_permission
 from app.services.school_settings import module_enabled
@@ -46,6 +48,7 @@ router = APIRouter(
 
 reader = require_permission("admission.application.read", school_wide=True)
 writer = Depends(require_permission("admission.application.write"))
+override_auth = require_permission("admission.document.override", school_wide=True)
 medical_reader = require_permission("admission.medical.read", school_wide=True)
 
 
@@ -582,3 +585,183 @@ def verify_claims(
     app = svc.get(db, user.school_id, application_id)
     svc.refresh_claims(db, app)
     return _detail(db, app)
+
+
+class DocumentOverrideInput(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    document_code: str = Field(min_length=1, max_length=40)
+    reason: str = Field(min_length=3, max_length=500)
+
+
+@router.post("/applications/{application_id}/document-overrides")
+def authorize_document_override(
+    application_id: int,
+    body: DocumentOverrideInput,
+    user: User = Depends(override_auth),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Authorize an exception for a missing mandatory document with mandatory reason and audit log."""
+    app = svc.get(db, user.school_id, application_id)
+    doc_code = body.document_code.strip().lower()
+
+    override = db.scalar(
+        select(ApplicationDocumentOverride).where(
+            ApplicationDocumentOverride.application_id == app.id,
+            ApplicationDocumentOverride.document_code == doc_code,
+        )
+    )
+    if override is None:
+        override = ApplicationDocumentOverride(
+            school_id=user.school_id,
+            application_id=app.id,
+            document_code=doc_code,
+            authorized_by_id=user.id,
+            reason=body.reason,
+            authorized_at=datetime.now(UTC),
+        )
+        db.add(override)
+    else:
+        override.reason = body.reason
+        override.authorized_by_id = user.id
+        override.authorized_at = datetime.now(UTC)
+
+    audit.record(
+        db,
+        actor=user,
+        school_id=user.school_id,
+        entity_type="application_document_override",
+        entity_id=app.id,
+        action=AuditAction.update,
+        after={
+            "document_code": doc_code,
+            "application_id": app.id,
+            "application_no": app.application_no,
+            "authorized_by": user.id,
+        },
+        reason=body.reason,
+    )
+    db.commit()
+    return {
+        "id": override.id,
+        "application_id": override.application_id,
+        "document_code": override.document_code,
+        "authorized_by_id": override.authorized_by_id,
+        "authorized_by_name": user.full_name,
+        "reason": override.reason,
+        "authorized_at": override.authorized_at.isoformat() if override.authorized_at else None,
+    }
+
+
+@router.get("/applications/{application_id}/document-overrides")
+def list_application_document_overrides(
+    application_id: int,
+    user: User = Depends(override_auth),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    app = svc.get(db, user.school_id, application_id)
+    rows = db.scalars(
+        select(ApplicationDocumentOverride).where(
+            ApplicationDocumentOverride.application_id == app.id
+        )
+    ).all()
+    return [
+        {
+            "id": r.id,
+            "application_id": r.application_id,
+            "document_code": r.document_code,
+            "authorized_by_id": r.authorized_by_id,
+            "authorized_by_name": r.authorized_by.full_name if r.authorized_by else None,
+            "reason": r.reason,
+            "authorized_at": r.authorized_at.isoformat() if r.authorized_at else None,
+        }
+        for r in rows
+    ]
+
+
+@router.get("/document-overrides")
+def list_all_document_overrides(
+    user: User = Depends(override_auth),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    """Admin exception review screen: lists all authorized overrides across the school."""
+    rows = db.scalars(
+        select(ApplicationDocumentOverride)
+        .where(ApplicationDocumentOverride.school_id == user.school_id)
+        .order_by(ApplicationDocumentOverride.id.desc())
+    ).all()
+    return [
+        {
+            "id": r.id,
+            "application_id": r.application_id,
+            "application_no": r.application.application_no if r.application else None,
+            "applicant_name": r.application.full_name if r.application else "",
+            "class_applying_for": r.application.class_applying_for if r.application else "",
+            "document_code": r.document_code,
+            "authorized_by_id": r.authorized_by_id,
+            "authorized_by_name": r.authorized_by.full_name if r.authorized_by else None,
+            "reason": r.reason,
+            "authorized_at": r.authorized_at.isoformat() if r.authorized_at else None,
+        }
+        for r in rows
+    ]
+
+
+@router.get("/applications/lookup")
+def lookup_application_for_override(
+    ref: str = Query(..., min_length=1),
+    user: User = Depends(override_auth),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Lookup draft or application for Admin exception authorization."""
+    clean_ref = ref.strip()
+    app = None
+    if clean_ref.upper().startswith("DFT-"):
+        try:
+            draft_id = int(clean_ref.split("-")[1])
+            app = svc.get(db, user.school_id, draft_id)
+        except (ValueError, IndexError, HTTPException):
+            pass
+    elif clean_ref.isdigit():
+        try:
+            app = svc.get(db, user.school_id, int(clean_ref))
+        except HTTPException:
+            pass
+
+    if app is None:
+        app = db.scalar(
+            select(Application).where(
+                Application.school_id == user.school_id,
+                Application.application_no == clean_ref,
+            )
+        )
+
+    if app is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Application '{ref}' not found")
+
+    checklist_items = svc.checklist(db, app)
+    overrides = db.scalars(
+        select(ApplicationDocumentOverride).where(
+            ApplicationDocumentOverride.application_id == app.id
+        )
+    ).all()
+
+    return {
+        "id": app.id,
+        "application_no": app.application_no or f"DFT-{app.id}",
+        "full_name": app.full_name,
+        "date_of_birth": str(app.date_of_birth),
+        "class_applying_for": app.class_applying_for,
+        "status": app.status.value,
+        "checklist": checklist_items,
+        "overrides": [
+            {
+                "id": o.id,
+                "document_code": o.document_code,
+                "reason": o.reason,
+                "authorized_by_name": o.authorized_by.full_name if o.authorized_by else None,
+                "authorized_at": o.authorized_at.isoformat() if o.authorized_at else None,
+            }
+            for o in overrides
+        ],
+    }

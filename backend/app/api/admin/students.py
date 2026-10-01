@@ -7,23 +7,28 @@ from pydantic import BaseModel
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
+import re
 from app.core.db import get_db
 from app.services.rbac import require_permission
 from app.services.school_settings import module_enabled
 from app.core.security import hash_password
 from app.models import (
+    AcademicYear,
     AuditAction,
     ClassSection,
     Enrolment,
+    EnrolmentStatus,
     Gender,
     Guardian,
     StudentGuardian,
     GuardianRelation,
     OwnerType,
+    School,
     Student,
     User,
     UserRole,
 )
+from app.pdf import id_card as id_card_pdf
 from app.schemas.common import Page
 from app.services import assessment, attendance, audit, homework, tenancy
 from app.services import custom_fields as cf
@@ -80,6 +85,10 @@ class StudentUpdate(BaseModel):
     address: str | None = None
     phone: str | None = None
     email: str | None = None
+    apaar_id: str | None = None
+    apaar_consent: bool | None = None
+    apaar_consent_guardian_name: str | None = None
+    apaar_consent_guardian_relation: str | None = None
     custom: dict | None = None
 
 
@@ -112,15 +121,6 @@ def _row(db: Session, s: Student) -> dict:
         "id": s.id,
         "full_name": s.user.full_name,
         "admission_no": s.admission_no,
-        # The current year's enrolment id, which nothing else exposed.
-        # Every money route is keyed on the enrolment rather than the student -
-        # a fee belongs to a child's year in a class, not to the child - so
-        # without this the client could only reach it by finding a row that
-        # already carried money (an invoice, a defaulter, a ledger line). A
-        # student with no invoices was therefore unpayable-for, and assigning a
-        # fee plan or requesting a concession could not be built at all.
-        # `current_enrolment` was already being called here for the class and
-        # roll number; only the id was being dropped.
         "enrolment_id": enrolment.id if enrolment else None,
         "class_section_id": enrolment.class_section_id if enrolment else None,
         "class_label": enrolment.class_section.label if enrolment else "",
@@ -129,6 +129,11 @@ def _row(db: Session, s: Student) -> dict:
         "is_active": s.user.is_active,
         "guardian_name": guardians[0].user.full_name if guardians else None,
         "guardian_phone": guardians[0].user.phone if guardians else None,
+        "apaar_id": s.apaar_id,
+        "apaar_consent": s.apaar_consent,
+        "apaar_consent_guardian_name": s.apaar_consent_guardian_name,
+        "apaar_consent_guardian_relation": s.apaar_consent_guardian_relation,
+        "apaar_consent_at": s.apaar_consent_at.isoformat() if s.apaar_consent_at else None,
         "custom": s.custom or {},
     }
 
@@ -448,6 +453,19 @@ def update_student(
         value = getattr(body, field)
         if value is not None:
             setattr(s.user, field, value)
+    if body.apaar_id is not None:
+        clean_apaar = body.apaar_id.strip().replace(" ", "").replace("-", "")
+        if clean_apaar and not re.match(r"^\d{12}$", clean_apaar):
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY, "APAAR ID must be exactly 12 digits"
+            )
+        s.apaar_id = clean_apaar or None
+    if body.apaar_consent is not None:
+        s.apaar_consent = body.apaar_consent
+        if body.apaar_consent_guardian_name:
+            s.apaar_consent_guardian_name = body.apaar_consent_guardian_name
+        if body.apaar_consent_guardian_relation:
+            s.apaar_consent_guardian_relation = body.apaar_consent_guardian_relation
     db.commit()
     return _row(db, s)
 
@@ -479,3 +497,99 @@ def deactivate_student(
     )
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/students/{student_id}/id-card")
+def generate_student_id_card(
+    student_id: int,
+    enrolment_id: int | None = Query(None),
+    user: User = Depends(admin_only),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Generate official single CR80 student ID card with canonical Enrollment ID and QR code."""
+    student = _owned(db, user, student_id)
+    school = db.get(School, user.school_id)
+    if school is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "School not found")
+
+    if enrolment_id:
+        enrolment = db.scalar(
+            select(Enrolment).where(
+                Enrolment.id == enrolment_id,
+                Enrolment.student_id == student.id,
+                Enrolment.school_id == user.school_id,
+            )
+        )
+    else:
+        enrolment = current_enrolment(db, student.id)
+
+    if enrolment is None:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            "No active enrolment found for this student to generate an ID card",
+        )
+
+    ay = db.get(AcademicYear, enrolment.academic_year_id) if enrolment.academic_year_id else None
+    session_code = ay.code if ay else "2026-2027"
+    pdf_bytes = id_card_pdf.generate_single_id_card(school, student, enrolment, session_code)
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="id-card-{student.admission_no}.pdf"'
+        },
+    )
+
+
+@router.get("/students/id-cards/bulk")
+def generate_bulk_id_cards(
+    academic_year_id: int | None = Query(None),
+    class_section_id: int | None = Query(None),
+    class_name: str | None = Query(None),
+    user: User = Depends(admin_only),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Generate 8-up A4 sheet(s) of student ID cards for a section or class."""
+    school = db.get(School, user.school_id)
+    if school is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "School not found")
+
+    year_id = academic_year_id or tenancy.current_year(db, user.school_id).id
+
+    stmt = (
+        select(Student, Enrolment, AcademicYear.code)
+        .join(Enrolment, Enrolment.student_id == Student.id)
+        .join(AcademicYear, AcademicYear.id == Enrolment.academic_year_id)
+        .join(ClassSection, ClassSection.id == Enrolment.class_section_id)
+        .join(User, User.id == Student.user_id)
+        .where(
+            Student.school_id == user.school_id,
+            Enrolment.academic_year_id == year_id,
+            Enrolment.status == EnrolmentStatus.active,
+            User.is_active.is_(True),
+        )
+    )
+    if class_section_id is not None:
+        stmt = stmt.where(Enrolment.class_section_id == class_section_id)
+    elif class_name:
+        stmt = stmt.where(ClassSection.class_name == class_name)
+
+    stmt = stmt.order_by(ClassSection.class_name, ClassSection.section, Enrolment.roll_no)
+    rows = db.execute(stmt).all()
+    if not rows:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            "No active students found matching the selected criteria",
+        )
+
+    items = [(student, enrolment, session_code) for student, enrolment, session_code in rows]
+    pdf_bytes = id_card_pdf.generate_bulk_id_cards(school, items)
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="id-cards-bulk-{year_id}.pdf"'
+        },
+    )

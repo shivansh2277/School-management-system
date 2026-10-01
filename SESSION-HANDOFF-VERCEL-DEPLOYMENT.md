@@ -1,144 +1,161 @@
-# SESSION-HANDOFF: Vercel Website Update & Deployment Guide
+# SESSION-HANDOFF: Vercel Website Update & Neon Database Guide
 
 > **Project:** Sunrise School ERP  
-> **Target URL (Fixed Production Link):** `https://school-management-system-blush-iota.vercel.app`  
+> **Target Website URL (Fixed Production Link):** `https://school-management-system-blush-iota.vercel.app`  
 > **Backend API (Render):** `https://school-management-system-12ks.onrender.com`  
-> **Database:** Neon Tech Serverless PostgreSQL  
+> **Backend Health Endpoint:** `https://school-management-system-12ks.onrender.com/healthz`  
+> **Database:** Neon Tech Serverless PostgreSQL (`postgresql+psycopg://`)  
 > **GitHub Repository:** `https://github.com/shivansh2277/School-management-system.git`  
-> **Vercel Tracked Branch:** `main`  
+> **Vercel & Render Tracked Branch:** `main`  
 > **Local Working Branch:** `slice/office-feedback`  
+> **Local Project Root:** `c:\Users\SHIVANSH\OneDrive\Documents\AGENTS\school-management-system`  
 
 ---
 
 ## 1. Executive Summary
 
-This handoff document provides the complete, authoritative guide to updating your live web project on Vercel so that all your vast new features (Public Website Pages, User Access Management, Attendance, Admissions, Timetables, etc.) go live on the exact same production URL:
-👉 **`https://school-management-system-blush-iota.vercel.app`**
+This session handoff provides everything needed to:
+1. **Update your live website on Vercel** to the exact same URL (`https://school-management-system-blush-iota.vercel.app`).
+2. **Upgrade your database on Neon Tech** (apply new Alembic migrations, add new columns/tables, and update demo seed data) using PowerShell commands directly in your project folder.
+3. Understand how the database, backend (Render), and frontend (Vercel) interact.
+
+---
+
+## 2. Part 1: How to Update Your Website on Vercel on the Same Link
 
 Because Vercel is connected directly to your GitHub repository and monitors the **`main`** branch, updating your live website requires **zero manual file uploads** and **zero configuration changes**. Pushing the latest commits to GitHub automatically triggers a fresh build and instantly deploys it to the same link.
 
----
-
-## 2. Pre-Deployment Verification (Already Tested & Verified)
-
-Before deploying to Vercel, the local web build was tested and confirmed **100% clean**:
-- **TypeScript Typecheck:** Passed with `0 errors` (`npx tsc -b`)
-- **Vite Production Bundler:** Built in `21.62s` without errors (`dist/` directory cleanly generated)
-- **Vercel Routing Configuration (`web/vercel.json`):** Verified with SPA rewrite rule `source: "/(.*)" -> destination: "/index.html"` to guarantee client-side React routes work on direct link refresh without 404s.
-
----
-
-## 3. Step-by-Step Instructions: How to Update Vercel Yourself
-
-Follow these simple steps whenever you want to update your live website on Vercel.
-
 ### Method 1: The Standard & Recommended Way (Git Push to `main`)
 
-Open PowerShell or terminal in your project root (`c:\Users\SHIVANSH\OneDrive\Documents\AGENTS\school-management-system`) and run:
+Open PowerShell in your project root:
 
-#### Step 1: Stage and commit all your latest changes
 ```powershell
-# Navigate to project root
+# 1. Navigate to your project root
 cd c:\Users\SHIVANSH\OneDrive\Documents\AGENTS\school-management-system
 
-# Stage all files
+# 2. Stage and commit all your latest changes
 git add .
+git commit -m "feat: deploy latest website features to production"
 
-# Create a clear commit message
-git commit -m "feat: update web app with latest features and pages for production"
-```
-
-#### Step 2: Push your branch directly to GitHub's `main` branch
-Since your Vercel project is linked to GitHub's `main` branch, push your current `slice/office-feedback` branch directly into `origin/main`:
-```powershell
+# 3. Push your branch directly to GitHub's main branch
 git push origin slice/office-feedback:main
 ```
 
 > **What happens immediately after this command:**
-> 1. GitHub receives the new commits.
+> 1. GitHub receives the new commits on `main`.
 > 2. Vercel automatically detects the push via GitHub Webhook.
 > 3. Vercel runs `npm run build` in the `web` directory.
-> 4. In ~60 seconds, your site at `https://school-management-system-blush-iota.vercel.app` updates automatically!
+> 4. In ~60 seconds, your site at `https://school-management-system-blush-iota.vercel.app` updates automatically to the exact same link!
 > 5. Render.com also receives the push and keeps the backend API completely in sync.
 
-#### Step 3 (Optional): Keep your local `main` branch synced
+---
+
+### Method 2: Manual Trigger via Vercel Dashboard
+
+If your latest code is already pushed to GitHub:
+1. Open your browser and go to [vercel.com/dashboard](https://vercel.com/dashboard).
+2. Click on your project: **`school-management-system-blush-iota`**.
+3. Click on the **Deployments** tab.
+4. On the latest deployment row, click the **three dots (`...`)** on the right side.
+5. Select **Redeploy** and click **Redeploy**.
+
+---
+
+### Method 3: Deploy via Vercel CLI (From PowerShell)
+
+If you ever want to build and deploy directly from your local terminal:
 ```powershell
-git checkout main
-git merge slice/office-feedback
-git checkout slice/office-feedback
+cd c:\Users\SHIVANSH\OneDrive\Documents\AGENTS\school-management-system\web
+npx vercel --prod
 ```
 
 ---
 
-### Method 2: Instant Redeploy from the Vercel Dashboard
+## 3. Part 2: How to Upgrade Your Neon Tech Database Using PowerShell
 
-If your latest code is already on GitHub, or if you want to rebuild without touching the terminal:
+When you add new database tables, add new columns, or update the demo seed data, follow these exact instructions using PowerShell.
 
-1. Open your browser and go to [vercel.com/dashboard](https://vercel.com/dashboard).
-2. Click on your project: **`school-management-system-blush-iota`**.
-3. Click on the **Deployments** tab at the top.
-4. On the latest deployment row, click the **three dots (`...`)** on the right side.
-5. Select **Redeploy**.
-6. Check **"Include existing build cache"** (or uncheck to do a 100% clean rebuild) and click **Redeploy**.
-7. Vercel will build and deploy to the exact same link in under 1 minute.
+### Your Project Folders:
+- **Project Root:** `c:\Users\SHIVANSH\OneDrive\Documents\AGENTS\school-management-system`
+- **Backend Folder (where Alembic and Seed live):** `c:\Users\SHIVANSH\OneDrive\Documents\AGENTS\school-management-system\backend`
+- **Python Virtualenv:** `..\.venv\Scripts\python.exe` (from `backend`)
 
 ---
 
-### Method 3: Direct Deploy via Vercel CLI (Optional Alternative)
+### Step-by-Step PowerShell Database Upgrade:
 
-If you ever want to deploy directly from your computer without pushing to GitHub first:
+#### 1. Open PowerShell and navigate to the backend folder
+```powershell
+cd c:\Users\SHIVANSH\OneDrive\Documents\AGENTS\school-management-system\backend
+```
 
-1. In PowerShell, navigate to the `web/` folder:
+#### 2. Set your Neon Tech connection string
+> ⚠️ **Important Driver Rule**: Always use `postgresql+psycopg://` instead of `postgresql://` so SQLAlchemy uses the modern `psycopg` (v3) driver installed in your virtual environment.
+
+```powershell
+$env:DATABASE_URL = "postgresql+psycopg://neondb_owner:YOUR_PASSWORD@ep-YOUR-ENDPOINT.neon.tech/neondb?sslmode=require"
+```
+
+#### 3. Apply Schema Migrations (Add New Tables & Columns)
+To apply any new Alembic migration files to Neon Tech:
+```powershell
+..\.venv\Scripts\python.exe -m alembic upgrade head
+```
+*(If you ever encounter a conflict with pre-existing tables, stamp the previous migration first, e.g.: `..\.venv\Scripts\python.exe -m alembic stamp f6a7b8c9d0e1` and then run `upgrade head`)*
+
+#### 4. Update or Re-populate Seed Data
+To populate or update demo seed data on Neon Tech:
+```powershell
+..\.venv\Scripts\python.exe seed.py --force
+```
+> **Why `--force` is required:**
+> `seed.py` has a built-in safety guard to prevent accidental data wipes on production/cloud hosts (`neon.tech`, `rds`, `supabase`). Passing `--force` explicitly confirms you intend to update the demo database on Neon.
+>
+> **Note on Timing:**
+> Seeding Neon Tech over the internet takes ~15–20 minutes because it creates:
+> - 224 user accounts with 12-round bcrypt password hashing
+> - 5,800 daily attendance records
+> - 2,400 exam marks records
+> - 300 monthly invoices and 140+ payment allocations
+> - Timetables, routes, inventory, and RBAC roles
+
+#### 5. Verify the Connection
+```powershell
+..\.venv\Scripts\python.exe -c "from app.core.db import engine; from sqlalchemy import text; print('Connected School:', engine.connect().execute(text('SELECT name, code FROM schools')).fetchone())"
+```
+
+#### 6. Clear your database key from PowerShell memory (Security)
+```powershell
+$env:DATABASE_URL = ""
+```
+
+---
+
+### Alternative: Automated Runner (`upgrade_neon.py`)
+
+You can also use the automated runner script:
+1. Create a temporary file `backend/.env.neon`:
+   ```env
+   DATABASE_URL=postgresql+psycopg://neondb_owner:YOUR_PASSWORD@ep-YOUR-ENDPOINT.neon.tech/neondb?sslmode=require
+   ```
+2. Run in PowerShell:
    ```powershell
-   cd c:\Users\SHIVANSH\OneDrive\Documents\AGENTS\school-management-system\web
+   cd c:\Users\SHIVANSH\OneDrive\Documents\AGENTS\school-management-system\backend
+   ..\.venv\Scripts\python.exe upgrade_neon.py
    ```
-2. Run:
+3. Delete `backend/.env.neon` when finished:
    ```powershell
-   npx vercel --prod
-   ```
-3. If prompted to link to an existing project:
-   - "Set up and deploy?": **Yes**
-   - "Which scope?": Select your personal account
-   - "Link to existing project?": **Yes**
-   - "What's the name of existing project?": **`school-management-system-blush-iota`**
-4. Vercel CLI will upload the local build and point the production alias to your link.
-
----
-
-## 4. Key Configuration Checklist (Do Not Modify)
-
-To ensure the deployment never breaks:
-1. **Production URL:** `https://school-management-system-blush-iota.vercel.app` (Managed under Vercel Project Settings → Domains).
-2. **Environment Variable on Vercel:**
-   - Key: `VITE_API_URL`
-   - Value: `https://school-management-system-12ks.onrender.com`
-   - Target: Production, Preview, Development
-3. **Root Directory on Vercel:** Set to `web`.
-4. **Build Command on Vercel:** `npm run build` (or Vite framework default).
-5. **Output Directory on Vercel:** `dist`.
-6. **SPA Routing (`web/vercel.json`):**
-   ```json
-   {
-     "framework": "vite",
-     "buildCommand": "npm run build",
-     "outputDirectory": "dist",
-     "rewrites": [
-       {
-         "source": "/(.*)",
-         "destination": "/index.html"
-       }
-     ]
-   }
+   Remove-Item -Path "backend\.env.neon" -Force
    ```
 
 ---
 
-## 5. Summary of Live Links
+## 4. Key Configuration Summary
 
-| Component | Provider | Live URL |
-| :--- | :--- | :--- |
-| **Web Application** | Vercel | `https://school-management-system-blush-iota.vercel.app` |
+| Layer | Host / Provider | URL / Connection |
+|---|---|---|
+| **Website (Frontend)** | Vercel | `https://school-management-system-blush-iota.vercel.app` |
 | **Backend API** | Render | `https://school-management-system-12ks.onrender.com` |
-| **Backend Health** | Render | `https://school-management-system-12ks.onrender.com/healthz` |
-| **Database** | Neon Tech | Serverless PostgreSQL |
-| **GitHub Repo** | GitHub | `https://github.com/shivansh2277/School-management-system.git` |
+| **Database** | Neon Tech | PostgreSQL Serverless (`postgresql+psycopg://`) |
+| **Repo** | GitHub | `https://github.com/shivansh2277/School-management-system.git` |
+| **Deploy Branch** | GitHub `main` | Linked to Vercel production auto-deployment |

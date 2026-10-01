@@ -57,6 +57,10 @@ from app.models import (
     DayOfWeek,
     Exam,
     ExamSchedule,
+    Book,
+    BookCopy,
+    CertificateTemplate,
+    LibraryLoan,
     FeeFrequency,
     FeeHead,
     FeeHeadType,
@@ -110,6 +114,7 @@ RECEPTIONIST_LOGIN = "receptionist@sunrisepublic.edu"
 ADMISSION_OFFICER_LOGIN = "admission@sunrisepublic.edu"
 TRANSPORT_INCHARGE_LOGIN = "transport@sunrisepublic.edu"
 ACCOUNTS_LOGIN = "accounts@sunrisepublic.edu"
+LIBRARIAN_LOGIN = "library@sunrisepublic.edu"
 SCHOOL_CODE = "SPS"
 TODAY = date(2026, 9, 1)  # deterministic "today" so the seeded window never drifts
 
@@ -618,6 +623,17 @@ def seed(db: Session, reset: bool = True, force: bool = False) -> None:  # noqa:
     )
     db.add(accounts_user)
 
+    # Librarian: dedicated role for library catalog and circulation
+    librarian_user = User(
+        role=UserRole.admin,
+        login_id=LIBRARIAN_LOGIN,
+        password_hash=hash_password(DEMO_PASSWORDS[UserRole.admin]),
+        full_name="School Librarian",
+        email=LIBRARIAN_LOGIN,
+        phone="+91 522 400 1240",
+    )
+    db.add(librarian_user)
+
     teachers: list[Employee] = []
     departments = {}
     for code, dept_name in DEPARTMENTS:
@@ -629,6 +645,17 @@ def seed(db: Session, reset: bool = True, force: bool = False) -> None:  # noqa:
         departments[code] = existing or hr_svc.create_department(
             db, school.id, code=code, name=dept_name
         )
+    db.flush()
+
+    librarian_emp = Employee(
+        user_id=librarian_user.id,
+        employee_code="LIB001",
+        employee_type=EmployeeType.administrative,
+        joining_date=date(2022, 7, 1),
+        department_id=departments["ADM"].id,
+        designation="Librarian",
+    )
+    db.add(librarian_emp)
     db.flush()
 
     for i, (name, qual, dept_code, designation) in enumerate(TEACHER_NAMES, start=1):
@@ -1400,6 +1427,8 @@ def seed(db: Session, reset: bool = True, force: bool = False) -> None:  # noqa:
     _seed_inventory(db, school)
     _seed_grievances(db, school)
     _seed_operational_tables(db, school, academic_year_id)
+    _seed_library(db, school, librarian_emp, enrolment_of, students)
+    _seed_certificates(db, school)
 
     _assign_roles(db, roles, sections)
     db.commit()
@@ -1944,6 +1973,141 @@ def _seed_transport(db: Session, school, departments: dict, enrolment_of: dict, 
     db.flush()
 
 
+def _seed_library(db: Session, school, librarian_emp, enrolment_of: dict, students: list) -> None:
+    """Seed library catalogue with books and copies, and initial loan records."""
+    if db.scalar(select(Book).where(Book.school_id == school.id)) is not None:
+        return
+
+    sample_books = [
+        ("978-0143335405", "Malgudi Days", "R. K. Narayan", "Indian Thought Publications", "Fiction", "Shelf A1", 3),
+        ("978-0199105434", "The Oxford Illustrated Science Encyclopedia", "Oxford University Press", "Oxford", "Science", "Shelf B2", 2),
+        ("978-0140449136", "The Discovery of India", "Jawaharlal Nehru", "Penguin Books", "History", "Shelf C1", 2),
+        ("978-8172234980", "Wings of Fire", "A. P. J. Abdul Kalam", "Universities Press", "Biography", "Shelf C3", 3),
+        ("978-0439023528", "The Hunger Games", "Suzanne Collins", "Scholastic Press", "Fiction", "Shelf A3", 2),
+        ("978-0070669116", "Higher Engineering Mathematics", "B. S. Grewal", "Khanna Publishers", "Mathematics", "Shelf D1", 2),
+    ]
+
+    copies_list = []
+    acc_idx = 1001
+    for isbn, title, author, publisher, cat, shelf, copy_count in sample_books:
+        book = Book(
+            school_id=school.id,
+            isbn=isbn,
+            title=title,
+            author=author,
+            publisher=publisher,
+            category=cat,
+            shelf_location=shelf,
+            total_copies=copy_count,
+            available_copies=copy_count,
+        )
+        db.add(book)
+        db.flush()
+        for i in range(1, copy_count + 1):
+            acc_no = f"ACC-{acc_idx}"
+            acc_idx += 1
+            copy = BookCopy(
+                school_id=school.id,
+                book_id=book.id,
+                accession_no=acc_no,
+                barcode=f"BC-{acc_no}",
+                status="available",
+            )
+            db.add(copy)
+            copies_list.append((book, copy))
+    db.flush()
+
+    if students and copies_list and librarian_emp:
+        s0 = students[0]
+        e0 = enrolment_of.get(s0.id)
+        b0, c0 = copies_list[0]
+        if e0:
+            c0.status = "issued"
+            b0.available_copies -= 1
+            loan1 = LibraryLoan(
+                school_id=school.id,
+                book_copy_id=c0.id,
+                enrolment_id=e0.id,
+                issued_by_id=librarian_emp.id,
+                issued_on=TODAY - timedelta(days=5),
+                due_date=TODAY + timedelta(days=9),
+                status="active",
+                fine_amount=Decimal("0.00"),
+                fine_paid=False,
+            )
+            db.add(loan1)
+
+        if len(students) > 1 and len(copies_list) > 1:
+            s1 = students[1]
+            e1 = enrolment_of.get(s1.id)
+            b1, c1 = copies_list[1]
+            if e1:
+                loan2 = LibraryLoan(
+                    school_id=school.id,
+                    book_copy_id=c1.id,
+                    enrolment_id=e1.id,
+                    issued_by_id=librarian_emp.id,
+                    issued_on=TODAY - timedelta(days=20),
+                    due_date=TODAY - timedelta(days=6),
+                    returned_on=TODAY - timedelta(days=4),
+                    status="returned",
+                    fine_amount=Decimal("10.00"),
+                    fine_paid=True,
+                )
+                db.add(loan2)
+    db.flush()
+
+
+def _seed_certificates(db: Session, school) -> None:
+    """Seed default certificate templates for Transfer, Bonafide, and Character certificates."""
+    if db.scalar(select(CertificateTemplate).where(CertificateTemplate.school_id == school.id)) is not None:
+        return
+
+    templates = [
+        (
+            "transfer_certificate",
+            "SCHOOL LEAVING / TRANSFER CERTIFICATE",
+            "Recognized & Affiliated to CBSE, New Delhi",
+            "This is to certify that the particulars furnished above have been verified from the official records and registers.",
+            "Principal",
+            "Principal / Head of Institution",
+            True,
+        ),
+        (
+            "bonafide_certificate",
+            "BONAFIDE CERTIFICATE",
+            "Recognized & Affiliated to CBSE, New Delhi",
+            "This is to certify that the student is a bonafide student of this institution studying in the class and session indicated above.",
+            "Principal",
+            "Principal / Head of Institution",
+            True,
+        ),
+        (
+            "character_certificate",
+            "CHARACTER CERTIFICATE",
+            "Recognized & Affiliated to CBSE, New Delhi",
+            "This is to certify that during the period of study, the student bore good moral character and exemplary conduct.",
+            "Principal",
+            "Principal / Head of Institution",
+            True,
+        ),
+    ]
+
+    for cert_type, title, hdr, body, sig_name, sig_title, seal in templates:
+        tmpl = CertificateTemplate(
+            school_id=school.id,
+            certificate_type=cert_type,
+            title=title,
+            header_text=hdr,
+            body_template=body,
+            signatory_name=sig_name,
+            signatory_title=sig_title,
+            show_seal=seal,
+        )
+        db.add(tmpl)
+    db.flush()
+
+
 def _assign_roles(db: Session, roles: dict, sections: list) -> None:
     """Give every seeded account the system role matching its primary role.
 
@@ -1972,6 +2136,8 @@ def _assign_roles(db: Session, roles: dict, sections: list) -> None:
             if user.login_id == TRANSPORT_INCHARGE_LOGIN
             else "accounts"
             if user.login_id == ACCOUNTS_LOGIN
+            else "librarian"
+            if user.login_id == LIBRARIAN_LOGIN
             else "transport_manager"
             if user.login_id.startswith("TRM")
             else LEGACY_ROLE_MAP[user.role.value]

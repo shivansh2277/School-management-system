@@ -150,6 +150,12 @@ def accounts_user(client):
 
 
 @pytest.fixture()
+def librarian(client):
+    """Librarian: holds library catalog and circulation permissions."""
+    return auth(_token(client, "admin", "library@sunrisepublic.edu", "Admin@123"))
+
+
+@pytest.fixture()
 def teacher(client):
     """TCH001 — class teacher of 10-A and its Mathematics teacher."""
     return auth(_token(client, "teacher", "TCH001", "Teacher@123"))

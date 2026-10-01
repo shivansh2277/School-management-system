@@ -161,6 +161,7 @@ def _full_application_payload(**overrides):
         "school_rules_accepted": True,
         "data_processing_consent": True,
         "photo_media_consent": True,
+        "apaar_consent": True,
     }
     payload.update(overrides)
     return payload

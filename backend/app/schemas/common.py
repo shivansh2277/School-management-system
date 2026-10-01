@@ -35,6 +35,8 @@ class AttendanceMarkRequest(BaseModel):
     # Required only when changing an earlier day's mark: that is a correction
     # to a record, not a fix to an open register (§5.8.9).
     reason: str | None = None
+    # Required when marking attendance on a declared holiday (must hold attendance.holiday.override)
+    holiday_override_reason: str | None = None
 
 
 class RollRow(BaseModel):

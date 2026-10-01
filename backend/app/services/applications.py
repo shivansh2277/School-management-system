@@ -11,21 +11,26 @@ subtly wrong:
   offices reopen decisions.
 """
 
-from datetime import UTC, datetime
+import re
+from datetime import UTC, date, datetime
+from decimal import Decimal
 
 from fastapi import HTTPException, status as http
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.models import (
+    AcademicYear,
     AdmissionCategory,
     AdmissionCycle,
     Application,
+    ApplicationDocumentOverride,
     ApplicationGuardian,
     ApplicationMedical,
     ApplicationSibling,
     ApplicationStatus,
     AuditAction,
+    Document,
     DocumentStatus,
     DocumentType,
     Employee,
@@ -134,6 +139,98 @@ def duplicate_warnings(db: Session, app: Application) -> list[dict]:
     return sorted(matches.values(), key=lambda m: m["application_id"])
 
 
+def is_junior_section_through_ukg(class_name: str | None) -> bool:
+    """Check if class is in the junior section through UKG, inclusive."""
+    if not class_name:
+        return False
+    name = class_name.strip()
+    clean = re.sub(r"^(class|grade|std)\s*", "", name, flags=re.IGNORECASE).strip()
+    if clean.isdigit():
+        return False
+    roman_to_int = {
+        "i": 1, "ii": 2, "iii": 3, "iv": 4, "v": 5, "vi": 6,
+        "vii": 7, "viii": 8, "ix": 9, "x": 10, "xi": 11, "xii": 12,
+    }
+    if clean.lower() in roman_to_int:
+        return False
+    return True
+
+
+def get_admission_cutoff_date(
+    db: Session, school_id: int, cycle_id: int | None, class_name: str | None
+) -> date:
+    """Determine the admission cutoff date using the cycle class config, cycle start, or academic year."""
+    if cycle_id and class_name:
+        cfg = admission.class_config(db, cycle_id, class_name)
+        if cfg and cfg.age_on:
+            return cfg.age_on
+    if cycle_id:
+        cyc = db.get(AdmissionCycle, cycle_id)
+        if cyc:
+            if cyc.starts_on:
+                return cyc.starts_on
+            if cyc.academic_year and cyc.academic_year.start_date:
+                return cyc.academic_year.start_date
+    curr_year = db.scalar(
+        select(AcademicYear).where(
+            AcademicYear.school_id == school_id, AcademicYear.is_current.is_(True)
+        )
+    )
+    if curr_year and curr_year.start_date:
+        return curr_year.start_date
+    return date.today()
+
+
+def is_birth_certificate_mandatory(
+    db: Session,
+    school_id: int,
+    class_name: str | None,
+    dob: date | None,
+    cycle_id: int | None = None,
+) -> bool:
+    """A birth certificate is mandatory if either condition is true:
+    1. Student is applying for a class in the junior section through UKG, inclusive.
+    2. Student is younger than 5 years old on the relevant admission date.
+    If neither condition is true, the birth certificate is optional.
+    """
+    if not class_name or not dob:
+        return False
+    if is_junior_section_through_ukg(class_name):
+        return True
+    cutoff = get_admission_cutoff_date(db, school_id, cycle_id, class_name)
+    age = admission.age_years_on(dob, cutoff)
+    if age < Decimal("5.0"):
+        return True
+    return False
+
+
+def has_document(db: Session, school_id: int, application_id: int, code: str) -> bool:
+    return bool(
+        db.scalar(
+            select(Document.id)
+            .join(DocumentType, DocumentType.id == Document.document_type_id)
+            .where(
+                Document.school_id == school_id,
+                Document.owner_type == OwnerType.application,
+                Document.owner_id == application_id,
+                DocumentType.code == code,
+                Document.deleted_at.is_(None),
+            )
+        )
+    )
+
+
+def has_override(db: Session, application_id: int, code: str) -> bool:
+    return bool(
+        db.scalar(
+            select(ApplicationDocumentOverride.id).where(
+                ApplicationDocumentOverride.application_id == application_id,
+                ApplicationDocumentOverride.document_code == code,
+            )
+        )
+    )
+
+
 def _missing_for_submission(db: Session, app: Application) -> list[str]:
     """Steps 1-3 are mandatory to submit; the rest may complete later
     (§5.1.4)."""
@@ -236,17 +333,30 @@ def checklist(db: Session, app: Application) -> list[dict]:
     }
     category = (app.caste_category or "").upper() or None
 
+    overrides = {
+        o.document_code: o
+        for o in db.scalars(
+            select(ApplicationDocumentOverride).where(
+                ApplicationDocumentOverride.application_id == app.id
+            )
+        )
+    }
+
     out = []
     for t in sorted(types, key=lambda t: (t.sort_order, t.code)):
         conditional = t.required_if_category is not None
         applies = (not conditional) or t.required_if_category.upper() == category
-        # A class checklist replaces the school-wide mandatory list, but never
-        # overrides a category claim: whoever claims EWS owes the income
-        # certificate whatever class they are applying to.
         by_class = t.code in class_codes if class_codes else t.is_mandatory
-        required = applies and (by_class or (conditional and t.is_mandatory))
+        if t.code == "birth_certificate":
+            required = by_class or is_birth_certificate_mandatory(
+                db, app.school_id, app.class_applying_for, app.date_of_birth, app.cycle_id
+            )
+        else:
+            required = applies and (by_class or (conditional and t.is_mandatory))
+
         doc = uploaded.get(t.id)
-        if not required and doc is None:
+        override = overrides.get(t.code)
+        if not required and doc is None and override is None:
             # Not asked for and not supplied: it does not belong on the list at
             # all, or every applicant sees twenty rows of nothing.
             continue
@@ -256,7 +366,9 @@ def checklist(db: Session, app: Application) -> list[dict]:
                 "name": t.name,
                 "document_type_id": t.id,
                 "required": required,
-                "status": doc.status.value if doc else "pending",
+                "status": "overridden" if (override and not doc) else (doc.status.value if doc else "pending"),
+                "is_overridden": override is not None,
+                "override_reason": override.reason if override else None,
                 "document_id": doc.id if doc else None,
                 "original_seen": doc.original_seen if doc else False,
                 "rejection_reason": doc.rejection_reason if doc else None,
@@ -266,11 +378,13 @@ def checklist(db: Session, app: Application) -> list[dict]:
 
 
 def outstanding_documents(db: Session, app: Application) -> list[str]:
-    """The names of required documents that are not verified yet."""
+    """The names of required documents that are not verified yet (excluding authorized overrides)."""
     return [
         item["name"]
         for item in checklist(db, app)
-        if item["required"] and item["status"] != DocumentStatus.verified.value
+        if item["required"]
+        and item["status"] not in (DocumentStatus.verified.value, "overridden")
+        and not item.get("is_overridden")
     ]
 
 

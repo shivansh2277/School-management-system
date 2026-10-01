@@ -15,6 +15,7 @@ from app.models.application import (
     ApplicationGuardian,
     ApplicationMedical,
     ApplicationSibling,
+    ApplicationDocumentOverride,
 )
 from app.models.admission import (
     AdmissionCycle,
@@ -112,6 +113,7 @@ from app.models.fees import (
 from app.models.ops import (
     Attendance,
     Holiday,
+    HolidayClassSection,
     Homework,
     HomeworkSubmission,
     Notice,
@@ -170,3 +172,13 @@ from app.models.reception import (
     StudentPass,
 )
 
+
+from app.models.certificate import (
+    CertificateTemplate,
+    StudentCertificate,
+)
+from app.models.library import (
+    Book,
+    BookCopy,
+    LibraryLoan,
+)

@@ -23,6 +23,7 @@ import base64
 import hashlib
 import hmac
 import json
+import re
 import uuid
 from datetime import UTC, date as Date, datetime, timedelta
 from decimal import Decimal
@@ -42,6 +43,7 @@ from app.models import (
     AdmissionOffer,
     Application,
     ApplicationAuthorizedPerson,
+    ApplicationDocumentOverride,
     ApplicationFeePurpose,
     ApplicationGuardian,
     ApplicationMedical,
@@ -306,9 +308,34 @@ class PublicApplication(BaseModel):
     school_rules_accepted: bool = False
     data_processing_consent: bool = False
     photo_media_consent: bool | None = None
+    # Draft and APAAR fields
+    draft_id: int | None = None
+    apaar_id: str | None = None
+    apaar_consent: bool = False
+    apaar_consent_guardian_name: str | None = None
+    apaar_consent_guardian_relation: str | None = None
     # Honeypot. A real form renders this hidden and empty; a bot fills every
     # field it finds. Named as something a scraper would want to complete.
     website: str | None = None
+
+
+class PublicDraftApplication(BaseModel):
+    model_config = {"extra": "ignore"}
+
+    draft_id: int | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    middle_name: str | None = None
+    date_of_birth: Date | None = None
+    gender: str | None = None
+    class_applying_for: str | None = None
+    stream: str | None = None
+    apaar_id: str | None = None
+    apaar_consent: bool = False
+    apaar_consent_guardian_name: str | None = None
+    apaar_consent_guardian_relation: str | None = None
+    guardians: list[PublicGuardian] = []
+    documents: list[PublicDocumentInput] = []
 
 
 class PaymentInitiateInput(BaseModel):
@@ -438,6 +465,74 @@ def open_cycle(school_code: str, db: Session = Depends(get_db)) -> dict:
     }
 
 
+@router.post("/draft")
+def save_draft(
+    school_code: str,
+    body: PublicDraftApplication,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Save an application draft so public applicants missing documents can obtain
+    a persistent reference (DFT-{id}) and request an administrative exception."""
+    school = _school(db, school_code)
+    cycle = admission.open_cycle(db, school.id)
+
+    app = None
+    if body.draft_id:
+        app = db.scalar(
+            select(Application).where(
+                Application.id == body.draft_id,
+                Application.school_id == school.id,
+            )
+        )
+    if app is None:
+        app = Application(
+            school_id=school.id,
+            cycle_id=cycle.id,
+            status=ApplicationStatus.draft,
+            first_name=body.first_name or "Draft",
+            last_name=body.last_name or "Applicant",
+            date_of_birth=body.date_of_birth or Date.today(),
+            gender=body.gender or "other",
+            class_applying_for=body.class_applying_for or "1",
+            stream=body.stream,
+        )
+        db.add(app)
+        db.flush()
+    else:
+        if app.status != ApplicationStatus.draft:
+            raise HTTPException(status.HTTP_409_CONFLICT, "This application has already been submitted")
+        if body.first_name:
+            app.first_name = body.first_name
+        if body.last_name:
+            app.last_name = body.last_name
+        if body.date_of_birth:
+            app.date_of_birth = body.date_of_birth
+        if body.gender:
+            app.gender = body.gender
+        if body.class_applying_for:
+            app.class_applying_for = body.class_applying_for
+        if body.stream:
+            app.stream = body.stream
+
+    clean_apaar = (body.apaar_id or "").strip().replace(" ", "").replace("-", "")
+    if clean_apaar:
+        app.apaar_id = clean_apaar
+    if body.apaar_consent:
+        app.apaar_consent = True
+        app.apaar_consent_guardian_name = body.apaar_consent_guardian_name
+        app.apaar_consent_guardian_relation = body.apaar_consent_guardian_relation
+        app.apaar_consent_at = datetime.now(UTC)
+
+    db.commit()
+    return {
+        "draft_id": app.id,
+        "reference_code": f"DFT-{app.id}",
+        "reference_number": f"DFT-{app.id}",
+        "status": "draft",
+        "message": f"Draft saved. Use reference code DFT-{app.id} for inquiries or document exception requests.",
+    }
+
+
 @router.post("/apply", status_code=status.HTTP_201_CREATED)
 def apply(
     school_code: str,
@@ -482,6 +577,7 @@ def apply(
 
     app_fields = body.model_dump(
         exclude={
+            "draft_id",
             "guardians",
             "authorized_pickup_persons",
             "siblings",
@@ -494,16 +590,29 @@ def apply(
             "photo_media_consent",
             "website",
             "photo_url",
+            "apaar_id",
+            "apaar_consent",
+            "apaar_consent_guardian_name",
+            "apaar_consent_guardian_relation",
         }
     )
 
-    app = Application(
-        school_id=school.id,
-        cycle_id=cycle.id,
-        created_by=None,  # nobody at the school typed this
-        source=body.heard_about_us,
-        **app_fields,
-        declarations={
+    app = None
+    if body.draft_id:
+        app = db.scalar(
+            select(Application).where(
+                Application.id == body.draft_id,
+                Application.school_id == school.id,
+            )
+        )
+        if app is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, f"Draft application {body.draft_id} not found")
+        if app.status != ApplicationStatus.draft:
+            raise HTTPException(status.HTTP_409_CONFLICT, "This application has already been submitted")
+        for field, value in app_fields.items():
+            setattr(app, field, value)
+        app.source = body.heard_about_us
+        app.declarations = {
             "information_accuracy": body.information_accuracy,
             "school_rules_accepted": body.school_rules_accepted,
             "data_processing_consent": body.data_processing_consent,
@@ -511,10 +620,72 @@ def apply(
             "submitted_from": "public_portal",
             "declared_on": str(Date.today()),
             "photo_url": body.photo_url,
-        },
-    )
-    db.add(app)
-    db.flush()
+        }
+    else:
+        app = Application(
+            school_id=school.id,
+            cycle_id=cycle.id,
+            created_by=None,  # nobody at the school typed this
+            source=body.heard_about_us,
+            **app_fields,
+            declarations={
+                "information_accuracy": body.information_accuracy,
+                "school_rules_accepted": body.school_rules_accepted,
+                "data_processing_consent": body.data_processing_consent,
+                "photo_media_consent": body.photo_media_consent,
+                "submitted_from": "public_portal",
+                "declared_on": str(Date.today()),
+                "photo_url": body.photo_url,
+            },
+        )
+        db.add(app)
+        db.flush()
+
+    # Check conditional birth certificate rule
+    if svc.is_birth_certificate_mandatory(db, school.id, body.class_applying_for, body.date_of_birth, cycle.id):
+        has_uploaded_bc = any(d.code == "birth_certificate" for d in body.documents)
+        has_override_bc = svc.has_override(db, app.id, "birth_certificate") if app.id else False
+        if not (has_uploaded_bc or has_override_bc):
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "A birth certificate is mandatory for junior section through UKG or applicants younger than 5 years old on the admission cutoff date.",
+            )
+
+    # Check APAAR ID section
+    clean_apaar = (body.apaar_id or "").strip().replace(" ", "").replace("-", "")
+    if clean_apaar:
+        if not re.match(r"^\d{12}$", clean_apaar):
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "APAAR ID must be exactly 12 digits.",
+            )
+        app.apaar_id = clean_apaar
+        app.apaar_consent = False
+    elif body.apaar_consent:
+        primary_g = next((g for g in body.guardians if g.is_primary), None)
+        g_name = (body.apaar_consent_guardian_name or (primary_g.full_name if primary_g else "")).strip()
+        if not g_name:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "Consenting parent or guardian name is required for APAAR consent.",
+            )
+        g_rel = body.apaar_consent_guardian_relation or (
+            str(primary_g.relation.value if hasattr(primary_g.relation, "value") else primary_g.relation)
+            if primary_g
+            else None
+        )
+        app.apaar_id = None
+        app.apaar_consent = True
+        app.apaar_consent_guardian_name = g_name
+        app.apaar_consent_guardian_relation = g_rel
+        app.apaar_consent_at = datetime.now(UTC)
+    else:
+        has_apaar_override = svc.has_override(db, app.id, "apaar") if app.id else False
+        if not has_apaar_override:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "APAAR ID section is required: please provide an existing 12-digit APAAR ID, record parental consent, or obtain an authorized exception.",
+            )
 
     for g in body.guardians:
         db.add(

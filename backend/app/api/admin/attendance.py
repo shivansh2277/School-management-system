@@ -15,14 +15,17 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.models import (
     AcademicYear,
+    AuditAction,
     ClassSection,
     Holiday,
+    HolidayClassSection,
     LeaveStatus,
     StudentLeaveRequest,
     User,
 )
 from app.schemas.common import AttendanceSummary, RollRow
 from app.services import attendance as svc
+from app.services import audit
 from app.services import leave as leave_svc
 from app.services import scoping
 from app.services import tenancy
@@ -37,6 +40,7 @@ router = APIRouter(
 
 reader = require_permission("attendance.record.read", school_wide=True)
 corrector = require_permission("attendance.record.correct", school_wide=True)
+holiday_manager = require_permission("attendance.holiday.manage", school_wide=True)
 
 
 @router.get("", response_model=list[RollRow])
@@ -80,9 +84,20 @@ def attendance_summary(
 class HolidayIn(BaseModel):
     model_config = {"extra": "forbid"}
 
-    date: Date
-    name: str
+    name: str = Field(min_length=1, max_length=120)
+    start_date: Date | None = None
+    end_date: Date | None = None
+    date: Date | None = None
+    description: str | None = None
+    is_school_wide: bool = True
+    class_section_ids: list[int] = []
     academic_year_id: int | None = None
+
+
+class HolidayCancelInput(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    reason: str = Field(min_length=3, max_length=255)
 
 
 class LeaveDecision(BaseModel):
@@ -132,21 +147,50 @@ def shortage(
 
 @router.get("/holidays")
 def holidays(
-    year: int | None = None, user: User = Depends(reader), db: Session = Depends(get_db)
+    year: int | None = None,
+    status_filter: str | None = None,
+    user: User = Depends(reader),
+    db: Session = Depends(get_db),
 ) -> list[dict]:
     q = select(Holiday).where(Holiday.school_id == user.school_id)
     if year is not None:
         q = q.where(Holiday.academic_year_id == year)
+    if status_filter:
+        q = q.where(Holiday.status == status_filter)
+    rows = list(db.scalars(q.order_by(Holiday.start_date.desc(), Holiday.id.desc())).all())
     return [
-        {"id": h.id, "date": h.date, "name": h.name, "academic_year_id": h.academic_year_id}
-        for h in db.scalars(q.order_by(Holiday.date))
+        {
+            "id": h.id,
+            "name": h.name,
+            "description": h.description,
+            "date": h.date,
+            "start_date": h.start_date,
+            "end_date": h.end_date,
+            "is_school_wide": h.is_school_wide,
+            "status": h.status,
+            "cancellation_reason": h.cancellation_reason,
+            "academic_year_id": h.academic_year_id,
+            "class_sections": [
+                {"id": cs.id, "label": cs.label} for cs in h.class_sections
+            ],
+        }
+        for h in rows
     ]
 
 
-@router.post("/holidays", status_code=201, dependencies=[Depends(corrector)])
+@router.post("/holidays", status_code=201, dependencies=[Depends(holiday_manager)])
 def add_holiday(
-    body: HolidayIn, user: User = Depends(reader), db: Session = Depends(get_db)
+    body: HolidayIn, user: User = Depends(holiday_manager), db: Session = Depends(get_db)
 ) -> dict:
+    start_date = body.start_date or body.date
+    if not start_date:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "start_date or date is required")
+    end_date = body.end_date or start_date
+    if end_date < start_date:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "end_date cannot be earlier than start_date"
+        )
+
     year_id = body.academic_year_id
     if year_id is None:
         current = db.scalar(
@@ -157,21 +201,160 @@ def add_holiday(
         if current is None:
             raise HTTPException(status.HTTP_409_CONFLICT, "No current academic year")
         year_id = current.id
-    if db.scalar(
-        select(Holiday).where(
-            Holiday.academic_year_id == year_id, Holiday.date == body.date
-        )
-    ):
-        raise HTTPException(status.HTTP_409_CONFLICT, "That day is already a holiday")
+
     row = Holiday(
         school_id=user.school_id,
         academic_year_id=year_id,
-        date=body.date,
+        date=start_date,
+        start_date=start_date,
+        end_date=end_date,
         name=body.name,
+        description=body.description,
+        is_school_wide=body.is_school_wide,
+        status="active",
+        created_by_id=user.id,
     )
     db.add(row)
+    db.flush()
+
+    if not body.is_school_wide and body.class_section_ids:
+        for cs_id in body.class_section_ids:
+            cs = db.get(ClassSection, cs_id)
+            if cs and cs.school_id == user.school_id:
+                db.add(
+                    HolidayClassSection(
+                        school_id=user.school_id,
+                        holiday_id=row.id,
+                        class_section_id=cs.id,
+                    )
+                )
+
+    audit.record(
+        db,
+        actor=user,
+        school_id=user.school_id,
+        entity_type="holiday",
+        entity_id=row.id,
+        action=AuditAction.create,
+        after={
+            "name": row.name,
+            "start_date": str(row.start_date),
+            "end_date": str(row.end_date),
+            "is_school_wide": row.is_school_wide,
+        },
+        reason="Holiday declared",
+    )
     db.commit()
-    return {"id": row.id, "date": row.date, "name": row.name}
+    return {
+        "id": row.id,
+        "name": row.name,
+        "date": row.date,
+        "start_date": row.start_date,
+        "end_date": row.end_date,
+        "is_school_wide": row.is_school_wide,
+        "class_section_ids": [cs.id for cs in row.class_sections] if not row.is_school_wide else [],
+        "status": row.status,
+    }
+
+
+@router.put("/holidays/{holiday_id}", dependencies=[Depends(holiday_manager)])
+def update_holiday(
+    holiday_id: int,
+    body: HolidayIn,
+    user: User = Depends(holiday_manager),
+    db: Session = Depends(get_db),
+) -> dict:
+    row = db.get(Holiday, holiday_id)
+    if row is None or row.school_id != user.school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Holiday not found")
+
+    start_date = body.start_date or body.date or row.start_date
+    end_date = body.end_date or start_date
+    if end_date < start_date:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "end_date cannot be earlier than start_date"
+        )
+
+    row.name = body.name
+    row.start_date = start_date
+    row.end_date = end_date
+    row.date = start_date
+    row.description = body.description
+    row.is_school_wide = body.is_school_wide
+
+    if not body.is_school_wide and body.class_section_ids is not None:
+        db.query(HolidayClassSection).filter(HolidayClassSection.holiday_id == row.id).delete()
+        for cs_id in body.class_section_ids:
+            cs = db.get(ClassSection, cs_id)
+            if cs and cs.school_id == user.school_id:
+                db.add(
+                    HolidayClassSection(
+                        school_id=user.school_id,
+                        holiday_id=row.id,
+                        class_section_id=cs.id,
+                    )
+                )
+
+    audit.record(
+        db,
+        actor=user,
+        school_id=user.school_id,
+        entity_type="holiday",
+        entity_id=row.id,
+        action=AuditAction.update,
+        after={
+            "name": row.name,
+            "start_date": str(row.start_date),
+            "end_date": str(row.end_date),
+            "is_school_wide": row.is_school_wide,
+        },
+        reason="Holiday updated",
+    )
+    db.commit()
+    return {"id": row.id, "name": row.name, "status": row.status}
+
+
+@router.post("/holidays/{holiday_id}/cancel", dependencies=[Depends(holiday_manager)])
+def cancel_holiday(
+    holiday_id: int,
+    body: HolidayCancelInput,
+    user: User = Depends(holiday_manager),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Cancel a holiday with mandatory reason. Retains historical attendance."""
+    row = db.get(Holiday, holiday_id)
+    if row is None or row.school_id != user.school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Holiday not found")
+    if row.status == "cancelled":
+        raise HTTPException(status.HTTP_409_CONFLICT, "Holiday is already cancelled")
+
+    row.status = "cancelled"
+    row.cancelled_by_id = user.id
+    row.cancellation_reason = body.reason
+
+    audit.record(
+        db,
+        actor=user,
+        school_id=user.school_id,
+        entity_type="holiday",
+        entity_id=row.id,
+        action=AuditAction.status_change,
+        after={"status": "cancelled", "cancellation_reason": body.reason},
+        reason=f"Holiday cancelled: {body.reason}",
+    )
+    db.commit()
+    return {"id": row.id, "status": row.status, "cancellation_reason": row.cancellation_reason}
+
+
+@router.delete("/holidays/{holiday_id}", dependencies=[Depends(holiday_manager)])
+def delete_holiday(
+    holiday_id: int,
+    reason: str = Query(..., min_length=1),
+    user: User = Depends(holiday_manager),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Cancel a holiday via DELETE with query param reason."""
+    return cancel_holiday(holiday_id, HolidayCancelInput(reason=reason), user, db)
 
 
 @router.get("/leave-requests")

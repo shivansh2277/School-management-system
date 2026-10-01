@@ -76,6 +76,13 @@ class Application(TenantBase):
     aadhaar_last4: Mapped[str | None] = mapped_column(String(4))
     aadhaar_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
+    # APAAR ID (12 digits) and parental consent metadata
+    apaar_id: Mapped[str | None] = mapped_column(String(12))
+    apaar_consent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    apaar_consent_guardian_name: Mapped[str | None] = mapped_column(String(120))
+    apaar_consent_guardian_relation: Mapped[str | None] = mapped_column(String(40))
+    apaar_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     class_applying_for: Mapped[str] = mapped_column(String(8), nullable=False)
     stream: Mapped[str | None] = mapped_column(String(20))
     second_language: Mapped[str | None] = mapped_column(String(40))
@@ -239,4 +246,32 @@ class ApplicationAuthorizedPerson(TenantBase):
     id_proof_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
     photo_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class ApplicationDocumentOverride(TenantBase):
+    """An authorized Admin exception permitting an application to be submitted
+    or processed despite missing a mandatory document (e.g. birth certificate, APAAR).
+    """
+
+    __tablename__ = "application_document_overrides"
+    __table_args__ = (
+        UniqueConstraint("application_id", "document_code", name="uq_app_doc_override"),
+        Index("ix_app_doc_override", "application_id", "document_code"),
+    )
+
+    application_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("applications.id", ondelete="CASCADE"), nullable=False
+    )
+    document_code: Mapped[str] = mapped_column(String(40), nullable=False)
+    authorized_by_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id"), nullable=False
+    )
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    authorized_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+
+    application = relationship("Application", lazy="joined")
+    authorized_by = relationship("User", lazy="joined")
+
 

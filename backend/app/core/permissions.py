@@ -23,6 +23,8 @@ PERMISSIONS: list[tuple[str, str]] = [
     ("attendance.record.read", "View attendance"),
     ("attendance.record.mark", "Mark attendance"),
     ("attendance.record.correct", "Correct attendance after the fact"),
+    ("attendance.holiday.manage", "Create, edit, cancel and manage school and class holidays"),
+    ("attendance.holiday.override", "Authorize attendance marking on declared holiday dates with reason and audit log"),
     # --- timetable
     ("timetable.slot.read", "View timetables"),
     ("timetable.slot.write", "Build and edit the timetable"),
@@ -63,6 +65,10 @@ PERMISSIONS: list[tuple[str, str]] = [
     ("admission.application.read", "View applications"),
     ("admission.application.write", "Create and edit applications, and move them along"),
     ("admission.document.verify", "Verify or reject an applicant's documents"),
+    (
+        "admission.document.override",
+        "Authorize missing mandatory admission documents with reason and audit log",
+    ),
     ("admission.assessment.enter", "Schedule applicant tests and enter their marks"),
     ("admission.decision.make", "Admit, waitlist or reject an applicant"),
     (
@@ -161,6 +167,16 @@ PERMISSIONS: list[tuple[str, str]] = [
     ("reception.meetings.respond_principal", "Respond to Principal meeting requests"),
     ("reception.directory.read", "View important emergency and school directory contacts"),
     ("reception.directory.write", "Manage important directory contacts"),
+
+    # --- library
+    ("library.read", "View library catalogue, copies, loans and fine history"),
+    ("library.manage", "Manage library books, copies, issue/return circulation and fines"),
+
+    # --- student certificates
+    ("certificates.read", "View student certificate requests and issued certificates"),
+    ("certificates.request", "Submit requests for student certificates like TC, Bonafide, Character"),
+    ("certificates.approve", "Approve or reject student certificate requests"),
+    ("certificates.issue", "Issue and re-issue student certificates, generate PDF, and trigger atomic student exit for TC"),
 
     # --- reporting
     ("reports.read", "View report library and run operational reports"),
@@ -263,6 +279,13 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "reception.meetings.respond_principal",
             "reception.directory.read",
             "reception.directory.write",
+            "admission.document.override",
+            "attendance.holiday.manage",
+            "attendance.holiday.override",
+            "library.manage",
+            "certificates.request",
+            "certificates.approve",
+            "certificates.issue",
         ],
     ),
     (
@@ -274,6 +297,9 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "students.profile.export",
             "academics.class.write",
             "attendance.record.correct",
+            "attendance.holiday.manage",
+            "attendance.holiday.override",
+            "admission.document.override",
             "timetable.slot.write",
             "timetable.substitution.manage",
             "exam.definition.write",
@@ -301,7 +327,10 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "grievance.write",
             "grievance.assign",
             "grievance.submit",
-
+            "library.manage",
+            "certificates.request",
+            "certificates.approve",
+            "certificates.issue",
         ],
     ),
     (
@@ -527,6 +556,17 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "transport.assignment.manage",
             "comms.notice.read",
             "comms.message.send",
+        ],
+    ),
+    (
+        "librarian",
+        "Librarian",
+        [
+            "students.profile.read",
+            "academics.class.read",
+            "library.read",
+            "library.manage",
+            "comms.notice.read",
         ],
     ),
     (

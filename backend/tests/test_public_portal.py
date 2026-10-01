@@ -39,6 +39,7 @@ def _payload(**over):
         "information_accuracy": True,
         "school_rules_accepted": True,
         "data_processing_consent": True,
+        "apaar_consent": True,
     }
     body.update(over)
     return body

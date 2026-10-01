@@ -35,7 +35,7 @@ from app.schemas.common import (
     AttendanceSummary,
     RollRow,
 )
-from app.services import audit, scoping
+from app.services import audit, rbac, scoping
 from app.services.common import roster
 
 # What each mark is worth when counting attendance. Late is still a child in
@@ -49,27 +49,56 @@ CREDIT = {
 SUNDAY = 6
 
 
-def holidays_between(db: Session, school_id: int, start: Date, end: Date) -> set[Date]:
-    return set(
-        db.scalars(
-            select(Holiday.date).where(
-                Holiday.school_id == school_id,
-                Holiday.date >= start,
-                Holiday.date <= end,
-            )
-        )
+def holidays_between(
+    db: Session, school_id: int, start: Date, end: Date, class_section_id: int | None = None
+) -> set[Date]:
+    """Return all holiday dates in [start, end] for this school (and optional class_section)."""
+    stmt = select(Holiday).where(
+        Holiday.school_id == school_id,
+        Holiday.status == "active",
+        Holiday.start_date <= end,
+        Holiday.end_date >= start,
     )
+    rows = list(db.scalars(stmt).all())
+    holiday_dates: set[Date] = set()
+    for h in rows:
+        if h.is_school_wide or (class_section_id and any(cs.id == class_section_id for cs in h.class_sections)):
+            range_start = max(start, h.start_date)
+            range_end = min(end, h.end_date)
+            days = (range_end - range_start).days + 1
+            for n in range(days):
+                holiday_dates.add(range_start + timedelta(days=n))
+    return holiday_dates
+
+
+def is_holiday_for(
+    db: Session, school_id: int, target_date: Date, class_section_id: int | None = None
+) -> Holiday | None:
+    """Check if target_date is an active holiday for this section (or school-wide)."""
+    stmt = select(Holiday).where(
+        Holiday.school_id == school_id,
+        Holiday.status == "active",
+        Holiday.start_date <= target_date,
+        Holiday.end_date >= target_date,
+    )
+    rows = list(db.scalars(stmt).all())
+    for h in rows:
+        if h.is_school_wide:
+            return h
+        if class_section_id and any(cs.id == class_section_id for cs in h.class_sections):
+            return h
+    return None
 
 
 def is_working_day(day: Date, holidays: set[Date]) -> bool:
     return day.weekday() != SUNDAY and day not in holidays
 
 
-def working_days(db: Session, school_id: int, start: Date, end: Date) -> int:
+def working_days(db: Session, school_id: int, start: Date, end: Date, class_section_id: int | None = None) -> int:
     """School days in a range: six-day week, minus declared holidays."""
     if end < start:
         return 0
-    holidays = holidays_between(db, school_id, start, end)
+    holidays = holidays_between(db, school_id, start, end, class_section_id=class_section_id)
     days = (end - start).days + 1
     return sum(
         1 for n in range(days) if is_working_day(start + timedelta(days=n), holidays)
@@ -159,11 +188,33 @@ def mark(db: Session, user: User, body: AttendanceMarkRequest) -> list[RollRow]:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Cannot mark attendance for a future date")
 
     teacher = scoping.employee_for(db, user)
-    holidays = holidays_between(db, teacher.school_id, body.date, body.date)
-    if not is_working_day(body.date, holidays):
+    if body.date.weekday() == SUNDAY:
         raise HTTPException(
-            status.HTTP_400_BAD_REQUEST,
-            "That day is not a working day for this school",
+            status.HTTP_400_BAD_REQUEST, "Sunday is not a working day for this school"
+        )
+
+    holiday = is_holiday_for(db, teacher.school_id, body.date, body.class_section_id)
+    if holiday is not None:
+        has_override_perm = rbac.authz_for(db, user).can("attendance.holiday.override")
+        if not has_override_perm or not (body.holiday_override_reason and body.holiday_override_reason.strip()):
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                f"Attendance cannot be marked on declared holiday '{holiday.name}'. It is not a working day. Admin holiday override with reason is required.",
+            )
+        audit.record(
+            db,
+            actor=user,
+            school_id=teacher.school_id,
+            entity_type="attendance_holiday_override",
+            entity_id=body.class_section_id,
+            action=AuditAction.update,
+            after={
+                "date": str(body.date),
+                "class_section_id": body.class_section_id,
+                "holiday_name": holiday.name,
+                "holiday_id": holiday.id,
+            },
+            reason=body.holiday_override_reason.strip(),
         )
 
     roster_list = roster(db, body.class_section_id)

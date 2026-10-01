@@ -925,5 +925,60 @@ Delivered in direct response to the requirement for a modern, polished, lightwei
   - Vite production build: Clean build in 10.21s (`npm run build`).
   - Visual verification: 15 screenshots captured across Desktop (1440x900), Tablet (768x1024), and Mobile (390x844) in `docs/screenshots/session23/`.
 
+### 11. Session 24 - Comprehensive ERP Enhancements: Admission Conditional Birth Certificate & Admin Document Overrides, APAAR ID & Parental Consent, Student ID Cards, Unified Library Circulation, Admin-Managed Certificates Lifecycle & Templates, and Holiday Management & Attendance
+- **1. Admission Form — Conditional Birth Certificate Requirement & Admin Document Overrides**:
+  - *Dynamic Business Rule:* A birth certificate is mandatory if the applicant is applying for a class in the junior section through UKG, inclusive (`is_junior_section_through_ukg(class_name)`), OR is younger than 5 years old on the relevant admission cutoff date (`get_admission_cutoff_date(db, school_id, cycle_id, class_name)`). If neither condition is true, the birth certificate is optional.
+  - *Server-Side & Public Portal Enforcement:* Validated independently on backend submission (`POST /public/{school_code}/admission/apply`). Missing mandatory birth certificate blocks final application submission by default (`422 Unprocessable Content`).
+  - *Narrowly Scoped Admin Document Override:* Dedicated permission `admission.document.override` allows Admin to record an authorized document exception for a draft (`POST /admin/admission/applications/{draft_id}/document-overrides`), stored in `application_document_overrides` table with document code, student/draft reference, authorized user, timestamp, and mandatory reason. The audit log permanently records the override.
+  - *RBAC Separation Invariant:* Admin override is a narrowly scoped exception authorization; Admin does not manage or process applications. The Admission Cell retains exclusive ownership of normal application workflows and document verification.
+  - *Public Draft Reference:* Public draft endpoint (`POST /public/{school_code}/admission/draft`) persists draft applications, returning persistent reference code `DFT-{id}`. Applicants can obtain an administrative override for `DFT-{id}` and then submit successfully without the missing document.
+- **2. APAAR ID and Parental Consent**:
+  - *Required Admission Workflow Section:* Public admission portal and internal admission forms require selecting either:
+    1. An existing 12-digit APAAR ID provided by the parent.
+    2. Parental/guardian consent for new students whose APAAR ID is not yet available, authorizing the school to facilitate its creation.
+    3. An authorized Admin exception recorded via `application_document_overrides`.
+  - *Data Integrity & Audit Invariants:* Parental consent is strictly recorded with consenting parent/guardian name, relation, and UTC timestamp (`apaar_consent_at`). Consent is not treated as an existing APAAR ID or locally generated number.
+  - *Student Conversion & Updates:* APAAR fields (`apaar_id`, `apaar_consent`, `apaar_consent_guardian_name`, `apaar_consent_at`) are transferred to `Student` upon conversion and can be updated later (`PATCH /admin/students/{id}`) without duplicate records.
+- **3. Student ID Cards with Canonical Enrollment ID**:
+  - *Canonical Identifier:* Consistently uses `ENR-{enrolments.id}` (not internal DB IDs or raw roll numbers) for human-readable ID card labels and QR payloads (`sunrise:enrolment:ENR-{enrolments.id}`).
+  - *Privacy & Safety Invariant:* Strictly excludes admission number, blood group, emergency contact phone, and personal identifiable information from card front and QR payload.
+  - *Active Enrolment Resolution:* Dynamically resolves active academic session enrolment for students with multiple historical enrolments, supporting optional explicit enrolment scoping.
+  - *PDF Generators (`backend/app/pdf/id_card.py`)*:
+    - Single CR80 standard card (85.6mm x 54mm, 242.6pt x 153.1pt) with header crest, photo box, name, Enrollment ID, class/section, roll number, session code, and QR code.
+    - Bulk 8-up A4 printable sheet (2 columns x 4 rows) with cutting guides and margins.
+- **4. Unified Library Circulation & Catalogue**:
+  - *Enrollment ID Integration:* Circulation is directly linked to the enrolled student record via canonical `ENR-{enrolments.id}`. Zero separate library cards or duplicate student accounts.
+  - *Catalogue & Copies:* Books table tracks titles, authors, categories, ISBNs, and copy counts. `book_copies` tracks physical copies with accession numbers (`ACC-{school}-{seq}`) and barcodes (`BC-ACC-XXXX`).
+  - *Circulation Service (`backend/app/services/library.py`)*:
+    - Borrower lookup by `ENR-{id}` with eligibility evaluation (active enrolment, max 3 active loans, no overdue items, unpaid fines <= ₹100).
+    - Issue book copy to student, renew loan, return copy, and calculate overdue fines (₹5.00/day).
+    - Fine settlement (collection / waiver) with reason and audit log.
+  - *Endpoints & Module Gating (`backend/app/api/admin/library.py`)*: Routes guarded by `library.read` and `library.manage` permissions and `library` module toggle.
+  - *Librarian System Role:* Registered `librarian` system role in `app/core/permissions.py` and seeded librarian user (`library@sunrisepublic.edu`) with administrative employee record (`LIB001`).
+- **5. Admin-Managed Student Certificates (TC, Bonafide, Character)**:
+  - *Configurable Templates (`certificate_templates` table)*: Configurable institutional details, title, header text, body template with variable placeholders (`{student_name}`, `{admission_no}`, `{class_name}`, `{session_code}`, etc.), signatory name, signatory title, and seal toggle.
+  - *Certificate Lifecycle (`student_certificates` table)*: `requested` -> `approved` / `rejected` -> `issued` -> `reissued`.
+  - *RBAC Restriction:* Certificate request permission `certificates.request` is restricted to Admin, Principal, and designated office staff; `teacher` role is strictly denied by default.
+  - *Atomic TC Invariant:* Transfer Certificate request and approval do NOT alter student status; only final TC issuance atomically transitions student status to `transferred_out` and active enrolment to `transferred_out`, preserving all historical financial, academic, attendance, and library records.
+  - *Numbering & Reissue:* Concurrency-safe sequence numbering (`audit.next_number`); reissuing increments `reissue_count`, logs reason, and generates PDF with a prominent "DUPLICATE" watermark.
+- **6. Holiday Management & Attendance Invariants**:
+  - *Database Schema & Migrations:* `holidays` table upgraded with `start_date`, `end_date`, `description`, `is_school_wide`, `status`, `created_by_id`, `cancelled_by_id`, `cancellation_reason`, and `holiday_class_sections` table for section scoping.
+  - *Cancellation Invariant:* Holiday cancellation via DELETE/POST requires mandatory reason, updates status to `cancelled`, and retains all historical attendance and working day records.
+  - *Holiday Attendance Override:* Dedicated permission `attendance.holiday.override`. Attendance marking on declared holidays is blocked by default (`400 Bad Request`); users with override permission may submit attendance only with a mandatory override reason, recorded in the audit log.
+  - *Absence Denominator:* Working day and percentage calculations dynamically exclude declared holidays from the attendance denominator.
+- **7. Verification Gates & Automated Test Coverage (100% Green)**:
+  - *New Feature Test Suites (22/22 tests passing)*:
+    - `backend/tests/test_admission_documents_override.py` (3 tests)
+    - `backend/tests/test_apaar.py` (5 tests)
+    - `backend/tests/test_id_cards.py` (3 tests)
+    - `backend/tests/test_library.py` (4 tests)
+    - `backend/tests/test_certificates.py` (5 tests)
+    - `backend/tests/test_holidays_attendance.py` (2 tests)
+  - *Migration Suite (`backend/tests/test_migrations.py`)*: 3/3 passed using SQLite batch alter table.
+  - *Timetable & Workload Suite (`backend/tests/test_timetable.py`)*: 17/17 passed (spread = 0).
+  - *Attendance Rules Suite (`backend/tests/test_attendance_rules.py`)*: 15/15 passed.
+  - *Public Portal Suite (`backend/tests/test_public_portal.py` & `test_public_admission_workflow.py`)*: 15/15 passed.
+  - *Admission Pipeline Suite (`backend/tests/test_admission_applications.py` & `test_admission_documents.py`)*: 21/21 passed.
+
 
 

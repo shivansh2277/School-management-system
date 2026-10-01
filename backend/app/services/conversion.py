@@ -360,6 +360,11 @@ def _do_conversion(db: Session, app: Application, actor: User) -> dict:
         gender=app.gender,
         address=_address_line(app.address),
         admission_date=date.today(),
+        apaar_id=app.apaar_id,
+        apaar_consent=app.apaar_consent,
+        apaar_consent_guardian_name=app.apaar_consent_guardian_name,
+        apaar_consent_guardian_relation=app.apaar_consent_guardian_relation,
+        apaar_consent_at=app.apaar_consent_at,
     )
     db.add(student)
     db.flush()

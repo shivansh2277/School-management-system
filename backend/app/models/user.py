@@ -1,10 +1,11 @@
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import (
     JSON,
     BigInteger,
     Boolean,
     Date,
+    DateTime,
     ForeignKey,
     Index,
     Integer,
@@ -71,6 +72,13 @@ class Student(TenantBase):
     gender: Mapped[Gender | None] = enum_col(Gender)
     address: Mapped[str | None] = mapped_column(Text)
     admission_date: Mapped[date | None] = mapped_column(Date)
+
+    # APAAR ID (12 digits) and parental consent metadata
+    apaar_id: Mapped[str | None] = mapped_column(String(12), index=True)
+    apaar_consent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    apaar_consent_guardian_name: Mapped[str | None] = mapped_column(String(120))
+    apaar_consent_guardian_relation: Mapped[str | None] = mapped_column(String(40))
+    apaar_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # School-defined attributes (§3.15 level 2). Validated against
     # `custom_fields` on write; never read without going through

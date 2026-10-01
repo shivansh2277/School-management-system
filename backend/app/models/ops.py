@@ -14,6 +14,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     select,
+    text,
 )
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -64,7 +65,7 @@ class Attendance(TenantBase):
 
 
 class Holiday(TenantBase):
-    """A day the school is shut.
+    """A day or date-range the school or specific sections are shut.
 
     Attendance needs it to refuse marking, and the attendance percentage needs
     it for the denominator — counting a Diwali break as days absent is the
@@ -73,14 +74,65 @@ class Holiday(TenantBase):
 
     __tablename__ = "holidays"
     __table_args__ = (
-        UniqueConstraint("academic_year_id", "date", name="uq_holiday_date"),
+        Index("ix_holiday_dates", "school_id", "start_date", "end_date"),
     )
 
     academic_year_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("academic_years.id"), nullable=False, index=True
     )
+    # Kept for backward compatibility with existing single-day queries
     date: Mapped[date] = mapped_column(Date, nullable=False)
-    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    end_date: Mapped[date] = mapped_column(Date, nullable=False)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    is_school_wide: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="active", server_default=text("'active'")
+    )
+    created_by_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id"))
+    cancelled_by_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id"))
+    cancellation_reason: Mapped[str | None] = mapped_column(Text)
+
+    academic_year = relationship("AcademicYear", lazy="joined")
+    class_sections = relationship(
+        "ClassSection", secondary="holiday_class_sections", lazy="selectin"
+    )
+    created_by = relationship("User", foreign_keys=[created_by_id], lazy="joined")
+    cancelled_by = relationship("User", foreign_keys=[cancelled_by_id], lazy="joined")
+
+    def __init__(self, **kwargs):
+        if "date" in kwargs and "start_date" not in kwargs:
+            kwargs["start_date"] = kwargs["date"]
+        if "start_date" in kwargs and "date" not in kwargs:
+            kwargs["date"] = kwargs["start_date"]
+        if "start_date" in kwargs and "end_date" not in kwargs:
+            kwargs["end_date"] = kwargs["start_date"]
+        elif "date" in kwargs and "end_date" not in kwargs:
+            kwargs["end_date"] = kwargs["date"]
+        super().__init__(**kwargs)
+
+
+class HolidayClassSection(TenantBase):
+    """Associates a holiday with specific class sections when not school-wide."""
+
+    __tablename__ = "holiday_class_sections"
+    __table_args__ = (
+        UniqueConstraint("holiday_id", "class_section_id", name="uq_holiday_class_section"),
+    )
+
+    holiday_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("holidays.id", ondelete="CASCADE"), nullable=False
+    )
+    class_section_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("class_sections.id", ondelete="CASCADE"), nullable=False
+    )
+
+    holiday = relationship("Holiday", lazy="joined", overlaps="class_sections")
+    class_section = relationship("ClassSection", lazy="joined", overlaps="class_sections")
+
 
 
 class StudentLeaveRequest(TenantBase):
