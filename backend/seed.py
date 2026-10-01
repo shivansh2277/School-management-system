@@ -647,17 +647,6 @@ def seed(db: Session, reset: bool = True, force: bool = False) -> None:  # noqa:
         )
     db.flush()
 
-    librarian_emp = Employee(
-        user_id=librarian_user.id,
-        employee_code="LIB001",
-        employee_type=EmployeeType.administrative,
-        joining_date=date(2022, 7, 1),
-        department_id=departments["ADM"].id,
-        designation="Librarian",
-    )
-    db.add(librarian_emp)
-    db.flush()
-
     for i, (name, qual, dept_code, designation) in enumerate(TEACHER_NAMES, start=1):
         emp = f"TCH{i:03d}"
         u = User(
@@ -1427,7 +1416,7 @@ def seed(db: Session, reset: bool = True, force: bool = False) -> None:  # noqa:
     _seed_inventory(db, school)
     _seed_grievances(db, school)
     _seed_operational_tables(db, school, academic_year_id)
-    _seed_library(db, school, librarian_emp, enrolment_of, students)
+    _seed_library(db, school, teachers[0] if teachers else None, enrolment_of, students)
     _seed_certificates(db, school)
 
     _assign_roles(db, roles, sections)

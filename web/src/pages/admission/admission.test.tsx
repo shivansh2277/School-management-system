@@ -118,9 +118,9 @@ describe("Admission screen registry and permission gating", () => {
     expect(admissionLabels).toHaveLength(0);
   });
 
-  it("every admission screen declares the admission module (6 total screens)", () => {
+  it("every admission screen declares the admission module (7 total screens)", () => {
     const admissionScreens = SCREENS.filter((s) => s.group === "Admission");
-    expect(admissionScreens.length).toBe(6);
+    expect(admissionScreens.length).toBe(7);
     for (const s of admissionScreens) {
       expect(s.modules).toContain("admission");
     }

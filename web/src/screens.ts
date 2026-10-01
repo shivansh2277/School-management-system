@@ -54,7 +54,9 @@ export type ModuleCode =
   | "transport"
   | "reports"
   | "inventory"
-  | "grievances";
+  | "grievances"
+  | "library"
+  | "certificates";
 
 export type Screen = {
   path: string;
@@ -164,6 +166,19 @@ export const SCREENS: Screen[] = [
     ),
   },
   {
+    path: "/admin/admission-exceptions",
+    label: "Admission Exceptions",
+    group: "Admission",
+    // GET /admin/admission/document-overrides - narrowly scoped exception authorization
+    permissions: ["admission.document.override"],
+    modules: ["admission"],
+    element: lazy(() =>
+      import("./pages/admission/AdmissionExceptions").then((m) => ({
+        default: m.AdmissionExceptions,
+      })),
+    ),
+  },
+  {
     path: "/students",
     label: "Students",
     group: "People",
@@ -230,6 +245,18 @@ export const SCREENS: Screen[] = [
     element: lazy(() => import("./pages/Attendance").then((m) => ({ default: m.Attendance }))),
   },
   {
+    path: "/admin/holidays",
+    label: "Holidays",
+    group: "Academics",
+    // GET /admin/attendance/holidays - attendance.py, attendance.holiday.manage, module attendance.
+    permissions: ["attendance.holiday.manage"],
+    modules: ["attendance"],
+    excludeRoles: ["transport_incharge"],
+    element: lazy(() =>
+      import("./pages/HolidayManagement").then((m) => ({ default: m.HolidayManagement })),
+    ),
+  },
+  {
     path: "/exams",
     label: "Exams",
     group: "Academics",
@@ -254,6 +281,16 @@ export const SCREENS: Screen[] = [
     element: lazy(() =>
       import("./pages/SessionRollover").then((m) => ({ default: m.SessionRollover })),
     ),
+  },
+  {
+    path: "/library",
+    label: "Library",
+    group: "Academics",
+    // GET /admin/library/books and /admin/library/loans - library.py, library.read, module library.
+    permissions: ["library.read"],
+    modules: ["library"],
+    excludeRoles: ["transport_incharge"],
+    element: lazy(() => import("./pages/Library").then((m) => ({ default: m.Library }))),
   },
   {
     path: "/fees",
@@ -431,6 +468,18 @@ export const SCREENS: Screen[] = [
     permissions: ["admin.settings.read"],
     element: lazy(() =>
       import("./pages/UserAccessPage").then((m) => ({ default: m.UserAccessPage })),
+    ),
+  },
+  {
+    path: "/certificates",
+    label: "Certificates",
+    group: "Administration",
+    // GET /admin/certificates - certificates.py, certificates.read, module certificates.
+    permissions: ["certificates.read"],
+    modules: ["certificates"],
+    excludeRoles: ["teacher", "transport_incharge"],
+    element: lazy(() =>
+      import("./pages/Certificates").then((m) => ({ default: m.Certificates })),
     ),
   },
   {

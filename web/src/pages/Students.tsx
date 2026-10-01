@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { api, money } from "../api/client";
+import { api, money, tokenStore, API_BASE_URL } from "../api/client";
 import { errorText } from "../api/errors";
 import { useWrite } from "../api/useWrite";
 import { useAuth } from "../auth/AuthContext";
@@ -35,6 +35,7 @@ type Detail = Row & {
   attendance_percent: number | null;
   latest_result_percent: number | null;
   homework_pending: number;
+  apaar_id?: string | null;
 };
 
 /** The rows of /admin/fees/defaulters this screen actually reads. */
@@ -49,7 +50,60 @@ export function Students() {
   const [adding, setAdding] = useState(false);
   const [chasing, setChasing] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [bulkIdCardModal, setBulkIdCardModal] = useState(false);
+  const [bulkSectionId, setBulkSectionId] = useState("");
+  const [idCardBusy, setIdCardBusy] = useState(false);
   const { can, hasModule } = useAuth();
+
+  const downloadSingleIdCard = async (studentId: number) => {
+    setIdCardBusy(true);
+    try {
+      const token = tokenStore.get();
+      const res = await fetch(`${API_BASE_URL}/admin/students/${studentId}/id-card`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Failed to download student ID card.");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `id-card-${studentId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(errorText(err));
+    } finally {
+      setIdCardBusy(false);
+    }
+  };
+
+  const downloadBulkIdCards = async (secId?: string) => {
+    setIdCardBusy(true);
+    try {
+      const token = tokenStore.get();
+      const queryStr = secId ? `?class_section_id=${secId}` : "";
+      const res = await fetch(`${API_BASE_URL}/admin/students/id-cards/bulk${queryStr}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Failed to download bulk ID cards sheet.");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `bulk-id-cards-${secId || "all"}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      setBulkIdCardModal(false);
+    } catch (err) {
+      alert(errorText(err));
+    } finally {
+      setIdCardBusy(false);
+    }
+  };
 
   /**
    * Who owes fees, in one call rather than a ledger lookup per row.
@@ -110,6 +164,12 @@ export function Students() {
             >
               Add Student
             </ActionButton>
+            <button
+              onClick={() => setBulkIdCardModal(true)}
+              className="rounded-input border border-rule px-3 py-1.5 text-sm font-medium hover:bg-ground flex items-center gap-1.5"
+            >
+              Bulk ID Cards (8-up)
+            </button>
           </div>
         }
       >
@@ -218,24 +278,77 @@ export function Students() {
                     : `${detail.data.latest_result_percent}%`,
                 ],
                 ["Homework pending", detail.data.homework_pending],
+                ["APAAR ID", detail.data.apaar_id || "Not Linked"],
               ].map(([k, v]) => (
                 <div key={String(k)}>
                   <dt className="text-ink-faint text-xs">{k}</dt>
                   <dd>{v}</dd>
                 </div>
               ))}
-              <div className="col-span-2 pt-2">
+              <div className="col-span-2 pt-2 flex items-center justify-between">
                 <ActionButton
                   permission="students.profile.write"
                   onClick={() => setEditing(true)}
                 >
                   Edit details
                 </ActionButton>
+                <button
+                  type="button"
+                  onClick={() => detail.data && downloadSingleIdCard(detail.data.id)}
+                  disabled={idCardBusy}
+                  className="rounded-input bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  {idCardBusy ? "Generating ID Card..." : "Download ID Card (CR80)"}
+                </button>
               </div>
             </dl>
           ) : (
             <p className="text-ink-faint text-sm">Loading...</p>
           )}
+        </Modal>
+      )}
+
+      {bulkIdCardModal && (
+        <Modal title="Generate Bulk Student ID Cards (8-up A4)" onClose={() => setBulkIdCardModal(false)}>
+          <div className="space-y-4">
+            <p className="text-xs text-ink-soft">
+              Generates a print-ready 8-up A4 printable sheet of standard CR80 ID cards featuring Canonical Enrollment IDs (ENR-&#123;id&#125;) and QR codes. Personal data such as emergency contacts and blood groups are excluded for privacy.
+            </p>
+            <FormField label="Target Class & Section">
+              <select
+                className={inputClass}
+                value={bulkSectionId}
+                onChange={(e) => setBulkSectionId(e.target.value)}
+              >
+                <option value="">All Enrolled Students (School-Wide)</option>
+                {classes.data?.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.class_label}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+            <div className="flex gap-2 justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setBulkIdCardModal(false)}
+                className="rounded-input border border-rule px-4 py-2 text-sm hover:bg-ground"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => downloadBulkIdCards(bulkSectionId)}
+                disabled={idCardBusy}
+                className="rounded-input bg-primary px-4 py-2 text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+              >
+                {idCardBusy ? "Generating Printable Sheet..." : "Download 8-up Sheet (PDF)"}
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
 

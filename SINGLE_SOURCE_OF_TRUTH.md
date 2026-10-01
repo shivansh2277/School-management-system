@@ -966,19 +966,49 @@ Delivered in direct response to the requirement for a modern, polished, lightwei
   - *Cancellation Invariant:* Holiday cancellation via DELETE/POST requires mandatory reason, updates status to `cancelled`, and retains all historical attendance and working day records.
   - *Holiday Attendance Override:* Dedicated permission `attendance.holiday.override`. Attendance marking on declared holidays is blocked by default (`400 Bad Request`); users with override permission may submit attendance only with a mandatory override reason, recorded in the audit log.
   - *Absence Denominator:* Working day and percentage calculations dynamically exclude declared holidays from the attendance denominator.
-- **7. Verification Gates & Automated Test Coverage (100% Green)**:
-  - *New Feature Test Suites (22/22 tests passing)*:
+- **7. Frontend Implementation (`web/`)**:
+  - *Public Admission Portal (`web/src/pages/public/PublicApplyPage.tsx`)*:
+    - Dynamic conditional Birth Certificate requirement badge: displays "Mandatory" badge and validation if applicant is applying for Nursery through UKG or age < 5 on cutoff date; displays "Optional" badge otherwise.
+    - APAAR ID Section: clear 3-way option (Existing 12-digit APAAR ID with digit formatting, Parental Facilitation Consent with consenting guardian name & relation, and Administrative Exception note).
+    - Save Draft modal: saves draft and displays persistent `DFT-{id}` reference code with guidance for parents needing administrative document exceptions.
+  - *Admin Admission Document Exceptions (`web/src/pages/admission/AdmissionExceptions.tsx`)*:
+    - Dedicated screen at `/admin/admission-exceptions` strictly gated on `admission.document.override` under Admission module.
+    - Draft lookup input (`DFT-...`), applicant summary card with missing mandatory documents checklist, reason selector (e.g. Affidavit submitted, Court order, Foreign national exemption), and authorized exception submission with full audit logging.
+    - Preserves strict RBAC separation: Admin does not access Admission Cell application processing queues.
+  - *Student ID Cards & Profile (`web/src/pages/Students.tsx`)*:
+    - Single CR80 ID Card download button (`/admin/students/{id}/id-card`) in student profile drawer.
+    - Bulk Print ID Cards modal (`/admin/students/id-cards/bulk?class_section_id=...`) for 8-up A4 printable card sheets.
+    - Student profile drawer displays APAAR ID / Parental Consent status.
+  - *Unified Library Module (`web/src/pages/Library.tsx`)*:
+    - Registered at `/library` under Academics, gated on `library.read` and `library.manage` permissions.
+    - Circulation Desk: Canonical Enrollment ID borrower lookup (`ENR-{id}`), active loans list with calculated fines, book issue form with barcode/accession number and loan duration, return book with fine settlement modal, and loan renewal.
+    - Books Catalogue tab: Title/author/category search, copy status badges (available, issued, lost), and Add Book Title modal.
+  - *Admin-Managed Certificates Module (`web/src/pages/Certificates.tsx`)*:
+    - Registered at `/certificates` under Administration, gated on `certificates.read` (teacher role excluded).
+    - Certificate requests and issued log with status filters (`requested`, `approved`, `issued`, `rejected`).
+    - Request Certificate modal with Atomic TC exit warning (explaining student status transition to `transferred_out` upon issuance while preserving all history).
+    - Certificate Templates tab: Configurable institutional details, headers, body templates with placeholders, signatories, and seal toggle for TC, Bonafide, and Character certificates.
+  - *Holiday Management & Attendance (`web/src/pages/HolidayManagement.tsx` & `web/src/pages/Attendance.tsx`)*:
+    - Registered at `/admin/holidays` under Academics, gated on `attendance.holiday.manage`.
+    - Single and multi-day holiday declaration with school-wide or class-specific scoping.
+    - Holiday cancellation with mandatory reason.
+    - Attendance screen displays declared holiday banner for active section and date.
+  - *Screen Registry (`web/src/screens.ts`)*: Added `library` and `certificates` module codes and registered `/admin/admission-exceptions`, `/library`, `/certificates`, `/admin/holidays`.
+
+- **8. Verification Gates & Automated Test Coverage (100% Green)**:
+  - *Backend Pytest*: **800 passed, 1 skipped, 0 failed** across all 801 backend tests (778 baseline + 22 new tests).
     - `backend/tests/test_admission_documents_override.py` (3 tests)
     - `backend/tests/test_apaar.py` (5 tests)
     - `backend/tests/test_id_cards.py` (3 tests)
     - `backend/tests/test_library.py` (4 tests)
     - `backend/tests/test_certificates.py` (5 tests)
     - `backend/tests/test_holidays_attendance.py` (2 tests)
-  - *Migration Suite (`backend/tests/test_migrations.py`)*: 3/3 passed using SQLite batch alter table.
-  - *Timetable & Workload Suite (`backend/tests/test_timetable.py`)*: 17/17 passed (spread = 0).
-  - *Attendance Rules Suite (`backend/tests/test_attendance_rules.py`)*: 15/15 passed.
-  - *Public Portal Suite (`backend/tests/test_public_portal.py` & `test_public_admission_workflow.py`)*: 15/15 passed.
-  - *Admission Pipeline Suite (`backend/tests/test_admission_applications.py` & `test_admission_documents.py`)*: 21/21 passed.
+    - Full regression across all historical domains (conversion, rbac, timetable, attendance, hr, payroll, fees).
+  - *Web Unit Tests (`vitest`)*: **134 passed, 2 skipped, 0 failed** across 25 test files (`npm test -- --run` in 17.14s).
+  - *TypeScript Typecheck*: **0 errors** on web (`npx tsc -b`).
+  - *Vite Production Build*: **Clean production build in 6.76s** (`npm run build`).
+  - *Visual Verification*: **14 screenshots captured** across Desktop (1440x900) in `docs/screenshots/session24/` and brain artifacts directory (`01_public_admission_step1_birth_cert_badge.png` through `14_attendance_declared_holiday_banner.png`).
+
 
 
 

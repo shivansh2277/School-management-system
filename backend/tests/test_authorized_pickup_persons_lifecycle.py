@@ -96,6 +96,7 @@ def test_public_upload_and_application_with_authorized_persons(client, admission
         "information_accuracy": True,
         "school_rules_accepted": True,
         "data_processing_consent": True,
+        "apaar_consent": True,
     }
 
     res = client.post("/public/SPS/admission/apply", json=app_payload)
@@ -203,6 +204,7 @@ def test_conversion_carries_forward_authorized_persons_and_decoupling(client, ad
         "information_accuracy": True,
         "school_rules_accepted": True,
         "data_processing_consent": True,
+        "apaar_consent": True,
     }
     res = client.post("/public/SPS/admission/apply", json=app_payload)
     assert res.status_code == status.HTTP_201_CREATED

@@ -31,6 +31,8 @@ const ALL_MODULES = [
   "transport",
   "reports",
   "inventory",
+  "library",
+  "certificates",
 ];
 
 const can = (held: string[]) => (p: string) => held.includes(p);

@@ -311,4 +311,40 @@ describe("PublicApplyPage - Online Admission Portal & Workflow", () => {
     expect(screen.getByText("Provisional Admission Letter")).toBeInTheDocument();
     expect(screen.getByText("Fee Payment Receipt Voucher")).toBeInTheDocument();
   });
+
+  it("handles APAAR ID selection and saves application draft returning DFT reference code", async () => {
+    vi.mocked(api.rawPost).mockImplementation(async (path: string) => {
+      if (path.includes("/admission/draft")) {
+        return {
+          draft_id: 88,
+          reference_code: "DFT-88",
+          reference_number: "DFT-88",
+          status: "draft",
+          message: "Draft saved.",
+        };
+      }
+      return {};
+    });
+
+    renderWithClient(<PublicApplyPage />);
+
+    // Check APAAR section is present on Step 1
+    expect(await screen.findByText(/APAAR ID & National Student Registry/i)).toBeInTheDocument();
+    expect(screen.getByText(/Request Facilitation \(Consent\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Already Have APAAR ID/i)).toBeInTheDocument();
+
+    // Fill minimal student details
+    fireEvent.change(screen.getByPlaceholderText("e.g. Aarav"), { target: { value: "Kabir" } });
+    fireEvent.change(screen.getByPlaceholderText("e.g. Sharma"), { target: { value: "Malhotra" } });
+
+    // Click Save Draft button
+    const saveDraftBtn = screen.getByRole("button", { name: /Save Draft & Get Ref/i });
+    fireEvent.click(saveDraftBtn);
+
+    // Verify draft saved modal with DFT-88 appears
+    expect(await screen.findByText("Application Draft Saved")).toBeInTheDocument();
+    expect(screen.getAllByText("DFT-88").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Requesting an Administrative Override\?/i)).toBeInTheDocument();
+  });
 });
+

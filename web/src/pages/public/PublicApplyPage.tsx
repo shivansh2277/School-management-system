@@ -284,6 +284,19 @@ export function PublicApplyPage() {
   const [transportRequired, setTransportRequired] = useState(false);
   const [studentPhotoUrl, setStudentPhotoUrl] = useState<string | null>(null);
 
+  // Draft & Document Override Reference
+  const [draftId, setDraftId] = useState<number | null>(null);
+  const [draftRef, setDraftRef] = useState<string | null>(null);
+  const [draftSaving, setDraftSaving] = useState(false);
+  const [draftSavedModal, setDraftSavedModal] = useState(false);
+
+  // APAAR ID & Consent State
+  const [apaarOption, setApaarOption] = useState<"existing" | "consent" | "override">("consent");
+  const [apaarId, setApaarId] = useState("");
+  const [apaarConsentChecked, setApaarConsentChecked] = useState(true);
+  const [apaarConsentGuardianName, setApaarConsentGuardianName] = useState("");
+  const [apaarConsentGuardianRelation, setApaarConsentGuardianRelation] = useState("father");
+
   // Address
   const [addressLine, setAddressLine] = useState("");
   const [city, setCity] = useState("Lucknow");
@@ -428,6 +441,34 @@ export function PublicApplyPage() {
   const [docData, setDocData] = useState<any | null>(null);
   const [docError, setDocError] = useState<string | null>(null);
 
+  // Dynamic Birth Certificate Requirement Rule:
+  // Mandatory if:
+  // 1) Class is in Junior section through UKG, inclusive (Nursery, LKG, UKG, Prep, KG, Kindergarten, Playgroup, etc.)
+  // OR 2) Age < 5 years on admission cutoff date (April 1st of admission cycle year)
+  // Optional otherwise.
+  const isJuniorSection = (className: string) => {
+    const norm = className.trim().toLowerCase();
+    return /^(nursery|lkg|ukg|prep|kg|kindergarten|jr\.?\s*kg|sr\.?\s*kg|playgroup|pre-nursery)/i.test(norm);
+  };
+
+  const isUnder5OnCutoff = (dobStr: string, startsOn?: string) => {
+    if (!dobStr) return false;
+    const d = new Date(dobStr);
+    if (isNaN(d.getTime())) return false;
+    const cutoffYear = startsOn ? new Date(startsOn).getFullYear() : new Date().getFullYear();
+    const cutoffDate = new Date(cutoffYear, 3, 1);
+    let age = cutoffDate.getFullYear() - d.getFullYear();
+    const m = cutoffDate.getMonth() - d.getMonth();
+    if (m < 0 || (m === 0 && cutoffDate.getDate() < d.getDate())) {
+      age--;
+    }
+    return age < 5;
+  };
+
+  const isBirthCertMandatory = Boolean(
+    isJuniorSection(selectedClass) || isUnder5OnCutoff(dob, cycleQuery.data?.cycle?.starts_on)
+  );
+
   // -------------------------------------------------------------------
   // Step Validation Helpers
   // -------------------------------------------------------------------
@@ -448,6 +489,14 @@ export function PublicApplyPage() {
       }
       if (aadhaarLast4 && (!/^\d{4}$/.test(aadhaarLast4.trim()))) {
         setSubmitError("Aadhaar last 4 digits must be exactly 4 numeric digits.");
+        return false;
+      }
+      if (apaarOption === "existing" && (!apaarId.trim() || !/^\d{12}$/.test(apaarId.trim()))) {
+        setSubmitError("Please provide a valid 12-digit APAAR ID, or choose the Parental Consent option.");
+        return false;
+      }
+      if (apaarOption === "consent" && !apaarConsentChecked) {
+        setSubmitError("Please confirm parental consent for school facilitation of APAAR ID.");
         return false;
       }
       if (!addressLine.trim() || !pinCode.trim()) {
@@ -479,8 +528,8 @@ export function PublicApplyPage() {
       return true;
     }
     if (step === 5) {
-      if (!uploadedDocs["birth_certificate"]?.url) {
-        setSubmitError("Please upload the Student's Birth Certificate (Mandatory).");
+      if (isBirthCertMandatory && !uploadedDocs["birth_certificate"]?.url && !draftId) {
+        setSubmitError("Please upload the Student's Birth Certificate (Mandatory for UKG/Junior section or age < 5). If requesting an Admin override, please click 'Save Draft & Request Exception'.");
         return false;
       }
       if (!uploadedDocs["address_proof"]?.url) {
@@ -658,6 +707,17 @@ export function PublicApplyPage() {
       data_processing_consent: consentData,
       photo_media_consent: consentMedia,
       website: honeypot.trim() || null,
+      draft_id: draftId,
+      apaar_id: apaarOption === "existing" && apaarId.trim() ? apaarId.trim() : null,
+      apaar_consent: apaarOption === "consent" ? apaarConsentChecked : false,
+      apaar_consent_guardian_name:
+        apaarOption === "consent"
+          ? (apaarConsentGuardianName.trim() || guardianName.trim() || null)
+          : null,
+      apaar_consent_guardian_relation:
+        apaarOption === "consent"
+          ? (apaarConsentGuardianRelation || guardianRelation)
+          : null,
     };
 
     setSubmitting(true);
@@ -675,6 +735,52 @@ export function PublicApplyPage() {
       setSubmitError(err?.message || "Failed to submit application. Please verify details.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    setDraftSaving(true);
+    setSubmitError(null);
+    try {
+      const draftPayload = {
+        draft_id: draftId,
+        first_name: firstName.trim() || null,
+        last_name: lastName.trim() || null,
+        date_of_birth: dob || null,
+        gender,
+        class_applying_for: selectedClass || null,
+        stream: stream.trim() || null,
+        nationality: nationality.trim() || "Indian",
+        religion: religion.trim() || null,
+        caste_category: casteCategory.trim() || null,
+        admission_category: admissionCategory,
+        mother_tongue: motherTongue.trim() || null,
+        place_of_birth: placeOfBirth.trim() || null,
+        address: addressLine.trim()
+          ? {
+              address_line: addressLine.trim(),
+              city: city.trim(),
+              pin_code: pinCode.trim(),
+              state: stateName.trim(),
+            }
+          : null,
+        apaar_id: apaarOption === "existing" && apaarId.trim() ? apaarId.trim() : null,
+        apaar_consent: apaarOption === "consent" ? apaarConsentChecked : false,
+        apaar_consent_guardian_name: apaarConsentGuardianName.trim() || guardianName.trim() || null,
+        apaar_consent_guardian_relation: apaarConsentGuardianRelation || guardianRelation,
+      };
+
+      const res = await api.rawPost<{ draft_id: number; reference_code: string; message: string }>(
+        `/public/${schoolCode}/admission/draft`,
+        draftPayload
+      );
+      setDraftId(res.draft_id);
+      setDraftRef(res.reference_code || `DFT-${res.draft_id}`);
+      setDraftSavedModal(true);
+    } catch (err: any) {
+      setSubmitError("Failed to save draft: " + (err?.message || "Please check entered details."));
+    } finally {
+      setDraftSaving(false);
     }
   };
 
@@ -1285,6 +1391,150 @@ export function PublicApplyPage() {
                             className="w-full rounded-input border border-rule px-3 py-2 text-sm outline-none focus:border-primary"
                           />
                         </div>
+                      </div>
+
+                      {/* APAAR ID & Parental Consent Section */}
+                      <div className="border-t border-rule pt-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-ink">
+                            APAAR ID & National Student Registry (One Nation One Student ID) <span className="text-danger">*</span>
+                          </h4>
+                          <span className="text-[11px] bg-primary/10 text-primary font-medium px-2 py-0.5 rounded">
+                            Govt. of India Mandate
+                          </span>
+                        </div>
+                        <p className="text-xs text-ink-soft">
+                          APAAR (Automated Permanent Academic Account Registry) is a 12-digit unique ID issued by the Ministry of Education.
+                        </p>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <label
+                            className={`p-3 rounded-card border cursor-pointer flex flex-col justify-between text-xs transition-all ${
+                              apaarOption === "existing" ? "border-primary bg-primary/5" : "border-rule bg-ground"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name="apaar_choice"
+                                checked={apaarOption === "existing"}
+                                onChange={() => setApaarOption("existing")}
+                                className="text-primary focus:ring-primary"
+                              />
+                              <span className="font-semibold text-ink">Already Have APAAR ID</span>
+                            </div>
+                            <p className="text-[11px] text-ink-soft mt-1">Enter student's existing 12-digit number.</p>
+                          </label>
+
+                          <label
+                            className={`p-3 rounded-card border cursor-pointer flex flex-col justify-between text-xs transition-all ${
+                              apaarOption === "consent" ? "border-primary bg-primary/5" : "border-rule bg-ground"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name="apaar_choice"
+                                checked={apaarOption === "consent"}
+                                onChange={() => setApaarOption("consent")}
+                                className="text-primary focus:ring-primary"
+                              />
+                              <span className="font-semibold text-ink">Request Facilitation (Consent)</span>
+                            </div>
+                            <p className="text-[11px] text-ink-soft mt-1">School will facilitate generation via UDISE+.</p>
+                          </label>
+
+                          <label
+                            className={`p-3 rounded-card border cursor-pointer flex flex-col justify-between text-xs transition-all ${
+                              apaarOption === "override" ? "border-primary bg-primary/5" : "border-rule bg-ground"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name="apaar_choice"
+                                checked={apaarOption === "override"}
+                                onChange={() => setApaarOption("override")}
+                                className="text-primary focus:ring-primary"
+                              />
+                              <span className="font-semibold text-ink">Administrative Override</span>
+                            </div>
+                            <p className="text-[11px] text-ink-soft mt-1">Request exception via draft reference code.</p>
+                          </label>
+                        </div>
+
+                        {apaarOption === "existing" && (
+                          <div className="p-3 bg-ground rounded border border-rule space-y-2">
+                            <label className="block text-xs font-semibold text-ink-soft">
+                              12-Digit APAAR ID Number <span className="text-danger">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              maxLength={12}
+                              value={apaarId}
+                              onChange={(e) => setApaarId(e.target.value.replace(/\D/g, ""))}
+                              placeholder="e.g. 123456789012"
+                              className="w-full max-w-sm rounded-input border border-rule px-3 py-2 text-sm font-mono outline-none focus:border-primary"
+                            />
+                            <p className="text-[11px] text-ink-soft">
+                              Must match the 12-digit number from APAAR card or DigiLocker.
+                            </p>
+                          </div>
+                        )}
+
+                        {apaarOption === "consent" && (
+                          <div className="p-3 bg-ground rounded border border-rule space-y-3">
+                            <div className="flex items-start gap-2">
+                              <input
+                                type="checkbox"
+                                id="apaarConsentBox"
+                                checked={apaarConsentChecked}
+                                onChange={(e) => setApaarConsentChecked(e.target.checked)}
+                                className="mt-0.5 rounded border-rule text-primary focus:ring-primary"
+                              />
+                              <label htmlFor="apaarConsentBox" className="text-xs text-ink leading-relaxed cursor-pointer">
+                                I, as parent/guardian, hereby give consent to Sunrise Public School to share student and identity particulars on the Ministry of Education UDISE+ / APAAR portal to generate the APAAR ID on our behalf.
+                              </label>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                              <div>
+                                <label className="block text-[11px] font-semibold text-ink-soft mb-1">
+                                  Consenting Guardian Name
+                                </label>
+                                <input
+                                  type="text"
+                                  value={apaarConsentGuardianName}
+                                  onChange={(e) => setApaarConsentGuardianName(e.target.value)}
+                                  placeholder={guardianName || "Full name of parent"}
+                                  className="w-full rounded-input border border-rule px-3 py-1.5 text-xs outline-none focus:border-primary"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[11px] font-semibold text-ink-soft mb-1">
+                                  Relationship to Student
+                                </label>
+                                <select
+                                  value={apaarConsentGuardianRelation}
+                                  onChange={(e) => setApaarConsentGuardianRelation(e.target.value)}
+                                  className="w-full rounded-input border border-rule px-3 py-1.5 text-xs outline-none focus:border-primary bg-white"
+                                >
+                                  <option value="father">Father</option>
+                                  <option value="mother">Mother</option>
+                                  <option value="guardian">Legal Guardian</option>
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {apaarOption === "override" && (
+                          <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 rounded text-xs space-y-1">
+                            <p className="font-semibold">Requesting Admin Exception for APAAR ID</p>
+                            <p>
+                              Click <strong>"Save Draft & Request Exception"</strong> below to obtain a draft reference (e.g. <code>DFT-XX</code>). Share this code with the school administration to authorize an exception.
+                            </p>
+                          </div>
+                        )}
                       </div>
 
                       {/* Residential Address */}
@@ -1966,14 +2216,18 @@ export function PublicApplyPage() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <UniversalUploadField
-                          label="1. Student's Official Birth Certificate"
-                          required
+                          label={`1. Student's Official Birth Certificate ${isBirthCertMandatory ? "(Mandatory)" : "(Optional)"}`}
+                          required={isBirthCertMandatory}
                           acceptPdf
                           value={uploadedDocs["birth_certificate"]?.url || null}
                           filename={uploadedDocs["birth_certificate"]?.filename}
                           onChange={(url, fname, size) => handleDocChange("birth_certificate", url, fname, size)}
                           schoolCode={schoolCode}
-                          helperText="Issued by Municipal Corporation / Registrar of Births. Mandatory for age verification."
+                          helperText={
+                            isBirthCertMandatory
+                              ? "Mandatory for Nursery-UKG or applicants under 5 years of age on admission cutoff date."
+                              : "Optional for applicants aged 5 or older applying for Grade 1 and above."
+                          }
                         />
 
                         <UniversalUploadField
@@ -2146,14 +2400,40 @@ export function PublicApplyPage() {
                             </div>
                             <div className="flex justify-between">
                               <span className="text-ink-soft">Birth Certificate:</span>
-                              <span className={uploadedDocs["birth_certificate"] ? "text-emerald-600 font-semibold" : "text-danger"}>
-                                {uploadedDocs["birth_certificate"] ? "✓ Uploaded" : "Missing"}
+                              <span
+                                className={
+                                  uploadedDocs["birth_certificate"]
+                                    ? "text-emerald-600 font-semibold"
+                                    : isBirthCertMandatory
+                                    ? draftId
+                                      ? "text-amber-600 font-semibold"
+                                      : "text-danger font-semibold"
+                                    : "text-ink-soft"
+                                }
+                              >
+                                {uploadedDocs["birth_certificate"]
+                                  ? "✓ Uploaded"
+                                  : isBirthCertMandatory
+                                  ? draftId
+                                    ? `Override Pending (${draftRef || `DFT-${draftId}`})`
+                                    : "Missing (Mandatory)"
+                                  : "Not Uploaded (Optional)"}
                               </span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-ink-soft">Address Proof:</span>
                               <span className={uploadedDocs["address_proof"] ? "text-emerald-600 font-semibold" : "text-danger"}>
                                 {uploadedDocs["address_proof"] ? "✓ Uploaded" : "Missing"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-ink-soft">APAAR Registry:</span>
+                              <span className="font-semibold text-ink">
+                                {apaarOption === "existing"
+                                  ? `ID: ${apaarId || "Provided"}`
+                                  : apaarOption === "consent"
+                                  ? "Parental Consent Facilitation"
+                                  : `Admin Exception (${draftRef || "Draft"})`}
                               </span>
                             </div>
                             <div className="flex justify-between">
@@ -2268,35 +2548,92 @@ export function PublicApplyPage() {
                       </button>
                     ) : <div />}
 
-                    {currentStep < 6 ? (
+                    <div className="flex items-center gap-3">
                       <button
                         type="button"
-                        onClick={handleNextStep}
-                        className="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white text-sm font-bold rounded-input shadow-md transition flex items-center gap-2"
+                        onClick={handleSaveDraft}
+                        disabled={draftSaving}
+                        className="px-4 py-2.5 bg-ground hover:bg-surface border border-rule text-xs font-semibold text-ink-soft hover:text-ink rounded-input transition flex items-center gap-1.5"
                       >
-                        Continue &rarr;
+                        {draftSaving ? "Saving..." : draftRef ? `Draft Saved: ${draftRef}` : "💾 Save Draft & Get Ref"}
                       </button>
-                    ) : (
-                      <button
-                        type="submit"
-                        disabled={submitting}
-                        className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-input shadow-md transition-all disabled:opacity-50 flex items-center gap-2"
-                      >
-                        {submitting ? (
-                          <>
-                            <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                            <span>Submitting Application...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>✓</span>
-                            <span>Submit Admission Application</span>
-                          </>
-                        )}
-                      </button>
-                    )}
+
+                      {currentStep < 6 ? (
+                        <button
+                          type="button"
+                          onClick={handleNextStep}
+                          className="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white text-sm font-bold rounded-input shadow-md transition flex items-center gap-2"
+                        >
+                          Continue &rarr;
+                        </button>
+                      ) : (
+                        <button
+                          type="submit"
+                          disabled={submitting}
+                          className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-input shadow-md transition-all disabled:opacity-50 flex items-center gap-2"
+                        >
+                          {submitting ? (
+                            <>
+                              <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                              <span>Submitting Application...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>✓</span>
+                              <span>Submit Admission Application</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </form>
+
+                {/* Draft Saved Modal */}
+                {draftSavedModal && (
+                  <div className="fixed inset-0 z-50 bg-ink/40 grid place-items-center p-4">
+                    <div className="bg-surface rounded-card shadow-card w-full max-w-md p-6 space-y-4">
+                      <div className="flex items-center gap-3 text-emerald-700">
+                        <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center font-bold text-lg">
+                          ✓
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-base text-ink">Application Draft Saved</h3>
+                          <p className="text-xs text-ink-soft">Your details have been securely stored.</p>
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-ground border border-rule rounded-xl space-y-2 text-center">
+                        <p className="text-xs text-ink-soft uppercase tracking-wider font-semibold">
+                          Draft Reference Code
+                        </p>
+                        <p className="text-2xl font-mono font-bold text-primary select-all">
+                          {draftRef || `DFT-${draftId}`}
+                        </p>
+                        <p className="text-[11px] text-ink-soft">
+                          Save this code. You can return to your application anytime.
+                        </p>
+                      </div>
+
+                      <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg text-xs space-y-1">
+                        <strong className="font-semibold">Requesting an Administrative Override?</strong>
+                        <p>
+                          If you are missing a mandatory document (Birth Certificate or APAAR ID) and have submitted an undertaking to the school, provide this reference code <strong>{draftRef || `DFT-${draftId}`}</strong> to the school administration to authorize an exception.
+                        </p>
+                      </div>
+
+                      <div className="flex justify-end pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setDraftSavedModal(false)}
+                          className="px-5 py-2 bg-primary text-white text-xs font-semibold rounded-input hover:bg-primary/90"
+                        >
+                          Got It, Continue
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

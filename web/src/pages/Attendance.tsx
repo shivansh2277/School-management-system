@@ -28,6 +28,30 @@ export function Attendance() {
     enabled: Boolean(activeClass),
   });
 
+  const holidays = useQuery({
+    queryKey: ["admin-holidays"],
+    queryFn: () =>
+      api.rawGet<
+        Array<{
+          id: number;
+          name: string;
+          start_date: string;
+          end_date: string;
+          is_school_wide: boolean;
+          status: string;
+          class_section_ids: number[];
+        }>
+      >("/admin/attendance/holidays"),
+  });
+
+  const matchingHoliday = holidays.data?.find((h) => {
+    if (h.status !== "active") return false;
+    const inRange = date >= h.start_date && date <= h.end_date;
+    if (!inRange) return false;
+    if (h.is_school_wide) return true;
+    return activeClass && h.class_section_ids?.includes(Number(activeClass));
+  });
+
   return (
     <>
       <Card title="Attendance">
@@ -50,6 +74,15 @@ export function Attendance() {
             onChange={(e) => setDate(e.target.value)}
           />
         </div>
+
+        {matchingHoliday && (
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-300 text-amber-900 rounded-card text-xs flex items-center gap-2">
+            <span className="font-bold text-sm">🏖️ Declared Holiday:</span>
+            <span>
+              <strong>{matchingHoliday.name}</strong> ({matchingHoliday.start_date} → {matchingHoliday.end_date}). Normal attendance marking is blocked on declared holidays.
+            </span>
+          </div>
+        )}
 
         <p className="text-xs text-ink-faint mb-3">
           Read only. Attendance is marked by the class teacher in the mobile app.

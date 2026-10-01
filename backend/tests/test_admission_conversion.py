@@ -73,6 +73,7 @@ def _apply_on_portal(client, **over):
         "information_accuracy": True,
         "school_rules_accepted": True,
         "data_processing_consent": True,
+        "apaar_consent": True,
     }
     body.update(over)
     r = client.post(f"{PORTAL}/apply", json=body)
