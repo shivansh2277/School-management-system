@@ -242,13 +242,16 @@ def lookup_borrower(db: Session, school_id: int, identifier: str) -> dict:
     return {
         "enrolment_id": enrolment.id,
         "enrollment_code": f"ENR-{enrolment.id}",
+        "canonical_id": f"ENR-{enrolment.id}",
         "student_id": student.id,
         "admission_no": student.admission_no,
         "student_name": student.user.full_name if student.user else "",
+        "name": student.user.full_name if student.user else "",
         "class_label": enrolment.class_section.label if enrolment.class_section else "",
         "roll_no": enrolment.roll_no,
         "active_loans_count": len(active_loans),
         "unpaid_fines": float(unpaid_fines),
+        "unpaid_fines_total": float(unpaid_fines),
         "is_eligible": is_eligible,
         "ineligibility_reasons": reasons,
         "active_loans": [

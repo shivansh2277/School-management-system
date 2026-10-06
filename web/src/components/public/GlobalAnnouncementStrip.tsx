@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { api } from "../../api/client";
 
 export function GlobalAnnouncementStrip() {
   const location = useLocation();
@@ -14,13 +15,9 @@ export function GlobalAnnouncementStrip() {
     let isMounted = true;
     const fetchAnnouncements = async () => {
       try {
-        const apiHost = window.location.hostname === "localhost" ? "http://localhost:8000" : "";
-        const res = await fetch(`${apiHost}/public/sunrise/announcements`);
-        if (res.ok) {
-          const data = await res.json();
-          if (isMounted && Array.isArray(data) && data.length > 0) {
-            setAnnouncements(data);
-          }
+        const data = await api.rawGet<any[]>("/public/SPS/announcements");
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setAnnouncements(data);
         }
       } catch {
         // Fallback demo items if backend unreachable

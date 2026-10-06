@@ -162,28 +162,28 @@ export function SessionRollover() {
   }, [previewMutation.data]);
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12">
-      {/* Header Banner */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-rule pb-4">
+    <div className="space-y-5 max-w-6xl mx-auto pb-12">
+      {/* Header Banner Card */}
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-ink">Session Rollover &amp; Promotion Wizard</h1>
-            <span className="rounded-pill bg-primary/10 text-primary text-xs font-semibold px-2.5 py-0.5">
-              CBSE Academic Engine
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Session Rollover &amp; Promotion Wizard</h1>
+            <span className="rounded-pill bg-primary/10 text-primary text-xs font-semibold px-2.5 py-0.5 border border-primary/20">
+              CBSE Engine
             </span>
           </div>
-          <p className="text-sm text-ink-soft mt-1">
-            Batch promote class sections from one academic session to the next with roll number continuity, detention handling, and gapless record retention.
+          <p className="text-xs text-ink-faint mt-0.5">
+            Batch promote class sections from one academic session to the next with roll number continuity
           </p>
         </div>
 
         {/* Current Session Indicator */}
-        <div className="flex items-center gap-2 bg-surface rounded-card p-2.5 border border-rule text-xs">
+        <div className="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-1.5 border border-rule text-xs self-start md:self-auto">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span className="text-ink-soft font-medium">Current Session:</span>
-          <span className="font-semibold text-ink">{me?.academic_year || "2025-26"}</span>
+          <span className="text-ink-soft font-medium">Active Session:</span>
+          <span className="font-bold text-ink">{me?.academic_year || "2025-26"}</span>
         </div>
-      </header>
+      </div>
 
       {/* Stepper Wizard Indicator */}
       <nav aria-label="Wizard Steps" className="bg-surface rounded-card shadow-card p-3.5 border border-rule">

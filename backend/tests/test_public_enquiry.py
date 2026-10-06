@@ -77,3 +77,23 @@ def test_submit_public_enquiry_duplicate_mobile_handling(client: TestClient, db:
     interactions = db.query(EnquiryInteraction).filter_by(enquiry_id=id1).all()
     assert len(interactions) == 2
     assert "fee structure" in interactions[1].notes
+
+
+def test_submit_public_enquiry_with_sunrise_slug_alias(client: TestClient, db: Session):
+    """Submitting with the 'sunrise' school slug alias resolves the Sunrise School tenant."""
+    payload = {
+        "enquirer_name": "Deepak Kapoor",
+        "mobile": "+91 99887 76655",
+        "class_of_interest": "Class 3",
+        "notes": "Testing enquiry with sunrise tenant alias.",
+    }
+
+    res = client.post("/public/sunrise/admission/enquiry", json=payload)
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert data["status"] == "success"
+    assert "enquiry_id" in data
+    enquiry = db.get(Enquiry, data["enquiry_id"])
+    assert enquiry is not None
+    assert enquiry.enquirer_name == "Deepak Kapoor"
+

@@ -239,3 +239,12 @@ def heartbeat(db: Session, job: Job) -> dict:
         select(School).where(School.status == SchoolStatus.active).limit(1)
     )
     return {"ok": True, "school": active.code if active else None}
+
+
+@handler("attendance.unmarked_deadline_sweep")
+def attendance_unmarked_sweep(db: Session, job: Job) -> dict:
+    """Sweep for unmarked attendance past 11:59 PM deadline on instructional days."""
+    from app.services import attendance as att_svc
+    results = att_svc.check_unmarked_attendance_and_notify_admin(db, job.school_id)
+    return {"unmarked_count": len(results), "unmarked": results}
+

@@ -127,8 +127,15 @@ export function FeeLedger() {
   };
 
   return (
-    <>
-      <Card title="Student fees">
+    <div className="space-y-6">
+      {/* Header Surface Card */}
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Student Fee Ledger</h1>
+        </div>
+      </div>
+
+      <Card title="Find Student Account">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -144,19 +151,19 @@ export function FeeLedger() {
           */}
           <div className="flex items-end gap-3">
             <div className="flex-1">
-              <FormField label="Find a student">
+              <FormField label="Search student by name, admission no., or guardian phone">
                 <input
                   className={inputClass}
                   autoFocus
                   value={term}
-                  placeholder="Name, admission number or guardian's phone"
+                  placeholder="e.g. Aarav Sharma, ADM-2024-001, 9876543210..."
                   onChange={(e) => setTerm(e.target.value)}
                 />
               </FormField>
             </div>
             <button
               type="submit"
-              className="rounded-input bg-primary px-4 py-2 text-white text-sm font-medium hover:bg-primary-dark"
+              className="rounded-input bg-primary px-4 py-2 text-white text-sm font-semibold hover:bg-primary/90 transition-colors shadow-2xs"
             >
               Search
             </button>
@@ -164,7 +171,7 @@ export function FeeLedger() {
         </form>
 
         {searched.length > 0 && (
-          <div className="mt-4">
+          <div className="mt-4 pt-4 border-t border-rule/60">
             <DataTable
               rows={results.data?.items ?? []}
               loading={results.isLoading}
@@ -172,10 +179,34 @@ export function FeeLedger() {
               empty={`Nobody matches "${searched}". Try the admission number.`}
               onRowClick={pick}
               columns={[
-                { key: "name", header: "Student", render: (s) => s.full_name },
-                { key: "adm", header: "Admission No.", render: (s) => s.admission_no },
-                { key: "class", header: "Class", render: (s) => s.class_label ?? "—" },
-                { key: "ph", header: "Guardian", render: (s) => s.guardian_phone ?? "—" },
+                {
+                  key: "name",
+                  header: "Student",
+                  render: (s) => (
+                    <span className="font-semibold text-ink hover:text-primary transition-colors">
+                      {s.full_name}
+                    </span>
+                  ),
+                },
+                {
+                  key: "adm",
+                  header: "Admission No.",
+                  render: (s) => (
+                    <span className="font-mono text-xs text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/60">
+                      {s.admission_no}
+                    </span>
+                  ),
+                },
+                {
+                  key: "class",
+                  header: "Class",
+                  render: (s) => (
+                    <span className="text-xs font-medium text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-200/50">
+                      {s.class_label ?? "—"}
+                    </span>
+                  ),
+                },
+                { key: "ph", header: "Guardian Phone", render: (s) => s.guardian_phone ?? "—" },
               ]}
             />
           </div>
@@ -189,7 +220,7 @@ export function FeeLedger() {
           onClear={() => setStudent(null)}
         />
       )}
-    </>
+    </div>
   );
 }
 
@@ -205,12 +236,15 @@ function StudentAccount({
   const data = ledger.data;
 
   return (
-    <>
+    <div className="space-y-6">
       <Card
         title={`${student.full_name} — ${student.admission_no}`}
         action={
-          <button onClick={onClear} className="text-sm text-ink-faint hover:text-ink">
-            Change student
+          <button
+            onClick={onClear}
+            className="text-xs font-semibold text-primary hover:underline px-2.5 py-1 rounded bg-blue-50 border border-blue-200"
+          >
+            ← Change student
           </button>
         }
       >
@@ -219,9 +253,9 @@ function StudentAccount({
         {data && (
           <>
             <div className="grid gap-4 sm:grid-cols-3 mb-5">
-              <StatCard label="Outstanding" value={money(data.outstanding)} hint={student.class_label ?? undefined} />
-              <StatCard label="Credit on account" value={money(data.credit)} />
-              <StatCard label="Receipts" value={data.payments.length} />
+              <StatCard label="Outstanding Balance" value={money(data.outstanding)} hint={student.class_label ?? undefined} />
+              <StatCard label="Credit on Account" value={money(data.credit)} hint="Advance balance" />
+              <StatCard label="Total Receipts" value={data.payments.length} hint="Recorded transactions" />
             </div>
 
             {data.invoices.length === 0 && (
@@ -236,28 +270,46 @@ function StudentAccount({
 
       {data && (
         <>
-          <Card title="Invoices">
+          <Card
+            title="Invoices"
+            action={
+              <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                {data.invoices.length} billed
+              </span>
+            }
+          >
             <DataTable
               rows={data.invoices}
               empty="No invoices raised for this student."
               columns={[
-                { key: "no", header: "Invoice", render: (i) => i.invoice_no },
+                {
+                  key: "no",
+                  header: "Invoice No.",
+                  render: (i) => <span className="font-mono text-xs font-medium text-slate-800">{i.invoice_no}</span>,
+                },
                 { key: "period", header: "Period", render: (i) => `${monthName(i.month)} ${i.year}` },
-                { key: "due", header: "Due", render: (i) => asDate(i.due_date) },
-                { key: "billed", header: "Billed", render: (i) => money(i.payable), align: "right" },
-                { key: "paid", header: "Paid", render: (i) => money(i.paid), align: "right" },
-                { key: "bal", header: "Balance", render: (i) => money(i.balance), align: "right" },
+                { key: "due", header: "Due Date", render: (i) => asDate(i.due_date) },
+                { key: "billed", header: "Billed", render: (i) => <span className="font-mono">{money(i.payable)}</span>, align: "right" },
+                { key: "paid", header: "Paid", render: (i) => <span className="font-mono text-emerald-700 font-medium">{money(i.paid)}</span>, align: "right" },
+                { key: "bal", header: "Balance", render: (i) => <span className="font-mono font-semibold text-rose-700">{money(i.balance)}</span>, align: "right" },
                 { key: "st", header: "Status", render: (i) => <Pill status={i.status}>{i.status}</Pill> },
               ]}
             />
           </Card>
 
-          <Card title="Receipts">
+          <Card
+            title="Payment Receipts"
+            action={
+              <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                {data.payments.length} receipts
+              </span>
+            }
+          >
             <Receipts payments={data.payments} studentId={student.id} />
           </Card>
         </>
       )}
-    </>
+    </div>
   );
 }
 

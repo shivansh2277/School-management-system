@@ -55,13 +55,16 @@ type LoanItem = {
 type BorrowerInfo = {
   enrolment_id?: number;
   employee_id?: number;
-  canonical_id: string;
-  name: string;
-  role: string;
+  canonical_id?: string;
+  enrollment_code?: string;
+  name?: string;
+  student_name?: string;
+  role?: string;
   class_label?: string;
   roll_no?: number;
   active_loans_count: number;
-  unpaid_fines_total: number;
+  unpaid_fines_total?: number;
+  unpaid_fines?: number;
 };
 
 export function Library() {
@@ -205,20 +208,17 @@ export function Library() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="space-y-5">
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">Library & Circulation Desk</h1>
-          <p className="text-sm text-ink-soft">
-            Manage catalogue, barcode accessions, and book circulation using canonical Enrollment ID (ENR-&#123;id&#125;).
-          </p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Library & Circulation Desk</h1>
         </div>
 
         <div className="flex gap-2">
           {can("library.manage") && (
             <button
               onClick={() => setAddingBook(true)}
-              className="rounded-input bg-primary px-4 py-2 text-white text-sm font-medium hover:bg-primary/90"
+              className="rounded-input bg-[#042954] hover:bg-[#07366f] px-3.5 py-2 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
             >
               + Add New Book
             </button>
@@ -226,34 +226,37 @@ export function Library() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-rule gap-6">
+      {/* Segmented Tab Switcher */}
+      <div className="flex flex-wrap items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200/60 gap-1 self-start sm:self-auto">
         <button
+          type="button"
           onClick={() => setTab("circulation")}
-          className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             tab === "circulation"
-              ? "border-primary text-primary"
-              : "border-transparent text-ink-soft hover:text-ink"
+              ? "bg-white text-slate-900 shadow-2xs"
+              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
           }`}
         >
           Circulation Desk
         </button>
         <button
+          type="button"
           onClick={() => setTab("catalogue")}
-          className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             tab === "catalogue"
-              ? "border-primary text-primary"
-              : "border-transparent text-ink-soft hover:text-ink"
+              ? "bg-white text-slate-900 shadow-2xs"
+              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
           }`}
         >
           Catalogue & Copies ({booksQuery.data?.total ?? 0})
         </button>
         <button
+          type="button"
           onClick={() => setTab("fines")}
-          className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             tab === "fines"
-              ? "border-primary text-primary"
-              : "border-transparent text-ink-soft hover:text-ink"
+              ? "bg-white text-slate-900 shadow-2xs"
+              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
           }`}
         >
           Overdue Fines
@@ -311,17 +314,21 @@ export function Library() {
               {borrowerQuery.data && (
                 <div className="p-3 bg-ground border border-rule rounded-card text-xs flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <span className="font-semibold text-sm">{borrowerQuery.data.name}</span>{" "}
-                    <span className="font-mono text-ink-soft">({borrowerQuery.data.canonical_id})</span> •{" "}
-                    {borrowerQuery.data.class_label ? `Class ${borrowerQuery.data.class_label}` : borrowerQuery.data.role}
+                    <span className="font-semibold text-sm">
+                      {borrowerQuery.data.name || borrowerQuery.data.student_name || "Borrower"}
+                    </span>{" "}
+                    <span className="font-mono text-ink-soft">
+                      ({borrowerQuery.data.canonical_id || borrowerQuery.data.enrollment_code})
+                    </span> •{" "}
+                    {borrowerQuery.data.class_label ? `Class ${borrowerQuery.data.class_label}` : borrowerQuery.data.role || "Student"}
                   </div>
                   <div className="flex gap-4">
                     <span>
                       Active Loans: <strong>{borrowerQuery.data.active_loans_count}</strong>
                     </span>
-                    {borrowerQuery.data.unpaid_fines_total > 0 && (
+                    {((borrowerQuery.data.unpaid_fines_total ?? borrowerQuery.data.unpaid_fines ?? 0) > 0) && (
                       <span className="text-danger font-medium">
-                        Unpaid Fines: ₹{borrowerQuery.data.unpaid_fines_total}
+                        Unpaid Fines: ₹{borrowerQuery.data.unpaid_fines_total ?? borrowerQuery.data.unpaid_fines}
                       </span>
                     )}
                   </div>

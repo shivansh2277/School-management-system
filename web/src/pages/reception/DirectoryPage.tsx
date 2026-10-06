@@ -133,13 +133,10 @@ export function DirectoryPage() {
 
   return (
     <div className="space-y-6">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Top Header Surface Card */}
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-ink tracking-tight">Important Emergency & School Directory</h1>
-          <p className="text-sm text-ink-faint">
-            Directory of essential school, medical, civic, and emergency contacts for front desk coordination.
-          </p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Important Directory</h1>
         </div>
 
         {/* Admin CRUD Action: Gated on reception.directory.write (Admin only; Receptionist is Read-Only) */}
@@ -150,7 +147,7 @@ export function DirectoryPage() {
               resetForm();
               setShowAddModal(true);
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-pill hover:opacity-90 transition shadow-sm"
+            className="flex items-center gap-2 px-3.5 py-2 bg-primary text-white text-xs font-semibold rounded-input shadow-2xs hover:bg-primary-dark transition cursor-pointer"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />

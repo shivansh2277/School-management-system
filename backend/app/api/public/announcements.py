@@ -6,7 +6,7 @@ can view published institutional notices and news announcements.
 
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -18,7 +18,9 @@ router = APIRouter(prefix="/public", tags=["public-announcements"])
 
 
 def _school(db: Session, school_code: str) -> School:
-    school = db.scalar(select(School).where(School.code == school_code))
+    school = db.scalar(select(School).where(func.lower(School.code) == school_code.lower()))
+    if school is None and school_code.lower() in ("sunrise", "sunrisepublic", "sunrise-public"):
+        school = db.scalar(select(School).where(func.lower(School.code) == "sps"))
     if school is None or school.status is not SchoolStatus.active:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No such school")
     return school

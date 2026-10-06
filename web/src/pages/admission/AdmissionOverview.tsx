@@ -188,40 +188,39 @@ export function AdmissionOverview() {
   return (
     <div className="space-y-6">
       {/* Top action & Cycle Header */}
-      <header className="flex flex-wrap items-center justify-between gap-4 bg-surface rounded-card shadow-card p-5">
-        <div className="flex items-center gap-3">
-          <div>
-            <span className="text-xs font-medium uppercase tracking-wider text-ink-faint">
-              Admission Season
+      <header className="flex flex-wrap items-center justify-between gap-4 bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Admission Dashboard</h1>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-ink-soft">
+              Cycle:
             </span>
-            <div className="flex items-center gap-2 mt-0.5">
-              <select
-                className={`${inputClass} max-w-xs font-semibold text-base py-1`}
-                value={activeCycle?.id ?? ""}
-                onChange={(e) => setSelectedCycleId(Number(e.target.value))}
-                disabled={cycles.length === 0}
+            <select
+              className={`${inputClass} max-w-xs font-semibold text-xs py-1.5`}
+              value={activeCycle?.id ?? ""}
+              onChange={(e) => setSelectedCycleId(Number(e.target.value))}
+              disabled={cycles.length === 0}
+            >
+              {cycles.length === 0 && <option value="">No cycle configured</option>}
+              {cycles.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.academic_year}) — {c.status.toUpperCase()}
+                </option>
+              ))}
+            </select>
+            {activeCycle && (
+              <Pill
+                status={
+                  activeCycle.status === "open"
+                    ? "present"
+                    : activeCycle.status === "closed"
+                      ? "absent"
+                      : "pending"
+                }
               >
-                {cycles.length === 0 && <option value="">No cycle configured</option>}
-                {cycles.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.academic_year}) — {c.status.toUpperCase()}
-                  </option>
-                ))}
-              </select>
-              {activeCycle && (
-                <Pill
-                  status={
-                    activeCycle.status === "open"
-                      ? "present"
-                      : activeCycle.status === "closed"
-                        ? "absent"
-                        : "pending"
-                  }
-                >
-                  {activeCycle.status.toUpperCase()}
-                </Pill>
-              )}
-            </div>
+                {activeCycle.status.toUpperCase()}
+              </Pill>
+            )}
           </div>
         </div>
 

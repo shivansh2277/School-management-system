@@ -562,8 +562,6 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
         "librarian",
         "Librarian",
         [
-            "students.profile.read",
-            "academics.class.read",
             "library.read",
             "library.manage",
             "comms.notice.read",

@@ -143,44 +143,62 @@ export function Students() {
   });
 
   return (
-    <>
-      <Card
-        title={`Students${data ? ` (${data.total})` : ""}`}
-        action={
-          <div className="flex gap-2">
-            {feesVisible && (
-              <ActionButton
-                permission="comms.message.send"
-                onClick={() => setChasing(true)}
-                className="!px-3 !py-1.5"
-              >
-                Email defaulters
-              </ActionButton>
-            )}
+    <div className="space-y-5">
+      {/* Page Header & Action Bar */}
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Student Directory</h1>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {feesVisible && (
             <ActionButton
-              permission="students.profile.write"
-              onClick={() => setAdding(true)}
-              className="!px-3 !py-1.5"
+              permission="comms.message.send"
+              variant="secondary"
+              onClick={() => setChasing(true)}
+              className="!px-3 !py-1.5 text-xs font-semibold"
             >
-              Add Student
+              Email defaulters
             </ActionButton>
-            <button
-              onClick={() => setBulkIdCardModal(true)}
-              className="rounded-input border border-rule px-3 py-1.5 text-sm font-medium hover:bg-ground flex items-center gap-1.5"
-            >
-              Bulk ID Cards (8-up)
-            </button>
-          </div>
+          )}
+          <ActionButton
+            permission="students.profile.write"
+            variant="primary"
+            onClick={() => setAdding(true)}
+            className="!px-3 !py-1.5 text-xs font-semibold"
+          >
+            Add Student
+          </ActionButton>
+          <button
+            type="button"
+            onClick={() => setBulkIdCardModal(true)}
+            className="rounded-input border border-rule bg-surface px-3 py-1.5 text-xs font-semibold text-ink-soft hover:text-ink hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+          >
+            Bulk ID Cards (8-up)
+          </button>
+        </div>
+      </div>
+
+      {/* Directory Roster Card with Filters */}
+      <Card
+        title={`Enrolled Students${data ? ` (${data.total})` : ""}`}
+        action={
+          data ? (
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+              {data.total} records
+            </span>
+          ) : undefined
         }
       >
-        <div className="flex gap-3 mb-4">
-          <input
-            className={inputClass}
-            placeholder="Search by name or admission number"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-          <select className={inputClass} value={classId} onChange={(e) => setClassId(e.target.value)}>
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <div className="relative flex-1">
+            <input
+              className={inputClass}
+              placeholder="Search by student name or admission number..."
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
+          <select className={`${inputClass} sm:w-56`} value={classId} onChange={(e) => setClassId(e.target.value)}>
             <option value="">All classes</option>
             {classes.data?.map((c) => (
               <option key={c.id} value={c.id}>
@@ -199,32 +217,61 @@ export function Students() {
           columns={[
             {
               key: "name",
-              header: "Name",
+              header: "Student Name",
               render: (r) => (
-                <span className="flex items-center gap-2">
-                  <span className="w-7 h-7 rounded-full bg-primary-soft text-primary grid place-items-center text-xs font-medium">
-                    {r.full_name.slice(0, 1)}
+                <span className="flex items-center gap-2.5">
+                  <span className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center justify-center text-xs font-bold shrink-0">
+                    {r.full_name.charAt(0)}
                   </span>
-                  {r.full_name}
+                  <span className="font-semibold text-ink hover:text-primary transition-colors">
+                    {r.full_name}
+                  </span>
                 </span>
               ),
             },
-            { key: "adm", header: "Admission No.", render: (r) => r.admission_no },
-            { key: "class", header: "Class", render: (r) => r.class_label },
-            { key: "roll", header: "Roll", render: (r) => r.roll_no, align: "right" },
-            { key: "guardian", header: "Guardian", render: (r) => r.guardian_name ?? "-" },
-            { key: "phone", header: "Phone", render: (r) => r.guardian_phone ?? "-" },
-            // Only where the reader may see fees at all. The column is dropped
-            // rather than shown empty: a blank Fees cell reads as "nothing
-            // owed", which is a statement about the family's money that this
-            // screen would not actually be making.
+            {
+              key: "adm",
+              header: "Admission No.",
+              render: (r) => (
+                <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/60">
+                  {r.admission_no}
+                </span>
+              ),
+            },
+            {
+              key: "class",
+              header: "Class",
+              render: (r) => (
+                <span className="font-medium text-slate-800 bg-slate-50 px-2 py-0.5 rounded border border-slate-200/50 text-xs">
+                  {r.class_label}
+                </span>
+              ),
+            },
+            { key: "roll", header: "Roll", render: (r) => <span className="font-semibold text-ink tabular">{r.roll_no}</span>, align: "right" },
+            { key: "guardian", header: "Guardian", render: (r) => <span className="text-ink-soft">{r.guardian_name ?? "—"}</span> },
+            {
+              key: "phone",
+              header: "Phone",
+              render: (r) =>
+                r.guardian_phone ? (
+                  <a
+                    href={`tel:${r.guardian_phone}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-primary hover:underline text-xs font-medium"
+                  >
+                    {r.guardian_phone}
+                  </a>
+                ) : (
+                  <span className="text-ink-faint text-xs">—</span>
+                ),
+            },
             ...(feesVisible
               ? [
                   {
                     key: "fees",
                     header: "Fees",
                     render: (r: Row) => {
-                      if (owing.isLoading) return <span className="text-ink-faint">…</span>;
+                      if (owing.isLoading) return <span className="text-ink-faint text-xs">…</span>;
                       if (owing.error) return <span className="text-danger text-xs">not loaded</span>;
                       const due = owedBy.get(r.id);
                       return due ? (
@@ -363,7 +410,7 @@ export function Students() {
           }}
         />
       )}
-    </>
+    </div>
   );
 }
 

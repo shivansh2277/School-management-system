@@ -1,10 +1,44 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import heroCampusImage from "../../../assets/hero-campus.jpg";
 import { AdmissionEnquiryModal } from "../../../components/public/AdmissionEnquiryModal";
+
+const HERO_BUILDING_PHOTOS = [
+  {
+    src: "/images/school/hero_campus_exterior.jpg",
+    alt: "Sunrise School Main Academic Block and Flagship Portico - Gomti Nagar, Lucknow",
+    title: "Main Academic Quadrangle",
+    subtitle: "Terracotta and sandstone campus facade",
+  },
+  {
+    src: "/images/school/campus_building_front_angle.jpg",
+    alt: "Sunrise School Academic Block Front Lawn and Main Entrance - Gomti Nagar, Lucknow",
+    title: "Campus Entrance & Lawns",
+    subtitle: "Modern architectural sandstone entrance",
+  },
+  {
+    src: "/images/school/campus_senior_wing_facade.jpg",
+    alt: "Sunrise School Senior Academic Wing and Flowering Courtyard - Gomti Nagar, Lucknow",
+    title: "Senior Academic Wing",
+    subtitle: "Modern classrooms with architectural louvers",
+  },
+  {
+    src: "/images/school/campus_quadrangle_courtyard.jpg",
+    alt: "Sunrise School Central Quadrangle connecting Science and Library blocks - Gomti Nagar, Lucknow",
+    title: "Central Academic Quadrangle",
+    subtitle: "Lush courtyard connecting academic blocks",
+  },
+];
 
 export function HomePage() {
   const [enquiryModalOpen, setEnquiryModalOpen] = useState(false);
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % HERO_BUILDING_PHOTOS.length);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, []);
 
   const parentTestimonials = [
     {
@@ -23,7 +57,7 @@ export function HomePage() {
     },
     {
       quote:
-        "The early years foundation is phenomenal. The 1:15 ratio in pre-primary and kindergarten ensures each little learner is listened to, nurtured, and given joyful hands-on discovery.",
+        "The early years foundation is phenomenal. Personal attention in pre-primary and kindergarten ensures each little learner is listened to, nurtured, and given joyful hands-on discovery.",
       parentName: "Vikram & Neha Malhotra",
       role: "Parents of Kabir (Class II)",
       badge: "Alumni Family",
@@ -74,14 +108,77 @@ export function HomePage() {
             </div>
           </div>
 
-          {/* Hero Main Photography Centerpiece (1 of 4 School Photos: Exterior Campus) */}
-          <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-200 bg-slate-900">
-            <img
-              src={heroCampusImage}
-              alt="Sunrise School Main Campus Exterior - Gomti Nagar, Lucknow"
-              className="w-full h-[280px] sm:h-[400px] md:h-[500px] lg:h-[580px] object-cover object-[32%_center] sm:object-center block transition-transform duration-700 hover:scale-[1.01]"
-              loading="eager"
-            />
+          {/* Hero Main Photography Centerpiece: 4-Photo Carousel of Sunrise School Building */}
+          <div
+            role="region"
+            aria-roledescription="carousel"
+            aria-label="Sunrise School Campus Building Photographs"
+            className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-200 bg-slate-900 group"
+          >
+            <div className="relative w-full h-[280px] sm:h-[400px] md:h-[500px] lg:h-[580px] overflow-hidden">
+              {HERO_BUILDING_PHOTOS.map((photo, index) => {
+                const isActive = index === activeSlide;
+                return (
+                  <div
+                    key={photo.src}
+                    className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                      isActive ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
+                    }`}
+                    aria-hidden={!isActive}
+                  >
+                    <img
+                      src={photo.src}
+                      alt={photo.alt}
+                      className="w-full h-full object-cover object-center block"
+                      loading={index === 0 ? "eager" : "lazy"}
+                    />
+                    {/* Subtle gradient scrim at bottom for caption legibility */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-transparent to-transparent pointer-events-none" />
+                  </div>
+                );
+              })}
+
+              {/* Previous and Next arrow buttons */}
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveSlide((prev) => (prev - 1 + HERO_BUILDING_PHOTOS.length) % HERO_BUILDING_PHOTOS.length)
+                }
+                className="absolute left-3 top-1/2 -translate-y-1/2 z-20 p-2 sm:p-2.5 rounded-full bg-slate-900/60 hover:bg-slate-900/90 text-white border border-white/20 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 focus:outline-none cursor-pointer"
+                aria-label="Previous building photo"
+              >
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveSlide((prev) => (prev + 1) % HERO_BUILDING_PHOTOS.length)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2 sm:p-2.5 rounded-full bg-slate-900/60 hover:bg-slate-900/90 text-white border border-white/20 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 focus:outline-none cursor-pointer"
+                aria-label="Next building photo"
+              >
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+
+              {/* Interactive navigation dots (bottom-center) */}
+              <div className="absolute bottom-4 sm:bottom-6 inset-x-0 z-20 flex items-center justify-center gap-2">
+                {HERO_BUILDING_PHOTOS.map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setActiveSlide(idx)}
+                    className={`h-2 sm:h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
+                      idx === activeSlide
+                        ? "w-8 bg-amber-400 shadow-md"
+                        : "w-2 sm:w-2.5 bg-white/60 hover:bg-white"
+                    }`}
+                    aria-label={`Jump to building photo ${idx + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Trust Highlights Bar */}
@@ -92,7 +189,7 @@ export function HomePage() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-emerald-600 font-bold text-base">✓</span>
-              <span className="font-semibold text-slate-800">1:15 Early Years Ratio (1:18 Senior)</span>
+              <span className="font-semibold text-slate-800">Personal Attention at Every Stage</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-emerald-600 font-bold text-base">✓</span>
@@ -240,7 +337,7 @@ export function HomePage() {
               <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-2xl overflow-hidden bg-slate-900 shrink-0 border-2 border-slate-200 shadow-sm">
                 <img
                   src="/images/school/teacher_mentoring_students.jpg"
-                  alt="Dr. Meera Sharma, Principal of Sunrise School"
+                  alt="Dr. Ananya Sengupta, M.Sc., M.Ed., Ph.D., Principal of Sunrise School"
                   className="w-full h-full object-cover object-top"
                 />
               </div>
@@ -255,7 +352,7 @@ export function HomePage() {
                   At Sunrise School, we believe in creating an environment where children feel safe, valued, and inspired to learn. Our focus is on building strong foundations—academically, emotionally, and ethically—so that every student can face the future with confidence.
                 </p>
                 <div className="pt-1">
-                  <span className="block font-serif font-bold text-slate-900 text-sm">Dr. Meera Sharma</span>
+                  <span className="block font-serif font-bold text-slate-900 text-sm">Dr. Ananya Sengupta, M.Sc., M.Ed., Ph.D.</span>
                   <span className="text-xs text-slate-500">Principal, Sunrise School</span>
                 </div>
               </div>
@@ -268,7 +365,7 @@ export function HomePage() {
                 The purpose of education is to prepare the child for life, not just for exams.
               </p>
               <div className="pt-2 border-t border-indigo-100 text-xs font-semibold text-slate-600">
-                — Dr. Meera Sharma
+                — Dr. Ananya Sengupta, M.Sc., M.Ed., Ph.D.
               </div>
             </div>
           </div>

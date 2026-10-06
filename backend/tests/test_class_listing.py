@@ -59,8 +59,13 @@ def test_pre_primary_names_sort_before_the_numbered_classes():
 
 def test_the_endpoint_returns_them_in_that_order(client, admin):
     labels = [c["class_label"] for c in client.get("/admin/classes", headers=admin).json()]
-    numbered = [int(x.split("-")[0]) for x in labels]
+    numbered = [int(x.split("-")[0]) for x in labels if x.split("-")[0].isdigit()]
     assert numbered == sorted(numbered), labels
+    pre_primary = [x for x in labels if x.split("-")[0].lower() in ("nursery", "lkg", "ukg")]
+    if pre_primary:
+        first_num_idx = next(i for i, x in enumerate(labels) if x.split("-")[0].isdigit())
+        for pp in pre_primary:
+            assert labels.index(pp) < first_num_idx
 
 
 def test_a_primary_class_is_not_taught_the_same_subjects_as_class_ten(client, admin):
@@ -96,7 +101,10 @@ def test_the_shared_key_orders_every_listing_that_uses_it():
     assert sorted(["10", "1", "2", "9", "11", "12", "3"], key=class_sort_key) == [
         "1", "2", "3", "9", "10", "11", "12",
     ]
-    assert class_sort_key("LKG") < class_sort_key("1")
+    assert sorted(["10", "UKG", "1", "LKG", "11", "Nursery", "2"], key=class_sort_key) == [
+        "Nursery", "LKG", "UKG", "1", "2", "10", "11",
+    ]
+    assert class_sort_key("Nursery") < class_sort_key("LKG") < class_sort_key("UKG") < class_sort_key("1")
     assert class_sort_key(None) < class_sort_key("1")
 
 

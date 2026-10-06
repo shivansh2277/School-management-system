@@ -226,9 +226,11 @@ def has_override(db: Session, application_id: int, code: str) -> bool:
             select(ApplicationDocumentOverride.id).where(
                 ApplicationDocumentOverride.application_id == application_id,
                 ApplicationDocumentOverride.document_code == code,
+                ApplicationDocumentOverride.status == "approved",
             )
         )
     )
+
 
 
 def _missing_for_submission(db: Session, app: Application) -> list[str]:
@@ -356,6 +358,12 @@ def checklist(db: Session, app: Application) -> list[dict]:
 
         doc = uploaded.get(t.id)
         override = overrides.get(t.code)
+        is_approved_override = (
+            override is not None and getattr(override, "status", "approved") == "approved"
+        )
+        has_pending_override = (
+            override is not None and getattr(override, "status", None) == "pending"
+        )
         if not required and doc is None and override is None:
             # Not asked for and not supplied: it does not belong on the list at
             # all, or every applicant sees twenty rows of nothing.
@@ -366,8 +374,11 @@ def checklist(db: Session, app: Application) -> list[dict]:
                 "name": t.name,
                 "document_type_id": t.id,
                 "required": required,
-                "status": "overridden" if (override and not doc) else (doc.status.value if doc else "pending"),
-                "is_overridden": override is not None,
+                "status": "overridden"
+                if (is_approved_override and not doc)
+                else (doc.status.value if doc else ("override_pending" if has_pending_override else "pending")),
+                "is_overridden": is_approved_override,
+                "override_status": override.status if override else None,
                 "override_reason": override.reason if override else None,
                 "document_id": doc.id if doc else None,
                 "original_seen": doc.original_seen if doc else False,

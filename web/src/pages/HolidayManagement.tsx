@@ -45,6 +45,31 @@ export function HolidayManagement() {
   // Cancel Dialog State
   const [cancellingHoliday, setCancellingHoliday] = useState<HolidayItem | null>(null);
 
+  // Edit Modal State
+  const [editingHoliday, setEditingHoliday] = useState<HolidayItem | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editStartDate, setEditStartDate] = useState("");
+  const [editEndDate, setEditEndDate] = useState("");
+  const [editIsSchoolWide, setEditIsSchoolWide] = useState(true);
+  const [editSectionIds, setEditSectionIds] = useState<number[]>([]);
+  const [editDescription, setEditDescription] = useState("");
+
+  const openEditModal = (h: HolidayItem) => {
+    setEditingHoliday(h);
+    setEditName(h.name);
+    setEditStartDate(h.start_date);
+    setEditEndDate(h.end_date);
+    setEditIsSchoolWide(h.is_school_wide);
+    setEditSectionIds(h.class_section_ids ?? []);
+    setEditDescription(h.description ?? "");
+  };
+
+  const handleToggleEditSection = (id: number) => {
+    setEditSectionIds((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
+    );
+  };
+
   // Queries
   const holidaysQuery = useQuery({
     queryKey: ["admin-holidays"],
@@ -73,6 +98,24 @@ export function HolidayManagement() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingHoliday) return;
+      return api.rawPut(`/admin/attendance/holidays/${editingHoliday.id}`, {
+        name: editName.trim(),
+        start_date: editStartDate,
+        end_date: editEndDate,
+        description: editDescription.trim() || null,
+        is_school_wide: editIsSchoolWide,
+        class_section_ids: editIsSchoolWide ? [] : editSectionIds,
+      });
+    },
+    onSuccess: () => {
+      setEditingHoliday(null);
+      qc.invalidateQueries({ queryKey: ["admin-holidays"] });
+    },
+  });
+
   const cancelMutation = useMutation({
     mutationFn: async ({ holidayId, reason }: { holidayId: number; reason: string }) => {
       return api.rawPost(`/admin/attendance/holidays/${holidayId}/cancel`, { reason });
@@ -96,36 +139,46 @@ export function HolidayManagement() {
     return Math.round((e - s) / (1000 * 3600 * 24)) + 1;
   };
 
+  const holidayList = holidaysQuery.data ?? [];
+  const activeHolidaysCount = holidayList.filter((h) => h.status === "active").length;
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="space-y-5">
+      {/* Header Bar */}
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">Holiday Management</h1>
-          <p className="text-sm text-ink-soft">
-            Declare school-wide or section-specific holidays. Normal attendance marking is blocked on declared holidays.
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Holiday Management</h1>
+          <p className="text-xs text-ink-faint mt-0.5">
+            Declare school-wide and section-specific holidays to lock roll-call and preserve attendance rates
           </p>
         </div>
 
-        {can("attendance.holiday.manage") && (
-          <button
-            onClick={() => setModalOpen(true)}
-            className="rounded-input bg-primary px-4 py-2 text-white text-sm font-medium hover:bg-primary/90"
-          >
-            + Declare New Holiday
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+            {activeHolidaysCount} Active Holidays
+          </span>
+          {can("attendance.holiday.manage") && (
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="rounded-input bg-[#042954] hover:bg-[#07366f] px-3.5 py-2 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+            >
+              + Declare New Holiday
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="p-4 bg-sky-50 border border-sky-200 rounded-card text-sky-900 text-xs flex items-start gap-3">
+      <div className="p-4 bg-sky-50/80 border border-sky-200/90 rounded-card text-sky-900 text-xs flex items-start gap-3 shadow-2xs">
         <svg className="w-5 h-5 shrink-0 text-sky-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <div>
-          <strong className="font-semibold">Holiday Attendance Invariant:</strong> Declared holidays prevent teachers from marking attendance in the web ERP and mobile application. Attendance summaries exclude declared holidays from the absence denominator to prevent skewing student attendance percentages.
+          <strong className="font-semibold text-sky-950">Holiday Attendance Invariant:</strong> Declared holidays prevent teachers from marking attendance in the web ERP and mobile application. Attendance summaries exclude declared holidays from the absence denominator to prevent skewing student attendance percentages.
         </div>
       </div>
 
-      <Card title="Declared Holidays & Vacations">
+      <Card title={`Declared Holidays & Vacations (${holidayList.length})`}>
         <DataTable
           rows={holidaysQuery.data ?? []}
           loading={holidaysQuery.isLoading}
@@ -188,12 +241,20 @@ export function HolidayManagement() {
               align: "right",
               render: (r) =>
                 r.status === "active" && can("attendance.holiday.manage") ? (
-                  <button
-                    onClick={() => setCancellingHoliday(r)}
-                    className="rounded bg-danger/10 text-danger hover:bg-danger/20 px-2.5 py-1 text-xs font-medium"
-                  >
-                    Cancel Holiday
-                  </button>
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={() => openEditModal(r)}
+                      className="rounded bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 px-2.5 py-1 text-xs font-medium"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => setCancellingHoliday(r)}
+                      className="rounded bg-danger/10 text-danger hover:bg-danger/20 px-2.5 py-1 text-xs font-medium"
+                    >
+                      Cancel Holiday
+                    </button>
+                  </div>
                 ) : null,
             },
           ]}
@@ -304,6 +365,138 @@ export function HolidayManagement() {
                 className="rounded-input bg-primary px-4 py-2 text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
               >
                 {createMutation.isPending ? "Declaring..." : "Declare Holiday"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Edit Holiday Modal */}
+      {editingHoliday && (
+        <Modal title="Edit Declared Holiday" onClose={() => setEditingHoliday(null)}>
+          <div className="space-y-4">
+            {updateMutation.error && (
+              <div className="p-3 bg-danger/10 text-danger text-xs rounded-input">
+                {updateMutation.error.message}
+              </div>
+            )}
+
+            <FormField label="Holiday Name / Title">
+              <input
+                type="text"
+                className={inputClass}
+                placeholder="e.g. Gandhi Jayanti, Diwali Break"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+              />
+            </FormField>
+
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Start Date">
+                <input
+                  type="date"
+                  className={inputClass}
+                  value={editStartDate}
+                  onChange={(e) => {
+                    setEditStartDate(e.target.value);
+                    if (editEndDate < e.target.value) setEditEndDate(e.target.value);
+                  }}
+                />
+              </FormField>
+
+              <FormField label="End Date">
+                <input
+                  type="date"
+                  className={inputClass}
+                  value={editEndDate}
+                  min={editStartDate}
+                  onChange={(e) => setEditEndDate(e.target.value)}
+                />
+              </FormField>
+            </div>
+
+            <div className="flex items-center gap-2 p-2 bg-ground rounded text-xs text-ink-soft">
+              <span>Duration:</span>
+              <strong className="text-ink">
+                {calculateDays(editStartDate, editEndDate)} day(s)
+              </strong>
+            </div>
+
+            <FormField label="Description / Reason (Optional)">
+              <textarea
+                className={`${inputClass} h-16 resize-none`}
+                placeholder="Additional notes for parents and staff..."
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+              />
+            </FormField>
+
+            <div className="space-y-2 pt-2 border-t border-rule">
+              <label className="text-xs font-semibold text-ink uppercase tracking-wider block">
+                Holiday Scope
+              </label>
+
+              <label className="flex items-center gap-2 text-xs text-ink cursor-pointer">
+                <input
+                  type="radio"
+                  name="edit-holiday-scope"
+                  checked={editIsSchoolWide}
+                  onChange={() => setEditIsSchoolWide(true)}
+                  className="accent-primary"
+                />
+                Applies to all classes and sections (School-Wide Holiday)
+              </label>
+
+              <label className="flex items-center gap-2 text-xs text-ink cursor-pointer">
+                <input
+                  type="radio"
+                  name="edit-holiday-scope"
+                  checked={!editIsSchoolWide}
+                  onChange={() => setEditIsSchoolWide(false)}
+                  className="accent-primary"
+                />
+                Specific class sections only (Section-Scoped)
+              </label>
+
+              {!editIsSchoolWide && (
+                <div className="mt-3 p-3 bg-ground rounded border border-rule max-h-40 overflow-y-auto space-y-1.5">
+                  <p className="text-[11px] font-medium text-ink-soft mb-2">
+                    Select sections affected by this holiday:
+                  </p>
+                  {classes.data?.map((c) => (
+                    <label key={c.id} className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editSectionIds.includes(c.id)}
+                        onChange={() => handleToggleEditSection(c.id)}
+                        className="rounded border-rule text-primary accent-primary"
+                      />
+                      <span>{c.class_label}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-rule">
+              <button
+                type="button"
+                onClick={() => setEditingHoliday(null)}
+                className="rounded-input border border-rule px-4 py-2 text-ink text-sm hover:bg-ground"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => updateMutation.mutate()}
+                disabled={
+                  updateMutation.isPending ||
+                  !editName.trim() ||
+                  (!editIsSchoolWide && editSectionIds.length === 0)
+                }
+                className="rounded-input bg-primary px-4 py-2 text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+              >
+                {updateMutation.isPending ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </div>

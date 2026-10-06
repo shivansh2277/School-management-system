@@ -114,8 +114,15 @@ describe("Public Website - Home Page", () => {
     expect(screen.getByText("Supportive Community")).toBeInTheDocument();
     expect(screen.getByText("Beyond the Classroom")).toBeInTheDocument();
 
+    // Trust badge: Personal Attention at Every Stage (no ratio displayed)
+    expect(screen.getByText("Personal Attention at Every Stage")).toBeInTheDocument();
+    expect(screen.queryByText(/1:15 Early Years Ratio/i)).not.toBeInTheDocument();
+
+    // 4-Photo Building Carousel in Home hero
+    expect(screen.getByRole("region", { name: /Sunrise School Campus Building Photographs/i })).toBeInTheDocument();
+
     // Principal Welcome & Quote Card
-    expect(screen.getByText("Dr. Meera Sharma")).toBeInTheDocument();
+    expect(screen.getByText("Dr. Ananya Sengupta, M.Sc., M.Ed., Ph.D.")).toBeInTheDocument();
     expect(screen.getByText("Welcome to Sunrise School")).toBeInTheDocument();
     expect(screen.getByText(/The purpose of education is to prepare the child for life, not just for exams/i)).toBeInTheDocument();
 
@@ -213,7 +220,32 @@ describe("Public Website - Admissions Page", () => {
     const applyButtons = screen.getAllByRole("link", { name: /Start New Application/i });
     expect(applyButtons[0]).toHaveAttribute("href", "/apply");
   });
+
+  it("renders View Admission Steps button which smooth scrolls to the process section without colliding with router", () => {
+    const scrollMock = vi.fn();
+    const originalGetElementById = document.getElementById;
+    document.getElementById = vi.fn().mockImplementation((id: string) => {
+      if (id === "process") {
+        return { scrollIntoView: scrollMock };
+      }
+      return null;
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/admissions"]}>
+        <AdmissionsPage />
+      </MemoryRouter>
+    );
+
+    const stepsBtn = screen.getByRole("button", { name: /View Admission Steps/i });
+    expect(stepsBtn).toBeInTheDocument();
+    fireEvent.click(stepsBtn);
+
+    expect(scrollMock).toHaveBeenCalledWith({ behavior: "smooth" });
+    document.getElementById = originalGetElementById;
+  });
 });
+
 
 describe("Public Website - Facilities Page", () => {
   it("renders campus infrastructure cards with safety specifications", () => {
@@ -340,7 +372,7 @@ describe("Public Website - Public Disclosure Page", () => {
 
     // Check General tab values
     expect(screen.getByText("Sunrise School (Sunrise Public School)")).toBeInTheDocument();
-    expect(screen.getByText(/To be configured \(Demo information\)/i)).toBeInTheDocument();
+    expect(screen.getByText("DEMO-SS-2026 (Demo Code)")).toBeInTheDocument();
     expect(screen.getByText("Dr. Ananya Sengupta, M.Sc., M.Ed., Ph.D.")).toBeInTheDocument();
 
     // Switch to Documents tab
@@ -407,7 +439,7 @@ describe("Public Website - Footer", () => {
 
     // School story & affiliation
     expect(within(footer).getByText(/Gomti Nagar, Lucknow • Estd\. 2011/i)).toBeInTheDocument();
-    expect(within(footer).getByText(/School Code: To be configured \(Demo\)/i)).toBeInTheDocument();
+    expect(within(footer).getByText(/School Code: DEMO-SS-2026 \(Demo Code\)/i)).toBeInTheDocument();
 
     // Verify separate "Admissions & ERP" heading column is removed
     expect(within(footer).queryByRole("heading", { name: "Admissions & ERP" })).not.toBeInTheDocument();
@@ -464,5 +496,32 @@ describe("Public Website - Route Scroll Restoration", () => {
     expect(scrollIntoViewMock).toHaveBeenCalledWith({ behavior: "smooth" });
 
     document.body.removeChild(targetElement);
+  });
+
+  it("explicitly scrolls to top on navigation link clicks even when clicking the already-active tab", () => {
+    const scrollToMock = vi.fn();
+    window.scrollTo = scrollToMock;
+
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <PublicLayout>
+          <div>Home Page Content</div>
+        </PublicLayout>
+      </MemoryRouter>
+    );
+
+    scrollToMock.mockClear();
+
+    const nav = screen.getByRole("navigation", { name: "Main navigation" });
+    const homeLink = within(nav).getByRole("link", { name: "Home" });
+    fireEvent.click(homeLink);
+
+    expect(scrollToMock).toHaveBeenCalledWith({ top: 0, left: 0, behavior: "auto" });
+
+    scrollToMock.mockClear();
+    const aboutLink = within(nav).getByRole("link", { name: "About" });
+    fireEvent.click(aboutLink);
+
+    expect(scrollToMock).toHaveBeenCalledWith({ top: 0, left: 0, behavior: "auto" });
   });
 });

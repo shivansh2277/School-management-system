@@ -430,7 +430,7 @@ def wipe(db: Session, force: bool = False) -> None:
     db.commit()
 
 
-def seed(db: Session, reset: bool = True, force: bool = False) -> None:  # noqa: PLR0915 - linear script; splitting it would only hide it
+def seed(db: Session, reset: bool = True, force: bool = False, expand: bool = False) -> None:  # noqa: PLR0915 - linear script; splitting it would only hide it
     rng = random.Random(20260901)
     if reset:
         wipe(db, force=force)
@@ -550,7 +550,7 @@ def seed(db: Session, reset: bool = True, force: bool = False) -> None:  # noqa:
     # can use the same shared login (admin@sunrisepublic.edu) or their individual logins,
     # all sharing the same password (Admin@123) and holding full super_admin permissions.
     leadership_accounts = [
-        ("principal@sunrisepublic.edu", "Principal"),
+        ("principal@sunrisepublic.edu", "Dr. Ananya Sengupta, M.Sc., M.Ed., Ph.D."),
         ("viceprincipal@sunrisepublic.edu", "Vice Principal"),
         ("owner@sunrisepublic.edu", "School Owner / Management"),
         ("coordinator@sunrisepublic.edu", "Academic Coordinator"),
@@ -1420,6 +1420,12 @@ def seed(db: Session, reset: bool = True, force: bool = False) -> None:  # noqa:
     _seed_certificates(db, school)
 
     _assign_roles(db, roles, sections)
+
+    if expand:
+        # Expand Pre-primary (Nursery, LKG, UKG) and Senior Secondary (11 & 12 streams)
+        from app.services.seed_expansion import expand_database
+        expand_database(db)
+
     db.commit()
 
 
@@ -2126,7 +2132,7 @@ def _assign_roles(db: Session, roles: dict, sections: list) -> None:
             else "accounts"
             if user.login_id == ACCOUNTS_LOGIN
             else "librarian"
-            if user.login_id == LIBRARIAN_LOGIN
+            if user.login_id in (LIBRARIAN_LOGIN, "library@sunrisepublic.edu", "librarian@sunrisepublic.edu")
             else "transport_manager"
             if user.login_id.startswith("TRM")
             else LEGACY_ROLE_MAP[user.role.value]
@@ -2161,11 +2167,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Seed Sunrise School ERP demo database")
     parser.add_argument("--skip-wipe", action="store_true", help="Idempotently seed demo data without wiping existing tables")
     parser.add_argument("--force", action="store_true", help="Force wipe even on cloud/production database")
+    parser.add_argument("--expand", action="store_true", help="Expand database with Pre-primary and Senior Secondary groups")
     args = parser.parse_args()
 
     Base.metadata.create_all(engine)
     with SessionLocal() as db:
-        seed(db, reset=not args.skip_wipe, force=args.force)
+        seed(db, reset=not args.skip_wipe, force=args.force, expand=args.expand)
     print("Seeded Sunrise Public School demo data.")
 
 

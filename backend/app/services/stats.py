@@ -389,21 +389,38 @@ def month_attendance(
 
 
 def today_attendance(
-    db: Session, school_id: int, class_section_id: int | None = None
+    db: Session,
+    school_id: int,
+    class_section_id: int | None = None,
+    on_date: Date | None = None,
 ) -> dict:
-    """Attendance for today. If not yet marked today (e.g. non-school day or before
-    morning roll call), falls back to the most recent marked school day to ensure
-    the dashboard displays live, calculated data from the database.
+    """Attendance figures for today calculated using live database records and
+    the academic calendar.
+
+    On Sundays and declared school holidays, displays zero present/absent with
+    a clear indication that school is not in session. On instructional days,
+    computes real attendance from the actual attendance records.
     """
-    today = Date.today()
+    today = on_date or Date.today()
+    is_sunday = today.weekday() == 6
+    holiday = attendance.is_holiday_for(db, school_id, today, class_section_id)
+
+    if is_sunday or holiday is not None:
+        reason = "Sunday" if is_sunday else f"Holiday: {holiday.name}"
+        return {
+            "present": 0,
+            "absent": 0,
+            "leave": 0,
+            "percent": None,
+            "is_school_day": False,
+            "non_school_reason": reason,
+        }
+
     summary = attendance.section_summary(db, school_id, class_section_id, today, today)
-    if summary.present == 0 and summary.absent == 0 and summary.leave == 0:
-        latest_date = db.scalar(
-            select(func.max(Attendance.date)).where(Attendance.school_id == school_id)
-        )
-        if latest_date:
-            summary = attendance.section_summary(
-                db, school_id, class_section_id, latest_date, latest_date
-            )
-    return summary.model_dump()
+    data = summary.model_dump()
+    data["is_school_day"] = True
+    data["non_school_reason"] = (
+        None if (summary.present + summary.absent + summary.leave > 0) else "Attendance not marked today"
+    )
+    return data
 

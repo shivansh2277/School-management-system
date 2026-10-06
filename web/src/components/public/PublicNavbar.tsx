@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { SchoolCrest } from "./SchoolCrest";
+import { scrollToTop } from "./ScrollToTop";
 
 export const NAV_ITEMS = [
   { label: "Home", path: "/" },
@@ -35,7 +36,10 @@ export function PublicNavbar() {
             <Link
               to="/"
               className="flex items-center gap-2 sm:gap-3 group focus:outline-none min-w-0 shrink"
-              onClick={() => setMobileMenuOpen(false)}
+              onClick={() => {
+                setMobileMenuOpen(false);
+                scrollToTop("auto");
+              }}
             >
               <SchoolCrest className="w-9 h-9 sm:w-10 sm:h-10 xl:w-11 xl:h-11 transition-transform group-hover:scale-105 duration-200 shrink-0" />
               <div className="flex flex-col min-w-0">
@@ -56,6 +60,7 @@ export function PublicNavbar() {
                   <Link
                     key={item.path}
                     to={item.path}
+                    onClick={() => scrollToTop("auto")}
                     className={`px-2 py-1.5 xl:px-2.5 2xl:px-3 rounded-lg text-xs xl:text-[13px] 2xl:text-sm font-semibold transition-all duration-150 whitespace-nowrap ${
                       active
                         ? "text-primary bg-amber-50 font-bold shadow-xs border border-amber-200/50"
@@ -72,6 +77,7 @@ export function PublicNavbar() {
             <div className="hidden lg:flex items-center gap-2 xl:gap-3 shrink-0">
               <Link
                 to="/login"
+                onClick={() => scrollToTop("auto")}
                 className="inline-flex items-center gap-1.5 bg-primary hover:bg-primary-dark text-white text-xs xl:text-sm font-bold px-3.5 xl:px-4 py-2 rounded-lg shadow-xs hover:shadow transition-all duration-150 active:scale-95"
               >
                 <span>ERP Login</span>
@@ -135,7 +141,10 @@ export function PublicNavbar() {
                   <Link
                     key={item.path}
                     to={item.path}
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      scrollToTop("auto");
+                    }}
                     className={`px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-between ${
                       active
                         ? "text-primary bg-amber-50 font-bold border border-amber-200/50"
@@ -152,7 +161,10 @@ export function PublicNavbar() {
             <div className="pt-4 border-t border-slate-100 space-y-2">
               <Link
                 to="/login"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  scrollToTop("auto");
+                }}
                 className="w-full inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white font-bold text-sm px-4 py-2.5 rounded-lg shadow-xs transition-colors"
               >
                 <span>ERP Login</span>
@@ -161,7 +173,10 @@ export function PublicNavbar() {
 
               <Link
                 to="/apply"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  scrollToTop("auto");
+                }}
                 className="w-full inline-flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs px-4 py-2.5 rounded-lg transition-colors"
               >
                 <span>Apply Online Portal</span>

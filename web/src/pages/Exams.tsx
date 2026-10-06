@@ -30,42 +30,52 @@ export function Exams() {
   const exams = useQuery({ queryKey: ["exams"], queryFn: () => api.get("/admin/exams") });
 
   return (
-    <div className="space-y-4">
-      {/* Top Tab Strip */}
-      <div className="flex border-b border-rule gap-2 text-sm font-medium">
-        <button
-          type="button"
-          onClick={() => setActiveTab("exams")}
-          className={`pb-2.5 px-3 border-b-2 transition-colors ${
-            activeTab === "exams"
-              ? "border-primary text-primary font-bold"
-              : "border-transparent text-ink-soft hover:text-ink"
-          }`}
-        >
-          📅 Exams & Datesheets
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("schemes")}
-          className={`pb-2.5 px-3 border-b-2 transition-colors ${
-            activeTab === "schemes"
-              ? "border-primary text-primary font-bold"
-              : "border-transparent text-ink-soft hover:text-ink"
-          }`}
-        >
-          ⚖️ CBSE Schemes & Grading Scales
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("report_cards")}
-          className={`pb-2.5 px-3 border-b-2 transition-colors ${
-            activeTab === "report_cards"
-              ? "border-primary text-primary font-bold"
-              : "border-transparent text-ink-soft hover:text-ink"
-          }`}
-        >
-          🎓 Report Cards & Publications
-        </button>
+    <div className="space-y-5">
+      {/* Header Bar */}
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Examinations & Grading</h1>
+          <p className="text-xs text-ink-faint mt-0.5">
+            Datesheet scheduling, CBSE 8-point grading scales, marks entry, and official report cards
+          </p>
+        </div>
+
+        {/* Segmented Tab Switcher */}
+        <div className="flex flex-wrap items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200/60 gap-1 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => setActiveTab("exams")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              activeTab === "exams"
+                ? "bg-white text-slate-900 shadow-2xs"
+                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+            }`}
+          >
+            Exams & Datesheets
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("schemes")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              activeTab === "schemes"
+                ? "bg-white text-slate-900 shadow-2xs"
+                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+            }`}
+          >
+            CBSE Scales
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("report_cards")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              activeTab === "report_cards"
+                ? "bg-white text-slate-900 shadow-2xs"
+                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+            }`}
+          >
+            Report Cards
+          </button>
+        </div>
       </div>
 
       {/* Tab 1: Exams & Schedules */}

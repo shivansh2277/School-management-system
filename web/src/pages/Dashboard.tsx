@@ -15,7 +15,14 @@ type Stats = {
     fees_collected: string | number;
     fees_remaining?: string | number;
   };
-  attendance: { present: number; absent: number; leave: number; percent: number | null };
+  attendance: {
+    present: number;
+    absent: number;
+    leave: number;
+    percent: number | null;
+    is_school_day?: boolean;
+    non_school_reason?: string | null;
+  };
   top_performers: { student_id: number; name: string; class_label: string; average_percent: number }[];
   recent_notices: { id: number; title: string; audience: string; published_at: string }[];
   fee_trend: { month: string; collected: string }[];
@@ -93,6 +100,7 @@ type TeacherRow = {
 };
 
 export function Dashboard() {
+  const { me } = useAuth();
   const [showDefaultersModal, setShowDefaultersModal] = useState(false);
   const [selectedGrievance, setSelectedGrievance] = useState<GrievanceRow | null>(null);
 
@@ -145,209 +153,359 @@ export function Dashboard() {
       ? Math.round((presentToday / (presentToday + absentToday)) * 1000) / 10
       : null);
 
+  const totalRecordedAttendance = presentToday + absentToday;
+  const presentRatio = totalRecordedAttendance > 0 ? Math.round((presentToday / totalRecordedAttendance) * 100) : 0;
+  const absentRatio = totalRecordedAttendance > 0 ? Math.round((absentToday / totalRecordedAttendance) * 100) : 0;
+  const leaveRatio = totalRecordedAttendance > 0 ? Math.round((onLeave / totalRecordedAttendance) * 100) : 0;
+  const unexcusedRatio = Math.max(0, absentRatio - leaveRatio);
+
+  const todayFormatted = new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date());
+
   return (
-    <>
+    <div className="space-y-6">
+      {/* Dashboard Top Header Bar with Greeting & Calendar Badge */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Dashboard</h1>
+          <p className="text-xs sm:text-sm text-ink-soft mt-0.5">
+            Welcome back, {me?.user.full_name || "Office Administrator"}
+          </p>
+        </div>
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface border border-rule shadow-2xs text-xs font-medium text-ink-soft self-start sm:self-auto select-none">
+          <svg className="w-4 h-4 text-ink-faint shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span>{todayFormatted}</span>
+        </div>
+      </div>
+
+      {/* Attendance Overview Card */}
       <Card
         title="Attendance Overview"
         action={
-          <a
-            href="#/attendance"
-            className="text-xs font-medium text-primary hover:text-primary-dark transition-colors px-2.5 py-1 rounded bg-primary/10 hover:bg-primary/20"
-          >
-            View Register
-          </a>
+          <div className="flex items-center gap-2">
+            {data.attendance?.is_school_day === false ? (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                No school today ({data.attendance.non_school_reason || "Sunday"})
+              </span>
+            ) : totalRecordedAttendance === 0 ? (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                Roll call pending
+              </span>
+            ) : null}
+            <a
+              href="#/attendance"
+              className="text-xs font-semibold text-primary hover:text-primary-dark transition-colors px-2.5 py-1 rounded-md bg-primary/10 hover:bg-primary/20 inline-flex items-center gap-1"
+            >
+              <span>View Register</span>
+              <span aria-hidden="true">&rarr;</span>
+            </a>
+          </div>
         }
       >
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="space-y-5">
+          {/* 4 Attendance Metric Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* 1. Total Students */}
-            <div className="p-3.5 rounded-lg bg-ground border border-rule">
-              <span className="text-xs font-medium text-ink-faint">Total Students</span>
-              <div className="text-2xl font-bold tracking-tight text-ink mt-1 tabular">
-                {totalStudents}
+            <div className="relative overflow-hidden p-4 rounded-xl bg-surface border border-rule hover:border-slate-300 transition-all shadow-2xs flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
               </div>
-              <span className="text-xs text-ink-faint">Enrolled active students</span>
+              <div>
+                <span className="text-xs font-semibold text-ink-soft">Total Students</span>
+                <div className="text-3xl font-extrabold tracking-tight text-ink mt-1 tabular">
+                  {totalStudents}
+                </div>
+                <span className="text-xs text-ink-faint mt-1 block">Enrolled active students</span>
+              </div>
             </div>
 
             {/* 2. Present Today */}
-            <div className="p-3.5 rounded-lg bg-ground border border-rule">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-ink-faint">Present Today</span>
-                <span className="text-[10px] uppercase font-bold text-success bg-success/10 px-1.5 py-0.5 rounded">
+            <div className="relative overflow-hidden p-4 rounded-xl bg-surface border border-emerald-100/80 hover:border-emerald-300 transition-all shadow-2xs flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <span className="text-[10px] uppercase font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
                   Present
                 </span>
               </div>
-              <div className="text-2xl font-bold tracking-tight text-success mt-1 tabular">
-                {presentToday}
+              <div>
+                <span className="text-xs font-semibold text-ink-soft">Present Today</span>
+                <div className="text-3xl font-extrabold tracking-tight text-emerald-600 mt-1 tabular">
+                  {data.attendance?.is_school_day === false ? 0 : presentToday}
+                </div>
+                <span className="text-xs text-ink-faint mt-1 block">
+                  {data.attendance?.is_school_day === false
+                    ? "No school today"
+                    : totalRecordedAttendance === 0
+                    ? "Roll call pending"
+                    : "Attending school today"}
+                </span>
               </div>
-              <span className="text-xs text-ink-faint">Attending school today</span>
             </div>
 
             {/* 3. Absent Today */}
-            <div className="p-3.5 rounded-lg bg-ground border border-rule">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-ink-faint">Absent Today</span>
-                <span className="text-[10px] uppercase font-bold text-danger bg-danger/10 px-1.5 py-0.5 rounded">
+            <div className="relative overflow-hidden p-4 rounded-xl bg-surface border border-rose-100/80 hover:border-rose-300 transition-all shadow-2xs flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a7 7 0 00-7 7h14a7 7 0 00-7-7zM21 12h-6" />
+                  </svg>
+                </div>
+                <span className="text-[10px] uppercase font-bold text-rose-800 bg-rose-100 px-2 py-0.5 rounded-full">
                   Absent
                 </span>
               </div>
-              <div className="text-2xl font-bold tracking-tight text-danger mt-1 tabular">
-                {absentToday}
+              <div>
+                <span className="text-xs font-semibold text-ink-soft">Absent Today</span>
+                <div className="text-3xl font-extrabold tracking-tight text-rose-600 mt-1 tabular">
+                  {data.attendance?.is_school_day === false ? 0 : absentToday}
+                </div>
+                <span className="text-xs text-ink-faint mt-1 block">
+                  {data.attendance?.is_school_day === false
+                    ? "No school today"
+                    : onLeave > 0
+                    ? `${unexcusedAbsent} absent · ${onLeave} on leave`
+                    : "Not in school"}
+                </span>
               </div>
-              <span className="text-xs text-ink-faint">
-                {onLeave > 0 ? `${unexcusedAbsent} absent · ${onLeave} on leave` : "Not in school"}
-              </span>
             </div>
 
             {/* 4. Attendance Percentage */}
-            <div className="p-3.5 rounded-lg bg-ground border border-rule">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-ink-faint">Attendance Percentage</span>
-                <span className="text-[10px] uppercase font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+            <div className="relative overflow-hidden p-4 rounded-xl bg-surface border border-indigo-100/80 hover:border-indigo-300 transition-all shadow-2xs flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                  </svg>
+                </div>
+                <span className="text-[11px] font-bold text-indigo-800 bg-indigo-100 px-2 py-0.5 rounded-full">
                   Rate
                 </span>
               </div>
-              <div className="text-2xl font-bold tracking-tight text-ink mt-1 tabular">
-                {attendancePercent !== null ? `${attendancePercent}%` : "—"}
+              <div>
+                <span className="text-xs font-semibold text-ink-soft">Attendance Percentage</span>
+                <div className="text-3xl font-extrabold tracking-tight text-ink mt-1 tabular">
+                  {data.attendance?.is_school_day === false
+                    ? "—"
+                    : attendancePercent !== null
+                    ? `${attendancePercent}%`
+                    : "—"}
+                </div>
+                <span className="text-xs text-ink-faint mt-1 block">
+                  {data.attendance?.is_school_day === false ? "School closed today" : "Daily attendance rate"}
+                </span>
               </div>
-              <span className="text-xs text-ink-faint">Daily attendance rate</span>
             </div>
           </div>
 
-          <div className="pt-2 border-t border-rule">
-            <div className="flex justify-between items-center text-xs mb-1.5">
-              <span className="text-ink-faint font-medium">Daily Attendance Distribution</span>
+          {/* Daily Attendance Distribution Progress Visualization */}
+          <div className="pt-3 border-t border-rule space-y-2.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-1">
+              <span className="text-ink-soft font-semibold">Daily Attendance Distribution</span>
               <span className="font-semibold tabular text-ink">
-                {attendancePercent !== null ? `${attendancePercent}% Present` : "No attendance recorded"}
+                {data.attendance?.is_school_day === false
+                  ? `No school today (${data.attendance.non_school_reason || "Sunday / Holiday"})`
+                  : attendancePercent !== null
+                  ? `${attendancePercent}% Present (${presentToday} out of ${totalStudents} students)`
+                  : "No attendance recorded today"}
               </span>
             </div>
-            <div className="w-full bg-ground h-2.5 rounded-full overflow-hidden flex border border-rule/50">
-              <div
-                className="bg-success h-full transition-all duration-500 rounded-l-full"
-                style={{ width: `${Math.min(attendancePercent ?? 0, 100)}%` }}
-                title={`Present: ${presentToday}`}
-              />
-              <div
-                className="bg-danger/80 h-full transition-all duration-500 rounded-r-full"
-                style={{ width: `${Math.max(0, 100 - (attendancePercent ?? 0))}%` }}
-                title={`Absent: ${absentToday}`}
-              />
-            </div>
+            {data.attendance?.is_school_day === false ? (
+              <div className="w-full bg-amber-50/80 border border-amber-200/80 rounded-lg p-2.5 text-center text-xs text-amber-900 font-medium">
+                No school today — {data.attendance.non_school_reason || "Sunday / Holiday"}. Campus is not in session.
+              </div>
+            ) : totalRecordedAttendance === 0 ? (
+              <div className="w-full bg-slate-50 border border-rule/60 rounded-lg p-2.5 text-center text-xs text-ink-faint font-medium">
+                Attendance has not been recorded yet for today. Open the Attendance Register to mark morning roll call.
+              </div>
+            ) : (
+              <>
+                <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden flex border border-rule/60">
+                  <div
+                    className="bg-emerald-500 h-full transition-all duration-500 rounded-l-full"
+                    style={{ width: `${Math.min(presentRatio, 100)}%` }}
+                    title={`Present: ${presentToday}`}
+                  />
+                  {onLeave > 0 && (
+                    <div
+                      className="bg-amber-400 h-full transition-all duration-500"
+                      style={{ width: `${Math.min(leaveRatio, 100)}%` }}
+                      title={`On Leave: ${onLeave}`}
+                    />
+                  )}
+                  <div
+                    className="bg-rose-500 h-full transition-all duration-500 rounded-r-full"
+                    style={{ width: `${Math.max(0, 100 - presentRatio - (onLeave > 0 ? leaveRatio : 0))}%` }}
+                    title={`Absent: ${unexcusedAbsent}`}
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-4 text-xs text-ink-soft pt-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                    <span>Present: <strong className="text-ink font-semibold">{presentToday}</strong> ({presentRatio}%)</span>
+                  </div>
+                  {onLeave > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
+                      <span>On Leave: <strong className="text-ink font-semibold">{onLeave}</strong> ({leaveRatio}%)</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" />
+                    <span>Unexcused Absent: <strong className="text-ink font-semibold">{unexcusedAbsent}</strong> ({unexcusedRatio}%)</span>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </Card>
 
+      {/* Row 2: Fees Overview & Grievances in 2-Column Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* 1. Fees Overview Card (replaces Student Performance) */}
+        {/* Fees Overview Card */}
         <Card
           title="Fees Overview"
           action={
             <button
               onClick={() => setShowDefaultersModal(true)}
-              className="text-xs font-medium text-primary hover:text-primary-dark transition-colors px-2.5 py-1 rounded bg-primary/10 hover:bg-primary/20"
+              className="text-xs font-semibold text-primary hover:text-primary-dark transition-colors px-2.5 py-1 rounded-md bg-primary/10 hover:bg-primary/20 inline-flex items-center gap-1 cursor-pointer"
             >
-              View Roster
+              <span>View Roster</span>
+              <span aria-hidden="true">&rarr;</span>
             </button>
           }
         >
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3.5">
+              {/* Fees Collected */}
               <div
                 onClick={() => setShowDefaultersModal(true)}
-                className="p-3.5 rounded-lg bg-ground hover:bg-ground/70 cursor-pointer border border-rule transition-all hover:shadow-sm group"
+                className="p-3.5 sm:p-4 rounded-xl bg-surface border border-emerald-100 hover:border-emerald-300 hover:shadow-2xs cursor-pointer transition-all group"
                 title="Click to view pending fee students"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-ink-faint">Fees Collected</span>
-                  <span className="text-[10px] uppercase font-bold text-success bg-success/10 px-1.5 py-0.5 rounded">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <span className="text-xs font-semibold text-ink-soft truncate">Fees Collected</span>
+                  </div>
+                  <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full tabular shrink-0">
                     {collectionPct}%
                   </span>
                 </div>
-                <p className="text-xl font-bold text-success mt-1.5 tabular group-hover:underline">
+                <p className="text-xl xl:text-2xl font-bold text-emerald-600 mt-2.5 tabular group-hover:underline">
                   {money(collectedNum)}
                 </p>
-                <p className="text-[11px] text-ink-faint mt-1">Realized collection</p>
+                <p className="text-xs text-ink-faint mt-1">Realized collection</p>
               </div>
 
+              {/* Fees Remaining */}
               <div
                 onClick={() => setShowDefaultersModal(true)}
-                className="p-3.5 rounded-lg bg-ground hover:bg-ground/70 cursor-pointer border border-rule transition-all hover:shadow-sm group"
+                className="p-3.5 sm:p-4 rounded-xl bg-surface border border-rose-100 hover:border-rose-300 hover:shadow-2xs cursor-pointer transition-all group"
                 title="Click to view pending fee students"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-ink-faint">Fees Remaining</span>
-                  <span className="text-[10px] uppercase font-bold text-danger bg-danger/10 px-1.5 py-0.5 rounded">
-                    Pending
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                    </div>
+                    <span className="text-xs font-semibold text-ink-soft truncate">Fees Remaining</span>
+                  </div>
+                  <span className="text-[11px] font-bold text-rose-800 bg-rose-100 px-2 py-0.5 rounded-full shrink-0">
+                    PENDING
                   </span>
                 </div>
-                <p className="text-xl font-bold text-danger mt-1.5 tabular group-hover:underline">
+                <p className="text-xl xl:text-2xl font-bold text-rose-600 mt-2.5 tabular group-hover:underline">
                   {money(remainingNum)}
                 </p>
-                <p className="text-[11px] text-ink-faint mt-1">Click to view roster & export</p>
+                <p className="text-xs text-ink-faint mt-1">Click to view roster & export</p>
               </div>
             </div>
 
             {/* Visual Progress Bar */}
-            <div className="space-y-1.5">
+            <div className="space-y-2 pt-1">
               <div className="flex justify-between text-xs text-ink-soft">
-                <span>Collection Progress</span>
-                <span className="font-semibold tabular">{collectionPct}% complete</span>
+                <span className="font-medium">Collection Progress</span>
+                <span className="font-bold tabular text-ink">{collectionPct}% complete</span>
               </div>
-              <div className="w-full bg-ground h-2.5 rounded-full overflow-hidden flex">
+              <div className="w-full bg-rose-100/60 h-2.5 rounded-full overflow-hidden flex border border-rule/40">
                 <div
-                  className="bg-success transition-all duration-500"
+                  className="bg-emerald-500 transition-all duration-500 rounded-l-full"
                   style={{ width: `${Math.min(100, collectionPct)}%` }}
                 />
                 <div
-                  className="bg-danger/60 transition-all duration-500"
+                  className="bg-rose-400/80 transition-all duration-500 rounded-r-full"
                   style={{ width: `${Math.max(0, 100 - collectionPct)}%` }}
                 />
               </div>
-              <div className="flex justify-between text-[11px] text-ink-faint pt-0.5">
-                <span>Total Demand: {money(totalBilled)}</span>
-                <span
+              <div className="flex justify-between items-center text-xs text-ink-faint pt-0.5">
+                <span>Total Demand: <strong className="text-ink font-semibold">{money(totalBilled)}</strong></span>
+                <button
+                  type="button"
                   onClick={() => setShowDefaultersModal(true)}
-                  className="text-primary hover:underline cursor-pointer"
+                  className="text-primary hover:text-primary-dark font-semibold transition-colors inline-flex items-center gap-1 cursor-pointer"
                 >
-                  Inspect Defaulters &rarr;
-                </span>
+                  <span>Inspect Defaulters</span>
+                  <span aria-hidden="true">&rarr;</span>
+                </button>
               </div>
             </div>
           </div>
         </Card>
 
-        {/* 2. Grievances Card (replaces Attendance Overview) */}
+        {/* Grievances & Feedback Card */}
         <Card
           title="Grievances & Feedback"
           action={
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-danger/15 text-danger tabular">
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 tabular">
                 {gStats.open_count} Open
               </span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-warning/15 text-warning tabular">
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 tabular">
                 {gStats.in_progress_count} In Progress
               </span>
             </div>
           }
         >
-          <div className="space-y-3">
+          <div className="space-y-3.5">
             {/* Quick Filter Counts */}
             <div className="grid grid-cols-4 gap-2 text-center text-xs">
-              <div className="p-2 rounded bg-ground border border-rule">
-                <span className="text-ink-faint block text-[10px] uppercase">Teachers</span>
-                <span className="font-bold text-sm tabular">{gStats.teacher_count}</span>
+              <div className="p-2 rounded-lg bg-surface border border-rule">
+                <span className="text-ink-faint block text-[10px] uppercase font-semibold">Teachers</span>
+                <span className="font-bold text-sm text-ink tabular">{gStats.teacher_count}</span>
               </div>
-              <div className="p-2 rounded bg-ground border border-rule">
-                <span className="text-ink-faint block text-[10px] uppercase">Parents</span>
-                <span className="font-bold text-sm tabular">{gStats.parent_count}</span>
+              <div className="p-2 rounded-lg bg-surface border border-rule">
+                <span className="text-ink-faint block text-[10px] uppercase font-semibold">Parents</span>
+                <span className="font-bold text-sm text-ink tabular">{gStats.parent_count}</span>
               </div>
-              <div className="p-2 rounded bg-ground border border-rule">
-                <span className="text-ink-faint block text-[10px] uppercase">Resolved</span>
-                <span className="font-bold text-sm text-success tabular">{gStats.resolved_count}</span>
+              <div className="p-2 rounded-lg bg-surface border border-rule">
+                <span className="text-ink-faint block text-[10px] uppercase font-semibold">Resolved</span>
+                <span className="font-bold text-sm text-emerald-600 tabular">{gStats.resolved_count}</span>
               </div>
-              <div className="p-2 rounded bg-ground border border-rule">
-                <span className="text-ink-faint block text-[10px] uppercase">Total</span>
-                <span className="font-bold text-sm tabular">{gStats.total_count}</span>
+              <div className="p-2 rounded-lg bg-surface border border-rule">
+                <span className="text-ink-faint block text-[10px] uppercase font-semibold">Total</span>
+                <span className="font-bold text-sm text-ink tabular">{gStats.total_count}</span>
               </div>
             </div>
 
@@ -359,49 +517,72 @@ export function Dashboard() {
                 {grievancesQuery.data.slice(0, 5).map((g) => (
                   <div
                     key={g.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setSelectedGrievance(g)}
-                    className="p-2.5 rounded-lg border border-rule bg-ground/40 hover:bg-ground cursor-pointer transition-colors flex items-start justify-between gap-3"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelectedGrievance(g);
+                      }
+                    }}
+                    className="p-3 rounded-xl border border-rule bg-surface hover:bg-slate-50/80 cursor-pointer transition-all hover:shadow-2xs flex items-start justify-between gap-3 group focus:outline-none focus:ring-1 focus:ring-primary"
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
                         <span
-                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                             g.status === "open"
-                              ? "bg-danger/15 text-danger"
+                              ? "bg-rose-100 text-rose-700"
                               : g.status === "in_progress"
-                              ? "bg-warning/15 text-warning"
-                              : "bg-success/15 text-success"
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-emerald-100 text-emerald-700"
                           }`}
                         >
                           {g.status.replace("_", " ")}
                         </span>
-                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-surface border border-rule text-ink-soft capitalize">
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 capitalize">
                           {g.raised_by_role}
                         </span>
                         <span
-                          className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                             g.priority === "urgent"
-                              ? "bg-danger text-white"
+                              ? "bg-rose-600 text-white font-bold"
                               : g.priority === "high"
-                              ? "bg-warning/20 text-warning"
-                              : "bg-ink-faint/15 text-ink-soft"
+                              ? "bg-amber-100 text-amber-800"
+                              : g.priority === "medium"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-slate-100 text-slate-600"
                           }`}
                         >
                           {g.priority}
                         </span>
                       </div>
-                      <p className="text-sm font-medium text-ink truncate">{g.title}</p>
-                      <div className="flex items-center gap-2 text-xs text-ink-faint mt-0.5">
+                      <p className="text-sm font-semibold text-ink group-hover:text-primary transition-colors truncate">
+                        {g.title}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-ink-faint mt-1 flex-wrap">
                         <span>By {g.raised_by_name}</span>
-                        {g.student_name && <span>• Child: {g.student_name}</span>}
+                        {g.created_at && (
+                          <span>&bull; {new Date(g.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
+                        )}
+                        {g.student_name && <span>&bull; Child: {g.student_name}</span>}
                         {g.assigned_to_name && (
-                          <span className="text-primary font-medium">• Assigned: {g.assigned_to_name}</span>
+                          <span className="text-primary font-medium">&bull; Assigned: {g.assigned_to_name}</span>
                         )}
                       </div>
                     </div>
-                    <span className="text-xs text-primary font-medium shrink-0 pt-1">
-                      {g.replies_count > 0 ? `${g.replies_count} replies` : "Inspect"} &rarr;
-                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedGrievance(g);
+                      }}
+                      className="text-xs text-primary hover:text-primary-dark font-semibold shrink-0 pt-1 group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>{g.replies_count > 0 ? `${g.replies_count} replies` : "Inspect"}</span>
+                      <span aria-hidden="true">&rarr;</span>
+                    </button>
                   </div>
                 ))}
               </div>
@@ -412,45 +593,66 @@ export function Dashboard() {
         </Card>
       </div>
 
+      {/* Row 3: Top Performers, Recent Notices, and Upcoming Events in 3-Column Grid */}
       <div className="grid gap-6 lg:grid-cols-3">
+        {/* Top Performers Card */}
         <Card title="Top Performers">
           {data.top_performers.length === 0 ? (
             <Empty>No exam results yet.</Empty>
           ) : (
             <ol className="space-y-3 text-sm">
               {data.top_performers.map((t, i) => (
-                <li key={t.student_id} className="flex items-center gap-3">
-                  <span className="w-8 h-8 rounded-full bg-primary-soft text-primary grid place-items-center font-medium">
+                <li key={t.student_id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                  <span
+                    className={`w-7 h-7 rounded-full grid place-items-center font-bold text-xs shrink-0 ${
+                      i === 0
+                        ? "bg-amber-100 text-amber-800 border border-amber-300"
+                        : i === 1
+                        ? "bg-slate-200 text-slate-800 border border-slate-300"
+                        : i === 2
+                        ? "bg-orange-100 text-orange-800 border border-orange-300"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
                     {i + 1}
                   </span>
-                  <span className="flex-1">
-                    <span className="block">{t.name}</span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block font-semibold text-ink truncate">{t.name}</span>
                     <span className="text-xs text-ink-faint">{t.class_label}</span>
                   </span>
-                  <span className="tabular font-medium">{t.average_percent}%</span>
+                  <span className="tabular font-bold text-xs px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100 shrink-0">
+                    {t.average_percent}%
+                  </span>
                 </li>
               ))}
             </ol>
           )}
         </Card>
 
+        {/* Recent Notices Card */}
         <Card title="Recent Notices">
           {data.recent_notices.length === 0 ? (
             <Empty>Nothing published yet.</Empty>
           ) : (
             <ul className="space-y-3 text-sm">
               {data.recent_notices.map((n) => (
-                <li key={n.id}>
-                  <p>{n.title}</p>
-                  <p className="text-xs text-ink-faint">
-                    {n.audience} - {new Date(n.published_at).toLocaleDateString("en-GB")}
-                  </p>
+                <li key={n.id} className="p-2.5 rounded-lg border border-rule/60 hover:border-rule bg-surface transition-all">
+                  <p className="font-semibold text-ink line-clamp-1">{n.title}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wider bg-slate-100 text-slate-700">
+                      {n.audience}
+                    </span>
+                    <span className="text-xs text-ink-faint">
+                      {new Date(n.published_at).toLocaleDateString("en-GB")}
+                    </span>
+                  </div>
                 </li>
               ))}
             </ul>
           )}
         </Card>
 
+        {/* Upcoming Events Card */}
         <UpcomingEvents />
       </div>
 
@@ -471,7 +673,7 @@ export function Dashboard() {
           }}
         />
       )}
-    </>
+    </div>
   );
 }
 
@@ -975,7 +1177,7 @@ function UpcomingEvents() {
     enabled: canExams,
   });
   const holidays = useQuery({
-    queryKey: ["holidays"],
+    queryKey: ["admin-holidays"],
     queryFn: () => api.get("/admin/attendance/holidays") as Promise<HolidayRow[]>,
     enabled: canHolidays,
   });
@@ -991,7 +1193,7 @@ function UpcomingEvents() {
       title: e.name,
       note: e.term,
     })),
-    ...(holidays.data ?? []).map((h) => ({
+    ...(holidays.data ?? []).filter((h: any) => h.status !== "cancelled").map((h) => ({
       key: `holiday-${h.id}`,
       date: h.date,
       kind: "Holiday",

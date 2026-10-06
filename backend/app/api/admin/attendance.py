@@ -81,6 +81,17 @@ def attendance_summary(
     return svc.section_summary(db, user.school_id, class_section_id, date_from, date_to)
 
 
+@router.post("/deadline-sweep")
+def attendance_deadline_sweep(
+    date: Date | None = None,
+    user: User = Depends(reader),
+    db: Session = Depends(get_db),
+):
+    """Check for unmarked attendance past 11:59 PM deadline and alert admins/teachers."""
+    return svc.check_unmarked_attendance_and_notify_admin(db, user.school_id, on_date=date)
+
+
+
 class HolidayIn(BaseModel):
     model_config = {"extra": "forbid"}
 
@@ -173,6 +184,7 @@ def holidays(
             "class_sections": [
                 {"id": cs.id, "label": cs.label} for cs in h.class_sections
             ],
+            "class_section_ids": [cs.id for cs in h.class_sections],
         }
         for h in rows
     ]

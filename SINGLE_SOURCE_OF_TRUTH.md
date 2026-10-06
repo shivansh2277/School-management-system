@@ -1,13 +1,14 @@
 # Sunrise School ERP — Single Source of Truth
 
-**Date:** 29 September 2026  
-**Status:** Authoritative — Session 22 Verified: Central Academy Reference Website Study & Comprehensive Institutional Public Website Upgrade. Upgraded public navigation to 11 institutional menu items (Home, About, Academics, Admissions, Campus & Facilities, School Life, Events, Gallery, Public Disclosure, Resources, Contact) plus prominent "Admission Enquiry / Apply Now" CTA button. Desktop top utility micro-strip permanently removed (main nav is the topmost element). Zero public ERP login links anywhere on public views (no Sign In, Student/Parent/Teacher portals, or Branches). Mandatory Public Disclosure portal (`/public-disclosure`) with 6 CBSE Appendix-IX tabs (General, Documents, Results, Staff, Infrastructure, Grievance) with demo disclaimers and zero invented affiliation numbers. Resources & Downloads Hub (`/resources`) with approved 1-page A4 PDFs (strictly excludes Parent Info PDF). End-to-end Announcements & Circulars system with backend migration `d5e6f7a8b9c0` adding public fields to `notices`, public endpoint `/public/{school_code}/announcements`, ERP publishing controls with public checkboxes and pin badges, live ticker, listing (`/announcements`), and detail view (`/announcements/:id`). All 10 demo single-page A4 PDFs generated and verified. Full test suite: 776 backend tests passed (1 skipped), 125 web unit tests passed (2 skipped across 21 files), 0 TypeScript errors on web and mobile, and clean Vite production build.  
+**Date:** 06 October 2026  
+**Status:** Authoritative — Session 29 Completed & Verified (Public Admission Enquiry Fix, View Admission Steps Scroll, Dedicated Librarian Role & Admission Document Overrides Automatic Pending Queue). Delivered and verified: (1) Resolved Public Admission Enquiry failure ("No such school") by implementing tenant alias mapping (`sunrise`/`sunrisepublic` -> `SPS`) in backend endpoints, wiring `AdmissionEnquiryModal.tsx` to submit cleanly to `/public/SPS/admission/enquiry` with confirmation feedback, and verifying database storage in Reception/Admission workflows; (2) Fixed "View Admission Steps" on Admissions page by replacing hash anchor navigation with smooth DOM scroll to `#process`, eliminating collision with React Router's `<HashRouter>` that previously redirected visitors to `/login`; (3) Added dedicated `librarian` role strictly scoped to `library.read`, `library.manage`, and `comms.notice.read`, restricted from Admissions, Fees, Transport, HR, and settings, supported by `/admin/users/{user_id}/roles` assignment APIs and `/user-access` UI with Librarian quick login; (4) Upgraded Admission Document Overrides from manual lookup to an automatic Pending Exceptions Queue (`/admin/admission-exceptions`) with student name, app ID, document name, reason, timestamp, and Review/Approve/Reject actions, enforcing that only approved overrides satisfy application checklists while preserving audit trails; (5) Verified 100% green across all quality gates: 807 passed (1 skipped) backend pytest, 140 passed (2 skipped) web vitest, 0 web TypeScript errors, 0 mobile TypeScript errors.  
 **Canonical Branch:** `slice/office-feedback` (synced with `origin/main` and `origin/slice/office-feedback`).  
 **Live Cloud Deployment:**
 - **Web Frontend (Vercel):** `https://school-management-system-blush-iota.vercel.app`
 - **Backend API (Render):** `https://school-management-system-12ks.onrender.com`
 - **Database (Neon Tech):** Serverless PostgreSQL (`postgresql+psycopg://`)
 **Primary PDF Deliverables:**
+- [`docs/Sunrise-ERP-Admission-and-Transport-Documentation.pdf`](docs/Sunrise-ERP-Admission-and-Transport-Documentation.pdf) — Comprehensive 8-page documentation manual for Admission and Transport lifecycles, 360° student dossier, fleet safety, distance slabs, ERDs, and troubleshooting.
 - [`docs/Sunrise-ERP-Admission-Demo-Guide.pdf`](docs/Sunrise-ERP-Admission-Demo-Guide.pdf) — Complete Digital Admission Dossier & Interactive Testing Guide for Application 360° with Aarav Sharma & Ananya Verma walkthroughs.
 - [`docs/Sunrise-ERP-Operational-Data-Flows.pdf`](docs/Sunrise-ERP-Operational-Data-Flows.pdf) — Simple Database Data-Flow Guide showing TABLE → TABLE → TABLE flows, PK/FK connections, Student ID vs Enrollment ID rules, and the final student data journey.
 - [`docs/Sunrise-ERP-Database-Tables-and-Features.pdf`](docs/Sunrise-ERP-Database-Tables-and-Features.pdf) — Complete 93-table database & feature mapping reference (all 68 live tables + 25 unused tables mapped to web routes, UI components, and workflows).
@@ -41,6 +42,7 @@
      - Front desk receptionist: `receptionist@sunrisepublic.edu` (`Admin@123`) — dedicated front desk operational suite. Owns Enquiries, Notices, and all Front Desk modules: Found & Lost, Student Gate Passes, Visitor Meeting Slips (Principal only), Important Directory, and Reception Fee Counter. Navigation strictly hardened: `Applications`, `Merit & selection`, `Waitlist`, `Admission reports`, and all admin fee management screens (`Fees`, `Defaulters`, `Fee setup`, `Period close`, `Student fees`) are completely removed; direct URLs protected with in-page refusal and backend HTTP 403 Forbidden.
      - Transport In-Charge: `transport@sunrisepublic.edu` (`Admin@123`) — dedicated transport management role. Strictly hardened: People and Academics modules completely removed; sees only Transport & Logistics (`/transport`) and Notices (`/notices`); direct URLs protected with in-page refusal and backend HTTP 403 Forbidden (`students.profile.read` and `academics.class.read` removed). Upgraded with Plan 1 (Fleet & Route Setup Desk), Plan 2 (Student Transport Allocation Desk), and Address-First geocoding location system.
      - Accounts Officer: `accounts@sunrisepublic.edu` (`Admin@123`) — dedicated accounts department role. Owns financial operations (Fees overview, student ledger, defaulters, fee structure setup, periods close), payroll management, and Fee Reports. Strictly isolated via RBAC: zero access to Admin settings, Admissions, Transport, or Academic grading.
+     - Librarian: `librarian@sunrisepublic.edu` (`Admin@123`) — dedicated library operations role. Owns Library catalogue & circulation desk (`library.read`, `library.manage`) and institutional notices (`comms.notice.read`). Strictly isolated via RBAC: zero access to Admissions, Fees, Transport, Recruitment, Staff, Student Directory, Attendance, or Settings.
 4. **Git Protocol (Owner Directive)**:
    - Remote repository origin configured at `https://github.com/shivansh2277/School-management-system.git`.
    - Branch `slice/office-feedback` pushed to origin and synced to `main` for Vercel/Render automatic deployments.
@@ -48,11 +50,18 @@
 
 ---
 
-## 2. Verified Technical State (Measured 29 Sep 2026 — Session 22 Verified)
+## 2. Verified Technical State (Measured 06 Oct 2026 — Session 29 Verified)
 
 | Layer | Metric | Verification Command | Result |
 |---|---|---|:---:|
-| **Backend Suite** | 777 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest -q` | **776 passed, 1 skipped, 0 failed** (100% green, 0 regressions) |
+| **Backend Suite** | 808 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest -q` | **807 passed, 1 skipped, 0 failed** (100% green, 0 regressions) |
+| **Admission Exceptions & Overrides** | 4 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest tests/test_admission_documents_override.py -q` | **4 passed, 0 failed** (100% green) |
+| **Librarian RBAC** | 3 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest tests/test_librarian_rbac.py -q` | **3 passed, 0 failed** (100% green) |
+| **Public Admission Enquiry** | 4 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest tests/test_public_enquiry.py -q` | **4 passed, 0 failed** (100% green) |
+| **Public Announcements API** | 5 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest tests/test_public_announcements.py -q` | **5 passed, 0 failed** (100% green) |
+| **Public Admission Workflow** | 5 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest tests/test_public_admission_workflow.py -q` | **5 passed, 0 failed** (100% green) |
+| **Backend Alerts Engine** | 10 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest tests/test_alerts.py -q` | **10 passed, 0 failed** (100% green) |
+| **Backend RBAC** | 13 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest tests/test_rbac.py -q` | **13 passed, 0 failed** (100% green) |
 | **Public Announcements API** | 5 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest tests/test_public_announcements.py -q` | **5 passed, 0 failed** (100% green) |
 | **Public Admission Workflow** | 5 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest tests/test_public_admission_workflow.py -q` | **5 passed, 0 failed** (100% green) |
 | **Backend Alerts Engine** | 10 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest tests/test_alerts.py -q` | **10 passed, 0 failed** (100% green) |
@@ -61,13 +70,11 @@
 | **Admin User Access** | 6 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest tests/test_admin_user_access.py -q` | **6 passed, 0 failed** (100% green) |
 | **Teacher Leave & Substitutions** | 6 tests | `cd backend && ../.venv/Scripts/python.exe -m pytest tests/test_teacher_leave_ranked_substitutions.py -q` | **6 passed, 0 failed** (100% green) |
 | **Active Migration Head** | Revision `d5e6f7a8b9c0` | `alembic current` | **`d5e6f7a8b9c0 (head)` clean bidirectional** |
-| **Web Typecheck** | TypeScript 5.5 | `cd web && npx tsc --noEmit` | **0 errors** |
-| **Web Unit Tests** | Vitest 2.1 | `cd web && npm test` | **125 passed, 2 skipped across 21 test files** (100% green) |
+| **Web Typecheck** | TypeScript 5.5 | `cd web && npx tsc -b` | **0 errors (clean compilation)** |
+| **Web Unit Tests** | Vitest 2.1 | `cd web && npm test` | **135 passed, 2 skipped across 25 test files** (100% green) |
 | **Mobile Typecheck** | React Native 0.86 / TS | `cd mobile && npx tsc --noEmit` | **0 errors (clean compilation, Expo SDK 57)** |
-| **Production Build** | Vite 5.4 | `cd web && npm run build` | **Clean build (14.60s)** |
-| **Public Pages Live** | 12 Views + /apply | `/`, `/about`, `/academics`, `/admissions`, `/facilities`, `/school-life`, `/events`, `/gallery`, `/public-disclosure`, `/resources`, `/announcements`, `/announcements/:id`, `/apply` | **13/13 functional, responsive & integrated** |
-| **Declared Web Screens** | 32 Screens | Registered in `web/src/screens.ts` | **32/32 functional & gated** |
-| **Visual Verification Suite** | 17 Screenshots | Puppeteer automated verification | **17/17 passed in `docs/screenshots/session21/`** |
+| **Academic Groups** | 19 Sections | `/admin/classes` & DB | **19/19 populated (190 students, 24 teachers, 570 slots)** |
+| **Sidebar Scrollbar** | UI Styling | `Shell.tsx` | **Hidden cleanly across Blink, WebKit, Gecko; scrolling preserved** |
 
 ### Stack Configuration
 - **FastAPI Backend API**: `http://127.0.0.1:8000` (LAN binding: `http://0.0.0.0:8000` / `http://10.109.197.170:8000`)
@@ -1007,8 +1014,46 @@ Delivered in direct response to the requirement for a modern, polished, lightwei
   - *Web Unit Tests (`vitest`)*: **134 passed, 2 skipped, 0 failed** across 25 test files (`npm test -- --run` in 17.14s).
   - *TypeScript Typecheck*: **0 errors** on web (`npx tsc -b`).
   - *Vite Production Build*: **Clean production build in 6.76s** (`npm run build`).
-  - *Visual Verification*: **14 screenshots captured** across Desktop (1440x900) in `docs/screenshots/session24/` and brain artifacts directory (`01_public_admission_step1_birth_cert_badge.png` through `14_attendance_declared_holiday_banner.png`).
+  - *Visual Verification*: **14 baseline screenshots captured** across Desktop (1440x900) in `docs/screenshots/session24/` and brain artifacts directory (`01_public_admission_step1_birth_cert_badge.png` through `14_attendance_declared_holiday_banner.png`).
+  - *Bug Fixes Applied & Verified*:
+    - **FastAPI Route Shadowing Fix** (`backend/app/api/admin/applications.py`): Moved `@router.get("/applications/lookup")` above `@router.get("/applications/{application_id}")`, resolving 422 integer parsing collisions when resolving draft references (`DFT-...`).
+    - **Library Borrower Property Fallbacks** (`backend/app/services/library.py` & `web/src/pages/Library.tsx`): Borrower lookup payload supplies both canonical (`canonical_id`, `name`, `unpaid_fines_total`) and legacy aliases (`student_name`, `enrollment_code`, `unpaid_fines`), ensuring resilient borrower rendering.
+  - *Holiday Editing & Multi-View Propagation Verified (12/12 Passing Scenarios)*:
+    - **H1.1–H1.4**: Declaration of initial holiday on 2026-10-01, blocking of attendance marking (400 Bad Request), opening Edit modal, updating name ("Gandhi Jayanti Observance"), moving date to 2026-10-02, and scoping to Section 1 (`10-A`). Verified table update and persistence.
+    - **H2.1–H2.3**: Web Attendance propagation (`/#/attendance`): Old date (2026-10-01) banner disappears; affected section (`10-A`) on 2026-10-02 displays amber declared holiday warning banner; unaffected section (`9-A`) displays clean register without banner.
+    - **H3.1**: Web Dashboard propagation (`/#/dashboard`): Upcoming Events card reflects edited holiday name and date (`02/10/2026 - Gandhi Jayanti Observance`).
+    - **H4.1–H4.2**: Teacher / Mobile API propagation (`POST /teacher/attendance`): Marking on old date (2026-10-01) is unblocked (200 OK); marking on new date (2026-10-02) for Section 1 is blocked (400 Bad Request) with reason.
+    - **H5.1–H5.2**: Re-expansion to School-Wide: Secondary edit switching scope back to school-wide propagates declared holiday banner to all sections (verified on Section 2 `9-A`).
+    - **Verification Artifacts**: 7 visual screenshots saved in `docs/screenshots/local_e2e_verification/` and brain artifacts directory (`01_holiday_edit_modal_open.png` through `07_holiday_reexpanded_school_wide.png`).
 
+---
 
+## 9. Active Milestone — Admin Dashboard UI Upgrade (Session 25)
 
+Upgrade the existing **Sunrise School ERP Admin Dashboard** (`web/src/pages/Dashboard.tsx`) using the design reference image at [`docs/design_references/admin_dashboard_upgrade_reference.png`](docs/design_references/admin_dashboard_upgrade_reference.png). Focus on visual quality, typography, spacing, cards, and information hierarchy while strictly preserving existing functionality, APIs, and data.
 
+### Invariants & Constraints:
+1. **Strictly Preserve Sidebar & Header Controls**:
+   - Zero modifications to the existing left sidebar (`web/src/layout/Shell.tsx`): preserve width, colors, section headings, items, icons, active states, and expand/collapse behavior.
+   - Do not touch either hamburger button.
+   - Do not modify top header layout or add a search bar.
+2. **Dashboard Layout & Visual Design**:
+   - Clean, modern SaaS/ERP aesthetic with light neutral background and white content cards.
+   - Subtle borders, soft shadows, consistent corner radii.
+   - Maintain Sunrise orange and navy branding, using green for positive metrics and red for overdue/negative metrics.
+   - Responsive across desktop, laptop, and tablet.
+3. **Attendance Overview Section**:
+   - 4 clearly organized metric cards: Total Students, Present Today, Absent Today, Attendance Percentage.
+   - Prominent numbers, readable labels, and smaller supporting descriptions.
+   - Retain and polish the daily attendance distribution/progress visualization using real data.
+4. **Fees Overview Section**:
+   - Clear distinction: Fees Collected, Fees Remaining, Collection Progress bar, Total Demand.
+   - Keep functional action links: Inspect Defaulters / View Roster.
+5. **Grievances & Feedback Section**:
+   - Display open, in-progress, resolved counts clearly.
+   - Compact, readable list with title, category, priority, status, date, and functional Inspect modal actions.
+6. **Strict Prohibitions**:
+   - **Do not add a Recent Admissions section or table.**
+   - Do not add the search bar shown in the reference image.
+   - Do not hardcode figures or introduce fake/mock data.
+   - Do not remove existing functional dashboard sections (Upcoming Events, Notices, Top Performers, Grievances reply flow).

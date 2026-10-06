@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { api } from "../../api/client";
 
 interface AdmissionEnquiryModalProps {
   isOpen: boolean;
@@ -37,25 +38,19 @@ export function AdmissionEnquiryModal({ isOpen, onClose }: AdmissionEnquiryModal
     setError(null);
 
     try {
-      // Determine API base URL dynamically
-      const apiHost = window.location.hostname === "localhost" ? "http://localhost:8000" : "";
-      const res = await fetch(`${apiHost}/public/sunrise/admission/enquiry`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          enquirer_name: form.enquirer_name.trim(),
-          mobile: form.mobile.trim(),
-          email: form.email.trim() || undefined,
-          child_name: form.child_name.trim() || undefined,
-          class_of_interest: form.class_of_interest,
-          notes: form.notes.trim() || undefined,
-        }),
+      const data = await api.rawPost<{
+        status: string;
+        enquiry_id: number;
+        enquiry_no: string;
+        message: string;
+      }>("/public/SPS/admission/enquiry", {
+        enquirer_name: form.enquirer_name.trim(),
+        mobile: form.mobile.trim(),
+        email: form.email.trim() || undefined,
+        child_name: form.child_name.trim() || undefined,
+        class_of_interest: form.class_of_interest,
+        notes: form.notes.trim() || undefined,
       });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.detail || "Failed to submit enquiry.");
-      }
 
       setSuccessData({
         enquiry_no: data.enquiry_no || "ENQ-SUCCESS",

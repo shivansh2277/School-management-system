@@ -265,13 +265,10 @@ export function Payroll() {
 
   return (
     <div className="space-y-6">
-      {/* Top Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      {/* Top Header Surface Card */}
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-ink tracking-tight">Payroll & Salary Disbursal</h1>
-          <p className="text-sm text-ink-faint mt-1">
-            Monthly staff salary calculation, statutory registers, and bank disbursal sheets
-          </p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Payroll & Salary Disbursal</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Can permission="payroll.setup.manage">

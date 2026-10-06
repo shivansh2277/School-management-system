@@ -26,6 +26,7 @@ export interface UserAccessItem {
   created_at: string | null;
   identifier: string | null;
   subtext: string | null;
+  roles?: string[];
 }
 
 export function UserAccessPage() {
@@ -41,6 +42,10 @@ export function UserAccessPage() {
 
   const [resetTarget, setResetTarget] = useState<UserAccessItem | null>(null);
   const [newPassword, setNewPassword] = useState<string>("");
+
+  const [roleAssignTarget, setRoleAssignTarget] = useState<UserAccessItem | null>(null);
+  const [selectedRoleCode, setSelectedRoleCode] = useState<string>("librarian");
+
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Query users
@@ -53,6 +58,40 @@ export function UserAccessPage() {
       if (searchQuery.trim()) params.append("search", searchQuery.trim());
       const q = params.toString() ? `?${params.toString()}` : "";
       return api.get(`/admin/users${q}` as any) as Promise<UserAccessItem[]>;
+    },
+  });
+
+  // Assign role mutation
+  const assignRoleMutation = useMutation({
+    mutationFn: ({ userId, roleCode }: { userId: number; roleCode: string }) =>
+      api.post(`/admin/users/${userId}/roles` as any, { role_code: roleCode }),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users-access"] });
+      setRoleAssignTarget(null);
+      setFeedbackMsg({
+        type: "success",
+        text: data?.message || "Role assigned successfully.",
+      });
+    },
+    onError: (err: any) => {
+      setFeedbackMsg({ type: "error", text: err?.message || "Failed to assign role." });
+    },
+  });
+
+  // Remove role mutation
+  const removeRoleMutation = useMutation({
+    mutationFn: ({ userId, roleCode }: { userId: number; roleCode: string }) =>
+      api.rawDel(`/admin/users/${userId}/roles/${roleCode}`),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users-access"] });
+      setRoleAssignTarget(null);
+      setFeedbackMsg({
+        type: "success",
+        text: data?.message || "Role removed successfully.",
+      });
+    },
+    onError: (err: any) => {
+      setFeedbackMsg({ type: "error", text: err?.message || "Failed to remove role." });
     },
   });
 
@@ -120,13 +159,15 @@ export function UserAccessPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header Surface Card */}
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-ink tracking-tight">App User Access & Security</h1>
-          <p className="text-sm text-ink-faint">
-            Manage mobile application access, block/unblock accounts, and securely reset passwords for Teachers, Parents, and Students.
-          </p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">App User Access & Security</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+            {totalUsers} Accounts Total
+          </span>
         </div>
       </div>
 
@@ -277,6 +318,40 @@ export function UserAccessPage() {
                   <span className="text-[10px] text-ink-faint block mt-1">
                     v{row.token_version} session
                   </span>
+                </div>
+              ),
+            },
+            {
+              key: "roles",
+              header: "RBAC Roles",
+              render: (row) => (
+                <div className="flex flex-wrap items-center gap-1">
+                  {row.roles && row.roles.length > 0 ? (
+                    row.roles.map((r) => (
+                      <span
+                        key={r}
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded capitalize ${
+                          r === "librarian"
+                            ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                            : "bg-slate-100 text-slate-700 border border-slate-200"
+                        }`}
+                      >
+                        {r.replace(/_/g, " ")}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-ink-faint italic">Standard ({row.role})</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRoleAssignTarget(row);
+                      setSelectedRoleCode("librarian");
+                    }}
+                    className="ml-1 text-[11px] font-semibold text-brand hover:underline"
+                  >
+                    + Manage
+                  </button>
                 </div>
               ),
             },
@@ -432,6 +507,94 @@ export function UserAccessPage() {
               </button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* Modal: Manage Roles */}
+      {roleAssignTarget && (
+        <Modal
+          title={`Manage RBAC Roles: ${roleAssignTarget.full_name} (${roleAssignTarget.login_id})`}
+          onClose={() => setRoleAssignTarget(null)}
+        >
+          <div className="space-y-5">
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-ink-faint mb-2">
+                Currently Assigned Roles
+              </h4>
+              {roleAssignTarget.roles && roleAssignTarget.roles.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {roleAssignTarget.roles.map((r) => (
+                    <div
+                      key={r}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-800 border border-slate-200"
+                    >
+                      <span className="capitalize">{r.replace(/_/g, " ")}</span>
+                      <button
+                        type="button"
+                        disabled={removeRoleMutation.isPending}
+                        onClick={() =>
+                          removeRoleMutation.mutate({
+                            userId: roleAssignTarget.id,
+                            roleCode: r,
+                          })
+                        }
+                        className="text-slate-400 hover:text-red-600 font-bold ml-1 cursor-pointer"
+                        title={`Remove ${r} role`}
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-ink-faint italic">
+                  No additional roles assigned. User has default {roleAssignTarget.role} permissions.
+                </p>
+              )}
+            </div>
+
+            <div className="border-t border-rule pt-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-ink-faint mb-2">
+                Assign New Role
+              </h4>
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedRoleCode}
+                  onChange={(e) => setSelectedRoleCode(e.target.value)}
+                  className={`${inputClass} text-xs py-2`}
+                >
+                  <option value="librarian">Librarian (Library Operations)</option>
+                  <option value="accountant">Accountant (Fees & Finance)</option>
+                  <option value="teacher">Teacher (Academics & Classes)</option>
+                  <option value="transport_manager">Transport Manager (Vehicles & Routes)</option>
+                  <option value="principal">Principal (Full School Operations)</option>
+                </select>
+                <button
+                  type="button"
+                  disabled={assignRoleMutation.isPending}
+                  onClick={() =>
+                    assignRoleMutation.mutate({
+                      userId: roleAssignTarget.id,
+                      roleCode: selectedRoleCode,
+                    })
+                  }
+                  className="px-4 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-pill hover:bg-emerald-700 transition whitespace-nowrap cursor-pointer"
+                >
+                  {assignRoleMutation.isPending ? "Assigning..." : "Assign Role"}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-rule">
+              <button
+                type="button"
+                onClick={() => setRoleAssignTarget(null)}
+                className="px-4 py-2 text-sm font-medium text-ink-faint hover:text-ink transition cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>

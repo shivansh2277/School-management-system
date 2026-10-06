@@ -3,12 +3,22 @@ import { useState, type ReactNode } from "react";
 import { ApiError, errorText } from "../api/errors";
 import { statusColor, theme } from "../theme";
 
-export function Card({ title, children, action }: { title?: string; children: ReactNode; action?: ReactNode }) {
+export function Card({
+  title,
+  children,
+  action,
+  className,
+}: {
+  title?: string;
+  children: ReactNode;
+  action?: ReactNode;
+  className?: string;
+}) {
   return (
-    <section className="bg-surface rounded-card shadow-card p-5">
+    <section className={`bg-surface rounded-card shadow-card p-5 border border-rule/80 ${className || ""}`}>
       {(title || action) && (
-        <header className="flex items-center justify-between mb-4">
-          {title && <h2 className="font-semibold">{title}</h2>}
+        <header className="flex items-center justify-between mb-4 pb-2.5 border-b border-rule/60">
+          {title && <h2 className="font-bold text-ink text-base tracking-tight">{title}</h2>}
           {action}
         </header>
       )}
@@ -17,22 +27,52 @@ export function Card({ title, children, action }: { title?: string; children: Re
   );
 }
 
-export function StatCard({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
+export function StatCard({
+  label,
+  value,
+  hint,
+  className,
+  icon,
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: string;
+  className?: string;
+  icon?: ReactNode;
+}) {
   return (
-    <div className="bg-surface rounded-card shadow-card p-5">
-      <p className="text-sm text-ink-faint">{label}</p>
-      <p className="text-2xl font-semibold mt-1 tabular">{value}</p>
-      {hint && <p className="text-xs text-ink-faint mt-1">{hint}</p>}
+    <div className={`bg-surface rounded-card shadow-card p-5 border border-rule/80 flex flex-col justify-between ${className || ""}`}>
+      <div>
+        {icon && <div className="mb-2.5">{icon}</div>}
+        <p className="text-xs font-semibold text-ink-soft">{label}</p>
+        <p className="text-2xl font-bold tracking-tight text-ink mt-1 tabular">{value}</p>
+      </div>
+      {hint && <p className="text-xs text-ink-faint mt-1.5">{hint}</p>}
     </div>
   );
 }
 
-export function Pill({ status, children }: { status?: string; children: ReactNode }) {
-  const color = status ? statusColor[status] : theme.inkSoft;
+export function Pill({ status, children, className }: { status?: string; children: ReactNode; className?: string }) {
+  const normalized = status?.toLowerCase() || "";
+  let badgeColor = status ? statusColor[normalized] || statusColor[status] : undefined;
+
+  // Semantic fallbacks for common statuses
+  if (!badgeColor) {
+    if (["active", "approved", "completed", "success"].includes(normalized)) badgeColor = theme.success;
+    else if (["rejected", "cancelled", "failed", "void"].includes(normalized)) badgeColor = theme.danger;
+    else if (["in_progress", "submitted", "review", "open"].includes(normalized)) badgeColor = theme.info;
+    else if (["draft", "neutral"].includes(normalized)) badgeColor = theme.inkSoft;
+  }
+
+  const color = badgeColor || theme.inkSoft;
   return (
     <span
-      className="inline-block rounded-pill px-2.5 py-0.5 text-xs font-medium"
-      style={{ color, backgroundColor: `${color}1A` }}
+      className={`inline-flex items-center rounded-pill px-2.5 py-0.5 text-xs font-semibold border ${className || ""}`}
+      style={{
+        color,
+        backgroundColor: `${color}14`,
+        borderColor: `${color}28`,
+      }}
     >
       {children}
     </span>
@@ -40,7 +80,16 @@ export function Pill({ status, children }: { status?: string; children: ReactNod
 }
 
 export function Empty({ children }: { children: ReactNode }) {
-  return <p className="text-sm text-ink-faint py-6 text-center">{children}</p>;
+  return (
+    <div className="py-8 px-4 text-center">
+      <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-2.5">
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+        </svg>
+      </div>
+      <p className="text-sm text-ink-faint max-w-sm mx-auto">{children}</p>
+    </div>
+  );
 }
 
 /**
@@ -55,7 +104,7 @@ export function ErrorState({ error }: { error: unknown }) {
     if (error.status === 403) message = "Refused: your role does not have permission to view this.";
     else if (error.status === 404) message = "Not available for this school.";
   }
-  return <p className="text-sm text-danger py-6 text-center">{message}</p>;
+  return <p className="text-sm text-danger py-6 text-center font-medium">{message}</p>;
 }
 
 export function DataTable<T>({
@@ -79,26 +128,26 @@ export function DataTable<T>({
   if (error && rows.length === 0) return <ErrorState error={error} />;
   if (rows.length === 0) return <Empty>{empty}</Empty>;
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto rounded-lg border border-rule/80">
       <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left text-ink-faint border-b border-rule">
+        <thead className="bg-slate-50/75 border-b border-rule">
+          <tr className="text-left text-xs uppercase tracking-wider text-ink-soft font-semibold">
             {columns.map((c) => (
-              <th key={c.key} className={`py-2 pr-4 font-medium ${c.align === "right" ? "text-right" : ""}`}>
+              <th key={c.key} className={`py-2.5 px-3.5 font-semibold ${c.align === "right" ? "text-right" : ""}`}>
                 {c.header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-rule/60 bg-surface">
           {rows.map((row, i) => (
             <tr
               key={i}
               onClick={() => onRowClick?.(row)}
-              className={`border-b border-rule last:border-0 ${onRowClick ? "cursor-pointer hover:bg-ground" : ""}`}
+              className={`transition-colors ${onRowClick ? "cursor-pointer hover:bg-slate-50" : "hover:bg-slate-50/50"}`}
             >
               {columns.map((c) => (
-                <td key={c.key} className={`py-2.5 pr-4 ${c.align === "right" ? "text-right tabular" : ""}`}>
+                <td key={c.key} className={`py-3 px-3.5 ${c.align === "right" ? "text-right tabular" : ""}`}>
                   {c.render(row)}
                 </td>
               ))}

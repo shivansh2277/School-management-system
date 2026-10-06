@@ -19,14 +19,21 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import (
+    AcademicYear,
     Attendance,
     AttendanceStatus,
     AuditAction,
+    ClassSection,
+    Employee,
     Enrolment,
     EnrolmentStatus,
     Holiday,
+    InAppNotification,
+    Notice,
+    NoticeAudience,
     Student,
     User,
+    UserRole,
 )
 from app.schemas.common import (
     AttendanceDay,
@@ -230,6 +237,24 @@ def mark(db: Session, user: User, body: AttendanceMarkRequest) -> list[RollRow]:
         )
     }
     now = datetime.now(UTC)
+    is_late_initial_submission = body.date < today and not existing
+    if is_late_initial_submission:
+        audit.record(
+            db,
+            actor=user,
+            school_id=teacher.school_id,
+            entity_type="attendance_late_marking",
+            entity_id=body.class_section_id,
+            action=AuditAction.create,
+            after={
+                "date": str(body.date),
+                "class_section_id": body.class_section_id,
+                "marked_by": teacher.id,
+                "entries_count": len(body.entries),
+            },
+            reason=body.reason or "Late attendance submission after same-day deadline",
+        )
+
     for entry in body.entries:
         enrolment = by_enrolment.get(entry.enrolment_id) if entry.enrolment_id else by_student.get(entry.student_id)
         if enrolment is None:
@@ -273,6 +298,164 @@ def mark(db: Session, user: User, body: AttendanceMarkRequest) -> list[RollRow]:
         row.marked_by = teacher.id
     db.commit()
     return roll_sheet(db, body.class_section_id, body.date)
+
+
+def check_unmarked_attendance_and_notify_admin(
+    db: Session, school_id: int, on_date: Date | None = None
+) -> list[dict]:
+    """Check whether attendance was submitted on or before the 11:59 PM deadline for each section on an instructional day.
+
+    On instructional days (excluding Sundays and declared holidays), if attendance is unmarked,
+    generates an admin Notice and InAppNotification for school administrators and the assigned teacher.
+    Idempotent: avoids duplicate notices and notifications for the same section and date.
+    """
+    target_date = on_date or Date.today()
+    if target_date.weekday() == SUNDAY:
+        return []
+
+    # Get active academic year
+    year = db.scalar(
+        select(AcademicYear).where(
+            AcademicYear.school_id == school_id,
+            AcademicYear.is_current.is_(True),
+        )
+    )
+    if year is None:
+        return []
+
+    sections = list(
+        db.scalars(
+            select(ClassSection).where(
+                ClassSection.school_id == school_id,
+                ClassSection.academic_year_id == year.id,
+            )
+        )
+    )
+
+    admin_users = list(
+        db.scalars(
+            select(User).where(
+                User.school_id == school_id,
+                User.role == UserRole.admin,
+                User.is_active.is_(True),
+            )
+        )
+    )
+
+    results = []
+    now = datetime.now(UTC)
+
+    for sec in sections:
+        if is_holiday_for(db, school_id, target_date, sec.id) is not None:
+            continue
+
+        active_roster = roster(db, sec.id)
+        if not active_roster:
+            continue
+
+        active_enr_ids = [e.id for e in active_roster]
+        marked_count = db.scalar(
+            select(func.count(Attendance.id)).where(
+                Attendance.school_id == school_id,
+                Attendance.enrolment_id.in_(active_enr_ids),
+                Attendance.date == target_date,
+            )
+        ) or 0
+
+        if marked_count == 0:
+            ct = db.get(Employee, sec.class_teacher_id) if sec.class_teacher_id else None
+            teacher_name = ct.user.full_name if ct and ct.user else "Unassigned"
+            teacher_code = ct.employee_code if ct else "N/A"
+
+            notice_title = f"Missing Attendance: Class {sec.label} on {target_date}"
+            notice_body = (
+                f"Attendance for Class {sec.label} was not marked before the 11:59 PM deadline on {target_date}. "
+                f"Assigned Class Teacher: {teacher_name} ({teacher_code}). "
+                f"Please follow up with the teacher or submit via administrative review."
+            )
+
+            # Idempotent notice creation
+            existing_notice = db.scalar(
+                select(Notice).where(
+                    Notice.school_id == school_id,
+                    Notice.title == notice_title,
+                )
+            )
+            publisher_id = admin_users[0].id if admin_users else 1
+            if not existing_notice:
+                db.add(
+                    Notice(
+                        school_id=school_id,
+                        title=notice_title,
+                        body=notice_body,
+                        audience=NoticeAudience.teachers,
+                        class_section_id=sec.id,
+                        published_by=publisher_id,
+                        published_at=now,
+                    )
+                )
+
+            # InAppNotifications for admins
+            for adm in admin_users:
+                existing_notif = db.scalar(
+                    select(InAppNotification).where(
+                        InAppNotification.school_id == school_id,
+                        InAppNotification.user_id == adm.id,
+                        InAppNotification.category == "attendance",
+                        InAppNotification.title == notice_title,
+                    )
+                )
+                if not existing_notif:
+                    db.add(
+                        InAppNotification(
+                            school_id=school_id,
+                            user_id=adm.id,
+                            title=notice_title,
+                            message=notice_body,
+                            category="attendance",
+                            link_url="/admin/attendance",
+                            is_read=False,
+                        )
+                    )
+
+            # InAppNotification for assigned class teacher
+            if ct and ct.user:
+                existing_tch_notif = db.scalar(
+                    select(InAppNotification).where(
+                        InAppNotification.school_id == school_id,
+                        InAppNotification.user_id == ct.user.id,
+                        InAppNotification.category == "attendance",
+                        InAppNotification.title == notice_title,
+                    )
+                )
+                if not existing_tch_notif:
+                    db.add(
+                        InAppNotification(
+                            school_id=school_id,
+                            user_id=ct.user.id,
+                            title=notice_title,
+                            message=(
+                                f"Attendance for your class {sec.label} on {target_date} "
+                                f"was not marked before the 11:59 PM deadline. Please submit immediately."
+                            ),
+                            category="attendance",
+                            link_url="/teacher/attendance",
+                            is_read=False,
+                        )
+                    )
+
+            results.append({
+                "class_section_id": sec.id,
+                "class_label": sec.label,
+                "teacher_name": teacher_name,
+                "teacher_code": teacher_code,
+                "date": str(target_date),
+                "status": "unmarked",
+            })
+
+    db.commit()
+    return results
+
 
 
 def absentees(db: Session, school_id: int, day: Date, class_section_id: int | None = None):

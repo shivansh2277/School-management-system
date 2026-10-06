@@ -39,7 +39,10 @@ function Home() {
     const transportScreen = userRoles.includes("transport_incharge")
       ? screens.find((s) => s.path === "/transport")
       : undefined;
-    const first = transportScreen ?? screens[0];
+    const librarianScreen = userRoles.includes("librarian")
+      ? screens.find((s) => s.path === "/library")
+      : undefined;
+    const first = transportScreen ?? librarianScreen ?? screens[0];
     if (!first) {
       return (
         <div className="min-h-[60vh] flex items-center justify-center p-4">
@@ -122,6 +125,7 @@ export function App() {
           />
         ))}
         {/* Direct URL aliases for legacy or alternate route naming */}
+        <Route path="/user-access" element={<Navigate to="/admin/users" replace />} />
         <Route path="/admission/selection" element={<Navigate to="/admission/merit" replace />} />
         <Route path="/reception/found-lost" element={<Navigate to="/reception/found-items" replace />} />
         <Route path="*" element={<NotFound />} />

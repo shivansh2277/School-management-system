@@ -112,10 +112,10 @@ export function Inventory() {
 
   return (
     <div className="space-y-6">
-      {/* Page Heading — clean and concise per owner directive */}
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header Surface Card */}
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">Stock & Inventory</h1>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Stock & Inventory</h1>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -124,7 +124,7 @@ export function Inventory() {
               setFlaggingItem(null);
               setShowFlagModal(true);
             }}
-            className="rounded-input border border-primary text-primary px-3 py-1.5 text-sm font-medium hover:bg-primary/10 transition-colors"
+            className="rounded-input border border-primary text-primary px-3 py-1.5 text-xs font-semibold hover:bg-primary/10 transition-colors shadow-2xs"
           >
             Flag Diminishing Stock
           </button>
@@ -132,13 +132,13 @@ export function Inventory() {
             <button
               type="button"
               onClick={() => setShowAddModal(true)}
-              className="rounded-input bg-primary text-white px-3 py-1.5 text-sm font-medium hover:bg-primary-dark transition-colors"
+              className="rounded-input bg-primary text-white px-3.5 py-1.5 text-xs font-semibold hover:bg-primary-dark transition-colors shadow-2xs"
             >
               + Add Item
             </button>
           </Can>
         </div>
-      </header>
+      </div>
 
       {/* Overview Highlights (3 StatCards) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -72,24 +72,61 @@ export function FeePeriods() {
     onDone: () => setActing(null),
   });
 
+  const closedCount = rows.filter((r) => r.status === "closed").length;
+  const openCount = 12 - closedCount;
+
   return (
-    <>
-      <Card
-        title="Period close"
-        action={
+    <div className="space-y-6">
+      {/* Header Surface Card */}
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Accounting Period Close</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-ink-soft uppercase tracking-wider">Financial Year:</span>
           <input
-            className="w-24 rounded-input border border-rule px-3 py-1.5 text-sm outline-none focus:border-primary"
+            className="w-24 rounded-input border border-rule px-3 py-1.5 text-xs font-semibold outline-none focus:border-primary shadow-2xs"
             value={year}
             inputMode="numeric"
             onChange={(e) => setYear(Number(e.target.value) || year)}
           />
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="bg-surface rounded-card p-4 border border-rule/80 shadow-card flex items-center justify-between">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-ink-soft">Open Billing Months</div>
+            <div className="text-2xl font-bold text-emerald-700 mt-1">{openCount}</div>
+          </div>
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            Accepting Invoices
+          </span>
+        </div>
+        <div className="bg-surface rounded-card p-4 border border-rule/80 shadow-card flex items-center justify-between">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-ink-soft">Locked & Closed Months</div>
+            <div className="text-2xl font-bold text-slate-700 mt-1">{closedCount}</div>
+          </div>
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+            Books Finalized
+          </span>
+        </div>
+      </div>
+
+      <Card
+        title={`Monthly Books for FY ${year}`}
+        action={
+          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+            12 Calendar Periods
+          </span>
         }
       >
-        <p className="text-xs text-ink-faint mb-4">
+        <div className="mb-4 p-3 bg-slate-50/80 border border-slate-200/60 rounded-lg text-xs text-ink-soft">
           Closing a month stops invoices being raised into it, money being dated inside it, and
           its invoices being voided. It does <strong>not</strong> stop the counter taking an old
           due today — that receipt belongs to today and lands in the current month.
-        </p>
+        </div>
 
         <DataTable
           rows={rows}
@@ -97,15 +134,34 @@ export function FeePeriods() {
           error={periods.error}
           empty="No months to show."
           columns={[
-            { key: "month", header: "Month", render: (r) => `${monthName(r.month)} ${r.year}` },
+            {
+              key: "month",
+              header: "Month",
+              render: (r) => (
+                <span className="font-semibold text-ink">
+                  {monthName(r.month)} {r.year}
+                </span>
+              ),
+            },
             {
               key: "state",
               header: "Status",
               render: (r) => (
-                <Pill status={r.status === "closed" ? "paid" : "pending"}>{r.status}</Pill>
+                <Pill status={r.status === "closed" ? "paid" : "pending"}>
+                  {r.status}
+                </Pill>
               ),
             },
-            { key: "note", header: "Reason on record", render: (r) => r.note ?? "—" },
+            {
+              key: "note",
+              header: "Audit Reason on Record",
+              render: (r) =>
+                r.note ? (
+                  <span className="text-xs text-ink-soft italic">“{r.note}”</span>
+                ) : (
+                  <span className="text-ink-faint text-xs">—</span>
+                ),
+            },
             {
               key: "act",
               header: "",
@@ -113,10 +169,10 @@ export function FeePeriods() {
                 <ActionButton
                   permission="fees.payment.void"
                   variant={r.status === "closed" ? "primary" : "danger"}
-                  className="!px-3 !py-1 text-xs"
+                  className="!px-3 !py-1 text-xs font-semibold"
                   onClick={() => setActing({ row: r, closing: r.status !== "closed" })}
                 >
-                  {r.status === "closed" ? "Reopen" : "Close"}
+                  {r.status === "closed" ? "Reopen Period" : "Close Period"}
                 </ActionButton>
               ),
             },
@@ -154,6 +210,6 @@ export function FeePeriods() {
           }}
         />
       )}
-    </>
+    </div>
   );
 }

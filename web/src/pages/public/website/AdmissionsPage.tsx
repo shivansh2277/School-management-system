@@ -24,12 +24,18 @@ export function AdmissionsPage() {
             >
               Fill Online Application Form &rarr;
             </Link>
-            <a
-              href="#process"
-              className="bg-white hover:bg-slate-50 text-slate-800 font-semibold px-6 py-3 rounded-input border border-slate-300 shadow-sm transition-all text-sm"
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById("process");
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth" });
+                }
+              }}
+              className="bg-white hover:bg-slate-50 text-slate-800 font-semibold px-6 py-3 rounded-input border border-slate-300 shadow-sm transition-all text-sm cursor-pointer"
             >
               View Admission Steps
-            </a>
+            </button>
           </div>
         </div>
       </section>

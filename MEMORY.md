@@ -1,26 +1,29 @@
 # MEMORY.md — Sunrise School ERP
 
-**Date:** 29 September 2026  
+**Date:** 06 October 2026  
 **Canonical State Document:** [`SINGLE_SOURCE_OF_TRUTH.md`](SINGLE_SOURCE_OF_TRUTH.md)  
-**Completed Milestone:** Sessions 21 & 22 Completed & Verified: Central Academy Reference Website Study & Comprehensive Institutional Public Website Upgrade. Upgraded public navigation to 11 institutional menu items (Home, About, Academics, Admissions, Campus & Facilities, School Life, Events, Gallery, Public Disclosure, Resources, Contact) plus prominent "Admission Enquiry / Apply Now" CTA button. Desktop top utility micro-strip permanently removed (main nav topmost). Zero public ERP login links anywhere on public views (no Sign In, Student/Parent/Teacher portals, or Branches). Mandatory Public Disclosure section (`/public-disclosure`) with 6 CBSE Appendix-IX tabs & demo disclaimers. Resources & Downloads Hub (`/resources`) with 6 approved single-page A4 PDFs (zero Parent Info PDF). End-to-end Announcements system with migration `d5e6f7a8b9c0`, public endpoint `/public/{school_code}/announcements`, ERP publishing controls with public checkboxes and pin badges, live ticker, listing (`/announcements`), and detail circular view (`/announcements/:id`). All 10 demo single-page A4 PDFs generated and verified. Full test suite: 776 backend tests passed (1 skipped), 125 web unit tests passed (2 skipped across 21 files), 0 TypeScript errors on web and mobile, and clean Vite production build.  
+**Completed Milestone:** Session 29 Completed & Verified (Public Admission Enquiry Fix, View Admission Steps Scroll, Dedicated Librarian Role & Admission Document Overrides Automatic Pending Queue). Delivered and verified: (1) Resolved Public Admission Enquiry failure ("No such school") by implementing tenant alias mapping (`sunrise`/`sunrisepublic` -> `SPS`) in backend endpoints, wiring `AdmissionEnquiryModal.tsx` to submit cleanly to `/public/SPS/admission/enquiry` with confirmation feedback, and verifying database storage in Reception/Admission workflows; (2) Fixed "View Admission Steps" on Admissions page by replacing hash anchor navigation with smooth DOM scroll to `#process`, eliminating collision with React Router's `<HashRouter>` that previously redirected visitors to `/login`; (3) Added dedicated `librarian` role strictly scoped to `library.read`, `library.manage`, and `comms.notice.read`, restricted from Admissions, Fees, Transport, HR, and settings, supported by `/admin/users/{user_id}/roles` assignment APIs and `/user-access` UI with Librarian quick login; (4) Upgraded Admission Document Overrides from manual lookup to an automatic Pending Exceptions Queue (`/admin/admission-exceptions`) with student name, app ID, document name, reason, timestamp, and Review/Approve/Reject actions, enforcing that only approved overrides satisfy application checklists while preserving audit trails; (5) Verified 100% green across all quality gates: 807 passed (1 skipped) backend pytest, 140 passed (2 skipped) web vitest, 0 web TypeScript errors, 0 mobile TypeScript errors.  
 **Active Branch:** `slice/office-feedback` (synced with `origin/main` and `origin/slice/office-feedback`)  
-**Alembic Migration Head:** `d5e6f7a8b9c0` (`public_announcements_fields.py`)  
 
 ---
 
 ## 1. Executive Summary & Current Status
 
 Sunrise School ERP is a multi-tenant school management system built for independent private schools.
-- **Backend Test Suite**: **776 passed, 1 skipped, 0 failed** (100% green across all 777 tests).
+- **Backend Test Suite**: **807 passed, 1 skipped, 0 failed** (100% green across 808 tests).
 - **Public Announcements API**: 5/5 unit tests passed (`tests/test_public_announcements.py`).
+- **Librarian RBAC**: 3/3 unit tests passed (`tests/test_librarian_rbac.py`).
+- **Admission Document Overrides**: 4/4 unit tests passed (`tests/test_admission_documents_override.py`).
+- **Public Enquiry**: 4/4 unit tests passed (`tests/test_public_enquiry.py`).
 - **10/10 Alert Unit Tests passed** (`tests/test_alerts.py`).
 - **32 Live Web Screens** registered in `web/src/screens.ts` (all functional and permission-gated).
 - **13 Public Website Views**: `/`, `/about`, `/academics`, `/admissions`, `/facilities`, `/school-life`, `/events`, `/gallery`, `/public-disclosure`, `/resources`, `/announcements`, `/announcements/:id`, and `/apply`.
-- **18 Active Staff** in employee directory (`employees`).
-- **Database**: PostgreSQL on `localhost:5432` (`sunrise_test`) + Neon Tech Serverless PostgreSQL in cloud (migration head `d5e6f7a8b9c0`).
-- **TypeScript**: 0 errors across backend, web (`npx tsc --noEmit`), and mobile (`npx tsc --noEmit`).
-- **Web Unit Tests**: Vitest 2.1 — **125 passed, 2 skipped across 21 test files** (100% green).
-- **Production Build**: Clean Vite production build in 14.60s (`npm run build`).
+- **24 Active Teachers / Staff** in employee directory (`employees`), covering Pre-primary, Secondary, and Senior Secondary streams.
+- **19 Academic Groups / Sections**: Nursery-A, LKG-A, UKG-A, 1-A to 10-A, 11-Sci, 11-Com, 11-Hum, 12-Sci, 12-Com, 12-Hum (190 students enrolled).
+- **Database**: PostgreSQL on `localhost:5432` (`sunrise_test` live, `sunrise` dedicated test runner DB).
+- **TypeScript**: 0 errors across backend, web (`npx tsc -b`), and mobile (`npx tsc --noEmit`).
+- **Web Unit Tests**: Vitest 2.1 — **140 passed, 2 skipped across 26 test files** (100% green).
+- **Production Build**: Clean Vite production build (`npm run build`).
 - **Dev Automation**: 1-click Windows batch scripts `start_dev.bat` and `show_qr.bat` with auto-IP detection and QR code generation.
 - **Mobile Stack**: Expo SDK 57, React Native `0.86.3`. Navigation with 4 bottom tabs per role, top-left hamburger opening smooth drawer (`NavDrawer.tsx`), multi-child switcher, and tap-to-fill demo credentials.
 - **Live Cloud Deployment**:
@@ -177,15 +180,20 @@ Session 18 has been fully delivered and verified on branch `slice/office-feedbac
 - **Web unit tests**: 109 passed, 2 skipped across 20 test files (100% green).
 - **Web typecheck**: 0 errors (`npx tsc --noEmit`).
 - **Mobile typecheck**: 0 errors (`npx tsc --noEmit`).
-- **Alembic migration head**: `a1b2c3d4e5f8 (head)` (`remove_teacher_meetings_add_user_access.py`).
-- **Visual Verification Suite**: 21/21 screenshots verified across Teacher Leave lifecycle (6/6) and Parent Hindi i18n (15/15) in `docs/screenshots/session18/` and `session18_visual_verification_report.md`.
-- **32 live web screens** (UserAccessPage added at `/admin/users`).
+- **Backend Suite**: 800 passed, 1 skipped, 0 failed across 801 backend tests (100% green).
+- **Web unit tests**: 134 passed, 2 skipped across 25 test files (100% green).
+- **Web typecheck**: 0 errors (`npx tsc -b`).
+- **Mobile typecheck**: 0 errors (`npx tsc --noEmit`).
+- **Alembic migration head**: `d5e6f7a8b9c0 (head)` (`public_announcements_fields.py`).
+- **Visual Verification Suite**: 14 baseline screenshots in `docs/screenshots/session24/` + 7 holiday editing propagation screenshots in `docs/screenshots/local_e2e_verification/` (100% verified).
+- **32 live web screens** including `/admin/admission-exceptions`, `/library`, `/certificates`, `/admin/holidays`.
 
-Canonical specification for Session 19 is defined in **`SESSION-HANDOFF-19.md`**:
-1. **Website — Redesign Sidebar Section Headings**: Redesign group headers in `web/src/layout/Shell.tsx` across all website roles with clear visual hierarchy, improved typography, spacing, and school branding accents, keeping them structural and non-clickable.
-2. **Mobile App — Future Feature Placeholders (Roadmap UI)**: Add clearly visible disabled "Coming Soon" placeholders in `NavDrawer.tsx` (Parent: Call Class Teacher, Message Class Teacher; Teacher: Today's Class, Parent Messages; Student: Today's Class). No backend/API/database changes.
-3. **Student & Parent Home — Important Alerts System (Live Feature)**: End-to-end implementation of 4 real-time alerts on Student & Parent Home tabs (Attendance Shortage < 75%, Fee Due, Report Card Available, Periodic Test Result Available).
-4. **Parent Multi-Child Alert Support**: Independent evaluation per child across `me.children` with clear child attribution (`— Rahul`, `— Priya`) and automatic child context switching on tap.
+Canonical specification for Session 25 is defined in **`SESSION-HANDOFF-PROMPT-25.md`**:
+1. **Admin Dashboard UI Upgrade (`web/src/pages/Dashboard.tsx`)**: Redesign content area for modern, polished SaaS/ERP look based on design reference [`docs/design_references/admin_dashboard_upgrade_reference.png`](docs/design_references/admin_dashboard_upgrade_reference.png).
+2. **Attendance Overview**: 4 prominent metric cards (Total Students, Present Today, Absent Today, Attendance Percentage) and attendance progress/distribution with real data.
+3. **Fees Overview**: Distinct collected vs remaining cards, collection progress bar, total demand, and functional Inspect Defaulters / View Roster actions.
+4. **Grievances & Feedback**: Open/in-progress/resolved status counts, compact clean list with priority badges and functional inspect modal.
+5. **Strict Prohibitions**: Sidebar and header controls completely untouched; no search bar; no Recent Admissions section; no fake data.
 
 ---
 

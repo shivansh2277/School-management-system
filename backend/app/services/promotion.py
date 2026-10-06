@@ -64,21 +64,50 @@ class PromotionPreview:
         return not self.blockers
 
 
+PRE_PRIMARY_NEXT = {
+    "nursery": "LKG",
+    "lkg": "UKG",
+    "ukg": "1",
+}
+
+
 def _target_section(
     db: Session, section: ClassSection, to_year: AcademicYear
 ) -> ClassSection | None:
-    """The same section letter, one class up, in the target year."""
-    try:
-        next_class = str(int(section.class_name) + 1)
-    except ValueError:
-        return None
-    return db.scalar(
+    """The matching section, one class up, in the target year."""
+    cls_lower = section.class_name.lower()
+    if cls_lower in PRE_PRIMARY_NEXT:
+        next_class = PRE_PRIMARY_NEXT[cls_lower]
+        target_sec = section.section
+    else:
+        try:
+            next_class = str(int(section.class_name) + 1)
+        except ValueError:
+            return None
+        target_sec = section.section
+
+    # Try matching exact section code first (e.g. 11-Sci -> 12-Sci, Nursery-A -> LKG-A)
+    match = db.scalar(
         select(ClassSection).where(
             ClassSection.academic_year_id == to_year.id,
             ClassSection.class_name == next_class,
-            ClassSection.section == section.section,
+            ClassSection.section == target_sec,
         )
     )
+    if match is not None:
+        return match
+
+    # When promoting from class 10 to class 11 where sections are stream-based,
+    # fallback to first available section of class 11
+    if next_class == "11":
+        return db.scalar(
+            select(ClassSection).where(
+                ClassSection.academic_year_id == to_year.id,
+                ClassSection.class_name == "11",
+            ).order_by(ClassSection.id)
+        )
+    return None
+
 
 
 def preview(

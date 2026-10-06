@@ -117,13 +117,10 @@ export function ReceptionFeeCounterPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header Surface Card */}
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-ink tracking-tight">Front Desk Fee Counter</h1>
-          <p className="text-sm text-ink-faint">
-            Collect complete-month student fees, enforce strict FIFO invoice settlement, and generate official receipts.
-          </p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Front Desk Fee Counter</h1>
         </div>
       </div>
 
@@ -145,7 +142,7 @@ export function ReceptionFeeCounterPage() {
           <button
             type="submit"
             disabled={feeStatusQuery.isFetching}
-            className="px-6 py-2.5 bg-primary text-white text-sm font-semibold rounded-pill hover:opacity-90 transition shadow-sm whitespace-nowrap"
+            className="px-5 py-2 bg-primary text-white text-xs font-semibold rounded-input hover:bg-primary-dark transition shadow-2xs whitespace-nowrap cursor-pointer"
           >
             {feeStatusQuery.isFetching ? "Searching..." : "Lookup Student"}
           </button>

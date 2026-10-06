@@ -89,47 +89,117 @@ export function Settings() {
   });
 
   return (
-    <>
-      <Card title="School settings">
-        <p className="text-xs text-ink-faint mb-4">
-          Every school-specific label on any screen reads from here, so a new deployment is a
-          configuration change rather than a code change.
-        </p>
+    <div className="space-y-6">
+      {/* Header Surface Card */}
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">School Settings</h1>
+        </div>
+      </div>
+
+      <Card title="School Profile & Configuration">
         {form && (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {FIELDS.map(([key, label]) => (
-              <FormField key={key} label={label}>
-                {/*
-                  The academic year is shown because the office looks for it
-                  here, but it is an AcademicYear row rather than a column on
-                  the school, and PATCH /admin/settings accepts it only to
-                  ignore it. An input that looks editable and silently is not is
-                  the same lie as the 422 this replaced, so it is disabled.
-                  There is no endpoint that changes the current year at all -
-                  see reports/packet-3-configuration.md.
-                */}
-                <input
-                  className={`${inputClass} ${key === "academic_year" ? "bg-canvas text-ink-faint" : ""}`}
-                  value={form[key] ?? ""}
-                  disabled={key === "academic_year"}
-                  title={
-                    key === "academic_year"
-                      ? "The current academic year is set on the year record, not here"
-                      : undefined
-                  }
-                  onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                />
-              </FormField>
-            ))}
+          <div className="space-y-6">
+            {/* Section 1: Identity & Branding */}
+            <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/60 space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Identity & Branding</h3>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <FormField label="School name">
+                  <input
+                    className={inputClass}
+                    value={form.name ?? ""}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  />
+                </FormField>
+                <FormField label="Logo URL">
+                  <input
+                    className={inputClass}
+                    value={form.logo_url ?? ""}
+                    placeholder="https://..."
+                    onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
+                  />
+                </FormField>
+                <FormField label="Primary colour">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      className="w-9 h-9 p-0.5 rounded border border-rule cursor-pointer"
+                      value={form.primary_color || "#042954"}
+                      onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
+                    />
+                    <input
+                      className={inputClass}
+                      value={form.primary_color ?? ""}
+                      placeholder="#042954"
+                      onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
+                    />
+                  </div>
+                </FormField>
+              </div>
+            </div>
+
+            {/* Section 2: Contact & Location */}
+            <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/60 space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Contact & Campus Location</h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <FormField label="Address">
+                  <input
+                    className={inputClass}
+                    value={form.address ?? ""}
+                    onChange={(e) => setForm({ ...form, address: e.target.value })}
+                  />
+                </FormField>
+                <FormField label="City">
+                  <input
+                    className={inputClass}
+                    value={form.city ?? ""}
+                    onChange={(e) => setForm({ ...form, city: e.target.value })}
+                  />
+                </FormField>
+                <FormField label="Phone">
+                  <input
+                    className={inputClass}
+                    value={form.phone ?? ""}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  />
+                </FormField>
+                <FormField label="Email">
+                  <input
+                    className={inputClass}
+                    type="email"
+                    value={form.email ?? ""}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  />
+                </FormField>
+              </div>
+            </div>
+
+            {/* Section 3: Academic Calendar */}
+            <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/60 space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Academic Calendar</h3>
+              <div className="max-w-xs">
+                <FormField label="Academic year">
+                  <input
+                    className={`${inputClass} bg-canvas text-ink-faint`}
+                    value={form.academic_year ?? ""}
+                    disabled
+                    title="The current academic year is set on the year record, not here"
+                  />
+                </FormField>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => save.mutate()}
+                disabled={save.isPending || !form}
+                className="rounded-input bg-primary px-5 py-2.5 text-white text-sm font-semibold hover:bg-primary-dark transition-colors shadow-2xs disabled:opacity-60 cursor-pointer"
+              >
+                {save.isPending ? "Saving..." : save.isSuccess ? "✓ Settings Saved" : "Save Changes"}
+              </button>
+            </div>
           </div>
         )}
-        <button
-          onClick={() => save.mutate()}
-          disabled={save.isPending || !form}
-          className="mt-4 rounded-input bg-primary px-4 py-2 text-white text-sm font-medium hover:bg-primary-dark disabled:opacity-60"
-        >
-          {save.isSuccess ? "Saved" : "Save"}
-        </button>
       </Card>
 
       <Card title="Grade bands">
@@ -176,7 +246,7 @@ export function Settings() {
         />
       </Card>
       )}
-    </>
+    </div>
   );
 }
 

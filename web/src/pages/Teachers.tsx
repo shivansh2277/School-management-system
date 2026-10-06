@@ -94,22 +94,133 @@ export function Teachers() {
     n: (staff.data ?? []).filter((e) => e.employee_type === t).length,
   }));
 
+  const totalStaff = staff.data?.length ?? 0;
+  const teachingCount = counts.find((c) => c.type === "teaching")?.n ?? 0;
+  const adminCount = counts.find((c) => c.type === "administrative")?.n ?? 0;
+  const supportCount = counts.find((c) => c.type === "support")?.n ?? 0;
+
   return (
-    <>
-      <Card title="Staff">
+    <div className="space-y-5">
+      {/* Header Bar */}
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Staff Directory</h1>
+          <p className="text-xs text-ink-faint mt-0.5">
+            Teaching faculty, administrative leadership, and operational support staff
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+            {totalStaff} Total Staff
+          </span>
+        </div>
+      </div>
+
+      {/* Staff Breakdown Metric Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <button
+          type="button"
+          onClick={() => setType("")}
+          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+            type === ""
+              ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+              : "bg-surface border-rule/80 hover:border-slate-300 shadow-2xs"
+          }`}
+        >
+          <span className={`text-xs font-semibold ${type === "" ? "text-slate-300" : "text-ink-soft"}`}>
+            All Personnel
+          </span>
+          <div className={`text-2xl font-extrabold mt-0.5 tabular ${type === "" ? "text-white" : "text-ink"}`}>
+            {totalStaff}
+          </div>
+          <span className={`text-[11px] ${type === "" ? "text-slate-400" : "text-ink-faint"}`}>
+            Active employees
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setType("teaching")}
+          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+            type === "teaching"
+              ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+              : "bg-surface border-rule/80 hover:border-indigo-200 shadow-2xs"
+          }`}
+        >
+          <span className={`text-xs font-semibold ${type === "teaching" ? "text-indigo-100" : "text-ink-soft"}`}>
+            Teaching Faculty
+          </span>
+          <div className={`text-2xl font-extrabold mt-0.5 tabular ${type === "teaching" ? "text-white" : "text-indigo-600"}`}>
+            {teachingCount}
+          </div>
+          <span className={`text-[11px] ${type === "teaching" ? "text-indigo-200" : "text-indigo-700/80"}`}>
+            Academic instruction
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setType("administrative")}
+          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+            type === "administrative"
+              ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+              : "bg-surface border-rule/80 hover:border-blue-200 shadow-2xs"
+          }`}
+        >
+          <span className={`text-xs font-semibold ${type === "administrative" ? "text-blue-100" : "text-ink-soft"}`}>
+            Administration
+          </span>
+          <div className={`text-2xl font-extrabold mt-0.5 tabular ${type === "administrative" ? "text-white" : "text-blue-600"}`}>
+            {adminCount}
+          </div>
+          <span className={`text-[11px] ${type === "administrative" ? "text-blue-200" : "text-blue-700/80"}`}>
+            Office & leadership
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setType("support")}
+          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+            type === "support"
+              ? "bg-amber-600 text-white border-amber-600 shadow-sm"
+              : "bg-surface border-rule/80 hover:border-amber-200 shadow-2xs"
+          }`}
+        >
+          <span className={`text-xs font-semibold ${type === "support" ? "text-amber-100" : "text-ink-soft"}`}>
+            Support Staff
+          </span>
+          <div className={`text-2xl font-extrabold mt-0.5 tabular ${type === "support" ? "text-white" : "text-amber-600"}`}>
+            {supportCount}
+          </div>
+          <span className={`text-[11px] ${type === "support" ? "text-amber-200" : "text-amber-700/80"}`}>
+            Transport & operations
+          </span>
+        </button>
+      </div>
+
+      {/* Roster Card */}
+      <Card
+        title={`Staff Register (${rows.length})`}
+        action={
+          <span className="text-xs text-ink-faint">
+            Click row to view complete employment record
+          </span>
+        }
+      >
         <div className="flex flex-wrap gap-3 mb-4">
           <input
             className={`${inputClass} flex-1 min-w-56`}
-            placeholder="Name, staff number, phone or role"
+            placeholder="Search by name, staff code, role, or phone..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
           <select
-            className={inputClass}
+            className={`${inputClass} sm:w-60`}
             value={type}
             onChange={(e) => setType(e.target.value as typeof type)}
           >
-            <option value="">Everyone{staff.data ? ` (${staff.data.length})` : ""}</option>
+            <option value="">All Groups ({totalStaff})</option>
             {counts.map((c) => (
               <option key={c.type} value={c.type}>
                 {TYPE_LABEL[c.type]} ({c.n})
@@ -126,23 +237,64 @@ export function Teachers() {
           empty={
             needle === "" && type === ""
               ? "Nobody on the staff register yet."
-              : "No one matches that. Try a staff number, or clear the filter."
+              : "No one matches that filter. Clear the filter or try a different search."
           }
           columns={[
-            { key: "code", header: "Staff No.", render: (e) => e.employee_code },
-            { key: "name", header: "Name", render: (e) => e.full_name },
             {
-              key: "type",
-              header: "Group",
+              key: "code",
+              header: "Staff Code",
               render: (e) => (
-                <Pill status={e.employee_type === "support" ? "pending" : "paid"}>
-                  {TYPE_LABEL[e.employee_type]}
-                </Pill>
+                <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/60">
+                  {e.employee_code}
+                </span>
               ),
             },
-            { key: "role", header: "Role", render: (e) => e.designation ?? "—" },
-            { key: "dept", header: "Department", render: (e) => e.department ?? "—" },
-            { key: "phone", header: "Phone", render: (e) => e.phone ?? "—" },
+            {
+              key: "name",
+              header: "Employee Name",
+              render: (e) => (
+                <span className="font-semibold text-ink flex items-center gap-2.5">
+                  <span className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center text-xs font-bold shrink-0">
+                    {e.full_name.charAt(0)}
+                  </span>
+                  <span className="hover:text-primary transition-colors">{e.full_name}</span>
+                </span>
+              ),
+            },
+            {
+              key: "type",
+              header: "Department Group",
+              render: (e) => {
+                const colorMap = {
+                  teaching: "bg-indigo-50 text-indigo-700 border-indigo-200",
+                  administrative: "bg-blue-50 text-blue-700 border-blue-200",
+                  support: "bg-amber-50 text-amber-700 border-amber-200",
+                };
+                return (
+                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${colorMap[e.employee_type] || "bg-slate-100"}`}>
+                    {TYPE_LABEL[e.employee_type]}
+                  </span>
+                );
+              },
+            },
+            { key: "role", header: "Designation", render: (e) => <span className="font-medium text-ink-soft">{e.designation ?? "—"}</span> },
+            { key: "dept", header: "Department", render: (e) => <span className="text-ink-soft">{e.department ?? "—"}</span> },
+            {
+              key: "phone",
+              header: "Contact Phone",
+              render: (e) =>
+                e.phone ? (
+                  <a
+                    href={`tel:${e.phone}`}
+                    onClick={(ev) => ev.stopPropagation()}
+                    className="text-primary hover:underline text-xs font-medium"
+                  >
+                    {e.phone}
+                  </a>
+                ) : (
+                  <span className="text-ink-faint text-xs">—</span>
+                ),
+            },
           ]}
         />
       </Card>
@@ -161,7 +313,7 @@ export function Teachers() {
           )}
         </Modal>
       )}
-    </>
+    </div>
   );
 }
 

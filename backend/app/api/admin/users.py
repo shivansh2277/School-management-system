@@ -12,17 +12,22 @@ from app.models import (
     Enrolment,
     EnrolmentStatus,
     Guardian,
+    Role,
+    ScopeType,
     Student,
     StudentGuardian,
     User,
     UserRole,
+    UserRoleAssignment,
 )
 from app.schemas.user_access import (
     AdminUserAccessItem,
+    AssignUserRoleRequest,
     BlockUserRequest,
     ResetPasswordRequest,
     UserAccessActionResponse,
 )
+from app.services import rbac
 from app.services.rbac import require_permission
 
 router = APIRouter(prefix="/admin/users", tags=["admin-user-access"])
@@ -108,6 +113,20 @@ def list_users_access(
         for gid, name in sg_rows:
             children_by_guardian.setdefault(gid, []).append(name)
 
+    # Preload assigned RBAC roles
+    roles_by_user: dict[int, list[str]] = {}
+    if user_ids:
+        role_rows = db.execute(
+            select(UserRoleAssignment.user_id, Role.code)
+            .join(Role, Role.id == UserRoleAssignment.role_id)
+            .where(
+                UserRoleAssignment.school_id == user.school_id,
+                UserRoleAssignment.user_id.in_(user_ids),
+            )
+        ).all()
+        for uid, code in role_rows:
+            roles_by_user.setdefault(uid, []).append(code)
+
     items: list[AdminUserAccessItem] = []
     for u in users:
         identifier = None
@@ -130,6 +149,10 @@ def list_users_access(
             identifier = u.role.value.capitalize()
             subtext = u.email or u.login_id
 
+        user_assigned_roles = sorted(roles_by_user.get(u.id, []))
+        if not user_assigned_roles and u.role == UserRole.admin:
+            user_assigned_roles = ["super_admin"]
+
         items.append(
             AdminUserAccessItem(
                 id=u.id,
@@ -144,6 +167,7 @@ def list_users_access(
                 created_at=u.created_at,
                 identifier=identifier,
                 subtext=subtext,
+                roles=user_assigned_roles,
             )
         )
 
@@ -264,3 +288,142 @@ def reset_user_password(
         app_access_blocked=target.app_access_blocked,
         token_version=target.token_version,
     )
+
+
+@router.post("/{user_id}/roles", response_model=UserAccessActionResponse)
+def assign_user_role(
+    user_id: int,
+    body: AssignUserRoleRequest,
+    user: User = Depends(manager_permission),
+    db: Session = Depends(get_db),
+) -> UserAccessActionResponse:
+    target = db.get(User, user_id)
+    if not target or target.school_id != user.school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+
+    role_code = body.role_code.strip().lower()
+    role = db.scalar(
+        select(Role).where(
+            Role.school_id == user.school_id,
+            Role.code == role_code,
+        )
+    )
+    if not role:
+        rbac.install_system_roles(db, user.school_id)
+        role = db.scalar(
+            select(Role).where(
+                Role.school_id == user.school_id,
+                Role.code == role_code,
+            )
+        )
+    if not role:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, f"Role '{body.role_code}' not found"
+        )
+
+    rbac.assign(db, target, role, scope_type=ScopeType.school)
+    target.token_version = (target.token_version or 1) + 1
+
+    audit_entry = AuditLog(
+        school_id=user.school_id,
+        occurred_at=datetime.now(UTC),
+        actor_user_id=user.id,
+        actor_label=f"{user.full_name} ({user.login_id})",
+        entity_type="user_role",
+        entity_id=target.id,
+        action=AuditAction.create,
+        reason=f"Assigned RBAC role '{role.name or role.code}'",
+        before={},
+        after={"role": role.code, "token_version": target.token_version},
+    )
+    db.add(audit_entry)
+    db.commit()
+
+    assigned_roles = list(
+        db.scalars(
+            select(Role.code)
+            .join(UserRoleAssignment, UserRoleAssignment.role_id == Role.id)
+            .where(
+                UserRoleAssignment.school_id == user.school_id,
+                UserRoleAssignment.user_id == target.id,
+            )
+        ).all()
+    )
+
+    return UserAccessActionResponse(
+        success=True,
+        message=f"Role '{role.name or role.code}' assigned to {target.full_name}.",
+        user_id=target.id,
+        app_access_blocked=target.app_access_blocked,
+        token_version=target.token_version,
+        roles=assigned_roles,
+    )
+
+
+@router.delete("/{user_id}/roles/{role_code}", response_model=UserAccessActionResponse)
+def remove_user_role(
+    user_id: int,
+    role_code: str,
+    user: User = Depends(manager_permission),
+    db: Session = Depends(get_db),
+) -> UserAccessActionResponse:
+    target = db.get(User, user_id)
+    if not target or target.school_id != user.school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+
+    clean_code = role_code.strip().lower()
+    role = db.scalar(
+        select(Role).where(
+            Role.school_id == user.school_id,
+            Role.code == clean_code,
+        )
+    )
+    if not role:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Role '{role_code}' not found")
+
+    assignments = db.scalars(
+        select(UserRoleAssignment).where(
+            UserRoleAssignment.school_id == user.school_id,
+            UserRoleAssignment.user_id == target.id,
+            UserRoleAssignment.role_id == role.id,
+        )
+    ).all()
+    for a in assignments:
+        db.delete(a)
+
+    target.token_version = (target.token_version or 1) + 1
+    audit_entry = AuditLog(
+        school_id=user.school_id,
+        occurred_at=datetime.now(UTC),
+        actor_user_id=user.id,
+        actor_label=f"{user.full_name} ({user.login_id})",
+        entity_type="user_role",
+        entity_id=target.id,
+        action=AuditAction.delete,
+        reason=f"Removed RBAC role '{role.name or role.code}'",
+        before={"role": role.code},
+        after={"token_version": target.token_version},
+    )
+    db.add(audit_entry)
+    db.commit()
+
+    assigned_roles = list(
+        db.scalars(
+            select(Role.code)
+            .join(UserRoleAssignment, UserRoleAssignment.role_id == Role.id)
+            .where(
+                UserRoleAssignment.school_id == user.school_id,
+                UserRoleAssignment.user_id == target.id,
+            )
+        ).all()
+    )
+
+    return UserAccessActionResponse(
+        success=True,
+        message=f"Role '{role.name or role.code}' removed from {target.full_name}.",
+        user_id=target.id,
+        app_access_blocked=target.app_access_blocked,
+        token_version=target.token_version,
+        roles=assigned_roles,
+    )
+

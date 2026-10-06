@@ -126,11 +126,25 @@ export function Configuration() {
   });
 
   return (
-    <>
+    <div className="space-y-6">
+      {/* Header Surface Card */}
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">System Configuration</h1>
+        </div>
+        {config.data && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+              {config.data.modules.length} Modules declared
+            </span>
+          </div>
+        )}
+      </div>
+
       <Modules config={config.data} loading={config.isLoading} error={config.error} onSaved={refresh} />
       <Settings config={config.data} loading={config.isLoading} error={config.error} />
       <CustomFields />
-    </>
+    </div>
   );
 }
 

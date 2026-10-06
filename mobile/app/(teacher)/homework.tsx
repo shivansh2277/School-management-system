@@ -1,10 +1,27 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Linking, Pressable, Text, TextInput, View } from "react-native";
+import { Linking, Modal, Pressable, Text, TextInput, View } from "react-native";
 
 import { api, formatDate } from "../../src/api/client";
 import { Button, Card, Empty, Loading, Pill, Row, Screen, s } from "../../src/components/ui";
 import { theme } from "../../src/theme";
+
+function formatLocalDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function getTodayStr(): string {
+  return formatLocalDate(new Date());
+}
+
+function isDateInPast(dStr: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dStr.trim())) return false;
+  return dStr.trim() < getTodayStr();
+}
 
 type ClassRow = { class_section_id: number; class_label: string; subjects: string[] };
 type Subject = { id: number; name: string };
@@ -51,6 +68,19 @@ export default function TeacherHomework() {
     attachment_url: "",
   });
   const [error, setError] = useState<string | null>(null);
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [pickerMonth, setPickerMonth] = useState(() => new Date());
+
+  const isPast = composing && Boolean(form.due_date && isDateInPast(form.due_date));
+
+  const quickSelect = (daysOffset: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + daysOffset);
+    const dateStr = formatLocalDate(d);
+    setForm((prev) => ({ ...prev, due_date: dateStr }));
+    setDatePickerVisible(false);
+    setError(null);
+  };
 
   const classes = useQuery({
     queryKey: ["teacher-classes"],
@@ -157,13 +187,91 @@ export default function TeacherHomework() {
             value={form.description}
             onChangeText={(v) => setForm({ ...form, description: v })}
           />
-          <TextInput
-            style={s.input}
-            placeholder="Due date (YYYY-MM-DD)"
-            placeholderTextColor={theme.inkFaint}
-            value={form.due_date}
-            onChangeText={(v) => setForm({ ...form, due_date: v })}
-          />
+          <Text style={s.meta}>Due Date</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <TextInput
+              style={[s.input, { flex: 1, marginBottom: 0 }]}
+              placeholder="Due date (YYYY-MM-DD)"
+              placeholderTextColor={theme.inkFaint}
+              value={form.due_date}
+              onChangeText={(v) => {
+                setForm({ ...form, due_date: v });
+                setError(null);
+              }}
+            />
+            <Pressable
+              onPress={() => setDatePickerVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Open calendar date picker"
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: theme.radius.input,
+                backgroundColor: theme.primarySoft,
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 1,
+                borderColor: theme.rule,
+              }}
+            >
+              <Ionicons name="calendar-outline" size={22} color={theme.primary} />
+            </Pressable>
+          </View>
+
+          {/* Quick chips directly under due date input */}
+          <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", marginTop: 4, marginBottom: 8 }}>
+            <Pressable
+              onPress={() => quickSelect(0)}
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: theme.radius.pill,
+                backgroundColor: form.due_date === getTodayStr() ? theme.primary : theme.ground,
+              }}
+            >
+              <Text style={{ fontSize: 12, color: form.due_date === getTodayStr() ? "#fff" : theme.inkSoft }}>Today</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => quickSelect(1)}
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: theme.radius.pill,
+                backgroundColor: theme.ground,
+              }}
+            >
+              <Text style={{ fontSize: 12, color: theme.inkSoft }}>Tomorrow</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => quickSelect(3)}
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: theme.radius.pill,
+                backgroundColor: theme.ground,
+              }}
+            >
+              <Text style={{ fontSize: 12, color: theme.inkSoft }}>In 3 Days</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => quickSelect(7)}
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: theme.radius.pill,
+                backgroundColor: theme.ground,
+              }}
+            >
+              <Text style={{ fontSize: 12, color: theme.inkSoft }}>In 1 Week</Text>
+            </Pressable>
+          </View>
+
+          {isPast && (
+            <Text style={{ color: theme.danger, fontSize: 12, marginTop: -4, marginBottom: 4 }}>
+              Due date cannot be set in the past for new homework assignments.
+            </Text>
+          )}
+
           <TextInput
             style={s.input}
             placeholder="Attachment URL (optional PDF / Worksheet)"
@@ -175,10 +283,161 @@ export default function TeacherHomework() {
           <Button
             label="Assign Homework"
             onPress={() => create.mutate()}
-            disabled={create.isPending || !form.title || !form.due_date}
+            disabled={create.isPending || !form.title || !form.due_date || isPast}
           />
         </Card>
       )}
+
+      {/* Calendar Date Picker Modal */}
+      <Modal
+        visible={datePickerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDatePickerVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 16,
+          }}
+        >
+          <View
+            style={{
+              width: "100%",
+              maxWidth: 360,
+              backgroundColor: theme.surface,
+              borderRadius: theme.radius.card,
+              padding: 16,
+              shadowColor: "#000",
+              shadowOpacity: 0.15,
+              shadowRadius: 10,
+              elevation: 5,
+            }}
+          >
+            {/* Header: Month / Year with arrows */}
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 12,
+              }}
+            >
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Previous month"
+                onPress={() => setPickerMonth(new Date(pickerMonth.getFullYear(), pickerMonth.getMonth() - 1, 1))}
+                style={{ padding: 6, borderRadius: 6, backgroundColor: theme.ground }}
+              >
+                <Ionicons name="chevron-back" size={20} color={theme.ink} />
+              </Pressable>
+              <Text style={{ fontSize: 16, fontWeight: "600", color: theme.ink }}>
+                {pickerMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Next month"
+                onPress={() => setPickerMonth(new Date(pickerMonth.getFullYear(), pickerMonth.getMonth() + 1, 1))}
+                style={{ padding: 6, borderRadius: 6, backgroundColor: theme.ground }}
+              >
+                <Ionicons name="chevron-forward" size={20} color={theme.ink} />
+              </Pressable>
+            </View>
+
+            {/* Quick Chips inside modal */}
+            <Text style={[s.meta, { marginBottom: 6 }]}>Quick select:</Text>
+            <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+              <Pressable
+                onPress={() => quickSelect(0)}
+                style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: theme.radius.pill, backgroundColor: theme.ground }}
+              >
+                <Text style={{ fontSize: 12, color: theme.inkSoft }}>Today</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => quickSelect(1)}
+                style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: theme.radius.pill, backgroundColor: theme.ground }}
+              >
+                <Text style={{ fontSize: 12, color: theme.inkSoft }}>Tomorrow</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => quickSelect(3)}
+                style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: theme.radius.pill, backgroundColor: theme.ground }}
+              >
+                <Text style={{ fontSize: 12, color: theme.inkSoft }}>In 3 Days</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => quickSelect(7)}
+                style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: theme.radius.pill, backgroundColor: theme.ground }}
+              >
+                <Text style={{ fontSize: 12, color: theme.inkSoft }}>In 1 Week</Text>
+              </Pressable>
+            </View>
+
+            {/* Day of week headers */}
+            <View style={{ flexDirection: "row", marginBottom: 6 }}>
+              {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((dayName) => (
+                <Text key={dayName} style={{ flex: 1, textAlign: "center", fontSize: 12, fontWeight: "600", color: theme.inkFaint }}>
+                  {dayName}
+                </Text>
+              ))}
+            </View>
+
+            {/* Calendar days grid */}
+            <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+              {Array.from({ length: new Date(pickerMonth.getFullYear(), pickerMonth.getMonth(), 1).getDay() }).map((_, i) => (
+                <View key={`filler-${i}`} style={{ width: "14.28%", height: 38 }} />
+              ))}
+              {Array.from({ length: new Date(pickerMonth.getFullYear(), pickerMonth.getMonth() + 1, 0).getDate() }).map((_, i) => {
+                const dayNum = i + 1;
+                const currentDayDate = new Date(pickerMonth.getFullYear(), pickerMonth.getMonth(), dayNum);
+                const dateStr = formatLocalDate(currentDayDate);
+                const isSelected = form.due_date === dateStr;
+                const isToday = dateStr === getTodayStr();
+                const past = isDateInPast(dateStr);
+
+                return (
+                  <Pressable
+                    key={`day-${dayNum}`}
+                    onPress={() => {
+                      setForm((prev) => ({ ...prev, due_date: dateStr }));
+                      setDatePickerVisible(false);
+                      setError(null);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Select ${dateStr}`}
+                    style={{
+                      width: "14.28%",
+                      height: 38,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: 19,
+                      backgroundColor: isSelected ? theme.primary : isToday ? theme.primarySoft : "transparent",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: isSelected || isToday ? "700" : "400",
+                        color: isSelected ? "#ffffff" : past ? theme.inkFaint : theme.ink,
+                      }}
+                    >
+                      {dayNum}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* Close Button */}
+            <View style={{ marginTop: 14 }}>
+              <Button label="Close" tone="ghost" onPress={() => setDatePickerVisible(false)} />
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {(list.data ?? []).length === 0 ? (
         <Card>

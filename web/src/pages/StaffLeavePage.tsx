@@ -165,28 +165,39 @@ export function StaffLeavePage() {
   const canApprove = matrix ? matrix.ready_for_approval : false;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="space-y-5">
+      {/* Header Bar */}
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">Staff Leave & Substitution Gate</h1>
-          <p className="text-sm text-ink-faint mt-1">
-            Teacher leave applications, timetable collision detection, and provisional substitution coverage.
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Staff Leave & Substitution Gate</h1>
+          <p className="text-xs text-ink-faint mt-0.5">
+            Teacher leave applications, timetable collision detection, and locked substitution coverage
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {pendingCount > 0 ? (
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+              {pendingCount} Pending Review
+            </span>
+          ) : (
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+              All Caught Up
+            </span>
+          )}
         </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <StatCard label="Total Applications" value={allRequests.length} />
         <StatCard label="Pending Approval" value={pendingCount} hint="Requires substitution gating" />
         <StatCard label="Approved Leaves" value={approvedCount} />
         <StatCard label="Rejected" value={rejectedCount} />
       </div>
 
-      {/* Leave Requests Table */}
+      {/* Leave Requests Table Card */}
       <Card title="Staff Leave Applications">
-        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-rule pb-2">
+        <div className="flex flex-wrap items-center gap-2 mb-4 border-b border-rule/60 pb-3">
           {[
             { key: "", label: `All (${allRequests.length})` },
             { key: "applied", label: `Pending Review (${pendingCount})` },
@@ -195,11 +206,12 @@ export function StaffLeavePage() {
           ].map((tab) => (
             <button
               key={tab.key}
+              type="button"
               onClick={() => setStatusFilter(tab.key)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-pill transition ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded-pill transition cursor-pointer ${
                 statusFilter === tab.key
-                  ? "bg-primary text-white"
-                  : "text-ink-soft hover:bg-ground hover:text-ink"
+                  ? "bg-slate-900 text-white shadow-2xs"
+                  : "text-ink-soft hover:bg-slate-100 hover:text-ink border border-rule/60 bg-surface"
               }`}
             >
               {tab.label}

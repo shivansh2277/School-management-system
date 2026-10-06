@@ -117,15 +117,18 @@ export function Waitlist() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      {/* Header Surface Card */}
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-ink">Waitlist Queue</h1>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Waitlist Queue</h1>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wider text-ink-soft">
+            Cycle:
+          </span>
           <select
-            className={`${inputClass} w-auto font-medium py-1.5`}
+            className={`${inputClass} w-auto font-semibold text-xs !py-1.5`}
             value={activeCycle?.id ?? ""}
             onChange={(e) => setSelectedCycleId(Number(e.target.value))}
           >
@@ -136,8 +139,11 @@ export function Waitlist() {
             ))}
           </select>
 
+          <span className="text-xs font-semibold uppercase tracking-wider text-ink-soft ml-1">
+            Class:
+          </span>
           <select
-            className={`${inputClass} w-auto font-medium py-1.5`}
+            className={`${inputClass} w-auto font-semibold text-xs !py-1.5`}
             value={activeClass}
             onChange={(e) => setSelectedClass(e.target.value)}
           >
@@ -152,6 +158,7 @@ export function Waitlist() {
             permission="admission.decision.make"
             onClick={() => setShowPromoteConfirm(true)}
             disabled={waitlist.length === 0}
+            className="!px-3.5 !py-2 text-xs font-semibold shadow-2xs cursor-pointer ml-1"
           >
             Promote next candidate →
           </ActionButton>

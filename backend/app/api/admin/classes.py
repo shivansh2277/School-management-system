@@ -57,17 +57,30 @@ def _row(db: Session, c: ClassSection) -> dict:
         "class_teacher": teacher.user.full_name if teacher else None,
         "student_count": len(roster(db, c.id)),
         "subjects": sorted(subjects[o.subject_id] for o in owned),
+        "stream": c.stream,
     }
 
 
+STREAM_SECTION_ORDER = {
+    "sci": 1,
+    "science": 1,
+    "com": 2,
+    "commerce": 2,
+    "hum": 3,
+    "humanities": 3,
+}
+
+
 def class_order(section: ClassSection) -> tuple:
-    """Sort key for a section: the class ladder, then the section letter.
+    """Sort key for a section: the class ladder, then the stream/section letter.
 
     `/admin/classes` is the one endpoint behind every class dropdown in the web
     app, so the lexicographic order it used to return - 1-A, 10-A, 2-A - showed
     up on Classes, Students, Settings and the fee screens at once.
     """
-    return (*class_sort_key(section.class_name), section.section)
+    sec_lower = (section.section or "").strip().lower()
+    stream_rank = STREAM_SECTION_ORDER.get(sec_lower, 99)
+    return (*class_sort_key(section.class_name), stream_rank, section.section)
 
 
 @router.get("/classes")

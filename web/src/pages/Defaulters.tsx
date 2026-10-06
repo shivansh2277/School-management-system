@@ -55,16 +55,28 @@ export function Defaulters() {
   const list = rows.data ?? [];
 
   return (
-    <>
-      <Card title="Fee defaulters">
-        <div className="grid gap-3 sm:grid-cols-3 mb-4">
+    <div className="space-y-6">
+      {/* Header Surface Card */}
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Fee Defaulters</h1>
+        </div>
+        <div>
+          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+            {rows.isLoading ? "Loading..." : `${list.length} students overdue`}
+          </span>
+        </div>
+      </div>
+
+      <Card title="Chase Filter Criteria">
+        <div className="grid gap-4 sm:grid-cols-3">
           <label className="block text-sm">
-            <span className="text-ink-soft">Owing at least</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-ink-soft">Owing at least (₹)</span>
             <input
               className={`${inputClass} mt-1`}
               value={minAmount}
               inputMode="decimal"
-              placeholder="any amount"
+              placeholder="e.g. 5000"
               onChange={(e) => setMinAmount(e.target.value)}
             />
           </label>
@@ -76,7 +88,7 @@ export function Defaulters() {
           */}
           {classes.data && (
             <label className="block text-sm">
-              <span className="text-ink-soft">Class</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-ink-soft">Filter by Class</span>
               <select
                 className={`${inputClass} mt-1`}
                 value={classId}
@@ -91,57 +103,114 @@ export function Defaulters() {
               </select>
             </label>
           )}
-          <StatCard label="Students to chase" value={rows.isLoading ? "…" : list.length} />
+          <StatCard
+            label="Defaulters to Chase"
+            value={rows.isLoading ? "…" : list.length}
+            hint={minAmount ? `Filtered >= ₹${minAmount}` : "All outstanding accounts"}
+          />
         </div>
+      </Card>
 
+      <Card
+        title="Outstanding Defaulters Register"
+        action={
+          <span className="text-xs text-ink-faint">
+            Sorted worst-first by balance & age
+          </span>
+        }
+      >
         <DataTable
           rows={list}
           loading={rows.isLoading}
           error={rows.error}
           empty="Nobody owes anything on these filters — nothing to chase."
           columns={[
-            { key: "name", header: "Student", render: (d) => d.student_name },
-            { key: "adm", header: "Admission No.", render: (d) => d.admission_no },
-            { key: "class", header: "Class", render: (d) => d.class_label },
+            {
+              key: "name",
+              header: "Student",
+              render: (d) => (
+                <span className="font-semibold text-ink">{d.student_name}</span>
+              ),
+            },
+            {
+              key: "adm",
+              header: "Admission No.",
+              render: (d) => (
+                <span className="font-mono text-xs text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/60">
+                  {d.admission_no}
+                </span>
+              ),
+            },
+            {
+              key: "class",
+              header: "Class",
+              render: (d) => (
+                <span className="text-xs font-medium text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-200/50">
+                  {d.class_label}
+                </span>
+              ),
+            },
             {
               key: "ring",
-              header: "Who to ring",
+              header: "Contact / Who to Ring",
               render: (d) =>
                 d.contact?.phone ? (
-                  <span>
-                    <a className="text-primary hover:underline" href={`tel:${d.contact.phone}`}>
+                  <span className="flex items-center gap-1.5">
+                    <a
+                      className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline bg-primary/5 px-2 py-1 rounded border border-primary/20"
+                      href={`tel:${d.contact.phone}`}
+                    >
+                      <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
                       {d.contact.phone}
                     </a>
                     {d.contact.name ? (
-                      <span className="text-ink-faint"> · {d.contact.name}</span>
+                      <span className="text-ink-faint text-xs">({d.contact.name})</span>
                     ) : null}
                   </span>
                 ) : (
                   // Not "—": no number on file is a fact the office can act on.
-                  <span className="text-danger text-xs">no number on file</span>
+                  <span className="text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 text-xs font-medium">
+                    no number on file
+                  </span>
                 ),
             },
-            { key: "months", header: "Months", render: (d) => d.months_due, align: "right" },
+            {
+              key: "months",
+              header: "Months",
+              render: (d) => (
+                <span className="font-semibold text-xs px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
+                  {d.months_due}m
+                </span>
+              ),
+              align: "right",
+            },
             {
               key: "since",
-              header: "Oldest due",
+              header: "Oldest Due",
               render: (d) => (
-                <span>
-                  {asDate(d.oldest_due_date)}
-                  <span className="text-ink-faint text-xs"> · {d.days_overdue}d</span>
+                <span className="text-xs">
+                  <span className="text-ink-soft">{asDate(d.oldest_due_date)}</span>
+                  <span className="ml-1 text-rose-600 font-semibold">({d.days_overdue}d)</span>
                 </span>
               ),
             },
-            { key: "fine", header: "Late fee", render: (d) => money(d.late_fee), align: "right" },
+            {
+              key: "fine",
+              header: "Late Fee",
+              render: (d) => <span className="font-mono text-xs text-amber-700">{money(d.late_fee)}</span>,
+              align: "right",
+            },
             {
               key: "due",
               header: "Outstanding",
-              render: (d) => <strong>{money(d.outstanding)}</strong>,
+              render: (d) => <span className="font-mono font-bold text-rose-700">{money(d.outstanding)}</span>,
               align: "right",
             },
           ]}
         />
       </Card>
-    </>
+    </div>
   );
 }

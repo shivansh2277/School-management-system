@@ -118,3 +118,39 @@ def test_student_month_view_matches_its_own_summary(client, student):
     assert counted["present"] == body["summary"]["present"]
     assert counted["absent"] == body["summary"]["absent"]
     assert counted["leave"] == body["summary"]["leave"]
+
+
+def test_unmarked_attendance_deadline_sweep_skips_sunday(db):
+    from app.models import School
+    from app.services import attendance as att_svc
+    school = db.query(School).first()
+    # 2026-10-04 is Sunday
+    sunday = date(2026, 10, 4)
+    res = att_svc.check_unmarked_attendance_and_notify_admin(db, school.id, on_date=sunday)
+    assert res == []
+
+
+def test_unmarked_attendance_deadline_sweep_creates_notices_and_is_idempotent(db):
+    from app.models import InAppNotification, Notice, School
+    from app.services import attendance as att_svc
+
+    school = db.query(School).first()
+    # Pick a weekday date where attendance hasn't been marked
+    test_date = date(2026, 9, 15)  # Tuesday
+    initial_notices = db.query(Notice).count()
+    initial_notifs = db.query(InAppNotification).count()
+
+    res = att_svc.check_unmarked_attendance_and_notify_admin(db, school.id, on_date=test_date)
+    assert len(res) > 0
+
+    # Verify notice was created
+    new_notices = db.query(Notice).count()
+    new_notifs = db.query(InAppNotification).count()
+    assert new_notices > initial_notices
+    assert new_notifs > initial_notifs
+
+    # Running a second time must be 100% idempotent
+    res2 = att_svc.check_unmarked_attendance_and_notify_admin(db, school.id, on_date=test_date)
+    assert db.query(Notice).count() == new_notices
+    assert db.query(InAppNotification).count() == new_notifs
+

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { scrollToTop } from "../../../components/public/ScrollToTop";
 
 export function PublicDisclosurePage() {
   const [activeTab, setActiveTab] = useState<"general" | "docs" | "results" | "staff" | "infra" | "grievance">("general");
@@ -58,7 +59,10 @@ export function PublicDisclosurePage() {
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as typeof activeTab)}
+              onClick={() => {
+                setActiveTab(tab.id as typeof activeTab);
+                scrollToTop("auto");
+              }}
               className={`px-3.5 py-2 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
                 activeTab === tab.id
                   ? "bg-[#042954] text-white shadow-xs"
@@ -111,7 +115,7 @@ export function PublicDisclosurePage() {
                     <tr>
                       <td className="py-3 px-4 font-medium text-slate-400">3</td>
                       <td className="py-3 px-4 font-semibold text-slate-900">Affiliation Number / School Code</td>
-                      <td className="py-3 px-4 text-slate-500 italic">To be configured (Demo information)</td>
+                      <td className="py-3 px-4 font-mono font-medium text-slate-800">DEMO-SS-2026 (Demo Code)</td>
                     </tr>
                     <tr>
                       <td className="py-3 px-4 font-medium text-slate-400">4</td>

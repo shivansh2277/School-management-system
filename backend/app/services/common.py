@@ -146,8 +146,21 @@ def grade_for(db: Session, school_id: int, percent: float | Decimal | None) -> s
     return grading.grade_in(db, scale.id, percent)
 
 
+PRE_PRIMARY_ORDER = {
+    "nursery": 1,
+    "playgroup": 1,
+    "pre-nursery": 1,
+    "lkg": 2,
+    "jr. kg": 2,
+    "junior kg": 2,
+    "ukg": 3,
+    "sr. kg": 3,
+    "senior kg": 3,
+}
+
+
 def class_sort_key(class_name: str | None) -> tuple[int, int, str]:
-    """Order class names the way a school does: 1, 2, ... 9, 10, 11, 12.
+    """Order class names the way a school does: Nursery, LKG, UKG, 1, 2, ... 12.
 
     `class_name` is a String column everywhere it appears - on ClassSection, on
     FeePlan, on CycleClassConfig - so ordering by the column is lexicographic
@@ -158,14 +171,16 @@ def class_sort_key(class_name: str | None) -> tuple[int, int, str]:
     Sorted in Python because it has to hold on both engines: the test suite
     runs on SQLite, where a Postgres `::int` cast does not exist.
 
-    Pre-primary names sort ahead of the numbered classes, alphabetically among
-    themselves.
-    # ponytail: alphabetical is wrong for Nursery -> LKG -> UKG, which is the
-    # real progression. No seeded school has them, so this stays a note rather
-    # than a hardcoded ladder; give the row an explicit ordinal column if a
-    # school ever needs it.
+    Pre-primary names (Nursery -> LKG -> UKG) sort ahead of the numbered classes.
     """
     name = (class_name or "").strip()
+    if not name:
+        return (0, 0, "")
+    lower = name.lower()
+    if lower in PRE_PRIMARY_ORDER:
+        return (0, PRE_PRIMARY_ORDER[lower], lower)
     if name.isdigit():
         return (1, int(name), "")
-    return (0, 0, name.lower())
+    return (0, 99, lower)
+
+

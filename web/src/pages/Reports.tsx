@@ -161,10 +161,10 @@ export function Reports() {
 
   return (
     <div className="space-y-6">
-      {/* Header and Search */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      {/* Header Surface Card and Search */}
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-ink">Reports Library</h1>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Reports Library</h1>
         </div>
 
         <div className="flex items-center gap-3">
@@ -173,7 +173,7 @@ export function Reports() {
             placeholder="Search reports by title or code..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className={`${inputClass} !py-1.5 w-64 text-xs`}
+            className={`${inputClass} !py-1.5 w-64 text-xs shadow-2xs`}
           />
         </div>
       </div>

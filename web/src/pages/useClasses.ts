@@ -13,6 +13,7 @@ export type ClassRow = {
   class_teacher: string | null;
   student_count: number;
   subjects: string[];
+  stream?: string | null;
 };
 
 /**

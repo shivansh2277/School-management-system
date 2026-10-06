@@ -141,12 +141,9 @@ export function Transport() {
   return (
     <div className="space-y-6">
       {/* Top Action Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-surface p-4 rounded-card border border-rule shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-surface p-4 sm:p-5 rounded-card border border-rule/80 shadow-card">
         <div>
-          <h1 className="text-xl font-bold text-ink">Transport & Fleet Management Desk</h1>
-          <p className="text-xs text-ink-soft">
-            Manage routes, vehicles, address-first geocoded stops, crew compliance, and student allocations.
-          </p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Transport & Fleet Management Desk</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <ActionButton

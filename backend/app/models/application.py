@@ -263,15 +263,20 @@ class ApplicationDocumentOverride(TenantBase):
         BigInteger, ForeignKey("applications.id", ondelete="CASCADE"), nullable=False
     )
     document_code: Mapped[str] = mapped_column(String(40), nullable=False)
-    authorized_by_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.id"), nullable=False
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="pending", default="pending"
+    )
+    authorized_by_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id"), nullable=True
     )
     reason: Mapped[str] = mapped_column(Text, nullable=False)
-    authorized_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    authorized_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
 
     application = relationship("Application", lazy="joined")
     authorized_by = relationship("User", lazy="joined")
+
 
 

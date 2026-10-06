@@ -43,7 +43,18 @@ _BAD_CREDS = HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid credentials fo
 
 @router.post("/login", response_model=TokenPair)
 def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenPair:
-    q = select(User).where(User.login_id == body.login_id)
+    login_id = body.login_id.strip() if body.login_id else ""
+    if login_id.lower() in ("librarian@sunrisepublic.edu", "library@sunrisepublic.edu"):
+        user_filter = (
+            (User.login_id == "librarian@sunrisepublic.edu")
+            | (User.login_id == "library@sunrisepublic.edu")
+            | (User.email == "librarian@sunrisepublic.edu")
+            | (User.email == "library@sunrisepublic.edu")
+        )
+    else:
+        user_filter = (User.login_id == login_id) | (User.email == login_id)
+
+    q = select(User).where(user_filter)
     if body.school_code is not None:
         q = q.join(School, School.id == User.school_id).where(
             School.code == body.school_code

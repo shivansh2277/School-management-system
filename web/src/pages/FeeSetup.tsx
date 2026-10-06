@@ -63,10 +63,17 @@ type InvoiceRef = { enrolment_id: number; student_name: string; admission_no: st
 
 export function FeeSetup() {
   return (
-    <>
+    <div className="space-y-6">
+      {/* Header Surface Card */}
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Fee Structure & Concessions</h1>
+        </div>
+      </div>
+
       <Plans />
       <Concessions />
-    </>
+    </div>
   );
 }
 
@@ -82,14 +89,14 @@ function Plans() {
 
   return (
     <Card
-      title="Fee plans"
+      title="Fee Plans by Class"
       action={
         <ActionButton
           permission="fees.setup.manage"
           onClick={() => setAdding(true)}
-          className="!px-3 !py-1.5"
+          className="!px-3.5 !py-2 text-xs font-semibold shadow-2xs"
         >
-          Add plan
+          + Add Plan
         </ActionButton>
       }
     >

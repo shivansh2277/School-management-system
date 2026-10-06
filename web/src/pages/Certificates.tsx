@@ -247,12 +247,10 @@ export function Certificates() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      {/* Header Surface Card */}
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">Student Certificates</h1>
-          <p className="text-sm text-ink-soft">
-            Manage request, approval, and issuance of Transfer, Bonafide, and Character Certificates.
-          </p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Student Certificates</h1>
         </div>
 
         <div className="flex gap-2">
@@ -262,7 +260,7 @@ export function Certificates() {
                 setSelectedStudent(null);
                 setRequestModalOpen(true);
               }}
-              className="rounded-input bg-primary px-4 py-2 text-white text-sm font-medium hover:bg-primary/90"
+              className="rounded-input bg-primary px-3.5 py-2 text-white text-xs font-semibold hover:bg-primary-dark transition-colors shadow-2xs cursor-pointer"
             >
               + Issue / Request Certificate
             </button>
@@ -270,24 +268,26 @@ export function Certificates() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-rule gap-6">
+      {/* Segmented Tab Switcher */}
+      <div className="flex flex-wrap items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200/60 gap-1 self-start sm:self-auto">
         <button
+          type="button"
           onClick={() => setTab("registry")}
-          className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             tab === "registry"
-              ? "border-primary text-primary"
-              : "border-transparent text-ink-soft hover:text-ink"
+              ? "bg-white text-slate-900 shadow-2xs"
+              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
           }`}
         >
           Certificate Registry & Requests ({certsQuery.data?.total ?? 0})
         </button>
         <button
+          type="button"
           onClick={() => setTab("templates")}
-          className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             tab === "templates"
-              ? "border-primary text-primary"
-              : "border-transparent text-ink-soft hover:text-ink"
+              ? "bg-white text-slate-900 shadow-2xs"
+              : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
           }`}
         >
           Institutional Templates

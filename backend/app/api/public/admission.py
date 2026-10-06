@@ -99,6 +99,10 @@ def _school(db: Session, school_code: str) -> School:
     school = db.scalar(
         select(School).where(func.lower(School.code) == school_code.lower())
     )
+    if school is None and school_code.lower() in ("sunrise", "sunrisepublic", "sunrise-public"):
+        school = db.scalar(
+            select(School).where(func.lower(School.code) == "sps")
+        )
     # A closed or suspended school is indistinguishable from one that never
     # existed: the portal must not confirm which schools are customers.
     if school is None or school.status is not SchoolStatus.active:
@@ -314,9 +318,27 @@ class PublicApplication(BaseModel):
     apaar_consent: bool = False
     apaar_consent_guardian_name: str | None = None
     apaar_consent_guardian_relation: str | None = None
+    exceptions: list["PublicExceptionInput"] = []
     # Honeypot. A real form renders this hidden and empty; a bot fills every
     # field it finds. Named as something a scraper would want to complete.
     website: str | None = None
+
+
+class PublicExceptionInput(BaseModel):
+    model_config = {"extra": "ignore"}
+    document_code: str = Field(min_length=1, max_length=40)
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class PublicExceptionRequest(BaseModel):
+    model_config = {"extra": "ignore"}
+    draft_id: int | None = None
+    application_no: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    class_applying_for: str | None = None
+    document_code: str = Field(min_length=1, max_length=40)
+    reason: str = Field(min_length=3, max_length=500)
 
 
 class PublicDraftApplication(BaseModel):
@@ -336,6 +358,7 @@ class PublicDraftApplication(BaseModel):
     apaar_consent_guardian_relation: str | None = None
     guardians: list[PublicGuardian] = []
     documents: list[PublicDocumentInput] = []
+    exceptions: list[PublicExceptionInput] = []
 
 
 class PaymentInitiateInput(BaseModel):
@@ -523,6 +546,31 @@ def save_draft(
         app.apaar_consent_guardian_relation = body.apaar_consent_guardian_relation
         app.apaar_consent_at = datetime.now(UTC)
 
+    if body.exceptions:
+        for exc in body.exceptions:
+            doc_code = exc.document_code.strip().lower()
+            override = db.scalar(
+                select(ApplicationDocumentOverride).where(
+                    ApplicationDocumentOverride.application_id == app.id,
+                    ApplicationDocumentOverride.document_code == doc_code,
+                )
+            )
+            if override is None:
+                override = ApplicationDocumentOverride(
+                    school_id=school.id,
+                    application_id=app.id,
+                    document_code=doc_code,
+                    status="pending",
+                    reason=exc.reason.strip(),
+                    authorized_by_id=None,
+                    authorized_at=None,
+                )
+                db.add(override)
+            elif override.status != "approved":
+                override.status = "pending"
+                override.reason = exc.reason.strip()
+                override.rejection_reason = None
+
     db.commit()
     return {
         "draft_id": app.id,
@@ -531,6 +579,83 @@ def save_draft(
         "status": "draft",
         "message": f"Draft saved. Use reference code DFT-{app.id} for inquiries or document exception requests.",
     }
+
+
+@router.post("/exception-request", status_code=status.HTTP_201_CREATED)
+def request_document_exception(
+    school_code: str,
+    body: PublicExceptionRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Create a pending admission document override/exception request from public applicant."""
+    school = _school(db, school_code)
+    cycle = admission.open_cycle(db, school.id)
+
+    app = None
+    if body.draft_id:
+        app = db.scalar(
+            select(Application).where(
+                Application.id == body.draft_id,
+                Application.school_id == school.id,
+            )
+        )
+    elif body.application_no:
+        app = db.scalar(
+            select(Application).where(
+                Application.application_no == body.application_no.strip(),
+                Application.school_id == school.id,
+            )
+        )
+    if app is None:
+        app = Application(
+            school_id=school.id,
+            cycle_id=cycle.id,
+            status=ApplicationStatus.draft,
+            first_name=body.first_name or "Applicant",
+            last_name=body.last_name or "Draft",
+            date_of_birth=Date.today(),
+            gender="other",
+            class_applying_for=body.class_applying_for or "1",
+        )
+        db.add(app)
+        db.flush()
+
+    doc_code = body.document_code.strip().lower()
+    override = db.scalar(
+        select(ApplicationDocumentOverride).where(
+            ApplicationDocumentOverride.application_id == app.id,
+            ApplicationDocumentOverride.document_code == doc_code,
+        )
+    )
+    if override is None:
+        override = ApplicationDocumentOverride(
+            school_id=school.id,
+            application_id=app.id,
+            document_code=doc_code,
+            status="pending",
+            reason=body.reason.strip(),
+            authorized_by_id=None,
+            authorized_at=None,
+        )
+        db.add(override)
+    else:
+        if override.status != "approved":
+            override.status = "pending"
+            override.reason = body.reason.strip()
+            override.rejection_reason = None
+
+    db.commit()
+
+    return {
+        "success": True,
+        "override_id": override.id,
+        "application_id": app.id,
+        "application_no": app.application_no or f"DFT-{app.id}",
+        "document_code": override.document_code,
+        "status": override.status,
+        "message": f"Exception request for {override.document_code} submitted. Awaiting administrative review.",
+    }
+
 
 
 @router.post("/apply", status_code=status.HTTP_201_CREATED)
@@ -583,6 +708,7 @@ def apply(
             "siblings",
             "medical",
             "documents",
+            "exceptions",
             "heard_about_us",
             "information_accuracy",
             "school_rules_accepted",
@@ -639,6 +765,33 @@ def apply(
             },
         )
         db.add(app)
+        db.flush()
+
+    if body.exceptions:
+        for exc in body.exceptions:
+            doc_code = exc.document_code.strip().lower()
+            existing_ov = db.scalar(
+                select(ApplicationDocumentOverride).where(
+                    ApplicationDocumentOverride.application_id == app.id,
+                    ApplicationDocumentOverride.document_code == doc_code,
+                )
+            )
+            if existing_ov is None:
+                db.add(
+                    ApplicationDocumentOverride(
+                        school_id=school.id,
+                        application_id=app.id,
+                        document_code=doc_code,
+                        status="pending",
+                        reason=exc.reason.strip(),
+                        authorized_by_id=None,
+                        authorized_at=None,
+                    )
+                )
+            elif existing_ov.status != "approved":
+                existing_ov.status = "pending"
+                existing_ov.reason = exc.reason.strip()
+                existing_ov.rejection_reason = None
         db.flush()
 
     # Check conditional birth certificate rule

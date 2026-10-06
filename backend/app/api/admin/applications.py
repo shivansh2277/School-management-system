@@ -383,6 +383,66 @@ def create_application(
     return _detail(db, app)
 
 
+@router.get("/applications/lookup")
+def lookup_application_for_override(
+    ref: str = Query(..., min_length=1),
+    user: User = Depends(override_auth),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Lookup draft or application for Admin exception authorization."""
+    clean_ref = ref.strip()
+    app = None
+    if clean_ref.upper().startswith("DFT-"):
+        try:
+            draft_id = int(clean_ref.split("-")[1])
+            app = svc.get(db, user.school_id, draft_id)
+        except (ValueError, IndexError, HTTPException):
+            pass
+    elif clean_ref.isdigit():
+        try:
+            app = svc.get(db, user.school_id, int(clean_ref))
+        except HTTPException:
+            pass
+
+    if app is None:
+        app = db.scalar(
+            select(Application).where(
+                Application.school_id == user.school_id,
+                Application.application_no == clean_ref,
+            )
+        )
+
+    if app is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Application '{ref}' not found")
+
+    checklist_items = svc.checklist(db, app)
+    overrides = db.scalars(
+        select(ApplicationDocumentOverride).where(
+            ApplicationDocumentOverride.application_id == app.id
+        )
+    ).all()
+
+    return {
+        "id": app.id,
+        "application_no": app.application_no or f"DFT-{app.id}",
+        "full_name": app.full_name,
+        "date_of_birth": str(app.date_of_birth),
+        "class_applying_for": app.class_applying_for,
+        "status": app.status.value,
+        "checklist": checklist_items,
+        "overrides": [
+            {
+                "id": o.id,
+                "document_code": o.document_code,
+                "reason": o.reason,
+                "authorized_by_name": o.authorized_by.full_name if o.authorized_by else None,
+                "authorized_at": o.authorized_at.isoformat() if o.authorized_at else None,
+            }
+            for o in overrides
+        ],
+    }
+
+
 @router.get("/applications/{application_id}")
 def application_detail(
     application_id: int, user: User = Depends(reader), db: Session = Depends(get_db)
@@ -594,6 +654,10 @@ class DocumentOverrideInput(BaseModel):
     reason: str = Field(min_length=3, max_length=500)
 
 
+class RejectOverrideInput(BaseModel):
+    reason: str = Field(min_length=2, max_length=500)
+
+
 @router.post("/applications/{application_id}/document-overrides")
 def authorize_document_override(
     application_id: int,
@@ -616,13 +680,16 @@ def authorize_document_override(
             school_id=user.school_id,
             application_id=app.id,
             document_code=doc_code,
+            status="approved",
             authorized_by_id=user.id,
             reason=body.reason,
             authorized_at=datetime.now(UTC),
         )
         db.add(override)
     else:
+        override.status = "approved"
         override.reason = body.reason
+        override.rejection_reason = None
         override.authorized_by_id = user.id
         override.authorized_at = datetime.now(UTC)
 
@@ -637,6 +704,7 @@ def authorize_document_override(
             "document_code": doc_code,
             "application_id": app.id,
             "application_no": app.application_no,
+            "status": "approved",
             "authorized_by": user.id,
         },
         reason=body.reason,
@@ -646,9 +714,13 @@ def authorize_document_override(
         "id": override.id,
         "application_id": override.application_id,
         "document_code": override.document_code,
+        "document_name": override.document_code.replace("_", " ").title(),
+        "status": override.status,
         "authorized_by_id": override.authorized_by_id,
         "authorized_by_name": user.full_name,
         "reason": override.reason,
+        "rejection_reason": override.rejection_reason,
+        "created_at": override.created_at.isoformat() if getattr(override, "created_at", None) else None,
         "authorized_at": override.authorized_at.isoformat() if override.authorized_at else None,
     }
 
@@ -670,9 +742,13 @@ def list_application_document_overrides(
             "id": r.id,
             "application_id": r.application_id,
             "document_code": r.document_code,
+            "document_name": r.document_code.replace("_", " ").title(),
+            "status": r.status,
             "authorized_by_id": r.authorized_by_id,
             "authorized_by_name": r.authorized_by.full_name if r.authorized_by else None,
             "reason": r.reason,
+            "rejection_reason": r.rejection_reason,
+            "created_at": r.created_at.isoformat() if getattr(r, "created_at", None) else None,
             "authorized_at": r.authorized_at.isoformat() if r.authorized_at else None,
         }
         for r in rows
@@ -681,15 +757,19 @@ def list_application_document_overrides(
 
 @router.get("/document-overrides")
 def list_all_document_overrides(
+    status_filter: str | None = Query(None, alias="status"),
     user: User = Depends(override_auth),
     db: Session = Depends(get_db),
 ) -> list[dict]:
-    """Admin exception review screen: lists all authorized overrides across the school."""
-    rows = db.scalars(
+    """Admin exception review screen: lists all overrides across the school."""
+    q = (
         select(ApplicationDocumentOverride)
         .where(ApplicationDocumentOverride.school_id == user.school_id)
         .order_by(ApplicationDocumentOverride.id.desc())
-    ).all()
+    )
+    if status_filter:
+        q = q.where(ApplicationDocumentOverride.status == status_filter.strip().lower())
+    rows = db.scalars(q).all()
     return [
         {
             "id": r.id,
@@ -698,70 +778,118 @@ def list_all_document_overrides(
             "applicant_name": r.application.full_name if r.application else "",
             "class_applying_for": r.application.class_applying_for if r.application else "",
             "document_code": r.document_code,
+            "document_name": r.document_code.replace("_", " ").title(),
+            "status": r.status,
             "authorized_by_id": r.authorized_by_id,
             "authorized_by_name": r.authorized_by.full_name if r.authorized_by else None,
             "reason": r.reason,
+            "rejection_reason": r.rejection_reason,
+            "created_at": r.created_at.isoformat() if getattr(r, "created_at", None) else None,
             "authorized_at": r.authorized_at.isoformat() if r.authorized_at else None,
         }
         for r in rows
     ]
 
 
-@router.get("/applications/lookup")
-def lookup_application_for_override(
-    ref: str = Query(..., min_length=1),
+@router.post("/document-overrides/{override_id}/approve")
+def approve_document_override(
+    override_id: int,
     user: User = Depends(override_auth),
     db: Session = Depends(get_db),
 ) -> dict:
-    """Lookup draft or application for Admin exception authorization."""
-    clean_ref = ref.strip()
-    app = None
-    if clean_ref.upper().startswith("DFT-"):
-        try:
-            draft_id = int(clean_ref.split("-")[1])
-            app = svc.get(db, user.school_id, draft_id)
-        except (ValueError, IndexError, HTTPException):
-            pass
-    elif clean_ref.isdigit():
-        try:
-            app = svc.get(db, user.school_id, int(clean_ref))
-        except HTTPException:
-            pass
+    override = db.get(ApplicationDocumentOverride, override_id)
+    if not override or override.school_id != user.school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Document override request not found")
 
-    if app is None:
-        app = db.scalar(
-            select(Application).where(
-                Application.school_id == user.school_id,
-                Application.application_no == clean_ref,
-            )
-        )
+    override.status = "approved"
+    override.authorized_by_id = user.id
+    override.authorized_at = datetime.now(UTC)
+    override.rejection_reason = None
 
-    if app is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Application '{ref}' not found")
-
-    checklist_items = svc.checklist(db, app)
-    overrides = db.scalars(
-        select(ApplicationDocumentOverride).where(
-            ApplicationDocumentOverride.application_id == app.id
-        )
-    ).all()
+    audit.record(
+        db,
+        actor=user,
+        school_id=user.school_id,
+        entity_type="application_document_override",
+        entity_id=override.application_id,
+        action=AuditAction.update,
+        after={
+            "override_id": override.id,
+            "document_code": override.document_code,
+            "status": "approved",
+            "authorized_by": user.id,
+        },
+        reason=f"Approved document override exception for {override.document_code}",
+    )
+    db.commit()
 
     return {
-        "id": app.id,
-        "application_no": app.application_no or f"DFT-{app.id}",
-        "full_name": app.full_name,
-        "date_of_birth": str(app.date_of_birth),
-        "class_applying_for": app.class_applying_for,
-        "status": app.status.value,
-        "checklist": checklist_items,
-        "overrides": [
-            {
-                "id": o.id,
-                "document_code": o.document_code,
-                "reason": o.reason,
-                "authorized_by_name": o.authorized_by.full_name if o.authorized_by else None,
-                "authorized_at": o.authorized_at.isoformat() if o.authorized_at else None,
-            }
-            for o in overrides
-        ],
+        "id": override.id,
+        "application_id": override.application_id,
+        "application_no": override.application.application_no if override.application else None,
+        "applicant_name": override.application.full_name if override.application else "",
+        "class_applying_for": override.application.class_applying_for if override.application else "",
+        "document_code": override.document_code,
+        "document_name": override.document_code.replace("_", " ").title(),
+        "status": override.status,
+        "reason": override.reason,
+        "rejection_reason": override.rejection_reason,
+        "created_at": override.created_at.isoformat() if getattr(override, "created_at", None) else None,
+        "authorized_by_id": override.authorized_by_id,
+        "authorized_by_name": user.full_name,
+        "authorized_at": override.authorized_at.isoformat() if override.authorized_at else None,
     }
+
+
+@router.post("/document-overrides/{override_id}/reject")
+def reject_document_override(
+    override_id: int,
+    body: RejectOverrideInput,
+    user: User = Depends(override_auth),
+    db: Session = Depends(get_db),
+) -> dict:
+    override = db.get(ApplicationDocumentOverride, override_id)
+    if not override or override.school_id != user.school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Document override request not found")
+
+    override.status = "rejected"
+    override.authorized_by_id = user.id
+    override.authorized_at = datetime.now(UTC)
+    override.rejection_reason = body.reason.strip()
+
+    audit.record(
+        db,
+        actor=user,
+        school_id=user.school_id,
+        entity_type="application_document_override",
+        entity_id=override.application_id,
+        action=AuditAction.update,
+        after={
+            "override_id": override.id,
+            "document_code": override.document_code,
+            "status": "rejected",
+            "rejection_reason": override.rejection_reason,
+            "authorized_by": user.id,
+        },
+        reason=f"Rejected document override exception: {override.rejection_reason}",
+    )
+    db.commit()
+
+    return {
+        "id": override.id,
+        "application_id": override.application_id,
+        "application_no": override.application.application_no if override.application else None,
+        "applicant_name": override.application.full_name if override.application else "",
+        "class_applying_for": override.application.class_applying_for if override.application else "",
+        "document_code": override.document_code,
+        "document_name": override.document_code.replace("_", " ").title(),
+        "status": override.status,
+        "reason": override.reason,
+        "rejection_reason": override.rejection_reason,
+        "created_at": override.created_at.isoformat() if getattr(override, "created_at", None) else None,
+        "authorized_by_id": override.authorized_by_id,
+        "authorized_by_name": user.full_name,
+        "authorized_at": override.authorized_at.isoformat() if override.authorized_at else None,
+    }
+
+

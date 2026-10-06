@@ -556,5 +556,29 @@ describe("Session 13: Role-Specific Sidebar & RBAC Restrictions", () => {
       expect(labels).toContain("Important Directory");
       expect(labels).toContain("Fee Counter");
     });
+
+    it("Librarian accesses Library module screens and notices, but is strictly isolated from unrelated modules", () => {
+      const librarianRoles = ["librarian"];
+      const librarianPermissions = [
+        "library.read",
+        "library.manage",
+        "comms.notice.read",
+      ];
+      const labels = labelsFor(librarianPermissions, ALL_MODULES, librarianRoles);
+      expect(labels).toContain("Library");
+      expect(labels).toContain("Notices");
+      // Isolated from unrelated modules:
+      expect(labels).not.toContain("Enquiries");
+      expect(labels).not.toContain("Admissions");
+      expect(labels).not.toContain("Fees");
+      expect(labels).not.toContain("Payroll");
+      expect(labels).not.toContain("Transport");
+      expect(labels).not.toContain("Staff");
+      expect(labels).not.toContain("Attendance");
+      expect(labels).not.toContain("Students");
+      expect(labels).not.toContain("App User Access & Security");
+      expect(labels).not.toContain("Settings");
+    });
   });
 });
+

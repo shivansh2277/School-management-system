@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { SchoolCrest } from "./SchoolCrest";
+import { scrollToTop } from "./ScrollToTop";
 
 export function PublicFooter() {
   return (
@@ -18,12 +19,14 @@ export function PublicFooter() {
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
               to="/admissions"
+              onClick={() => scrollToTop("auto")}
               className="bg-white hover:bg-slate-50 text-[#042954] font-semibold px-5 py-2.5 rounded-lg shadow-sm transition-all text-xs sm:text-sm"
             >
               Admissions Guide
             </Link>
             <Link
               to="/apply"
+              onClick={() => scrollToTop("auto")}
               className="bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold px-5 py-2.5 rounded-lg shadow-sm transition-all text-xs sm:text-sm inline-flex items-center gap-1"
             >
               <span>Apply Online</span>
@@ -38,7 +41,11 @@ export function PublicFooter() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* Col 1: School Identity & Story (2 cols wide on lg) */}
           <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center gap-3">
+            <Link
+              to="/"
+              onClick={() => scrollToTop("auto")}
+              className="flex items-center gap-3 inline-flex hover:opacity-95 transition-opacity"
+            >
               <SchoolCrest className="w-10 h-10" />
               <div>
                 <span className="text-xl font-bold text-white tracking-tight block font-serif">
@@ -48,13 +55,13 @@ export function PublicFooter() {
                   Gomti Nagar, Lucknow • Estd. 2011
                 </span>
               </div>
-            </div>
+            </Link>
             <p className="text-xs sm:text-sm text-slate-400 leading-relaxed pr-4">
               Sunrise School is an established, values-led CBSE institution located in Sector 4, Gomti Nagar, Lucknow. Dedicated to experiential learning, scientific inquiry, athletic excellence, and moral integrity, we nurture curious minds to build confident futures.
             </p>
             <div className="pt-1 flex flex-wrap gap-2">
               <span className="inline-block bg-slate-800 text-slate-300 text-xs px-3 py-1 rounded-full border border-slate-700">
-                CBSE Affiliated Senior Secondary • School Code: To be configured (Demo)
+                CBSE Affiliated Senior Secondary • School Code: DEMO-SS-2026 (Demo Code)
               </span>
               <span className="inline-block bg-slate-800 text-amber-400 text-xs px-3 py-1 rounded-full border border-slate-700 font-medium">
                 Science • Commerce • Humanities
@@ -69,57 +76,57 @@ export function PublicFooter() {
             </h4>
             <ul className="space-y-2 text-xs sm:text-sm">
               <li>
-                <Link to="/" className="text-slate-400 hover:text-white transition-colors">
+                <Link to="/" onClick={() => scrollToTop("auto")} className="text-slate-400 hover:text-white transition-colors">
                   Home
                 </Link>
               </li>
               <li>
-                <Link to="/about" className="text-slate-400 hover:text-white transition-colors">
+                <Link to="/about" onClick={() => scrollToTop("auto")} className="text-slate-400 hover:text-white transition-colors">
                   About Our School
                 </Link>
               </li>
               <li>
-                <Link to="/academics" className="text-slate-400 hover:text-white transition-colors">
+                <Link to="/academics" onClick={() => scrollToTop("auto")} className="text-slate-400 hover:text-white transition-colors">
                   Academics & Wings
                 </Link>
               </li>
               <li>
-                <Link to="/facilities" className="text-slate-400 hover:text-white transition-colors">
+                <Link to="/facilities" onClick={() => scrollToTop("auto")} className="text-slate-400 hover:text-white transition-colors">
                   Campus & Facilities
                 </Link>
               </li>
               <li>
-                <Link to="/school-life" className="text-slate-400 hover:text-white transition-colors">
+                <Link to="/school-life" onClick={() => scrollToTop("auto")} className="text-slate-400 hover:text-white transition-colors">
                   School Life & Houses
                 </Link>
               </li>
               <li>
-                <Link to="/events" className="text-slate-400 hover:text-white transition-colors">
+                <Link to="/events" onClick={() => scrollToTop("auto")} className="text-slate-400 hover:text-white transition-colors">
                   Events & Calendar
                 </Link>
               </li>
               <li>
-                <Link to="/gallery" className="text-slate-400 hover:text-white transition-colors">
+                <Link to="/gallery" onClick={() => scrollToTop("auto")} className="text-slate-400 hover:text-white transition-colors">
                   Photo Gallery
                 </Link>
               </li>
               <li>
-                <Link to="/public-disclosure" className="text-slate-400 hover:text-white transition-colors">
+                <Link to="/public-disclosure" onClick={() => scrollToTop("auto")} className="text-slate-400 hover:text-white transition-colors">
                   Public Disclosure
                 </Link>
               </li>
               <li>
-                <Link to="/resources" className="text-slate-400 hover:text-white transition-colors">
+                <Link to="/resources" onClick={() => scrollToTop("auto")} className="text-slate-400 hover:text-white transition-colors">
                   Resources & Downloads
                 </Link>
               </li>
               <li>
-                <Link to="/announcements" className="text-slate-400 hover:text-white transition-colors">
+                <Link to="/announcements" onClick={() => scrollToTop("auto")} className="text-slate-400 hover:text-white transition-colors">
                   News & Announcements
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="text-slate-400 hover:text-white transition-colors">
+                <Link to="/contact" onClick={() => scrollToTop("auto")} className="text-slate-400 hover:text-white transition-colors">
                   Contact Us
                 </Link>
               </li>

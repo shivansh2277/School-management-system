@@ -100,7 +100,14 @@ export function Notices() {
   });
 
   return (
-    <>
+    <div className="space-y-6">
+      {/* Header Surface Card */}
+      <div className="bg-surface rounded-card shadow-card p-4 sm:p-5 border border-rule/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink">Notices & Announcements</h1>
+        </div>
+      </div>
+
       <Card title="Compose notice">
         <div className="space-y-3">
           <FormField label="Title" error={publish.fields.title}>
@@ -311,6 +318,6 @@ export function Notices() {
           }}
         />
       )}
-    </>
+    </div>
   );
 }

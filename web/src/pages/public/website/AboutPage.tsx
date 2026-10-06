@@ -131,13 +131,14 @@ export function AboutPage() {
               <div className="relative rounded-2xl overflow-hidden shadow-2xl border-4 border-slate-800 bg-slate-950 max-w-sm w-full">
                 <img
                   src="/images/school/founder_portrait.jpg"
-                  alt="Dr. Anand Mohan Shukla, Founder & Chairman of Sunrise School"
+                  alt="Dr. Anand Mohan Shukla, Founder & Chairman of Sunrise School (Institutional Portrait)"
                   className="w-full h-auto object-cover"
                 />
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent p-5 text-center">
                   <h3 className="text-xl font-bold font-serif text-white">Dr. Anand Mohan Shukla</h3>
                   <p className="text-xs text-amber-300 font-semibold mt-0.5">Founder & Chairman, Board of Trustees</p>
                   <p className="text-[11px] text-slate-400">M.A., Ph.D. (Education), D.Lit.</p>
+                  <p className="text-[10px] text-slate-400/80 mt-1 italic">Conceptual Institutional Portrait</p>
                 </div>
               </div>
             </div>

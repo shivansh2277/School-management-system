@@ -169,6 +169,7 @@ DEFAULT_SCHEDULES: list[tuple[str, int, int | None]] = [
     # 01:00 UTC, 06:30 in the office: the compliance list is on the Transport
     # Manager's desk before the first bus leaves rather than after it.
     ("transport.document_expiry", 1440, 1),
+    ("attendance.unmarked_deadline_sweep", 1440, 18),
     ("system.heartbeat", 60, None),
 ]
 

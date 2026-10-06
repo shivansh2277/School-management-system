@@ -7,6 +7,27 @@ import { useLocation } from "react-router-dom";
  * 2. Preserves in-page anchor links (e.g. #process, #values) by smoothly
  *    scrolling to the targeted DOM element if present.
  */
+/**
+ * Explicitly scrolls window and document to the top (0, 0).
+ * Callable directly on navigation clicks across all tabs.
+ */
+export function scrollToTop(behavior: ScrollBehavior = "auto") {
+  if (typeof window === "undefined") return;
+  try {
+    if (typeof window.scrollTo === "function") {
+      window.scrollTo({ top: 0, left: 0, behavior });
+    }
+  } catch {
+    // jsdom environment does not implement window.scrollTo
+  }
+  if (document.documentElement) {
+    document.documentElement.scrollTop = 0;
+  }
+  if (document.body) {
+    document.body.scrollTop = 0;
+  }
+}
+
 export function ScrollToTop() {
   const { pathname, hash } = useLocation();
 
@@ -28,13 +49,7 @@ export function ScrollToTop() {
       }
     }
 
-    try {
-      if (typeof window.scrollTo === "function") {
-        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-      }
-    } catch {
-      // jsdom environment does not implement window.scrollTo
-    }
+    scrollToTop("auto");
   }, [pathname, hash]);
 
   return null;
