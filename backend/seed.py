@@ -38,6 +38,7 @@ from app.models import (
     AcademicYearStatus,
     Attendance,
     Enrolment,
+    EnrolmentStatus,
     AttendanceStatus,
     ClassSection,
     ClassSubjectTeacher,
@@ -47,6 +48,8 @@ from app.models import (
     LeaveTypeDef,
     AdmissionCycle,
     AdmissionCycleStatus,
+    Application,
+    ApplicationStatus,
     CustomFieldType,
     CycleClassConfig,
     Enquiry,
@@ -106,6 +109,19 @@ from app.models import (
     StaffLeaveRequest,
     Substitution,
     SubstitutionStatus,
+
+    Hostel,
+    HostelFloor,
+    HostelRoom,
+    HostelBed,
+    HostelAdmission,
+    BedAllocation,
+    HostelAttendance,
+    HostelLeaveRequest,
+    HostelMessMenu,
+    HostelComplaint,
+    HostelIncident,
+    HostelNotice,
 )
 
 ACADEMIC_YEAR = "2025-26"
@@ -115,6 +131,9 @@ ADMISSION_OFFICER_LOGIN = "admission@sunrisepublic.edu"
 TRANSPORT_INCHARGE_LOGIN = "transport@sunrisepublic.edu"
 ACCOUNTS_LOGIN = "accounts@sunrisepublic.edu"
 LIBRARIAN_LOGIN = "library@sunrisepublic.edu"
+CHIEF_PROVOST_LOGIN = "provost@sunrisepublic.edu"
+WARDEN_BOYS_LOGIN = "warden.boys@sunrisepublic.edu"
+WARDEN_GIRLS_LOGIN = "warden.girls@sunrisepublic.edu"
 SCHOOL_CODE = "SPS"
 TODAY = date(2026, 9, 1)  # deterministic "today" so the seeded window never drifts
 
@@ -1203,6 +1222,7 @@ def seed(db: Session, reset: bool = True, force: bool = False, expand: bool = Fa
         ("TUITION", "Tuition Fee", FeeHeadType.recurring),
         ("DEV", "Development Fee", FeeHeadType.recurring),
         ("TRANSPORT", "Transport Fee", FeeHeadType.optional),
+        ("HOSTEL", "Hostel & Mess Fee", FeeHeadType.optional),
         ("ADMISSION", "Admission Fee", FeeHeadType.one_time),
     ):
         head = FeeHead(name=name, code=code, type=kind)
@@ -1214,37 +1234,49 @@ def seed(db: Session, reset: bool = True, force: bool = False, expand: bool = Fa
         # Development fee is a fifth of the card, the way most schools split it,
         # so the invoice has more than one line to prove the model.
         development = (monthly / 5).quantize(Decimal("0.01"))
+        plan_items = [
+            FeePlanItem(
+                school_id=school.id,
+                fee_head_id=heads["TUITION"].id,
+                amount=monthly - development,
+                frequency=FeeFrequency.monthly,
+            ),
+            FeePlanItem(
+                school_id=school.id,
+                fee_head_id=heads["DEV"].id,
+                amount=development,
+                frequency=FeeFrequency.monthly,
+            ),
+            FeePlanItem(
+                school_id=school.id,
+                fee_head_id=heads["TRANSPORT"].id,
+                amount=Decimal("0.00"),
+                frequency=FeeFrequency.monthly,
+            ),
+        ]
         plan = FeePlan(
             academic_year_id=academic_year_id,
             name=f"Class {class_name} standard",
             class_name=class_name,
-            items=[
-                FeePlanItem(
-                    school_id=school.id,
-                    fee_head_id=heads["TUITION"].id,
-                    amount=monthly - development,
-                    frequency=FeeFrequency.monthly,
-                ),
-                FeePlanItem(
-                    school_id=school.id,
-                    fee_head_id=heads["DEV"].id,
-                    amount=development,
-                    frequency=FeeFrequency.monthly,
-                ),
-                # On every plan, and billed only to the children who actually
-                # ride. Before `generate()` learned what an `optional` head
-                # means, this one line charged all hundred of them. The amount
-                # here is never used: transport is priced from the slab on the
-                # stop the child boards at.
-                FeePlanItem(
-                    school_id=school.id,
-                    fee_head_id=heads["TRANSPORT"].id,
-                    amount=Decimal("0.00"),
-                    frequency=FeeFrequency.monthly,
-                ),
-            ],
+            items=plan_items,
         )
         db.add(plan)
+
+    # Dedicated Hostel & Mess residential facility fee plan carrying the dynamic hostel fee amount
+    hostel_plan = FeePlan(
+        academic_year_id=academic_year_id,
+        name="Hostel & Mess Facility",
+        class_name=None,
+        items=[
+            FeePlanItem(
+                school_id=school.id,
+                fee_head_id=heads["HOSTEL"].id,
+                amount=Decimal("6500.00"),
+                frequency=FeeFrequency.monthly,
+            )
+        ],
+    )
+    db.add(hostel_plan)
     db.flush()
 
     _seed_transport(db, school, departments, enrolment_of, students)
@@ -1411,6 +1443,12 @@ def seed(db: Session, reset: bool = True, force: bool = False, expand: bool = Fa
         )
     ) is None:
         db.add(Setting(school_id=school.id, key="feature.hr", value=True))
+    if db.scalar(
+        select(Setting).where(
+            Setting.school_id == school.id, Setting.key == "feature.hostel"
+        )
+    ) is None:
+        db.add(Setting(school_id=school.id, key="feature.hostel", value=True))
     db.flush()
 
     _seed_inventory(db, school)
@@ -1418,6 +1456,7 @@ def seed(db: Session, reset: bool = True, force: bool = False, expand: bool = Fa
     _seed_operational_tables(db, school, academic_year_id)
     _seed_library(db, school, teachers[0] if teachers else None, enrolment_of, students)
     _seed_certificates(db, school)
+    _seed_hostel(db, school, academic_year_id, enrolment_of, students)
 
     _assign_roles(db, roles, sections)
 
@@ -2103,6 +2142,439 @@ def _seed_certificates(db: Session, school) -> None:
     db.flush()
 
 
+def _seed_hostel(
+    db: Session, school, academic_year_id: int, enrolment_of: dict, students: list
+) -> None:
+    """Seed Boys and Girls Hostels, floors, rooms, beds, 20 residents, attendance,
+    leave requests (including an overdue outing), weekly mess menu, notices, and complaints.
+    """
+    if db.scalar(select(Hostel).where(Hostel.school_id == school.id)) is not None:
+        return
+
+    # 1. Staff accounts: Chief Provost and 2 Wardens
+    provost = User(
+        school_id=school.id,
+        role=UserRole.admin,
+        login_id=CHIEF_PROVOST_LOGIN,
+        password_hash=hash_password(DEMO_PASSWORDS[UserRole.admin]),
+        full_name="Dr. Surendra Mohan",
+        email=CHIEF_PROVOST_LOGIN,
+        phone="+91 522 400 1240",
+    )
+    db.add(provost)
+
+    warden_boys = User(
+        school_id=school.id,
+        role=UserRole.admin,
+        login_id=WARDEN_BOYS_LOGIN,
+        password_hash=hash_password(DEMO_PASSWORDS[UserRole.admin]),
+        full_name="Rajesh Sharma",
+        email=WARDEN_BOYS_LOGIN,
+        phone="+91 522 400 1241",
+    )
+    db.add(warden_boys)
+
+    warden_girls = User(
+        school_id=school.id,
+        role=UserRole.admin,
+        login_id=WARDEN_GIRLS_LOGIN,
+        password_hash=hash_password(DEMO_PASSWORDS[UserRole.admin]),
+        full_name="Sunita Verma",
+        email=WARDEN_GIRLS_LOGIN,
+        phone="+91 522 400 1242",
+    )
+    db.add(warden_girls)
+    db.flush()
+
+    # 2. Hostels
+    boys_hostel = Hostel(
+        school_id=school.id,
+        name="Boys Hostel",
+        code="BH-01",
+        gender=Gender.male,
+        description="Senior boys residential accommodation building",
+        status="active",
+    )
+    db.add(boys_hostel)
+
+    girls_hostel = Hostel(
+        school_id=school.id,
+        name="Girls Hostel",
+        code="GH-01",
+        gender=Gender.female,
+        description="Senior girls residential accommodation building",
+        status="active",
+    )
+    db.add(girls_hostel)
+    db.flush()
+
+    # 3. Floors, Rooms, and Beds
+    def build_rooms_and_beds(hostel: Hostel) -> list[HostelBed]:
+        f1 = HostelFloor(
+            school_id=school.id,
+            hostel_id=hostel.id,
+            floor_number=1,
+            floor_name="Ground Floor",
+        )
+        f2 = HostelFloor(
+            school_id=school.id,
+            hostel_id=hostel.id,
+            floor_number=2,
+            floor_name="First Floor",
+        )
+        db.add_all([f1, f2])
+        db.flush()
+
+        beds_created: list[HostelBed] = []
+        rooms_layout = [
+            (f1, "101"),
+            (f1, "102"),
+            (f1, "103"),
+            (f2, "201"),
+            (f2, "202"),
+        ]
+        for fl, r_no in rooms_layout:
+            room = HostelRoom(
+                school_id=school.id,
+                hostel_id=hostel.id,
+                floor_id=fl.id,
+                room_number=r_no,
+                room_type="double",
+                capacity=2,
+                status="occupied",
+            )
+            db.add(room)
+            db.flush()
+            for bed_letter in ("A", "B"):
+                bed = HostelBed(
+                    school_id=school.id,
+                    room_id=room.id,
+                    bed_number=f"{r_no}-{bed_letter}",
+                    status="occupied",
+                )
+                db.add(bed)
+                beds_created.append(bed)
+        db.flush()
+        return beds_created
+
+    boys_beds = build_rooms_and_beds(boys_hostel)
+    girls_beds = build_rooms_and_beds(girls_hostel)
+
+    # 4. Filter senior students (Class 9 and 10 in demo database)
+    senior_students = [
+        s for s in students
+        if enrolment_of.get(s.id) and enrolment_of[s.id].class_section.class_name in ("9", "10", "11", "12")
+    ]
+    male_seniors = [s for s in senior_students if s.gender == Gender.male][:10]
+    female_seniors = [s for s in senior_students if s.gender == Gender.female][:10]
+
+    admission_date = date(2026, 4, 1)
+
+    # Allocate 10 boys
+    boys_admissions = []
+    for s, bed in zip(male_seniors, boys_beds, strict=False):
+        adm = HostelAdmission(
+            school_id=school.id,
+            student_id=s.id,
+            hostel_id=boys_hostel.id,
+            admission_date=admission_date,
+            status="active",
+            admitted_by_id=provost.id,
+        )
+        db.add(adm)
+        db.flush()
+        alloc = BedAllocation(
+            school_id=school.id,
+            admission_id=adm.id,
+            bed_id=bed.id,
+            allocated_at=datetime.combine(admission_date, time(9, 0), tzinfo=UTC),
+            is_active=True,
+            allocated_by_id=provost.id,
+            remarks="Initial session allocation",
+        )
+        db.add(alloc)
+        boys_admissions.append((adm, s, bed))
+
+    # Allocate 10 girls
+    girls_admissions = []
+    for s, bed in zip(female_seniors, girls_beds, strict=False):
+        adm = HostelAdmission(
+            school_id=school.id,
+            student_id=s.id,
+            hostel_id=girls_hostel.id,
+            admission_date=admission_date,
+            status="active",
+            admitted_by_id=provost.id,
+        )
+        db.add(adm)
+        db.flush()
+        alloc = BedAllocation(
+            school_id=school.id,
+            admission_id=adm.id,
+            bed_id=bed.id,
+            allocated_at=datetime.combine(admission_date, time(9, 0), tzinfo=UTC),
+            is_active=True,
+            allocated_by_id=provost.id,
+            remarks="Initial session allocation",
+        )
+        db.add(alloc)
+        girls_admissions.append((adm, s, bed))
+    db.flush()
+
+    # 5. Evening Attendance (8:00 PM) for the last 3 days
+    for day_offset in (2, 1, 0):
+        att_date = TODAY - timedelta(days=day_offset)
+        # Boys hostel attendance
+        for idx, (adm, s, bed) in enumerate(boys_admissions):
+            att_status = "present"
+            if day_offset == 0 and idx == 0:
+                att_status = "on_outing"
+            elif day_offset == 0 and idx == 1:
+                att_status = "on_leave"
+            db.add(
+                HostelAttendance(
+                    school_id=school.id,
+                    hostel_id=boys_hostel.id,
+                    student_id=s.id,
+                    admission_id=adm.id,
+                    attendance_date=att_date,
+                    status=att_status,
+                    scheduled_time=time(20, 0, 0),
+                    recorded_at=datetime.combine(att_date, time(20, 4), tzinfo=UTC),
+                    recorded_by_id=warden_boys.id,
+                    remarks="Evening roll call verified",
+                )
+            )
+        # Girls hostel attendance
+        for idx, (adm, s, bed) in enumerate(girls_admissions):
+            db.add(
+                HostelAttendance(
+                    school_id=school.id,
+                    hostel_id=girls_hostel.id,
+                    student_id=s.id,
+                    admission_id=adm.id,
+                    attendance_date=att_date,
+                    status="present",
+                    scheduled_time=time(20, 0, 0),
+                    recorded_at=datetime.combine(att_date, time(20, 7), tzinfo=UTC),
+                    recorded_by_id=warden_girls.id,
+                    remarks="Evening roll call verified",
+                )
+            )
+    db.flush()
+
+    # 6. Leave and Outing Requests (including Overdue demo!)
+    if boys_admissions:
+        adm0, s0, b0 = boys_admissions[0]
+        sg0 = db.scalar(select(StudentGuardian).where(StudentGuardian.student_id == s0.id))
+        g0_id = sg0.guardian_id if sg0 else db.scalar(select(Guardian.id))
+
+        overdue_req = HostelLeaveRequest(
+            school_id=school.id,
+            student_id=s0.id,
+            admission_id=adm0.id,
+            hostel_id=boys_hostel.id,
+            request_type="outing",
+            start_date=TODAY - timedelta(days=1),
+            end_date=TODAY - timedelta(days=1),
+            out_time=time(14, 0),
+            expected_return_time=datetime.now(UTC) - timedelta(hours=3),
+            actual_return_time=None,
+            purpose="Purchase project supplies at local market",
+            parent_guardian_id=g0_id,
+            status="approved",
+            approved_by_id=warden_boys.id,
+            approved_at=datetime.now(UTC) - timedelta(days=1, hours=2),
+            remarks="Approved for afternoon project shopping",
+        )
+        db.add(overdue_req)
+
+        adm1, s1, b1 = boys_admissions[1]
+        sg1 = db.scalar(select(StudentGuardian).where(StudentGuardian.student_id == s1.id))
+        g1_id = sg1.guardian_id if sg1 else g0_id
+        leave_req = HostelLeaveRequest(
+            school_id=school.id,
+            student_id=s1.id,
+            admission_id=adm1.id,
+            hostel_id=boys_hostel.id,
+            request_type="leave",
+            start_date=TODAY - timedelta(days=2),
+            end_date=TODAY + timedelta(days=1),
+            out_time=time(8, 30),
+            expected_return_time=datetime.combine(TODAY + timedelta(days=1), time(18, 0), tzinfo=UTC),
+            actual_return_time=None,
+            purpose="Family function and wedding ceremony",
+            parent_guardian_id=g1_id,
+            status="approved",
+            approved_by_id=warden_boys.id,
+            approved_at=datetime.now(UTC) - timedelta(days=2, hours=3),
+            remarks="Parent telephonic confirmation recorded",
+        )
+        db.add(leave_req)
+
+    # 7. Weekly Mess Menu (School-wide)
+    menu_schedule = [
+        (DayOfWeek.mon, "Poha, Boiled Eggs / Sprouts, Tea & Milk", "Rajma Masala, Steamed Basmati Rice, Chapati, Salad", "Vegetable Cutlet, Masala Chai", "Mix Veg Curry, Dal Tadka, Phulka, Rice, Kheer"),
+        (DayOfWeek.tue, "Idli Sambar, Coconut Chutney, Milk & Tea", "Chole Bhature, Jeera Rice, Boondi Raita, Onion Salad", "Bread Pakora with Mint Chutney, Tea", "Aloo Gobi Adraki, Dal Makhani, Phulka, Rice"),
+        (DayOfWeek.wed, "Aloo Paratha, Fresh Curd, Mixed Pickle, Tea", "Kadhi Pakora, Steamed Rice, Roti, Roasted Papad", "Crispy Vegetable Samosa, Sweet Chutney, Tea", "Paneer Butter Masala, Yellow Dal Fry, Butter Roti, Jeera Rice"),
+        (DayOfWeek.thu, "Vegetable Upma, Coconut Chutney, Banana, Milk", "Dal Palak, Aloo Jeera Dry, Tawa Roti, Rice, Curd", "Assorted Biscuits & Hot Tea", "Egg Curry / Malai Kofta, Dal Fry, Tawa Roti, Steamed Rice"),
+        (DayOfWeek.fri, "Methi Paratha, White Butter, Curd, Tea", "Hyderabadi Veg Biryani, Mirchi ka Salan, Veg Raita", "Grilled Vegetable Sandwich, Fresh Fruit Juice", "Shahi Paneer, Dal Makhani, Butter Roti, Rice, Hot Gulab Jamun"),
+        (DayOfWeek.sat, "Puri Bhaji, Sooji Halwa, Tea & Milk", "Arhar Dal Tadka, Crispy Bhindi Fry, Steamed Rice, Chapati", "Bhel Puri & Lemon Tea", "Matar Paneer, Dal Tadka, Phulka, Peas Pulao, Custard"),
+    ]
+    for d, bk, ln, sn, dn in menu_schedule:
+        db.add(
+            HostelMessMenu(
+                school_id=school.id,
+                day_of_week=d,
+                breakfast=bk,
+                lunch=ln,
+                snacks=sn,
+                dinner=dn,
+                is_published=True,
+                updated_by_id=provost.id,
+            )
+        )
+
+    # 8. Hostel Notices
+    db.add(
+        HostelNotice(
+            school_id=school.id,
+            hostel_id=None,
+            title="Hostel Study Hours & Quiet Time (9:00 PM - 11:00 PM)",
+            content="All residents are requested to observe strict silence during designated night study hours from 9:00 PM to 11:00 PM. Group discussions must take place in common study halls.",
+            priority="important",
+            posted_at=datetime.combine(TODAY - timedelta(days=10), time(10, 0), tzinfo=UTC),
+            is_active=True,
+            posted_by_id=provost.id,
+        )
+    )
+    db.add(
+        HostelNotice(
+            school_id=school.id,
+            hostel_id=None,
+            title="Weekend Outing Gate Pass Procedure",
+            content="All weekend outings require prior submission by parents via the Parent App before Friday 6:00 PM. Gate passes will only be validated if parents have submitted through the official portal.",
+            priority="normal",
+            posted_at=datetime.combine(TODAY - timedelta(days=5), time(11, 30), tzinfo=UTC),
+            is_active=True,
+            posted_by_id=provost.id,
+        )
+    )
+
+    # 9. Hostel Complaints
+    db.add(
+        HostelComplaint(
+            school_id=school.id,
+            hostel_id=boys_hostel.id,
+            student_id=male_seniors[0].id if male_seniors else None,
+            category="plumbing",
+            title="Hot water geyser heating slow on 2nd Floor",
+            description="The geyser in bathroom 4 on Floor 2 takes over 45 minutes to heat water in the morning.",
+            status="resolved",
+            resolution_remarks="Heating coil serviced and thermostat replaced by school electrician.",
+            resolved_by_id=warden_boys.id,
+            resolved_at=datetime.now(UTC) - timedelta(days=2),
+        )
+    )
+    db.add(
+        HostelComplaint(
+            school_id=school.id,
+            hostel_id=girls_hostel.id,
+            student_id=female_seniors[0].id if female_seniors else None,
+            category="electrical",
+            title="Study lamp flickering in Room 102",
+            description="Ceiling tube-light near desk B in Room 102 flickers intermittently during night study hours.",
+            status="pending",
+        )
+    )
+    db.flush()
+
+    # 10. Seed eligible Class 9+ day scholars available for hostel admission
+    sec_10 = db.scalar(select(ClassSection).where(ClassSection.class_name == "10"))
+    if sec_10:
+        day_scholar_boy_user = User(
+            school_id=school.id,
+            role=UserRole.student,
+            login_id="ADM-2024-00101",
+            password_hash=hash_password(DEMO_PASSWORDS[UserRole.student]),
+            full_name="Abhinav Saxena",
+        )
+        db.add(day_scholar_boy_user)
+        db.flush()
+        day_scholar_boy = Student(
+            school_id=school.id,
+            user_id=day_scholar_boy_user.id,
+            admission_no="ADM-2024-00101",
+            dob=date(2010, 5, 15),
+            gender=Gender.male,
+            address="Sector 14, Indira Nagar, Lucknow",
+            admission_date=date(2024, 4, 1),
+        )
+        db.add(day_scholar_boy)
+        db.flush()
+        db.add(
+            Enrolment(
+                student_id=day_scholar_boy.id,
+                academic_year_id=academic_year_id,
+                class_section_id=sec_10.id,
+                roll_no=11,
+                status=EnrolmentStatus.active,
+                joined_on=date(2024, 4, 1),
+            )
+        )
+
+        day_scholar_girl_user = User(
+            school_id=school.id,
+            role=UserRole.student,
+            login_id="ADM-2024-00102",
+            password_hash=hash_password(DEMO_PASSWORDS[UserRole.student]),
+            full_name="Prerna Srivastava",
+        )
+        db.add(day_scholar_girl_user)
+        db.flush()
+        day_scholar_girl = Student(
+            school_id=school.id,
+            user_id=day_scholar_girl_user.id,
+            admission_no="ADM-2024-00102",
+            dob=date(2010, 8, 20),
+            gender=Gender.female,
+            address="Sector 18, Indira Nagar, Lucknow",
+            admission_date=date(2024, 4, 1),
+        )
+        db.add(day_scholar_girl)
+        db.flush()
+        db.add(
+            Enrolment(
+                student_id=day_scholar_girl.id,
+                academic_year_id=academic_year_id,
+                class_section_id=sec_10.id,
+                roll_no=12,
+                status=EnrolmentStatus.active,
+                joined_on=date(2024, 4, 1),
+            )
+        )
+
+        # 11. Seed an enrolled Application with hostel_required=True
+        open_cycle = db.scalar(select(AdmissionCycle).where(AdmissionCycle.status == AdmissionCycleStatus.open))
+        if open_cycle:
+            intake_app = Application(
+                school_id=school.id,
+                cycle_id=open_cycle.id,
+                application_no="APP-2026-0099",
+                first_name="Abhinav",
+                last_name="Saxena",
+                date_of_birth=date(2010, 5, 15),
+                gender="male",
+                class_applying_for="10",
+                status=ApplicationStatus.enrolled,
+                hostel_required=True,
+                student_id=day_scholar_boy.id,
+                submitted_at=datetime.now(UTC) - timedelta(days=3),
+            )
+            db.add(intake_app)
+    db.flush()
+
+
 def _assign_roles(db: Session, roles: dict, sections: list) -> None:
     """Give every seeded account the system role matching its primary role.
 
@@ -2135,17 +2607,33 @@ def _assign_roles(db: Session, roles: dict, sections: list) -> None:
             if user.login_id in (LIBRARIAN_LOGIN, "library@sunrisepublic.edu", "librarian@sunrisepublic.edu")
             else "transport_manager"
             if user.login_id.startswith("TRM")
+            else "chief_provost"
+            if user.login_id in (CHIEF_PROVOST_LOGIN, "PROVOST01")
+            else "warden"
+            if user.login_id in (WARDEN_BOYS_LOGIN, WARDEN_GIRLS_LOGIN, "WRD_BOYS", "WRD_GIRLS")
             else LEGACY_ROLE_MAP[user.role.value]
         )
         # Students and guardians hold their permissions over their own records
         # only. Granting them school-wide would let a parent read the admin
         # roster, since both hold students.profile.read.
+        # Wardens hold their permissions strictly scoped to their assigned hostel.
         scope = (
             ScopeType.self_only
             if code in ("student", "guardian")
+            else ScopeType.hostel
+            if code == "warden"
             else ScopeType.school
         )
-        rbac.assign(db, user, roles[code], scope_type=scope)
+        scope_id = None
+        if code == "warden":
+            if user.login_id in (WARDEN_BOYS_LOGIN, "WRD_BOYS"):
+                bh = db.scalar(select(Hostel).where(Hostel.code == "BH-01"))
+                scope_id = bh.id if bh else None
+            elif user.login_id in (WARDEN_GIRLS_LOGIN, "WRD_GIRLS"):
+                gh = db.scalar(select(Hostel).where(Hostel.code == "GH-01"))
+                scope_id = gh.id if gh else None
+
+        rbac.assign(db, user, roles[code], scope_type=scope, scope_id=scope_id)
 
     class_teacher_role = roles["teacher"]
     for sec in sections:

@@ -212,6 +212,27 @@ export function LoginPage() {
                   >
                     Librarian
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setDemoRole("provost@sunrisepublic.edu")}
+                    className="px-2 py-0.5 rounded-md bg-white border border-slate-200 hover:border-primary text-ink text-[11px] font-medium transition-colors cursor-pointer"
+                  >
+                    Chief Provost
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDemoRole("warden.boys@sunrisepublic.edu")}
+                    className="px-2 py-0.5 rounded-md bg-white border border-slate-200 hover:border-primary text-ink text-[11px] font-medium transition-colors cursor-pointer"
+                  >
+                    Boys Warden
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDemoRole("warden.girls@sunrisepublic.edu")}
+                    className="px-2 py-0.5 rounded-md bg-white border border-slate-200 hover:border-primary text-ink text-[11px] font-medium transition-colors cursor-pointer"
+                  >
+                    Girls Warden
+                  </button>
                 </div>
               </div>
             </div>

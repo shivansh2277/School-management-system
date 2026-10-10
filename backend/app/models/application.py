@@ -95,6 +95,9 @@ class Application(TenantBase):
     transport_required: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
     )
+    hostel_required: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
 
     status: Mapped[ApplicationStatus] = enum_col(
         ApplicationStatus, nullable=False, default=ApplicationStatus.draft

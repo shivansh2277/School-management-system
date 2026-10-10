@@ -130,6 +130,7 @@ class ScopeType(StrEnum):
     academic_year = "academic_year"
     class_section = "class_section"
     department = "department"
+    hostel = "hostel"          # assigned hostel only
     self_only = "self"         # own record only
 
 

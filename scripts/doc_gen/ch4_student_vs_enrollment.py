@@ -68,7 +68,10 @@ def render_ch4() -> str:
         • <code>grievances.student_id</code><br>
         • <code>marks.student_id</code><br>
         • <code>homework_submissions.student_id</code><br>
-        • <code>message_recipients.student_id</code>
+        • <code>message_recipients.student_id</code><br>
+        • <code>student_certificates.student_id</code><br>
+        • <code>student_passes.student_id</code><br>
+        • <code>student_authorized_persons.student_id</code>
       </td>
       <td>
         Point at <code>enrolments.id</code> (Year-scoped facts):<br>
@@ -79,7 +82,9 @@ def render_ch4() -> str:
         • <code>fee_concessions.enrolment_id</code><br>
         • <code>report_card_publications.enrolment_id</code><br>
         • <code>transport_assignments.enrolment_id</code><br>
-        • <code>student_leave_requests.enrolment_id</code>
+        • <code>student_leave_requests.enrolment_id</code><br>
+        • <code>student_certificates.enrolment_id</code><br>
+        • <code>library_loans.enrolment_id</code>
       </td>
     </tr>
   </tbody>

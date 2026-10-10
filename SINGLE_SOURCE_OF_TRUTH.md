@@ -1,22 +1,20 @@
 # Sunrise School ERP — Single Source of Truth
 
-**Date:** 06 October 2026  
-**Status:** Authoritative — Session 29 Completed & Verified (Public Admission Enquiry Fix, View Admission Steps Scroll, Dedicated Librarian Role & Admission Document Overrides Automatic Pending Queue). Delivered and verified: (1) Resolved Public Admission Enquiry failure ("No such school") by implementing tenant alias mapping (`sunrise`/`sunrisepublic` -> `SPS`) in backend endpoints, wiring `AdmissionEnquiryModal.tsx` to submit cleanly to `/public/SPS/admission/enquiry` with confirmation feedback, and verifying database storage in Reception/Admission workflows; (2) Fixed "View Admission Steps" on Admissions page by replacing hash anchor navigation with smooth DOM scroll to `#process`, eliminating collision with React Router's `<HashRouter>` that previously redirected visitors to `/login`; (3) Added dedicated `librarian` role strictly scoped to `library.read`, `library.manage`, and `comms.notice.read`, restricted from Admissions, Fees, Transport, HR, and settings, supported by `/admin/users/{user_id}/roles` assignment APIs and `/user-access` UI with Librarian quick login; (4) Upgraded Admission Document Overrides from manual lookup to an automatic Pending Exceptions Queue (`/admin/admission-exceptions`) with student name, app ID, document name, reason, timestamp, and Review/Approve/Reject actions, enforcing that only approved overrides satisfy application checklists while preserving audit trails; (5) Verified 100% green across all quality gates: 807 passed (1 skipped) backend pytest, 140 passed (2 skipped) web vitest, 0 web TypeScript errors, 0 mobile TypeScript errors.  
+**Date:** 08 October 2026  
+**Status:** Authoritative — Session 30 Completed & Verified: **Hostel + Mess Management Module** (`SESSION-HANDOFF-31.md`). Verified baseline: 823 passed (1 skipped) backend pytest across 35 test files, 15/15 passed dedicated `test_hostel.py`, 140 passed web vitest across 26 test files, 0 web TypeScript errors, 0 mobile TypeScript errors, 17/17 schema documentation checks passed against live PostgreSQL (117 tables, 81 live tables, 926 columns, 137 foreign keys), 26 visual evidence screenshots captured.  
 **Canonical Branch:** `slice/office-feedback` (synced with `origin/main` and `origin/slice/office-feedback`).  
 **Live Cloud Deployment:**
 - **Web Frontend (Vercel):** `https://school-management-system-blush-iota.vercel.app`
 - **Backend API (Render):** `https://school-management-system-12ks.onrender.com`
 - **Database (Neon Tech):** Serverless PostgreSQL (`postgresql+psycopg://`)
-**Primary PDF Deliverables:**
-- [`docs/Sunrise-ERP-Admission-and-Transport-Documentation.pdf`](docs/Sunrise-ERP-Admission-and-Transport-Documentation.pdf) — Comprehensive 8-page documentation manual for Admission and Transport lifecycles, 360° student dossier, fleet safety, distance slabs, ERDs, and troubleshooting.
+**Primary PDF Deliverables (Updated & Synced with Database Introspection):**
+- [`docs/Sunrise-ERP-Features-Operational-and-Planned.pdf`](docs/Sunrise-ERP-Features-Operational-and-Planned.pdf) — Comprehensive operational (28 feature cards, 32+ screens, 28 staff) & planned feature specification.
+- [`docs/Sunrise-ERP-Operational-Data-Flows.pdf`](docs/Sunrise-ERP-Operational-Data-Flows.pdf) — Architectural Database Data-Flow Guide showing TABLE → TABLE → TABLE flows, PK/FK connections, Student ID vs Enrollment ID invariants, cross-module relational highways, and 22 operational workflows.
+- [`docs/Sunrise-ERP-Database.pdf`](docs/Sunrise-ERP-Database.pdf) — Complete 105-table database schema with 852 active columns, 114 relational foreign keys, and full column nullability specifications.
+- [`docs/Sunrise-ERP-Database-Essentials.pdf`](docs/Sunrise-ERP-Database-Essentials.pdf) — 72 live data tables with interactive Mermaid entity-relationship diagrams and compact non-boilerplate cards.
+- [`docs/Sunrise-ERP-Admission-and-Transport-Documentation.pdf`](docs/Sunrise-ERP-Admission-and-Transport-Documentation.pdf) — Comprehensive manual for Admission and Transport lifecycles, 360° student dossier, fleet safety, distance slabs, ERDs, and troubleshooting.
 - [`docs/Sunrise-ERP-Admission-Demo-Guide.pdf`](docs/Sunrise-ERP-Admission-Demo-Guide.pdf) — Complete Digital Admission Dossier & Interactive Testing Guide for Application 360° with Aarav Sharma & Ananya Verma walkthroughs.
-- [`docs/Sunrise-ERP-Operational-Data-Flows.pdf`](docs/Sunrise-ERP-Operational-Data-Flows.pdf) — Simple Database Data-Flow Guide showing TABLE → TABLE → TABLE flows, PK/FK connections, Student ID vs Enrollment ID rules, and the final student data journey.
-- [`docs/Sunrise-ERP-Database-Tables-and-Features.pdf`](docs/Sunrise-ERP-Database-Tables-and-Features.pdf) — Complete 93-table database & feature mapping reference (all 68 live tables + 25 unused tables mapped to web routes, UI components, and workflows).
 - [`docs/Sunrise-ERP-Database-Viva-100.pdf`](docs/Sunrise-ERP-Database-Viva-100.pdf) — 100 Project-Specific Database & Backend Viva Questions and Answers with Top 20 Focus.
-- [`docs/Sunrise-ERP-Features-Operational-and-Planned.pdf`](docs/Sunrise-ERP-Features-Operational-and-Planned.pdf) — Comprehensive operational (31 live screens, 18 staff) & planned feature specification.
-- [`docs/Sunrise-ERP-Database-Essentials-Explained.pdf`](docs/Sunrise-ERP-Database-Essentials-Explained.pdf) — Step-by-step plain-English process explanation guide for the 68 essential database tables across 16 end-to-end workflows.
-- [`docs/Sunrise-ERP-Database-Essentials.pdf`](docs/Sunrise-ERP-Database-Essentials.pdf) — 68 live data tables with entity relationship diagrams.
-- [`docs/Sunrise-ERP-Database.pdf`](docs/Sunrise-ERP-Database.pdf) — Complete 93-table database schema with all 1,097 columns and 250 foreign keys.
 
 ---
 
@@ -43,6 +41,9 @@
      - Transport In-Charge: `transport@sunrisepublic.edu` (`Admin@123`) — dedicated transport management role. Strictly hardened: People and Academics modules completely removed; sees only Transport & Logistics (`/transport`) and Notices (`/notices`); direct URLs protected with in-page refusal and backend HTTP 403 Forbidden (`students.profile.read` and `academics.class.read` removed). Upgraded with Plan 1 (Fleet & Route Setup Desk), Plan 2 (Student Transport Allocation Desk), and Address-First geocoding location system.
      - Accounts Officer: `accounts@sunrisepublic.edu` (`Admin@123`) — dedicated accounts department role. Owns financial operations (Fees overview, student ledger, defaulters, fee structure setup, periods close), payroll management, and Fee Reports. Strictly isolated via RBAC: zero access to Admin settings, Admissions, Transport, or Academic grading.
      - Librarian: `librarian@sunrisepublic.edu` (`Admin@123`) — dedicated library operations role. Owns Library catalogue & circulation desk (`library.read`, `library.manage`) and institutional notices (`comms.notice.read`). Strictly isolated via RBAC: zero access to Admissions, Fees, Transport, Recruitment, Staff, Student Directory, Attendance, or Settings.
+      - Chief Provost: `provost@sunrisepublic.edu` (`Admin@123`) — dedicated tenant-wide hostel authority. Owns all hostels, floors, rooms, beds, admissions, allocations, transfers, exits, evening attendance, leave/outing oversight, complaints, notices, and weekly mess menu.
+      - Boys Hostel Warden: `warden.boys@sunrisepublic.edu` (`Admin@123`) — dedicated warden for Boys Hostel. Strictly scoped to assigned hostel: residents, rooms/beds, attendance, leave/outing approvals, student return recording, complaints, incidents, menu view, and reports.
+      - Girls Hostel Warden: `warden.girls@sunrisepublic.edu` (`Admin@123`) — dedicated warden for Girls Hostel. Strictly scoped to assigned hostel: residents, rooms/beds, attendance, leave/outing approvals, student return recording, complaints, incidents, menu view, and reports.
 4. **Git Protocol (Owner Directive)**:
    - Remote repository origin configured at `https://github.com/shivansh2277/School-management-system.git`.
    - Branch `slice/office-feedback` pushed to origin and synced to `main` for Vercel/Render automatic deployments.
@@ -1057,3 +1058,102 @@ Upgrade the existing **Sunrise School ERP Admin Dashboard** (`web/src/pages/Dash
    - Do not add the search bar shown in the reference image.
    - Do not hardcode figures or introduce fake/mock data.
    - Do not remove existing functional dashboard sections (Upcoming Events, Notices, Top Performers, Grievances reply flow).
+
+---
+
+## 12. Session 30 & 31 — Complete Hostel + Mess Management Module (RBAC, Scoping, and Admission Lifecycle)
+
+### 12.1 Core Architectural Principles & Scope
+1. **Optional Facility:** Hostel is an optional residential facility. Day scholars continue without alteration. Available strictly to students enrolled in **Class 9 and above**.
+2. **Physical Structure Hierarchy:** `Hostel` → `HostelFloor` → `HostelRoom` → `HostelBed` → `Student` (via active `BedAllocation` and `HostelAdmission`).
+   - Beds are explicit first-class database entities with individual codes (`101-A`, `101-B`), not merely a room capacity count.
+   - Room capacity is configurable per room (default double occupancy).
+   - Demo database seeds two facilities: Boys Hostel (`BH-01`) and Girls Hostel (`GH-01`), each with 2 floors, 5 rooms, and 10 beds.
+3. **Gender Integrity:** Male students are admitted only to male hostels; female students only to female hostels.
+
+### 12.2 Three Distinct RBAC Roles & Scoping Model
+- **1. Existing Admin (`super_admin` / `admin`)**:
+  - Full ERP administrator. Retains unrestricted access to all non-hostel school modules (`/dashboard`, `/students`, `/fees`, `/transport`, `/library`, `/academics`, `/payroll`, `/settings`, etc.).
+  - Within the Hostel module, Admin has access to **EXACTLY TWO sidebar entries**:
+    1. **Hostel Dashboard** (`/hostel` with badge *"Hostel Administrative Overview"*)
+    2. **Hostel Admissions** (`/hostel/admissions` with admission management authority)
+  - Strictly excluded from operational hostel sections: Rooms & Beds, Residents, Attendance, Leave & Outing, Complaints & Incidents, Notices, and Mess Menu are completely absent from Admin's sidebar.
+  - Operational backend endpoints (`/attendance/batch`, `/leaves/{id}/adjudicate`, `/menu`, `/hostels`, etc.) return **HTTP 403 Forbidden** to Admin because operational permissions (`_HOSTEL_OPERATIONAL_PERMS`) are excluded from `SUPER_ADMIN_PERMISSIONS`.
+- **2. Chief Provost (`chief_provost`)**:
+  - Dedicated, **HOSTEL-DOMAIN-ONLY** role across all hostels in the tenant.
+  - Sidebar displays **ALL 9 hostel navigation entries**:
+    1. Hostel Dashboard
+    2. Rooms & Beds
+    3. Residents
+    4. Hostel Admissions
+    5. Attendance
+    6. Leave & Outing
+    7. Complaints & Incidents
+    8. Notices
+    9. Mess Menu
+  - Role badge on dashboard: *"Chief Provost Portal"*.
+  - Full cross-hostel operational and structural authority: mutate physical hostel structure, admit students, transfer beds, permanently exit residents, adjudicate leaves/outings, mark roll-call, edit/publish school-wide mess menu, and manage wardens.
+  - Holds zero generic Admin permissions (`*READ_ONLY`, `fees.setup.manage`, `students.profile.read`, `academics.*`, etc., purged). Non-hostel ERP endpoints return **HTTP 403 Forbidden**.
+- **3. Warden (`warden`)**:
+  - Dedicated, **HOSTEL-DOMAIN-ONLY** role scoped strictly to **ONE assigned hostel** via `UserRoleAssignment` (`scope_type='hostel'`, `scope_id=<hostel_id>`).
+  - Sidebar group is dynamically titled *"My Hostel"* and displays **EXACTLY 8 navigation entries**:
+    1. Hostel Dashboard
+    2. Rooms & Beds
+    3. Residents
+    4. Attendance
+    5. Leave & Outing
+    6. Complaints & Incidents
+    7. Notices
+    8. Mess Menu
+  - **No Admission Access**: `Hostel Admissions` is completely absent from the Warden sidebar. Direct URL navigation to `#/hostel/admissions` displays in-page *"Access Restricted"* refusal. Direct API calls to `/admin/hostel/admissions/*` return **HTTP 403 Forbidden**.
+  - **Cross-Hostel Isolation**: Wardens see only their assigned facility (e.g. Boys Warden sees only Boys Hostel; Girls Hostel is invisible). Direct navigation or API calls to the other hostel return **HTTP 403 Forbidden**.
+  - Prohibitions: Cannot mutate structure (floors, rooms, beds), cannot admit students, cannot permanently exit students, cannot edit/publish mess menu, cannot manage wardens, and cannot access non-hostel ERP modules (all return HTTP 403).
+
+### 12.3 Hostel Admissions & Who Admits Students
+- **Who Admits Students:**
+  - **Chief Provost:** Admits eligible Class 9+ students across all hostels in the institution.
+  - **Office Administrator / Admin:** Retains authority over the Hostel Admissions management desk (`/hostel/admissions`).
+  - **Warden:** Has **NO admission authority**. Wardens manage operational day-to-day welfare of admitted residents only.
+  - **General Admission Cell:** Can indicate hostel preference (`hostel_required=true`) on the student application during initial school intake. The Admission Cell handles school enrolment; they do **NOT** allocate rooms/beds or admit students to the hostel.
+- **Two Admission Queues (`/hostel/admissions`)**:
+  - *Application Intake Requests:* Enrolled Class 9+ students whose admission application requested hostel accommodation (`hostel_required=true`). Derived status displays `Pending Allocation` or `Allocated`.
+  - *Day Scholars Direct Admission:* Active Class 9+ day scholars available for independent hostel admission.
+- **Admission Invariant:** Admitting a student requires selecting an available bed, sets `bed.status='occupied'`, increments room occupancy, creates active `BedAllocation`, creates active `HostelAdmission`, and dynamically enables the `HOSTEL` fee head. No duplicate student accounts are created.
+
+### 12.4 Sidebar Navigation Icons (Akkhor Theme Alignment)
+- Replaced square placeholder fallback (`<rect width="7" height="7">`) across all 9 hostel routes with proper Lucide SVG icons in golden-amber (`#ffa726`):
+  - `/hostel`: Layout Dashboard (`layout-dashboard`)
+  - `/hostel/rooms`: Double Bed (`bed-double`)
+  - `/hostel/residents`: Student Residents (`users`)
+  - `/hostel/admissions`: Admissions Register (`clipboard-list`)
+  - `/hostel/attendance`: 8:00 PM Roll Call (`calendar-check`)
+  - `/hostel/leaves`: Leaves & Outings (`calendar-clock`)
+  - `/hostel/complaints`: Incidents & Complaints (`shield-alert`)
+  - `/hostel/notices`: Hostel Broadcast (`bell`)
+  - `/hostel/mess`: Dining Menu (`utensils`)
+
+### 12.5 Financial Architecture Integration
+- **Unified Fee Engine:** Sourced dynamically from `FeePlanItem` where `FeeHead.code == 'HOSTEL'`. No hardcoded fees (e.g. ₹6,500 is never hardcoded).
+- **Idempotent Billing:** `hostel_svc.charges_for_month` calculates charges idempotently without duplicate ledger entries. Follows existing fee rules without ad-hoc proration.
+
+### 12.6 Verification & Evidence
+- **Automated Quality Gates:**
+  - `pytest backend/tests/test_hostel.py backend/tests/test_rbac.py`: **36 passed** (100% green).
+  - `npm test` in `web`: **43 passed** in `screens.test.tsx` and `NavIcons.test.tsx` (all 27 suites / 144 tests green).
+  - `npm run typecheck` in `web`: **0 errors**.
+  - `python scripts/verify_db_docs.py`: **17 checks, 0 failed**.
+- **E2E Browser Visual Verification Artifacts (`docs/visual_evidence/`)**:
+  - `43_admin_erp_dashboard_intact.png`: Admin ERP dashboard intact with all non-hostel school modules.
+  - `44_admin_hostel_sidebar_pruned.png`: Admin sidebar showing EXACTLY two hostel items: "Hostel Dashboard" and "Hostel Admissions".
+  - `45_admin_hostel_dashboard_overview.png`: Admin Hostel Dashboard with badge *"Hostel Administrative Overview"* and admissions action.
+  - `46_admin_hostel_admissions_page.png`: Admin accessing Hostel Admissions management page.
+  - `47_admin_denied_hostel_rooms.png`: Admin direct navigation to `/hostel/rooms` showing in-page *"Access Restricted"* refusal.
+  - `48_provost_hostel_dashboard_and_sidebar.png`: Chief Provost portal with ALL 9 navigation entries and *"Chief Provost Portal"* badge.
+  - `49_provost_both_hostels_rooms_beds.png`: Chief Provost viewing Rooms & Beds across both Boys and Girls Hostels.
+  - `50_provost_admissions_page.png`: Chief Provost accessing tenant-wide Hostel Admissions queue.
+  - `51_boys_warden_dashboard_and_sidebar.png`: Boys Warden portal with group *"My Hostel"*, exactly 8 items, admissions absent, and Boys Hostel ONLY.
+  - `52_boys_warden_rooms_isolation.png`: Boys Warden viewing Rooms & Beds with complete Girls Hostel isolation.
+  - `53_warden_denied_hostel_admissions.png`: Warden direct navigation to `#/hostel/admissions` blocked with *"Access Restricted"* refusal.
+  - `54_girls_warden_dashboard_isolation.png`: Girls Warden dashboard showing Girls Hostel ONLY (Boys Hostel invisible).
+  - `55_hostel_lucide_golden_amber_icons.png`: Verification of high-contrast golden-amber Lucide SVG icons across all 9 hostel paths without placeholder fallback.
+

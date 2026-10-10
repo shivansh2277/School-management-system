@@ -23,26 +23,35 @@ def render_ch5() -> str:
 
    [ADMISSION PIPELINE]
    admission_cycles ──► applications ──► application_guardians / documents
+                              │                 ▲
+                              │                 │ (Document Exceptions Queue)
+                              │        application_document_overrides
                               │
                               ▼ (1-Click Conversion: services/conversion.py)
    ========================================================================================
-   [MASTER IDENTITY CORE]
-             ┌───────────────► users (Authentication Principals & Credentials)
-             │                   │
+   [MASTER IDENTITY & RBAC CORE]
+             ┌───────────────► users (Principals & token_version Invalidation)
+             │                   │        ▲
+             │                   │        └─► user_roles ◄── roles (Librarian, etc.)
              │                   ├─► employees ──────► departments
              │                   │        │
              │                   │        ├─► staff_leave_requests ──► substitutions
              │                   │        ├─► staff_attendance
-             │                   │        └─► payslips ──► payslip_items
+             │                   │        ├─► payslips ──► payslip_items
+             │                   │        └─► library_loans (Staff Borrowing)
              │                   │
              │                   └─► guardians ◄──┐
              │                                    │ (student_guardian junction)
              └───────────────► students ──────────┴───────────────────────────┐
                                  │                                            │
+                                 ├─► student_passes / found_items (Reception) │
+                                 ├─► student_certificates (Official TC/Study) │
                                  ▼ (student_id)                               │
    ========================================================================   │
    [SESSION-SCOPED ACADEMIC CORE]                                             │
    academic_years ──► class_sections ◄── class_subject_teacher                │
+             │               │                                                │
+             │               ├─► holiday_class_sections ◄── holidays          │
              │               │                                                │
              └───────────────┼─────────────────────────────────┐              │
                              ▼ (academic_year_id + section_id) │              │
@@ -55,6 +64,7 @@ def render_ch5() -> str:
                              │        └─► payment_allocations ◄── fee_payments
                              ├─► transport_assignments ──► routes ──► route_stops
                              ├─► student_leave_requests
+                             ├─► library_loans ◄── book_copies ◄── books
                              └─► report_card_publications
                                       ▲
                                       │ (Gated on Zero Fee Dues)
@@ -84,6 +94,12 @@ def render_ch5() -> str:
       <td><strong>Student Master & Academics</strong></td>
       <td><code>applications.student_id</code><br><code>students.id</code><br><code>enrolments.id</code></td>
       <td>Approved applications are converted into <code>students</code> and <code>enrolments</code> rows, populating class rosters and parent user logins.</td>
+    </tr>
+    <tr>
+      <td><strong>Admission Document Overrides</strong></td>
+      <td><strong>Application Checklist Gate</strong></td>
+      <td><code>application_document_overrides.application_id</code><br><code>applications.id</code></td>
+      <td>Document override requests queued with <code>status='pending'</code> are approved by Admin, clearing mandatory document prerequisites for admission scoring and conversion.</td>
     </tr>
     <tr>
       <td><strong>Class & Timetabling</strong></td>
@@ -126,6 +142,30 @@ def render_ch5() -> str:
       <td><strong>Departmental Expense Tracking</strong></td>
       <td><code>stock_requests.employee_id</code><br><code>stock_items.quantity</code></td>
       <td>Staff requisitions deduct from real-time stock balances and flag low-stock warnings when quantities drop below safe thresholds.</td>
+    </tr>
+    <tr>
+      <td><strong>Library Circulation Desk</strong></td>
+      <td><strong>Student & Staff Accounts</strong></td>
+      <td><code>books.id</code><br><code>book_copies.id</code><br><code>library_loans.enrolment_id</code></td>
+      <td>Physical barcode copies in <code>book_copies</code> are loaned to active student enrollments or employees; returns compute overdue fines and reset copy shelf availability.</td>
+    </tr>
+    <tr>
+      <td><strong>Certificate Templating</strong></td>
+      <td><strong>Official Student Records</strong></td>
+      <td><code>certificate_templates.id</code><br><code>student_certificates.enrolment_id</code><br><code>students.id</code></td>
+      <td>Templates format student identity and enrollment facts into standardized Transfer or Bonafide Certificates with frozen data snapshots and unique serial numbers.</td>
+    </tr>
+    <tr>
+      <td><strong>Front Desk Reception</strong></td>
+      <td><strong>Student Gate Security</strong></td>
+      <td><code>student_passes.student_id</code><br><code>student_authorized_persons.student_id</code></td>
+      <td>Reception verifies authorized pickup contacts before issuing student early departure gate passes, recording verified guardian details and gate codes.</td>
+    </tr>
+    <tr>
+      <td><strong>User Access & RBAC</strong></td>
+      <td><strong>Module Security & Authorization</strong></td>
+      <td><code>user_roles.role_id</code><br><code>roles.code</code><br><code>users.token_version</code></td>
+      <td>Admin assigns granular roles (e.g. Librarian) via <code>/user-access</code>; system increments <code>token_version</code> to enforce instant session claim refresh across web and mobile clients.</td>
     </tr>
   </tbody>
 </table>

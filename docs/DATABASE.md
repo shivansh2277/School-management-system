@@ -3,8 +3,8 @@
 A reference for every table in `sunrise_test`: what it is for, every column it
 has, and how it joins to the rest.
 
-**93 tables, 1103 columns, 251 foreign keys.** Of those tables **68 hold data** in
-the seeded demo school and **25 are empty** - not unfinished, simply features
+**117 tables, 1437 columns, 328 foreign keys.** Of those tables **82 hold data** in
+the seeded demo school and **35 are empty** - not unfinished, simply features
 this demo school has not exercised.
 
 Columns, types, foreign keys and row counts below were **introspected from the
@@ -63,11 +63,11 @@ would bury the relationships that actually tell you something.
 
 **Tenancy, identity and access** - `schools`, `academic_years`, `users`, `roles`, `permissions`, `role_permissions`, `user_roles`, `settings`, `custom_fields`, `number_sequences`, `alembic_version`
 
-**People - students and guardians** - `students`, `guardians`, `student_guardian`, `enrolments`
+**People - students and guardians** - `students`, `guardians`, `student_guardian`, `enrolments` &middot; *empty:* `student_authorized_persons`
 
 **People - staff** - `employees`, `departments`
 
-**Academics** - `class_sections`, `subjects`, `class_subject_teacher`, `school_periods`, `timetable_slots`, `substitutions`, `holidays`, `homework`, `homework_submissions`
+**Academics** - `class_sections`, `subjects`, `class_subject_teacher`, `school_periods`, `timetable_slots`, `substitutions`, `holidays`, `homework`, `homework_submissions` &middot; *empty:* `holiday_class_sections`
 
 **Attendance** - `attendance` &middot; *empty:* `student_leave_requests`
 
@@ -79,21 +79,29 @@ would bury the relationships that actually tell you something.
 
 **HR and payroll** - `staff_attendance`, `staff_leave_requests`, `leave_types`, `salary_components`, `salary_structures` &middot; *empty:* `leave_balances`, `salary_structure_items`, `payroll_runs`, `payslips`, `payslip_lines`
 
-**Admission** - `enquiries`, `admission_cycles`, `cycle_class_config` &middot; *empty:* `enquiry_interactions`, `applications`, `application_guardians`, `application_siblings`, `application_medical`, `application_payments`, `assessments`, `assessment_subjects`, `interviews`, `admission_decisions`, `admission_offers`, `waitlist_entries`
+**Admission** - `enquiries`, `admission_cycles`, `cycle_class_config`, `applications` &middot; *empty:* `enquiry_interactions`, `application_guardians`, `application_siblings`, `application_medical`, `application_payments`, `application_authorized_persons`, `application_document_overrides`, `assessments`, `assessment_subjects`, `interviews`, `admission_decisions`, `admission_offers`, `waitlist_entries`
 
-**Teacher recruitment and hiring** - `candidates`, `candidate_offers`
+**Library** - `books`, `book_copies`, `library_loans`
 
-**Communication** - `notices`, `message_templates`, `in_app_notifications` &middot; *empty:* `messages`, `message_recipients`, `notification_preferences`
+**Certificates** - `certificate_templates` &middot; *empty:* `student_certificates`
+
+**Reception and front desk** - *empty:* `student_passes`, `principal_meeting_requests`, `found_items`, `directory_contacts`
+
+**Teacher recruitment and hiring** - 
+
+**Communication** - `notices`, `message_templates`, `in_app_notifications` &middot; *empty:* `messages`, `message_recipients`, `notification_preferences`, `alert_views`
 
 **Inventory and stock** - `stock_items`, `stock_requests`
 
 **Grievances and feedback** - `grievances`, `grievance_replies`
 
+**Hostel and mess** - `hostels`, `hostel_floors`, `hostel_rooms`, `hostel_beds`, `hostel_admissions`, `bed_allocations`, `hostel_attendances`, `hostel_leave_requests`, `hostel_mess_menus`, `hostel_complaints`, `hostel_notices` &middot; *empty:* `hostel_incidents`
+
 **System** - `audit_log`, `documents`, `document_types`, `scheduled_jobs` &middot; *empty:* `jobs`
 
 ---
 
-# Part 1 - Tables in use (68)
+# Part 1 - Tables in use (82)
 
 Every table here holds data in the seeded school, and the row counts are live.
 
@@ -113,7 +121,7 @@ erDiagram
 
 One customer. The only table without a `school_id` of its own.
 
-**Pointed at by:** `academic_years`, `admission_cycles`, `admission_decisions`, `admission_offers`, `application_guardians`, `application_medical`, `application_payments`, `application_siblings`, `applications`, `assessment_schemes`, `assessment_subjects`, `assessments`, `attendance`, `audit_log`, `candidate_offers`, `candidates`, `class_sections`, `class_subject_teacher`, `custom_fields`, `cycle_class_config`, `departments`, `document_types`, `documents`, `employees`, `enquiries`, `enquiry_interactions`, `enrolments`, `exam_schedule`, `exams`, `fee_concessions`, `fee_heads`, `fee_invoice_lines`, `fee_invoices`, `fee_payments`, `fee_periods`, `fee_plan_items`, `fee_plans`, `grade_bands`, `grading_scales`, `grievance_replies`, `grievances`, `guardians`, `holidays`, `homework`, `homework_submissions`, `in_app_notifications`, `interviews`, `jobs`, `leave_balances`, `leave_types`, `marks`, `message_recipients`, `message_templates`, `messages`, `notices`, `notification_preferences`, `number_sequences`, `payment_allocations`, `payroll_runs`, `payslip_lines`, `payslips`, `report_card_publications`, `role_permissions`, `roles`, `route_stops`, `routes`, `salary_components`, `salary_structure_items`, `salary_structures`, `scheme_components`, `school_periods`, `settings`, `staff_attendance`, `staff_leave_requests`, `stock_items`, `stock_requests`, `student_fee_plans`, `student_guardian`, `student_leave_requests`, `students`, `subjects`, `substitutions`, `timetable_slots`, `transport_assignments`, `transport_fee_slabs`, `user_roles`, `users`, `vehicles`, `waitlist_entries`
+**Pointed at by:** `academic_years`, `admission_cycles`, `admission_decisions`, `admission_offers`, `alert_views`, `application_authorized_persons`, `application_document_overrides`, `application_guardians`, `application_medical`, `application_payments`, `application_siblings`, `applications`, `assessment_schemes`, `assessment_subjects`, `assessments`, `attendance`, `audit_log`, `bed_allocations`, `book_copies`, `books`, `certificate_templates`, `class_sections`, `class_subject_teacher`, `custom_fields`, `cycle_class_config`, `departments`, `directory_contacts`, `document_types`, `documents`, `employees`, `enquiries`, `enquiry_interactions`, `enrolments`, `exam_schedule`, `exams`, `fee_concessions`, `fee_heads`, `fee_invoice_lines`, `fee_invoices`, `fee_payments`, `fee_periods`, `fee_plan_items`, `fee_plans`, `found_items`, `grade_bands`, `grading_scales`, `grievance_replies`, `grievances`, `guardians`, `holiday_class_sections`, `holidays`, `homework`, `homework_submissions`, `hostel_admissions`, `hostel_attendances`, `hostel_beds`, `hostel_complaints`, `hostel_floors`, `hostel_incidents`, `hostel_leave_requests`, `hostel_mess_menus`, `hostel_notices`, `hostel_rooms`, `hostels`, `in_app_notifications`, `interviews`, `jobs`, `leave_balances`, `leave_types`, `library_loans`, `marks`, `message_recipients`, `message_templates`, `messages`, `notices`, `notification_preferences`, `number_sequences`, `payment_allocations`, `payroll_runs`, `payslip_lines`, `payslips`, `principal_meeting_requests`, `report_card_publications`, `role_permissions`, `roles`, `route_stops`, `routes`, `salary_components`, `salary_structure_items`, `salary_structures`, `scheme_components`, `school_periods`, `settings`, `staff_attendance`, `staff_leave_requests`, `stock_items`, `stock_requests`, `student_authorized_persons`, `student_certificates`, `student_fee_plans`, `student_guardian`, `student_leave_requests`, `student_passes`, `students`, `subjects`, `substitutions`, `timetable_slots`, `transport_assignments`, `transport_fee_slabs`, `user_roles`, `users`, `vehicles`, `waitlist_entries`
 
 **Unique on:** `code`
 
@@ -168,7 +176,7 @@ which the v0 string could not express.
 
 ### `users`
 
-*221 rows / 12 columns*
+*230 rows / 14 columns*
 
 Every person who can sign in - staff, students and guardians alike. One row per
 login; the role-specific detail lives in `students`, `guardians` or `employees`,
@@ -176,7 +184,7 @@ each of which points back here.
 
 **Points at:** `schools`
 
-**Pointed at by:** `admission_decisions`, `application_payments`, `applications`, `assessments`, `audit_log`, `candidate_offers`, `candidates`, `documents`, `employees`, `enquiries`, `enquiry_interactions`, `exam_schedule`, `fee_concessions`, `fee_payments`, `fee_periods`, `grievance_replies`, `grievances`, `guardians`, `in_app_notifications`, `interviews`, `marks`, `message_recipients`, `messages`, `notices`, `notification_preferences`, `payroll_runs`, `report_card_publications`, `staff_attendance`, `staff_leave_requests`, `stock_items`, `stock_requests`, `student_fee_plans`, `student_leave_requests`, `students`, `user_roles`
+**Pointed at by:** `admission_decisions`, `alert_views`, `application_document_overrides`, `application_payments`, `applications`, `assessments`, `audit_log`, `bed_allocations`, `documents`, `employees`, `enquiries`, `enquiry_interactions`, `exam_schedule`, `fee_concessions`, `fee_payments`, `fee_periods`, `found_items`, `grievance_replies`, `grievances`, `guardians`, `holidays`, `hostel_admissions`, `hostel_attendances`, `hostel_complaints`, `hostel_incidents`, `hostel_leave_requests`, `hostel_mess_menus`, `hostel_notices`, `in_app_notifications`, `interviews`, `marks`, `message_recipients`, `messages`, `notices`, `notification_preferences`, `payroll_runs`, `principal_meeting_requests`, `report_card_publications`, `staff_attendance`, `staff_leave_requests`, `stock_items`, `stock_requests`, `student_certificates`, `student_fee_plans`, `student_leave_requests`, `student_passes`, `students`, `user_roles`
 
 **Unique on:** `school_id,login_id`
 
@@ -190,6 +198,8 @@ each of which points back here.
 | `phone` | varchar(20) | yes | - |
 | `photo_url` | text | yes | - |
 | `is_active` | boolean | no | - |
+| `app_access_blocked` | boolean | no | default `false` |
+| `token_version` | integer | no | default `1` |
 | `school_id` | bigint | no | -> `schools.id`, unique |
 | `id` | bigint | no | primary key |
 | `created_at` | timestamptz | no | default `now()` |
@@ -197,7 +207,7 @@ each of which points back here.
 
 ### `roles`
 
-*14 rows / 8 columns*
+*19 rows / 8 columns*
 
 A named set of permissions. System roles ship with the product and cannot be
 deleted; a school may copy one and adjust it.
@@ -221,7 +231,7 @@ deleted; a school may copy one and adjust it.
 
 ### `permissions`
 
-*91 rows / 7 columns*
+*129 rows / 7 columns*
 
 A thing that can be done, named `module.resource.action`.
 
@@ -241,7 +251,7 @@ A thing that can be done, named `module.resource.action`.
 
 ### `role_permissions`
 
-*325 rows / 6 columns*
+*515 rows / 6 columns*
 
 Which permissions a role grants. Per school, so two tenants can define the same
 role differently.
@@ -261,7 +271,7 @@ role differently.
 
 ### `user_roles`
 
-*228 rows / 8 columns*
+*237 rows / 8 columns*
 
 A user holds a role, optionally narrowed to part of the school.
 
@@ -282,7 +292,7 @@ A user holds a role, optionally narrowed to part of the school.
 
 ### `settings`
 
-*3 rows / 6 columns*
+*5 rows / 6 columns*
 
 Per-school configuration as key/value pairs, with the vocabulary defined in
 `core/settings_registry.py`. Module switches live here too, as
@@ -378,14 +388,14 @@ erDiagram
 
 ### `students`
 
-*100 rows / 12 columns*
+*102 rows / 17 columns*
 
 What is true about a student for life. Which class they sit in is a fact about a
 *year* and lives on `enrolments` (ERP_BLUEPRINT §3.2).
 
 **Points at:** `schools`, `users`
 
-**Pointed at by:** `application_siblings`, `applications`, `enrolments`, `grievances`, `message_recipients`, `student_guardian`
+**Pointed at by:** `alert_views`, `application_siblings`, `applications`, `enrolments`, `found_items`, `grievances`, `hostel_admissions`, `hostel_attendances`, `hostel_complaints`, `hostel_incidents`, `hostel_leave_requests`, `message_recipients`, `student_authorized_persons`, `student_certificates`, `student_guardian`, `student_passes`
 
 **Unique on:** `user_id`, `school_id,admission_no`
 
@@ -398,6 +408,11 @@ What is true about a student for life. Which class they sit in is a fact about a
 | `gender` | varchar(6) | yes | - |
 | `address` | text | yes | - |
 | `admission_date` | date | yes | - |
+| `apaar_id` | varchar(12) | yes | - |
+| `apaar_consent` | boolean | no | default `false` |
+| `apaar_consent_guardian_name` | varchar(120) | yes | - |
+| `apaar_consent_guardian_relation` | varchar(40) | yes | - |
+| `apaar_consent_at` | timestamptz | yes | - |
 | `custom` | json | no | - |
 | `school_id` | bigint | no | -> `schools.id`, unique |
 | `id` | bigint | no | primary key |
@@ -412,7 +427,7 @@ Whoever is responsible for a child — not necessarily a parent (§3.4).
 
 **Points at:** `employees`, `schools`, `users`
 
-**Pointed at by:** `message_recipients`, `student_guardian`
+**Pointed at by:** `hostel_leave_requests`, `message_recipients`, `student_guardian`
 
 **Unique on:** `user_id`
 
@@ -450,7 +465,7 @@ them the school actually rings.
 
 ### `enrolments`
 
-*100 rows / 12 columns*
+*102 rows / 12 columns*
 
 A student's membership of a section for one academic year. **The most important
 join in the schema**: every year-scoped fact - fees, attendance, marks, a bus
@@ -458,7 +473,7 @@ seat - hangs off `enrolment_id`, never `student_id`.
 
 **Points at:** `academic_years`, `class_sections`, `schools`, `students`
 
-**Pointed at by:** `attendance`, `fee_concessions`, `fee_invoices`, `fee_payments`, `grievances`, `homework_submissions`, `marks`, `report_card_publications`, `student_fee_plans`, `student_leave_requests`, `transport_assignments`
+**Pointed at by:** `attendance`, `fee_concessions`, `fee_invoices`, `fee_payments`, `grievances`, `homework_submissions`, `library_loans`, `marks`, `report_card_publications`, `student_certificates`, `student_fee_plans`, `student_leave_requests`, `transport_assignments`
 
 **Unique on:** `class_section_id,roll_no`
 
@@ -494,7 +509,7 @@ Any member of staff, teaching or not (ERP_BLUEPRINT §3.4).
 
 **Points at:** `departments`, `employees`, `schools`, `users`
 
-**Pointed at by:** `application_guardians`, `attendance`, `candidates`, `class_sections`, `class_subject_teacher`, `departments`, `grievances`, `guardians`, `homework`, `leave_balances`, `payslips`, `routes`, `salary_structures`, `staff_attendance`, `staff_leave_requests`, `substitutions`, `timetable_slots`
+**Pointed at by:** `application_guardians`, `attendance`, `class_sections`, `class_subject_teacher`, `departments`, `grievances`, `guardians`, `homework`, `leave_balances`, `library_loans`, `payslips`, `routes`, `salary_structures`, `staff_attendance`, `staff_leave_requests`, `substitutions`, `timetable_slots`
 
 **Unique on:** `user_id`, `school_id,employee_code`
 
@@ -531,7 +546,7 @@ A teaching or administrative department (§5.3.3).
 
 **Points at:** `employees`, `schools`
 
-**Pointed at by:** `candidate_offers`, `employees`
+**Pointed at by:** `employees`
 
 **Unique on:** `school_id,code`
 
@@ -563,6 +578,8 @@ erDiagram
     employees ||--o{ substitutions : "substitute_teacher_id"
     timetable_slots ||--o{ substitutions : "timetable_slot_id"
     academic_years ||--o{ holidays : "academic_year_id"
+    users ||--o{ holidays : "cancelled_by_id"
+    users ||--o{ holidays : "created_by_id"
     class_sections ||--o{ homework : "class_section_id"
     subjects ||--o{ homework : "subject_id"
     employees ||--o{ homework : "teacher_id"
@@ -579,7 +596,7 @@ room and class teacher. The unit almost everything academic is scoped to.
 
 **Points at:** `academic_years`, `employees`, `schools`
 
-**Pointed at by:** `class_subject_teacher`, `enrolments`, `exam_schedule`, `homework`, `notices`, `timetable_slots`
+**Pointed at by:** `class_subject_teacher`, `enrolments`, `exam_schedule`, `holiday_class_sections`, `homework`, `notices`, `timetable_slots`
 
 **Unique on:** `academic_year_id,class_name,section`
 
@@ -716,19 +733,27 @@ One period, one day, covered by somebody else (§5.7.9).
 
 ### `holidays`
 
-*5 rows / 7 columns*
+*5 rows / 15 columns*
 
-A day the school is shut.
+A day or date-range the school or specific sections are shut.
 
-**Points at:** `academic_years`, `schools`
+**Points at:** `academic_years`, `schools`, `users`
 
-**Unique on:** `academic_year_id,date`
+**Pointed at by:** `holiday_class_sections`
 
 | Column | Type | Null | Notes |
 |---|---|---|---|
-| `academic_year_id` | bigint | no | -> `academic_years.id`, unique |
-| `date` | date | no | unique |
-| `name` | varchar(80) | no | - |
+| `academic_year_id` | bigint | no | -> `academic_years.id` |
+| `date` | date | no | - |
+| `start_date` | date | no | - |
+| `end_date` | date | no | - |
+| `name` | varchar(120) | no | - |
+| `description` | text | yes | - |
+| `is_school_wide` | boolean | no | default `true` |
+| `status` | varchar(20) | no | default `'active'` |
+| `created_by_id` | bigint | yes | -> `users.id` |
+| `cancelled_by_id` | bigint | yes | -> `users.id` |
+| `cancellation_reason` | text | yes | - |
 | `school_id` | bigint | no | -> `schools.id` |
 | `id` | bigint | no | primary key |
 | `created_at` | timestamptz | no | default `now()` |
@@ -1023,7 +1048,7 @@ erDiagram
 
 ### `fee_heads`
 
-*5 rows / 10 columns*
+*6 rows / 10 columns*
 
 The named charges a school bills: tuition, transport, exam fee. The vocabulary
 every invoice line is built from.
@@ -1049,7 +1074,7 @@ every invoice line is built from.
 
 ### `fee_plans`
 
-*10 rows / 8 columns*
+*11 rows / 8 columns*
 
 What a class is charged for a year.
 
@@ -1072,7 +1097,7 @@ What a class is charged for a year.
 
 ### `fee_plan_items`
 
-*30 rows / 8 columns*
+*31 rows / 8 columns*
 
 The lines of a fee plan - which head, how much, how often. A plan means nothing
 without these.
@@ -1287,7 +1312,7 @@ One bus doing one circuit.
 
 ### `route_stops`
 
-*7 rows / 13 columns*
+*7 rows / 14 columns*
 
 A halt on a route, with the times the bus is actually there.
 
@@ -1302,6 +1327,7 @@ A halt on a route, with the times the bus is actually there.
 | `route_id` | bigint | no | -> `routes.id`, unique |
 | `sequence` | integer | no | unique |
 | `name` | varchar(80) | no | - |
+| `address` | varchar(255) | yes | - |
 | `landmark` | varchar(120) | yes | - |
 | `pickup_time` | time without time zone | no | - |
 | `drop_time` | time without time zone | yes | - |
@@ -1512,6 +1538,9 @@ erDiagram
     admission_cycles ||--o{ enquiries : "cycle_id"
     academic_years ||--o{ admission_cycles : "academic_year_id"
     admission_cycles ||--o{ cycle_class_config : "cycle_id"
+    users ||--o{ applications : "created_by"
+    admission_cycles ||--o{ applications : "cycle_id"
+    students ||--o{ applications : "student_id"
 ```
 
 ### `enquiries`
@@ -1600,75 +1629,176 @@ Seats and rules for one class within one cycle.
 | `created_at` | timestamptz | no | default `now()` |
 | `updated_at` | timestamptz | no | default `now()` |
 
-## Teacher recruitment and hiring
+### `applications`
 
-```mermaid
-erDiagram
-    users ||--o{ candidates : "created_by_user_id"
-    employees ||--o{ candidates : "employee_id"
-    candidates ||--o{ candidate_offers : "candidate_id"
-    users ||--o{ candidate_offers : "created_by_user_id"
-    departments ||--o{ candidate_offers : "offered_department_id"
-```
+*1 rows / 45 columns*
 
-### `candidates`
+One child's candidacy in one cycle.
 
-*1 rows / 23 columns*
+**Points at:** `admission_cycles`, `applications`, `schools`, `students`, `users`
 
-A teacher applicant registered for recruitment.
+**Pointed at by:** `admission_decisions`, `admission_offers`, `application_authorized_persons`, `application_document_overrides`, `application_guardians`, `application_medical`, `application_payments`, `application_siblings`, `assessments`, `enquiries`, `interviews`, `message_recipients`, `waitlist_entries`
 
-**Points at:** `employees`, `schools`, `users`
-
-**Pointed at by:** `candidate_offers`
-
-**Unique on:** `employee_id`, `school_id,application_no`
+**Unique on:** `school_id,application_no`
 
 | Column | Type | Null | Notes |
 |---|---|---|---|
-| `application_no` | varchar(50) | no | unique |
-| `full_name` | varchar(120) | no | - |
-| `email` | varchar(255) | no | - |
-| `phone` | varchar(20) | no | - |
-| `gender` | varchar(20) | no | - |
+| `cycle_id` | bigint | no | -> `admission_cycles.id` |
+| `application_no` | varchar(24) | yes | unique |
+| `first_name` | varchar(60) | no | - |
+| `middle_name` | varchar(60) | yes | - |
+| `last_name` | varchar(60) | no | - |
 | `date_of_birth` | date | no | - |
-| `address` | text | yes | - |
-| `post_applied_for` | varchar(100) | no | - |
-| `qualification` | varchar(200) | no | - |
-| `specialization` | varchar(100) | yes | - |
-| `experience_years` | numeric(4,1) | no | - |
-| `previous_school` | varchar(200) | yes | - |
-| `expected_salary` | numeric(12,2) | yes | - |
-| `resume_file_key` | varchar(500) | yes | - |
-| `photo_file_key` | varchar(500) | yes | - |
-| `status` | varchar(11) | no | - |
-| `notes` | text | yes | - |
-| `employee_id` | bigint | yes | -> `employees.id`, unique |
-| `created_by_user_id` | bigint | yes | -> `users.id` |
+| `gender` | varchar(12) | no | - |
+| `nationality` | varchar(40) | yes | - |
+| `religion` | varchar(40) | yes | - |
+| `caste_category` | varchar(12) | yes | - |
+| `mother_tongue` | varchar(40) | yes | - |
+| `place_of_birth` | varchar(80) | yes | - |
+| `identification_marks` | text | yes | - |
+| `is_single_child` | boolean | no | - |
+| `aadhaar_last4` | varchar(4) | yes | - |
+| `aadhaar_verified` | boolean | no | - |
+| `apaar_id` | varchar(12) | yes | - |
+| `apaar_consent` | boolean | no | default `false` |
+| `apaar_consent_guardian_name` | varchar(120) | yes | - |
+| `apaar_consent_guardian_relation` | varchar(40) | yes | - |
+| `apaar_consent_at` | timestamptz | yes | - |
+| `class_applying_for` | varchar(8) | no | - |
+| `stream` | varchar(20) | yes | - |
+| `second_language` | varchar(40) | yes | - |
+| `optional_subject` | varchar(40) | yes | - |
+| `preferred_section` | varchar(4) | yes | - |
+| `admission_category` | varchar(12) | no | - |
+| `transport_required` | boolean | no | - |
+| `hostel_required` | boolean | no | default `false` |
+| `status` | varchar(27) | no | - |
+| `submitted_at` | timestamptz | yes | - |
+| `source` | varchar(10) | no | - |
+| `created_by` | bigint | yes | -> `users.id` |
+| `address` | json | yes | - |
+| `previous_school` | json | yes | - |
+| `declarations` | json | yes | - |
+| `sibling_verified` | boolean | no | - |
+| `staff_ward_verified` | boolean | no | - |
+| `age_override_reason` | text | yes | - |
+| `previous_application_id` | bigint | yes | -> `applications.id` |
+| `student_id` | bigint | yes | -> `students.id` |
 | `school_id` | bigint | no | -> `schools.id`, unique |
 | `id` | bigint | no | primary key |
 | `created_at` | timestamptz | no | default `now()` |
 | `updated_at` | timestamptz | no | default `now()` |
 
-### `candidate_offers`
+## Library
 
-*1 rows / 11 columns*
+```mermaid
+erDiagram
+    books ||--o{ book_copies : "book_id"
+    book_copies ||--o{ library_loans : "book_copy_id"
+    employees ||--o{ library_loans : "employee_id"
+    enrolments ||--o{ library_loans : "enrolment_id"
+    employees ||--o{ library_loans : "issued_by_id"
+```
 
-Job offer terms extended to a selected candidate.
+### `books`
 
-**Points at:** `candidates`, `departments`, `schools`, `users`
+*6 rows / 12 columns*
 
-**Unique on:** `candidate_id`
+A book title in the library catalog.
+
+**Points at:** `schools`
+
+**Pointed at by:** `book_copies`
 
 | Column | Type | Null | Notes |
 |---|---|---|---|
-| `candidate_id` | bigint | no | -> `candidates.id`, unique |
-| `offered_designation` | varchar(100) | no | - |
-| `offered_department_id` | bigint | yes | -> `departments.id` |
-| `offered_salary` | numeric(12,2) | no | - |
-| `joining_date` | date | no | - |
-| `offer_notes` | text | yes | - |
-| `created_by_user_id` | bigint | yes | -> `users.id` |
+| `isbn` | varchar(20) | yes | - |
+| `title` | varchar(200) | no | - |
+| `author` | varchar(120) | no | - |
+| `publisher` | varchar(120) | yes | - |
+| `category` | varchar(60) | no | - |
+| `total_copies` | integer | no | - |
+| `available_copies` | integer | no | - |
+| `shelf_location` | varchar(40) | yes | - |
 | `school_id` | bigint | no | -> `schools.id` |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+### `book_copies`
+
+*14 rows / 8 columns*
+
+An individual physical copy of a book, identified by a unique accession number.
+
+**Points at:** `books`, `schools`
+
+**Pointed at by:** `library_loans`
+
+**Unique on:** `school_id,accession_no`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `book_id` | bigint | no | -> `books.id` |
+| `accession_no` | varchar(40) | no | unique |
+| `barcode` | varchar(60) | yes | - |
+| `status` | varchar(20) | no | - |
+| `school_id` | bigint | no | -> `schools.id`, unique |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+### `library_loans`
+
+*2 rows / 16 columns*
+
+A circulation record: book copy issued to an enrolled student (via Enrollment
+ID) or a staff member.
+
+**Points at:** `book_copies`, `employees`, `enrolments`, `schools`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `book_copy_id` | bigint | no | -> `book_copies.id` |
+| `enrolment_id` | bigint | yes | -> `enrolments.id` |
+| `employee_id` | bigint | yes | -> `employees.id` |
+| `issued_by_id` | bigint | no | -> `employees.id` |
+| `issued_on` | date | no | - |
+| `due_date` | date | no | - |
+| `returned_on` | date | yes | - |
+| `status` | varchar(20) | no | - |
+| `fine_amount` | numeric(10,2) | no | - |
+| `fine_paid` | boolean | no | - |
+| `renewal_count` | integer | no | - |
+| `remarks` | text | yes | - |
+| `school_id` | bigint | no | -> `schools.id` |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+## Certificates
+
+### `certificate_templates`
+
+*3 rows / 11 columns*
+
+Configurable certificate template for a school. Allows institutional details,
+signatory titles, and wording to be configured rather than hardcoded.
+
+**Points at:** `schools`
+
+**Unique on:** `school_id,certificate_type`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `certificate_type` | varchar(30) | no | unique |
+| `title` | varchar(120) | no | - |
+| `header_text` | text | yes | - |
+| `body_template` | text | no | - |
+| `signatory_name` | varchar(120) | yes | - |
+| `signatory_title` | varchar(80) | yes | - |
+| `show_seal` | boolean | no | default `true` |
+| `school_id` | bigint | no | -> `schools.id`, unique |
 | `id` | bigint | no | primary key |
 | `created_at` | timestamptz | no | default `now()` |
 | `updated_at` | timestamptz | no | default `now()` |
@@ -1685,7 +1815,7 @@ erDiagram
 
 ### `notices`
 
-*6 rows / 11 columns*
+*6 rows / 17 columns*
 
 The noticeboard. An announcement with an audience - the whole school, one class,
 parents, teachers - optionally also sent as a message.
@@ -1701,6 +1831,12 @@ parents, teachers - optionally also sent as a message.
 | `published_by` | bigint | no | -> `users.id` |
 | `published_at` | timestamptz | no | - |
 | `message_id` | bigint | yes | -> `messages.id` |
+| `category` | varchar(50) | no | - |
+| `is_public` | boolean | no | - |
+| `is_pinned` | boolean | no | - |
+| `summary` | varchar(300) | yes | - |
+| `expiry_date` | date | yes | - |
+| `attachment_url` | varchar(255) | yes | - |
 | `school_id` | bigint | no | -> `schools.id` |
 | `id` | bigint | no | primary key |
 | `created_at` | timestamptz | no | default `now()` |
@@ -1889,6 +2025,311 @@ A response or progress note on a grievance thread.
 | `created_at` | timestamptz | no | default `now()` |
 | `updated_at` | timestamptz | no | default `now()` |
 
+## Hostel and mess
+
+```mermaid
+erDiagram
+    hostels ||--o{ hostel_floors : "hostel_id"
+    hostel_floors ||--o{ hostel_rooms : "floor_id"
+    hostels ||--o{ hostel_rooms : "hostel_id"
+    hostel_rooms ||--o{ hostel_beds : "room_id"
+    users ||--o{ hostel_admissions : "admitted_by_id"
+    users ||--o{ hostel_admissions : "exited_by_id"
+    hostels ||--o{ hostel_admissions : "hostel_id"
+    students ||--o{ hostel_admissions : "student_id"
+    hostel_admissions ||--o{ bed_allocations : "admission_id"
+    users ||--o{ bed_allocations : "allocated_by_id"
+    hostel_beds ||--o{ bed_allocations : "bed_id"
+    hostel_admissions ||--o{ hostel_attendances : "admission_id"
+    hostels ||--o{ hostel_attendances : "hostel_id"
+    users ||--o{ hostel_attendances : "recorded_by_id"
+    students ||--o{ hostel_attendances : "student_id"
+    hostel_admissions ||--o{ hostel_leave_requests : "admission_id"
+    users ||--o{ hostel_leave_requests : "approved_by_id"
+    hostels ||--o{ hostel_leave_requests : "hostel_id"
+    guardians ||--o{ hostel_leave_requests : "parent_guardian_id"
+    users ||--o{ hostel_leave_requests : "returned_recorded_by_id"
+    students ||--o{ hostel_leave_requests : "student_id"
+    users ||--o{ hostel_mess_menus : "updated_by_id"
+    hostels ||--o{ hostel_complaints : "hostel_id"
+    users ||--o{ hostel_complaints : "resolved_by_id"
+    hostel_rooms ||--o{ hostel_complaints : "room_id"
+    students ||--o{ hostel_complaints : "student_id"
+    hostels ||--o{ hostel_notices : "hostel_id"
+    users ||--o{ hostel_notices : "posted_by_id"
+```
+
+### `hostels`
+
+*2 rows / 9 columns*
+
+A residential building / facility belonging to the school.
+
+**Points at:** `schools`
+
+**Pointed at by:** `hostel_admissions`, `hostel_attendances`, `hostel_complaints`, `hostel_floors`, `hostel_incidents`, `hostel_leave_requests`, `hostel_notices`, `hostel_rooms`
+
+**Unique on:** `school_id,code`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `name` | varchar(100) | no | - |
+| `code` | varchar(20) | no | unique |
+| `gender` | varchar(6) | no | - |
+| `status` | varchar(20) | no | - |
+| `description` | text | yes | - |
+| `school_id` | bigint | no | -> `schools.id`, unique |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+### `hostel_floors`
+
+*4 rows / 8 columns*
+
+A floor within a hostel.
+
+**Points at:** `hostels`, `schools`
+
+**Pointed at by:** `hostel_rooms`
+
+**Unique on:** `school_id,hostel_id,floor_number`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `hostel_id` | bigint | no | -> `hostels.id`, unique |
+| `floor_number` | integer | no | unique |
+| `floor_name` | varchar(60) | no | - |
+| `status` | varchar(20) | no | - |
+| `school_id` | bigint | no | -> `schools.id`, unique |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+### `hostel_rooms`
+
+*10 rows / 10 columns*
+
+A room on a floor with configurable bed capacity.
+
+**Points at:** `hostel_floors`, `hostels`, `schools`
+
+**Pointed at by:** `hostel_beds`, `hostel_complaints`
+
+**Unique on:** `school_id,hostel_id,room_number`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `hostel_id` | bigint | no | -> `hostels.id`, unique |
+| `floor_id` | bigint | no | -> `hostel_floors.id` |
+| `room_number` | varchar(20) | no | unique |
+| `capacity` | integer | no | - |
+| `room_type` | varchar(30) | no | - |
+| `status` | varchar(20) | no | - |
+| `school_id` | bigint | no | -> `schools.id`, unique |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+### `hostel_beds`
+
+*20 rows / 7 columns*
+
+An explicit bed record inside a room.
+
+**Points at:** `hostel_rooms`, `schools`
+
+**Pointed at by:** `bed_allocations`
+
+**Unique on:** `school_id,room_id,bed_number`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `room_id` | bigint | no | -> `hostel_rooms.id`, unique |
+| `bed_number` | varchar(20) | no | unique |
+| `status` | varchar(20) | no | - |
+| `school_id` | bigint | no | -> `schools.id`, unique |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+### `hostel_admissions`
+
+*20 rows / 13 columns*
+
+Lifetime stay record of a student admitted to a hostel.
+
+**Points at:** `hostels`, `schools`, `students`, `users`
+
+**Pointed at by:** `bed_allocations`, `hostel_attendances`, `hostel_leave_requests`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `student_id` | bigint | no | -> `students.id` |
+| `hostel_id` | bigint | no | -> `hostels.id` |
+| `admission_date` | date | no | - |
+| `status` | varchar(20) | no | - |
+| `exit_date` | date | yes | - |
+| `exit_reason` | text | yes | - |
+| `remarks` | text | yes | - |
+| `admitted_by_id` | bigint | yes | -> `users.id` |
+| `exited_by_id` | bigint | yes | -> `users.id` |
+| `school_id` | bigint | no | -> `schools.id` |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+### `bed_allocations`
+
+*20 rows / 11 columns*
+
+Historical and active bed allocations for a hostel admission.
+
+**Points at:** `hostel_admissions`, `hostel_beds`, `schools`, `users`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `admission_id` | bigint | no | -> `hostel_admissions.id` |
+| `bed_id` | bigint | no | -> `hostel_beds.id` |
+| `allocated_at` | timestamptz | no | - |
+| `vacated_at` | timestamptz | yes | - |
+| `is_active` | boolean | no | - |
+| `allocated_by_id` | bigint | yes | -> `users.id` |
+| `remarks` | text | yes | - |
+| `school_id` | bigint | no | -> `schools.id` |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+### `hostel_attendances`
+
+*60 rows / 13 columns*
+
+Residential 8:00 PM evening attendance marked by Wardens.
+
+**Points at:** `hostel_admissions`, `hostels`, `schools`, `students`, `users`
+
+**Unique on:** `school_id,hostel_id,student_id,attendance_date`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `hostel_id` | bigint | no | -> `hostels.id`, unique |
+| `student_id` | bigint | no | -> `students.id`, unique |
+| `admission_id` | bigint | no | -> `hostel_admissions.id` |
+| `attendance_date` | date | no | unique |
+| `status` | varchar(20) | no | - |
+| `scheduled_time` | time without time zone | no | - |
+| `recorded_at` | timestamptz | no | - |
+| `recorded_by_id` | bigint | no | -> `users.id` |
+| `remarks` | text | yes | - |
+| `school_id` | bigint | no | -> `schools.id`, unique |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+### `hostel_leave_requests`
+
+*2 rows / 21 columns*
+
+Leave and outing requests initiated by parents and approved by wardens.
+
+**Points at:** `guardians`, `hostel_admissions`, `hostels`, `schools`, `students`, `users`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `student_id` | bigint | no | -> `students.id` |
+| `admission_id` | bigint | no | -> `hostel_admissions.id` |
+| `hostel_id` | bigint | no | -> `hostels.id` |
+| `request_type` | varchar(20) | no | - |
+| `start_date` | date | no | - |
+| `end_date` | date | no | - |
+| `out_time` | time without time zone | yes | - |
+| `expected_return_time` | timestamptz | no | - |
+| `actual_return_time` | timestamptz | yes | - |
+| `purpose` | text | no | - |
+| `parent_guardian_id` | bigint | no | -> `guardians.id` |
+| `status` | varchar(20) | no | - |
+| `approved_by_id` | bigint | yes | -> `users.id` |
+| `approved_at` | timestamptz | yes | - |
+| `remarks` | text | yes | - |
+| `rejection_reason` | text | yes | - |
+| `returned_recorded_by_id` | bigint | yes | -> `users.id` |
+| `school_id` | bigint | no | -> `schools.id` |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+### `hostel_mess_menus`
+
+*6 rows / 11 columns*
+
+School-wide weekly mess menu managed and published by Chief Provost.
+
+**Points at:** `schools`, `users`
+
+**Unique on:** `school_id,day_of_week`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `day_of_week` | varchar(3) | no | unique |
+| `breakfast` | text | no | - |
+| `lunch` | text | no | - |
+| `snacks` | text | no | - |
+| `dinner` | text | no | - |
+| `is_published` | boolean | no | - |
+| `updated_by_id` | bigint | yes | -> `users.id` |
+| `school_id` | bigint | no | -> `schools.id`, unique |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+### `hostel_complaints`
+
+*2 rows / 14 columns*
+
+Hostel maintenance, cleanliness, and facilities complaints.
+
+**Points at:** `hostel_rooms`, `hostels`, `schools`, `students`, `users`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `hostel_id` | bigint | no | -> `hostels.id` |
+| `student_id` | bigint | yes | -> `students.id` |
+| `room_id` | bigint | yes | -> `hostel_rooms.id` |
+| `category` | varchar(50) | no | - |
+| `title` | varchar(200) | no | - |
+| `description` | text | no | - |
+| `status` | varchar(20) | no | - |
+| `resolution_remarks` | text | yes | - |
+| `resolved_by_id` | bigint | yes | -> `users.id` |
+| `resolved_at` | timestamptz | yes | - |
+| `school_id` | bigint | no | -> `schools.id` |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+### `hostel_notices`
+
+*2 rows / 11 columns*
+
+Hostel-wide broadcast circulars and notices.
+
+**Points at:** `hostels`, `schools`, `users`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `hostel_id` | bigint | yes | -> `hostels.id` |
+| `title` | varchar(200) | no | - |
+| `content` | text | no | - |
+| `priority` | varchar(20) | no | - |
+| `posted_by_id` | bigint | no | -> `users.id` |
+| `posted_at` | timestamptz | no | - |
+| `is_active` | boolean | no | - |
+| `school_id` | bigint | no | -> `schools.id` |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
 ## System
 
 ```mermaid
@@ -1996,7 +2437,7 @@ and by state regulation, and a school must be able to edit them without a deploy
 
 ### `scheduled_jobs`
 
-*4 rows / 10 columns*
+*5 rows / 10 columns*
 
 A recurring job. Deliberately not cron syntax — a school needs "every day at
 02:00", not "*/7 3-5 * * 2", and an interval plus an hour is far easier for a
@@ -2019,9 +2460,67 @@ non-technical administrator to read in a settings screen.
 
 ---
 
-# Part 2 - Tables not yet used (25)
+# Part 2 - Tables not yet used (35)
 
 These are empty in the demo school. Each belongs to a feature that is built and has working endpoints - admission has taken no applications, payroll has run no cycle, nobody has requested leave. The schema is real; only the rows are missing.
+
+## People - students and guardians
+
+```mermaid
+erDiagram
+    students ||--o{ student_authorized_persons : "student_id"
+```
+
+### `student_authorized_persons`
+
+*0 rows / 13 columns*
+
+Permanent authorized pickup roster on the student master record.
+
+**Points at:** `schools`, `students`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `student_id` | bigint | no | -> `students.id` |
+| `name` | varchar(120) | no | - |
+| `relationship` | varchar(60) | no | - |
+| `phone` | varchar(30) | no | - |
+| `id_proof_type` | varchar(50) | yes | - |
+| `id_proof_number` | varchar(50) | yes | - |
+| `photo_url` | text | yes | - |
+| `is_active` | boolean | no | - |
+| `notes` | text | yes | - |
+| `school_id` | bigint | no | -> `schools.id` |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+## Academics
+
+```mermaid
+erDiagram
+    class_sections ||--o{ holiday_class_sections : "class_section_id"
+    holidays ||--o{ holiday_class_sections : "holiday_id"
+```
+
+### `holiday_class_sections`
+
+*0 rows / 6 columns*
+
+Associates a holiday with specific class sections when not school-wide.
+
+**Points at:** `class_sections`, `holidays`, `schools`
+
+**Unique on:** `holiday_id,class_section_id`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `holiday_id` | bigint | no | -> `holidays.id`, unique |
+| `class_section_id` | bigint | no | -> `class_sections.id`, unique |
+| `school_id` | bigint | no | -> `schools.id` |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
 
 ## Attendance
 
@@ -2295,9 +2794,6 @@ One component on one payslip, as it was computed.
 erDiagram
     users ||--o{ enquiry_interactions : "by_user_id"
     enquiries ||--o{ enquiry_interactions : "enquiry_id"
-    users ||--o{ applications : "created_by"
-    admission_cycles ||--o{ applications : "cycle_id"
-    students ||--o{ applications : "student_id"
     applications ||--o{ application_guardians : "application_id"
     employees ||--o{ application_guardians : "employee_id"
     applications ||--o{ application_siblings : "application_id"
@@ -2305,6 +2801,9 @@ erDiagram
     applications ||--o{ application_medical : "application_id"
     applications ||--o{ application_payments : "application_id"
     users ||--o{ application_payments : "collected_by"
+    applications ||--o{ application_authorized_persons : "application_id"
+    applications ||--o{ application_document_overrides : "application_id"
+    users ||--o{ application_document_overrides : "authorized_by_id"
     applications ||--o{ assessments : "application_id"
     users ||--o{ assessments : "evaluated_by"
     assessments ||--o{ assessment_subjects : "assessment_id"
@@ -2339,63 +2838,9 @@ evidence behind a conversion number.
 | `created_at` | timestamptz | no | default `now()` |
 | `updated_at` | timestamptz | no | default `now()` |
 
-### `applications`
-
-*0 rows / 39 columns*
-
-One child's candidacy in one cycle.
-
-**Points at:** `admission_cycles`, `applications`, `schools`, `students`, `users`
-
-**Pointed at by:** `admission_decisions`, `admission_offers`, `application_guardians`, `application_medical`, `application_payments`, `application_siblings`, `assessments`, `enquiries`, `interviews`, `message_recipients`, `waitlist_entries`
-
-**Unique on:** `school_id,application_no`
-
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `cycle_id` | bigint | no | -> `admission_cycles.id` |
-| `application_no` | varchar(24) | yes | unique |
-| `first_name` | varchar(60) | no | - |
-| `middle_name` | varchar(60) | yes | - |
-| `last_name` | varchar(60) | no | - |
-| `date_of_birth` | date | no | - |
-| `gender` | varchar(12) | no | - |
-| `nationality` | varchar(40) | yes | - |
-| `religion` | varchar(40) | yes | - |
-| `caste_category` | varchar(12) | yes | - |
-| `mother_tongue` | varchar(40) | yes | - |
-| `place_of_birth` | varchar(80) | yes | - |
-| `identification_marks` | text | yes | - |
-| `is_single_child` | boolean | no | - |
-| `aadhaar_last4` | varchar(4) | yes | - |
-| `aadhaar_verified` | boolean | no | - |
-| `class_applying_for` | varchar(8) | no | - |
-| `stream` | varchar(20) | yes | - |
-| `second_language` | varchar(40) | yes | - |
-| `optional_subject` | varchar(40) | yes | - |
-| `preferred_section` | varchar(4) | yes | - |
-| `admission_category` | varchar(12) | no | - |
-| `transport_required` | boolean | no | - |
-| `status` | varchar(27) | no | - |
-| `submitted_at` | timestamptz | yes | - |
-| `source` | varchar(10) | no | - |
-| `created_by` | bigint | yes | -> `users.id` |
-| `address` | json | yes | - |
-| `previous_school` | json | yes | - |
-| `declarations` | json | yes | - |
-| `sibling_verified` | boolean | no | - |
-| `staff_ward_verified` | boolean | no | - |
-| `age_override_reason` | text | yes | - |
-| `previous_application_id` | bigint | yes | -> `applications.id` |
-| `student_id` | bigint | yes | -> `students.id` |
-| `school_id` | bigint | no | -> `schools.id`, unique |
-| `id` | bigint | no | primary key |
-| `created_at` | timestamptz | no | default `now()` |
-| `updated_at` | timestamptz | no | default `now()` |
-
 ### `application_guardians`
 
-*0 rows / 23 columns*
+*0 rows / 24 columns*
 
 Repeatable: father, mother, guardian (§5.1.4 step 3).
 
@@ -2419,6 +2864,7 @@ Repeatable: father, mother, guardian (§5.1.4 step 3).
 | `is_primary` | boolean | no | - |
 | `is_emergency_contact` | boolean | no | - |
 | `is_authorised_for_pickup` | boolean | no | - |
+| `photo_url` | text | yes | - |
 | `is_school_alumnus` | boolean | no | - |
 | `is_school_staff` | boolean | no | - |
 | `employee_id` | bigint | yes | -> `employees.id` |
@@ -2502,6 +2948,56 @@ because an applicant is not a student and has no enrolment.
 | `void_reason` | text | yes | - |
 | `idempotency_key` | varchar(120) | yes | unique |
 | `school_id` | bigint | no | -> `schools.id`, unique |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+### `application_authorized_persons`
+
+*0 rows / 12 columns*
+
+Repeatable: authorized pickup persons permitted to collect the student (§5.1.4
+step 3). Supports multiple people (parents, grandparents, drivers, relatives)
+with genuine photos.
+
+**Points at:** `applications`, `schools`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `application_id` | bigint | no | -> `applications.id` |
+| `name` | varchar(120) | no | - |
+| `relationship` | varchar(60) | no | - |
+| `phone` | varchar(30) | no | - |
+| `id_proof_type` | varchar(50) | yes | - |
+| `id_proof_number` | varchar(50) | yes | - |
+| `photo_url` | text | yes | - |
+| `notes` | text | yes | - |
+| `school_id` | bigint | no | -> `schools.id` |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+### `application_document_overrides`
+
+*0 rows / 11 columns*
+
+An authorized Admin exception permitting an application to be submitted or
+processed despite missing a mandatory document (e.g. birth certificate, APAAR).
+
+**Points at:** `applications`, `schools`, `users`
+
+**Unique on:** `application_id,document_code`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `application_id` | bigint | no | -> `applications.id`, unique |
+| `document_code` | varchar(40) | no | unique |
+| `status` | varchar(20) | no | default `'pending'` |
+| `authorized_by_id` | bigint | yes | -> `users.id` |
+| `reason` | text | no | - |
+| `rejection_reason` | text | yes | - |
+| `authorized_at` | timestamptz | yes | - |
+| `school_id` | bigint | no | -> `schools.id` |
 | `id` | bigint | no | primary key |
 | `created_at` | timestamptz | no | default `now()` |
 | `updated_at` | timestamptz | no | default `now()` |
@@ -2650,6 +3146,187 @@ An ordered queue per class, not a label on an application.
 | `created_at` | timestamptz | no | default `now()` |
 | `updated_at` | timestamptz | no | default `now()` |
 
+## Certificates
+
+```mermaid
+erDiagram
+    users ||--o{ student_certificates : "approved_by_id"
+    enrolments ||--o{ student_certificates : "enrolment_id"
+    users ||--o{ student_certificates : "issued_by_id"
+    users ||--o{ student_certificates : "requested_by_id"
+    students ||--o{ student_certificates : "student_id"
+```
+
+### `student_certificates`
+
+*0 rows / 22 columns*
+
+An official certificate issued to or requested for a student. Maintains an
+immutable issuance history, request/approval status, and audit records.
+
+**Points at:** `enrolments`, `schools`, `student_certificates`, `students`, `users`
+
+**Unique on:** `school_id,certificate_no`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `certificate_type` | varchar(30) | no | - |
+| `student_id` | bigint | no | -> `students.id` |
+| `enrolment_id` | bigint | no | -> `enrolments.id` |
+| `certificate_no` | varchar(40) | yes | unique |
+| `issue_date` | date | yes | - |
+| `issued_by_id` | bigint | yes | -> `users.id` |
+| `issued_at` | timestamptz | yes | - |
+| `status` | varchar(20) | no | - |
+| `requested_by_id` | bigint | yes | -> `users.id` |
+| `requested_at` | timestamptz | yes | - |
+| `approved_by_id` | bigint | yes | -> `users.id` |
+| `approved_at` | timestamptz | yes | - |
+| `rejection_reason` | text | yes | - |
+| `data_snapshot` | json | no | - |
+| `is_reissue` | boolean | no | default `false` |
+| `reissue_count` | integer | no | default `0` |
+| `reissue_reason` | text | yes | - |
+| `original_certificate_id` | bigint | yes | -> `student_certificates.id` |
+| `school_id` | bigint | no | -> `schools.id`, unique |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+## Reception and front desk
+
+```mermaid
+erDiagram
+    users ||--o{ student_passes : "issued_by_id"
+    students ||--o{ student_passes : "student_id"
+    users ||--o{ principal_meeting_requests : "created_by_id"
+    students ||--o{ found_items : "claimed_by_student_id"
+    users ||--o{ found_items : "collected_by_staff_id"
+    users ||--o{ found_items : "recorded_by_id"
+```
+
+### `student_passes`
+
+*0 rows / 20 columns*
+
+One-time student gate pass generated on behalf of a parent.
+
+**Points at:** `schools`, `students`, `users`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `pass_code` | varchar(40) | no | - |
+| `student_id` | bigint | no | -> `students.id` |
+| `student_name` | varchar(120) | no | - |
+| `admission_no` | varchar(50) | no | - |
+| `class_name` | varchar(60) | yes | - |
+| `reason` | text | no | - |
+| `pickup_person_name` | varchar(120) | no | - |
+| `pickup_person_relation` | varchar(60) | no | - |
+| `pickup_person_phone` | varchar(30) | no | - |
+| `pickup_person_id_proof` | varchar(80) | yes | - |
+| `pass_date` | date | no | - |
+| `pass_time` | varchar(20) | no | - |
+| `issued_by_id` | bigint | no | -> `users.id` |
+| `issued_by_name` | varchar(120) | no | - |
+| `status` | varchar(30) | no | - |
+| `remarks` | text | yes | - |
+| `school_id` | bigint | no | -> `schools.id` |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+### `principal_meeting_requests`
+
+*0 rows / 19 columns*
+
+Visitor meeting slips/requests for the Principal.
+
+**Points at:** `schools`, `users`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `slip_code` | varchar(40) | no | - |
+| `visitor_name` | varchar(120) | no | - |
+| `visitor_phone` | varchar(30) | no | - |
+| `visitor_organization` | varchar(120) | yes | - |
+| `student_name` | varchar(120) | yes | - |
+| `student_admission_no` | varchar(50) | yes | - |
+| `reason` | text | no | - |
+| `meeting_date` | date | no | - |
+| `meeting_time` | varchar(20) | no | - |
+| `status` | varchar(30) | no | - |
+| `wait_duration_minutes` | integer | yes | - |
+| `response_notes` | text | yes | - |
+| `responded_at` | timestamptz | yes | - |
+| `created_by_id` | bigint | no | -> `users.id` |
+| `created_by_name` | varchar(120) | no | - |
+| `school_id` | bigint | no | -> `schools.id` |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+### `found_items`
+
+*0 rows / 24 columns*
+
+Items found on school premises and managed by the receptionist.
+
+**Points at:** `schools`, `students`, `users`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `item_name` | varchar(150) | no | - |
+| `category` | varchar(50) | no | - |
+| `description` | text | yes | - |
+| `found_location` | varchar(150) | no | - |
+| `found_date` | date | no | - |
+| `found_time` | varchar(20) | yes | - |
+| `recorded_by_id` | bigint | no | -> `users.id` |
+| `recorded_by_name` | varchar(120) | no | - |
+| `photo_url` | text | yes | - |
+| `status` | varchar(30) | no | - |
+| `broadcasted_at` | timestamptz | yes | - |
+| `claimed_by_student_id` | bigint | yes | -> `students.id` |
+| `claimed_by_student_name` | varchar(120) | yes | - |
+| `claimed_by_admission_no` | varchar(50) | yes | - |
+| `claimed_by_class_name` | varchar(50) | yes | - |
+| `handover_photo_url` | text | yes | - |
+| `handover_notes` | text | yes | - |
+| `collected_at` | timestamptz | yes | - |
+| `collected_by_staff_id` | bigint | yes | -> `users.id` |
+| `collected_by_staff_name` | varchar(120) | yes | - |
+| `school_id` | bigint | no | -> `schools.id` |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+### `directory_contacts`
+
+*0 rows / 15 columns*
+
+Important emergency and administrative contacts for the school.
+
+**Points at:** `schools`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `category` | varchar(60) | no | - |
+| `name` | varchar(150) | no | - |
+| `designation_or_department` | varchar(120) | yes | - |
+| `phone_primary` | varchar(40) | no | - |
+| `phone_secondary` | varchar(40) | yes | - |
+| `email` | varchar(120) | yes | - |
+| `address` | text | yes | - |
+| `operating_hours` | varchar(100) | yes | - |
+| `is_emergency` | boolean | no | - |
+| `display_order` | integer | no | - |
+| `notes` | text | yes | - |
+| `school_id` | bigint | no | -> `schools.id` |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
 ## Communication
 
 ```mermaid
@@ -2663,6 +3340,8 @@ erDiagram
     students ||--o{ message_recipients : "student_id"
     users ||--o{ message_recipients : "user_id"
     users ||--o{ notification_preferences : "user_id"
+    students ||--o{ alert_views : "student_id"
+    users ||--o{ alert_views : "user_id"
 ```
 
 ### `messages`
@@ -2739,6 +3418,62 @@ One opt-out, per person per category per channel.
 | `category` | varchar(11) | no | unique |
 | `channel` | varchar(8) | no | unique |
 | `opted_out` | boolean | no | - |
+| `school_id` | bigint | no | -> `schools.id` |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+### `alert_views`
+
+*0 rows / 9 columns*
+
+Tracks viewed/dismissed status of important alerts per user, child, and alert
+event.
+
+**Points at:** `schools`, `students`, `users`
+
+**Unique on:** `school_id,user_id,student_id,alert_type,event_key`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `user_id` | bigint | no | -> `users.id`, unique |
+| `student_id` | bigint | no | -> `students.id`, unique |
+| `alert_type` | varchar(50) | no | unique |
+| `event_key` | varchar(100) | no | unique |
+| `viewed_at` | timestamptz | no | - |
+| `school_id` | bigint | no | -> `schools.id`, unique |
+| `id` | bigint | no | primary key |
+| `created_at` | timestamptz | no | default `now()` |
+| `updated_at` | timestamptz | no | default `now()` |
+
+## Hostel and mess
+
+```mermaid
+erDiagram
+    hostels ||--o{ hostel_incidents : "hostel_id"
+    users ||--o{ hostel_incidents : "reported_by_id"
+    students ||--o{ hostel_incidents : "student_id"
+```
+
+### `hostel_incidents`
+
+*0 rows / 13 columns*
+
+Disciplinary and welfare incidents recorded in hostels.
+
+**Points at:** `hostels`, `schools`, `students`, `users`
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `hostel_id` | bigint | no | -> `hostels.id` |
+| `student_id` | bigint | yes | -> `students.id` |
+| `title` | varchar(200) | no | - |
+| `description` | text | no | - |
+| `severity` | varchar(20) | no | - |
+| `incident_date` | date | no | - |
+| `action_taken` | text | yes | - |
+| `reported_by_id` | bigint | no | -> `users.id` |
+| `status` | varchar(20) | no | - |
 | `school_id` | bigint | no | -> `schools.id` |
 | `id` | bigint | no | primary key |
 | `created_at` | timestamptz | no | default `now()` |

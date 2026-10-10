@@ -180,6 +180,28 @@ PERMISSIONS: list[tuple[str, str]] = [
 
     # --- reporting
     ("reports.read", "View report library and run operational reports"),
+
+    # --- hostel and mess management
+    ("hostel.structure.read", "View hostels, floors, rooms, and beds"),
+    ("hostel.structure.manage", "Create and edit hostels, floors, rooms, and beds"),
+    ("hostel.resident.read", "View hostel residents and allocation history"),
+    ("hostel.resident.admit", "Admit eligible Class 9+ students to hostel"),
+    ("hostel.resident.allocate", "Allocate or transfer room and bed"),
+    ("hostel.resident.exit", "Permanently exit a student from hostel (Chief Provost only)"),
+    ("hostel.attendance.read", "View hostel evening attendance records"),
+    ("hostel.attendance.mark", "Mark hostel evening attendance at 8:00 PM"),
+    ("hostel.leave.read", "View hostel leave and outing records"),
+    ("hostel.leave.apply", "Submit leave and outing requests for hostel residents (Parents only)"),
+    ("hostel.leave.approve", "Approve/reject requests and record student returns"),
+    ("hostel.incident.read", "View hostel incidents and complaints"),
+    ("hostel.incident.manage", "Record and manage hostel incidents and complaints"),
+    ("hostel.notice.read", "View hostel notices"),
+    ("hostel.notice.manage", "Create and manage hostel notices"),
+    ("hostel.mess.read", "View weekly mess menu"),
+    ("hostel.mess.manage", "Create, edit, and publish weekly mess menu (Chief Provost only)"),
+    ("hostel.warden.manage", "Assign and manage hostel wardens"),
+    ("hostel.report.read", "View hostel occupancy and welfare reports"),
+    ("hostel.fee.manage", "Configure hostel fee applicability and integration operations"),
 ]
 
 # Permissions that end in `.read` but must NOT be handed out with the rest of
@@ -204,9 +226,35 @@ READ_ONLY = [
 
 _ALL = [c for c, _ in PERMISSIONS]
 
+# Operational hostel permissions that belong to Chief Provost and Wardens,
+# and are strictly excluded from the Office Administrator (Admin) account.
+# Admin retains full ERP authority elsewhere, plus Hostel Dashboard overview
+# and Hostel Admissions management (hostel.structure.read, hostel.resident.admit,
+# hostel.report.read, hostel.fee.manage).
+_HOSTEL_OPERATIONAL_PERMS = {
+    "hostel.structure.manage",
+    "hostel.resident.allocate",
+    "hostel.resident.exit",
+    "hostel.resident.read",
+    "hostel.attendance.read",
+    "hostel.attendance.mark",
+    "hostel.leave.read",
+    "hostel.leave.apply",
+    "hostel.leave.approve",
+    "hostel.incident.read",
+    "hostel.incident.manage",
+    "hostel.notice.read",
+    "hostel.notice.manage",
+    "hostel.mess.read",
+    "hostel.mess.manage",
+    "hostel.warden.manage",
+}
+
+SUPER_ADMIN_PERMISSIONS = [c for c in _ALL if c not in _HOSTEL_OPERATIONAL_PERMS]
+
 # (code, name, is_system, permissions)
 SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
-    ("super_admin", "Super Admin", _ALL),
+    ("super_admin", "Super Admin", SUPER_ADMIN_PERMISSIONS),
     (
         "principal",
         "Principal",
@@ -509,6 +557,12 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "fees.invoice.read",
             "fees.payment.pay_own",
             "grievance.submit",
+            "hostel.structure.read",
+            "hostel.resident.read",
+            "hostel.attendance.read",
+            "hostel.leave.read",
+            "hostel.notice.read",
+            "hostel.mess.read",
         ],
     ),
     (
@@ -524,6 +578,13 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "fees.payment.pay_own",
             "transport.assignment.read",
             "grievance.submit",
+            "hostel.structure.read",
+            "hostel.resident.read",
+            "hostel.attendance.read",
+            "hostel.leave.read",
+            "hostel.leave.apply",
+            "hostel.notice.read",
+            "hostel.mess.read",
         ],
     ),
     (
@@ -565,6 +626,50 @@ SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
             "library.read",
             "library.manage",
             "comms.notice.read",
+        ],
+    ),
+    (
+        "chief_provost",
+        "Chief Provost",
+        [
+            "hostel.structure.read",
+            "hostel.structure.manage",
+            "hostel.resident.read",
+            "hostel.resident.admit",
+            "hostel.resident.allocate",
+            "hostel.resident.exit",
+            "hostel.attendance.read",
+            "hostel.attendance.mark",
+            "hostel.leave.read",
+            "hostel.leave.approve",
+            "hostel.incident.read",
+            "hostel.incident.manage",
+            "hostel.notice.read",
+            "hostel.notice.manage",
+            "hostel.mess.read",
+            "hostel.mess.manage",
+            "hostel.warden.manage",
+            "hostel.report.read",
+            "hostel.fee.manage",
+        ],
+    ),
+    (
+        "warden",
+        "Warden",
+        [
+            "hostel.structure.read",
+            "hostel.resident.read",
+            "hostel.resident.allocate",
+            "hostel.attendance.read",
+            "hostel.attendance.mark",
+            "hostel.leave.read",
+            "hostel.leave.approve",
+            "hostel.incident.read",
+            "hostel.incident.manage",
+            "hostel.notice.read",
+            "hostel.notice.manage",
+            "hostel.mess.read",
+            "hostel.report.read",
         ],
     ),
     (

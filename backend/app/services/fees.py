@@ -73,8 +73,10 @@ def _opt_in_sources() -> dict:
     circle."""
     if not OPT_IN_SOURCES:
         from app.services import transport
+        from app.services import hostel
 
         OPT_IN_SOURCES["TRANSPORT"] = transport.charges_for_month
+        OPT_IN_SOURCES["HOSTEL"] = hostel.charges_for_month
     return OPT_IN_SOURCES
 # Statuses that no longer represent money anyone expects to receive.
 DEAD = (InvoiceStatus.voided, InvoiceStatus.written_off)

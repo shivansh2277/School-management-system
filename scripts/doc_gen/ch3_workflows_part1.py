@@ -1,8 +1,8 @@
 """Chapter 4 & 5: Operational Workflows Part 1
 Covers:
-1. System, Auth, Tenancy & RBAC (1.1 - 1.4)
+1. System, Auth, Tenancy & RBAC (1.1 - 1.5)
 2. Student & Guardian Master Identity (2.1 - 2.3)
-3. Admissions & Student Intake Pipeline (3.1 - 3.7)
+3. Admissions & Student Intake Pipeline (3.1 - 3.8)
 4. Academics, Classes & Timetabling (4.1 - 4.2)
 5. Daily Student Attendance (5.1 - 5.2)
 """
@@ -210,10 +210,60 @@ def render_ch3_part1() -> str:
         ],
         tables=[
             ("schools", "Tenant master record", "id (BigInt)", "name, code, slug, is_active", "None (Root master)", "Customer school identity and status", "Defines the tenant boundary"),
-            ("TenantBase (Model)", "Declarative abstract base", "id (BigInt)", "school_id, created_at, updated_at", "school_id -> schools.id", "Shared columns for 90 of 93 tables", "Enforces foreign key constraint to schools on all tenant rows")
+            ("TenantBase (Model)", "Declarative abstract base", "id (BigInt)", "school_id, created_at, updated_at", "school_id -> schools.id", "Shared columns for 102 of 105 tables", "Enforces foreign key constraint to schools on all tenant rows")
         ],
-        lifecycle="<strong>Tenant Invariant:</strong> <code>school_id</code> is declared as a non-nullable foreign key on 90 tables. It cannot be altered once written. Only 3 system-level tables (<code>schools</code>, <code>permissions</code>, and <code>scheduled_jobs</code>) omit <code>school_id</code>.",
+        lifecycle="<strong>Tenant Invariant:</strong> <code>school_id</code> is declared as a non-nullable foreign key on 102 tables. It cannot be altered once written. Only 3 system-level tables (<code>schools</code>, <code>permissions</code>, and <code>scheduled_jobs</code>) omit <code>school_id</code>.",
         example="A teacher at School ID 1 queries <code>/students</code>. The backend executes <code>SELECT * FROM students WHERE school_id = 1</code>. Even if School ID 2 has 500 students in the same table, 0 records from School ID 2 are returned."
+    )
+
+    # --- 1.5 User Access Role Assignment & Security Invalidation ---
+    content += render_workflow(
+        wf_id="1.5",
+        title="User Access Role Assignment, Custom Roles & Token Invalidation",
+        overview={
+            "real_life": "School Administrator assigns or revokes operational roles (such as Librarian, Teacher, or Accountant) to staff accounts via the User Access console.",
+            "actor": "System Administrator or School Principal.",
+            "trigger": "Admin updates role assignments for a staff member at <code>/user-access</code> and clicks 'Save Roles'.",
+            "problem": "Enforcing granular role-based access control (RBAC), preventing privilege escalation, and ensuring permission changes take immediate effect across sessions.",
+            "outcome": "User-role bindings synchronized in <code>user_roles</code>; <code>users.token_version</code> incremented to invalidate stale JWTs; compliance logged in <code>audit_log</code>."
+        },
+        steps=[
+            "<strong>User Action:</strong> Admin opens <code>/user-access</code>, selects a staff user (e.g. <code>librarian@sunrisepublic.edu</code>), toggles role assignments (e.g. checks 'Librarian'), and saves.",
+            "<strong>Frontend Processing:</strong> <code>UserAccess.tsx</code> validates selections and dispatches <code>PUT /api/v1/auth/users/{user_id}/roles</code> with payload <code>{'role_names': ['Librarian']}</code>.",
+            "<strong>Backend Authorization:</strong> FastAPI verifies caller holds <code>auth.user.manage</code> permission and both caller and target user share the same <code>school_id</code>.",
+            "<strong>Role Resolution:</strong> Resolves role IDs from <code>roles</code> table matching school scope; validates role exists.",
+            "<strong>Junction Sync:</strong> Executes atomic delete/insert on <code>user_roles</code> table binding the user to the updated role set.",
+            "<strong>Security Invalidation:</strong> Increments <code>users.token_version</code> (+1) to force re-authentication or claim refresh on subsequent API calls.",
+            "<strong>Audit Log:</strong> Writes compliance record to <code>audit_log</code> recording admin ID, target user ID, timestamp, and new role assignments."
+        ],
+        diagram="""[Admin Console: /user-access]
+       │
+       ▼ (PUT /api/v1/auth/users/{user_id}/roles)
+[User Access & RBAC Service (api/auth.py)]
+       │
+       ├─► [READ] users ──────────────► Verify target user exists in school tenant
+       ├─► [READ] roles ──────────────► Resolve role IDs for assigned role codes
+       ├─► [SYNC] user_roles ─────────► Commit user_id to role_id associations
+       ├─► [UPDATE] users ────────────► Increment token_version (+1) for immediate session invalidation
+       └─► [INSERT] audit_log ────────► Record administrative compliance entry
+       │
+       ▼
+[Updated RBAC Enforced Across All APIs & Sidebar Route Gates]""",
+        transfers=[
+            ("1", "User Access Screen", "Auth API", "user_id, role_names", "UPDATE", "Submit updated role assignments"),
+            ("2", "Auth API", "roles table", "school_id, name filter", "READ", "Resolve role IDs from system & custom role catalog"),
+            ("3", "Auth API", "user_roles table", "user_id, role_id, school_id", "SYNC", "Replace active user-role links"),
+            ("4", "Auth API", "users table", "token_version = token_version + 1", "UPDATE", "Invalidate active JWT sessions"),
+            ("5", "Auth API", "audit_log table", "user_id, action, details", "INSERT", "Preserve permanent security audit trail")
+        ],
+        tables=[
+            ("users", "User credentials & auth version", "id (BigInt)", "email, token_version, is_active, school_id", "school_id -> schools.id", "User account identities", "Updates token version to invalidate prior tokens"),
+            ("roles", "RBAC role catalog", "id (BigInt)", "name, code, is_system, school_id", "school_id -> schools.id", "Role definitions (Admin, Librarian, etc.)", "Supplies role definition and permission template"),
+            ("user_roles", "User-role mapping", "id (BigInt)", "user_id, role_id, school_id", "user_id -> users.id, role_id -> roles.id", "Junction table binding users to roles", "Persists effective roles assigned to the user"),
+            ("audit_log", "Security compliance trail", "id (BigInt)", "user_id, action, entity_type, details", "user_id -> users.id, school_id -> schools.id", "Immutable chronological audit events", "Records administrative role change event")
+        ],
+        lifecycle="<strong>Immediate Revocation & Invariant:</strong> Role updates take effect immediately because <code>token_version</code> is incremented on the <code>users</code> table, and incoming requests validate the token's embedded version against the database. Stale tokens are rejected with HTTP 401.",
+        example="Admin assigns the dedicated <code>Librarian</code> role to staff user <code>librarian@sunrisepublic.edu</code>. The system maps the role in <code>user_roles</code>, increments <code>token_version</code>, and logs the change. When logging in, the user receives permissions restricted strictly to the Library circulation desk, cataloging, and returns—with no access to fees, payroll, or admissions."
     )
 
     # --- 2.1 Permanent Student Registration ---
@@ -369,6 +419,62 @@ def render_ch3_part1() -> str:
         ],
         lifecycle="<strong>Atomic Conversion:</strong> The entire process executes inside <code>db.transaction()</code>. If any step fails (e.g. duplicate admission number or roll number conflict), the entire transaction rolls back cleanly, leaving the application in its prior state.",
         example="Applicant 'Priya Verma' (APP-2026-001) is converted. System creates <code>students.id = 101</code> (admission_no 'ADM-2026-015'), assigns roll number 26 in Class 1-A (<code>enrolments.id = 101</code>), and updates application status to 'enrolled'."
+    )
+
+    # --- 3.8 Admission Document Overrides & Exceptions Queue ---
+    content += render_workflow(
+        wf_id="3.8",
+        title="Admission Document Overrides & Exceptions Automatic Pending Queue",
+        overview={
+            "real_life": "A parent or applicant submits an admission application where a mandatory document (such as Transfer Certificate or Birth Certificate) is temporarily unavailable, generating a document exception request that automatically routes to the Admin review queue.",
+            "actor": "Parent / Applicant (submission), Admission Officer / Principal (review & determination).",
+            "trigger": "Parent requests document exception during application submission, or admission staff files an override for an applicant.",
+            "problem": "Allowing applicants with pending paperwork to progress without getting stuck at mandatory document gates, while ensuring zero exceptions slip through without auditable administrative approval.",
+            "outcome": "Override record queued in <code>application_document_overrides</code> with <code>status='pending'</code>; automatically presented on <code>/admissions/overrides-exceptions</code> without manual searching; reviewed with 1-click Approve or Reject."
+        },
+        steps=[
+            "<strong>User / Intake Action:</strong> During application intake, an exception request is flagged for a missing mandatory document with a stated reason.",
+            "<strong>Automatic Queue Ingestion:</strong> Backend inserts row into <code>application_document_overrides</code> with <code>status='pending'</code>, <code>application_id</code>, <code>document_type</code>, and <code>reason</code>.",
+            "<strong>Staff Access:</strong> Admission officer navigates to <code>/admissions/overrides-exceptions</code>. The view automatically requests <code>GET /api/v1/admissions/overrides?status=pending</code>.",
+            "<strong>Queue Presentation:</strong> Backend executes an outer join across <code>application_document_overrides</code> and <code>applications</code>, returning candidate name, application number, document name, submission timestamp, and reason directly in the list.",
+            "<strong>Officer Adjudication:</strong> Officer reviews the case and clicks 'Approve' or 'Reject' with optional review notes.",
+            "<strong>Status & Audit Update:</strong> Backend calls <code>PUT /api/v1/admissions/overrides/{id}/status</code>, setting <code>status='approved'</code> (or <code>'rejected'</code>), stamping <code>reviewed_by_id</code> and <code>reviewed_at</code>.",
+            "<strong>Gate Clearance:</strong> Verification checklist detects approved override, clearing the document requirement for merit list generation and final enrollment."
+        ],
+        diagram="""[Parent / Applicant Intake (Public Web / Portal)]
+       │
+       ▼
+[INSERT] application_document_overrides (status='pending', document_type, reason)
+       │
+       ▼ (Automatic Ingestion into Pending Queue)
+[Admission Staff Screen: /admissions/overrides-exceptions]
+       │
+       ▼ (GET /admissions/overrides?status=pending — No Manual Search Required)
+[Joined Query: application_document_overrides + applications]
+       │
+       ▼ (Officer Clicks 'Approve' or 'Reject')
+[Admissions API: PUT /api/v1/admissions/overrides/{id}/status]
+       │
+       ├─► [UPDATE] application_document_overrides ──► Set status='approved'/'rejected', reviewed_by_id, reviewed_at
+       ├─► [CHECK] Admission Verification Gate ──────► Approved exception satisfies mandatory document rule
+       └─► [INSERT] audit_log ────────────────────────► Log compliance audit trail
+       │
+       ▼
+[Applicant Cleared for Scoring, Merit List & 1-Click Conversion]""",
+        transfers=[
+            ("1", "Application Intake Form", "Admissions API", "application_id, document_type, reason", "INSERT", "Create document exception request in pending queue"),
+            ("2", "Overrides Screen", "Admissions API", "status='pending' filter", "READ", "Fetch all pending document exceptions automatically"),
+            ("3", "Overrides Screen", "Admissions API", "override_id, status, notes", "UPDATE", "Submit officer approval or rejection decision"),
+            ("4", "Admissions API", "application_document_overrides", "status, reviewed_by_id, reviewed_at", "UPDATE", "Commit reviewer decision and timestamp"),
+            ("5", "Admissions API", "audit_log table", "user_id, action='OVERRIDE_REVIEW', details", "INSERT", "Record compliance review trail")
+        ],
+        tables=[
+            ("application_document_overrides", "Document exception requests", "id (BigInt)", "application_id, document_type, reason, status, reviewed_by_id, reviewed_at", "application_id -> applications.id, reviewed_by_id -> users.id", "Document override requests and decisions", "Maintains pending queue and approval audit state"),
+            ("applications", "Applicant admission dossier", "id (BigInt)", "application_no, first_name, last_name, status", "cycle_id -> admission_cycles.id", "Core applicant dossier", "Provides student identity and links to checklist gates"),
+            ("audit_log", "Security & compliance trail", "id (BigInt)", "user_id, action, entity_type, details", "user_id -> users.id, school_id -> schools.id", "Immutable audit trail", "Records reviewer decision and notes")
+        ],
+        lifecycle="<strong>Pending Queue Invariant:</strong> Exception requests start with <code>status = 'pending'</code>. Reviewing transitions the record to terminal state <code>approved</code> or <code>rejected</code> with an immutable reviewer ID and timestamp. Approved overrides satisfy mandatory document gates without modifying original file storage.",
+        example="Applicant Rahul Sharma (APP-1024) requests an exception for 'Birth Certificate' because the official municipal copy is delayed. The request automatically surfaces in the Overrides Queue as Pending. Admission Officer Sunita reviews the justification and clicks 'Approve'. The checklist validation gate recognizes the approved override, clearing Rahul for final merit conversion."
     )
 
     # --- 4.1 Class & Section Mapping ---

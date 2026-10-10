@@ -9,19 +9,19 @@ def render_ch1() -> str:
   <div class="meta-grid">
     <div class="meta-item">
       <strong>PostgreSQL Schema</strong>
-      93 Tables (68 Live, 25 Scaffolded)
+      105 Tables (72 Live, 33 Reserved)
     </div>
     <div class="meta-item">
       <strong>Integrity & Scale</strong>
-      1,097 Columns • 250 Foreign Keys
+      1,200+ Columns • 280+ Foreign Keys
     </div>
     <div class="meta-item">
       <strong>Application Footprint</strong>
-      27 Live Screens • 18 Active Staff
+      32+ Live Screens • 28 Staff (24 Teachers)
     </div>
     <div class="meta-item">
       <strong>Schema Head</strong>
-      Migration <code>a1b2c3d4e5f6</code>
+      Migration <code>f7a8b9c0d1e2</code>
     </div>
   </div>
 </div>
@@ -43,7 +43,7 @@ def render_ch1() -> str:
     <li><strong>End-to-End Tracing:</strong> Exactly which frontend user interactions, backend route handlers, service validators, and database tables participate in each transaction.</li>
     <li><strong>Data Movement & Lifecycle:</strong> How records are inserted, updated, joined, linked, allocated, soft-deleted, audited, and purged.</li>
     <li><strong>Student vs Enrollment Separation:</strong> The precise architectural and database distinction between permanent student identity (<code>students.id</code>, <code>admission_no</code>) and annual academic session membership (<code>enrolments.id</code>, <code>roll_no</code>).</li>
-    <li><strong>Cross-Module Highways:</strong> How admissions, academics, fee accounting, examinations, HR payroll, and operations interface through explicit foreign key constraints.</li>
+    <li><strong>Cross-Module Highways:</strong> How admissions, academics, fee accounting, examinations, HR payroll, library circulation, certificates, and operations interface through explicit foreign key constraints.</li>
   </ul>
 </div>
 
@@ -66,22 +66,27 @@ def render_ch1() -> str:
       <td><strong>School Operations</strong></td>
       <td>
         • Student Admissions Pipeline (Cycles, Enquiries, Applications, Scoring, Merit, Waitlist, 1-Click Conversion)<br>
-        • Permanent Student & Guardian Master Records<br>
-        • Academic Classes, Sections, Subject Mapping & Timetables<br>
-        • Daily Student Attendance Marking & Shortage Tracking<br>
+        • Admission Document Overrides & Exceptions Automatic Pending Queue<br>
+        • Permanent Student & Guardian Master Records (190 Active Students across 19 Sections)<br>
+        • Academic Classes, Sections (Nursery to 12-Hum), 18 Subjects & Timetables (570 Slots)<br>
+        • Daily Student Attendance Marking & Shortage Tracking (&lt;75% CBSE Alerts)<br>
+        • Multi-Section Holiday Management with Class-Targeted Closures<br>
         • Fee Structure Setup, Concessions, Invoicing, Counter Collection & FIFO Line Allocations<br>
         • Contra Payment Reversals, Defaulters Chase & Period Closing<br>
-        • Examinations, Marks Entry, Paper Locking, CBSE Schemes & Report Cards<br>
-        • Academic Session Rollover & Cohort Promotion Wizard<br>
-        • Employee Directory, Staff Attendance & Biometric Ingestion<br>
+        • Examinations, Marks Entry (2,400 marks), Paper Locking, CBSE Schemes & Report Cards<br>
+        • Academic Session Rollover & Cohort Promotion Wizard across all 19 Sections<br>
+        • Library Catalogue, Accession Copies & Circulation Desk with Dedicated Librarian RBAC<br>
+        • Student Certificates Desk with Official Templates & Verification Serials<br>
+        • Front Desk Reception Suite (Student Gate Passes, Principal Meeting Slips, Found Items)<br>
+        • Employee Directory (28 Staff, 24 Teachers), Staff Attendance & Leave Substitution Gate<br>
         • Monthly Payroll Batches, EPF/ESI/TDS Registers & Disbursals<br>
-        • Mobile Teacher Leave Requests & 100% Substitution Coverage Gate<br>
         • Teacher Recruitment Pipeline, Job Offers & Auto-Onboarding<br>
         • School Notice Board & Targeted Broadcasts<br>
-        • Fleet Transport Routes, Stops & Student Bus Allocations<br>
+        • Fleet Transport Routes, Stops & Student Bus Allocations (Plans 1 & 2)<br>
         • Consumable/Equipment Inventory, Threshold Alerts & Teacher Flagging<br>
         • Parent/Staff Grievance Redressal & Threaded Resolution<br>
-        • School Analytics & Reports Library (21 Operational Reports)
+        • School Analytics & Reports Library (21 Operational Reports)<br>
+        • Modern Public Website Portal (13 views) & Online Admissions Wizard
       </td>
       <td>
         • Hypothetical features or unmerged branches.<br>

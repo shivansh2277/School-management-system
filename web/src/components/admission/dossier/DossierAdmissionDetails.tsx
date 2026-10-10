@@ -24,6 +24,7 @@ export function DossierAdmissionDetails({
     preferred_section: application.preferred_section || "",
     admission_category: application.admission_category || "general",
     transport_required: application.transport_required || false,
+    hostel_required: application.hostel_required || false,
     age_override_reason: application.age_override_reason || "",
   });
 
@@ -39,6 +40,7 @@ export function DossierAdmissionDetails({
       preferred_section: application.preferred_section || "",
       admission_category: application.admission_category || "general",
       transport_required: application.transport_required || false,
+      hostel_required: application.hostel_required || false,
       age_override_reason: application.age_override_reason || "",
     });
   }, [application]);
@@ -57,6 +59,7 @@ export function DossierAdmissionDetails({
         preferred_section: formData.preferred_section.trim() || null,
         admission_category: formData.admission_category as any,
         transport_required: formData.transport_required,
+        hostel_required: formData.hostel_required,
         age_override_reason: formData.age_override_reason.trim() || null,
       });
       setSavedSuccess(true);
@@ -71,6 +74,10 @@ export function DossierAdmissionDetails({
     formData.class_applying_for === "12" ||
     formData.class_applying_for.toLowerCase().includes("11") ||
     formData.class_applying_for.toLowerCase().includes("12");
+
+  const isHostelEligible = ["9", "10", "11", "12"].some((c) =>
+    formData.class_applying_for.includes(c),
+  );
 
   return (
     <Card title="2. Admission & Academic Preferences">
@@ -170,6 +177,26 @@ export function DossierAdmissionDetails({
             </p>
           </div>
 
+          <div className="p-3 bg-ground rounded border border-rule">
+            <label className={`flex items-center gap-2 text-sm font-medium ${isHostelEligible ? "cursor-pointer text-ink" : "opacity-60 text-ink-soft cursor-not-allowed"}`}>
+              <input
+                type="checkbox"
+                className="w-4 h-4 rounded text-primary"
+                disabled={!isHostelEligible}
+                checked={isHostelEligible && formData.hostel_required}
+                onChange={(e) => setFormData({ ...formData, hostel_required: e.target.checked })}
+              />
+              <span>Requires Hostel & Mess Accommodation</span>
+            </label>
+            <p className="text-2xs text-ink-soft mt-1 ml-6">
+              {isHostelEligible
+                ? "Residential accommodation request. Room & bed allocation is assigned upon enrollment."
+                : "Hostel facility is only available to students in Class 9 and above."}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 pt-1">
           <FormField label="Age Override Reason (if applicant is outside standard age band)">
             <input
               type="text"

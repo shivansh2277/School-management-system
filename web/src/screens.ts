@@ -56,7 +56,8 @@ export type ModuleCode =
   | "inventory"
   | "grievances"
   | "library"
-  | "certificates";
+  | "certificates"
+  | "hostel";
 
 export type Screen = {
   path: string;
@@ -550,6 +551,122 @@ export const SCREENS: Screen[] = [
       })),
     ),
   },
+  {
+    path: "/hostel",
+    label: "Hostel Dashboard",
+    group: "Hostel",
+    permissions: ["hostel.structure.read"],
+    modules: ["hostel"],
+    element: lazy(() =>
+      import("./pages/hostel/HostelDashboard").then((m) => ({
+        default: m.HostelDashboard,
+      })),
+    ),
+  },
+  {
+    path: "/hostel/rooms",
+    label: "Rooms & Beds",
+    group: "Hostel",
+    permissions: ["hostel.structure.read"],
+    modules: ["hostel"],
+    excludeRoles: ["super_admin", "admin"],
+    element: lazy(() =>
+      import("./pages/hostel/HostelRoomsPage").then((m) => ({
+        default: m.HostelRoomsPage,
+      })),
+    ),
+  },
+  {
+    path: "/hostel/residents",
+    label: "Residents",
+    group: "Hostel",
+    permissions: ["hostel.resident.read"],
+    modules: ["hostel"],
+    excludeRoles: ["super_admin", "admin"],
+    element: lazy(() =>
+      import("./pages/hostel/HostelResidentsPage").then((m) => ({
+        default: m.HostelResidentsPage,
+      })),
+    ),
+  },
+  {
+    path: "/hostel/admissions",
+    label: "Hostel Admissions",
+    group: "Hostel",
+    permissions: ["hostel.resident.admit"],
+    modules: ["hostel"],
+    excludeRoles: ["warden"],
+    element: lazy(() =>
+      import("./pages/hostel/HostelAdmissionsPage").then((m) => ({
+        default: m.HostelAdmissionsPage,
+      })),
+    ),
+  },
+  {
+    path: "/hostel/attendance",
+    label: "Attendance",
+    group: "Hostel",
+    permissions: ["hostel.attendance.read"],
+    modules: ["hostel"],
+    excludeRoles: ["super_admin", "admin"],
+    element: lazy(() =>
+      import("./pages/hostel/HostelAttendancePage").then((m) => ({
+        default: m.HostelAttendancePage,
+      })),
+    ),
+  },
+  {
+    path: "/hostel/leaves",
+    label: "Leave & Outing",
+    group: "Hostel",
+    permissions: ["hostel.leave.read"],
+    modules: ["hostel"],
+    excludeRoles: ["super_admin", "admin"],
+    element: lazy(() =>
+      import("./pages/hostel/HostelLeavesPage").then((m) => ({
+        default: m.HostelLeavesPage,
+      })),
+    ),
+  },
+  {
+    path: "/hostel/complaints",
+    label: "Complaints & Incidents",
+    group: "Hostel",
+    permissions: ["hostel.incident.read"],
+    modules: ["hostel"],
+    excludeRoles: ["super_admin", "admin"],
+    element: lazy(() =>
+      import("./pages/hostel/HostelComplaintsPage").then((m) => ({
+        default: m.HostelComplaintsPage,
+      })),
+    ),
+  },
+  {
+    path: "/hostel/notices",
+    label: "Notices",
+    group: "Hostel",
+    permissions: ["hostel.notice.read"],
+    modules: ["hostel"],
+    excludeRoles: ["super_admin", "admin"],
+    element: lazy(() =>
+      import("./pages/hostel/HostelNoticesPage").then((m) => ({
+        default: m.HostelNoticesPage,
+      })),
+    ),
+  },
+  {
+    path: "/hostel/mess",
+    label: "Mess Menu",
+    group: "Hostel",
+    permissions: ["hostel.mess.read"],
+    modules: ["hostel"],
+    excludeRoles: ["super_admin", "admin"],
+    element: lazy(() =>
+      import("./pages/hostel/HostelMessMenuPage").then((m) => ({
+        default: m.HostelMessMenuPage,
+      })),
+    ),
+  },
 ];
 
 type Can = (permission: string) => boolean;
@@ -596,11 +713,14 @@ export function groupedNav(
   hasModule: HasModule,
   roles?: string[],
 ): { group?: string; screens: Screen[] }[] {
+  const isWarden = roles?.includes("warden");
   const out: { group?: string; screens: Screen[] }[] = [];
   for (const screen of visibleScreens(can, hasModule, roles)) {
-    const existing = out.find((g) => g.group === screen.group);
+    const groupName =
+      screen.group === "Hostel" && isWarden ? "My Hostel" : screen.group;
+    const existing = out.find((g) => g.group === groupName);
     if (existing) existing.screens.push(screen);
-    else out.push({ group: screen.group, screens: [screen] });
+    else out.push({ group: groupName, screens: [screen] });
   }
   return out;
 }

@@ -156,6 +156,24 @@ def librarian(client):
 
 
 @pytest.fixture()
+def chief_provost(client):
+    """Chief Provost: cross-hostel authority."""
+    return auth(_token(client, "admin", "provost@sunrisepublic.edu", "Admin@123"))
+
+
+@pytest.fixture()
+def boys_warden(client):
+    """Warden for Boys Hostel (isolated)."""
+    return auth(_token(client, "admin", "warden.boys@sunrisepublic.edu", "Admin@123"))
+
+
+@pytest.fixture()
+def girls_warden(client):
+    """Warden for Girls Hostel (isolated)."""
+    return auth(_token(client, "admin", "warden.girls@sunrisepublic.edu", "Admin@123"))
+
+
+@pytest.fixture()
 def teacher(client):
     """TCH001 — class teacher of 10-A and its Mathematics teacher."""
     return auth(_token(client, "teacher", "TCH001", "Teacher@123"))

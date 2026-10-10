@@ -125,6 +125,12 @@ export function NavDrawer({
           path: "/(parent)/fees",
         },
         {
+          id: "p_hostel",
+          title: "Hostel & Mess",
+          icon: "bed-outline",
+          path: "/(parent)/hostel",
+        },
+        {
           id: "p_profile",
           title: t("nav_profile"),
           icon: "person-outline",
@@ -355,6 +361,12 @@ export function NavDrawer({
           title: "Student Profile",
           icon: "person-outline",
           path: "/(student)/profile",
+        },
+        {
+          id: "s_hostel",
+          title: "Hostel & Mess",
+          icon: "bed-outline",
+          path: "/(student)/hostel",
         },
       ],
     });

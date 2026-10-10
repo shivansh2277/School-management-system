@@ -1,8 +1,8 @@
 # MEMORY.md — Sunrise School ERP
 
-**Date:** 06 October 2026  
+**Date:** 10 October 2026  
 **Canonical State Document:** [`SINGLE_SOURCE_OF_TRUTH.md`](SINGLE_SOURCE_OF_TRUTH.md)  
-**Completed Milestone:** Session 29 Completed & Verified (Public Admission Enquiry Fix, View Admission Steps Scroll, Dedicated Librarian Role & Admission Document Overrides Automatic Pending Queue). Delivered and verified: (1) Resolved Public Admission Enquiry failure ("No such school") by implementing tenant alias mapping (`sunrise`/`sunrisepublic` -> `SPS`) in backend endpoints, wiring `AdmissionEnquiryModal.tsx` to submit cleanly to `/public/SPS/admission/enquiry` with confirmation feedback, and verifying database storage in Reception/Admission workflows; (2) Fixed "View Admission Steps" on Admissions page by replacing hash anchor navigation with smooth DOM scroll to `#process`, eliminating collision with React Router's `<HashRouter>` that previously redirected visitors to `/login`; (3) Added dedicated `librarian` role strictly scoped to `library.read`, `library.manage`, and `comms.notice.read`, restricted from Admissions, Fees, Transport, HR, and settings, supported by `/admin/users/{user_id}/roles` assignment APIs and `/user-access` UI with Librarian quick login; (4) Upgraded Admission Document Overrides from manual lookup to an automatic Pending Exceptions Queue (`/admin/admission-exceptions`) with student name, app ID, document name, reason, timestamp, and Review/Approve/Reject actions, enforcing that only approved overrides satisfy application checklists while preserving audit trails; (5) Verified 100% green across all quality gates: 807 passed (1 skipped) backend pytest, 140 passed (2 skipped) web vitest, 0 web TypeScript errors, 0 mobile TypeScript errors.  
+**Completed Milestone:** Session 32 Completed & Verified: **Hostel & Mess RBAC Separation, Golden-Amber Sidebar Icons & End-to-End Visual Verification** ([`SESSION-HANDOFF-32.md`](SESSION-HANDOFF-32.md)).
 **Active Branch:** `slice/office-feedback` (synced with `origin/main` and `origin/slice/office-feedback`)  
 
 ---
@@ -10,7 +10,7 @@
 ## 1. Executive Summary & Current Status
 
 Sunrise School ERP is a multi-tenant school management system built for independent private schools.
-- **Backend Test Suite**: **807 passed, 1 skipped, 0 failed** (100% green across 808 tests).
+- **Backend Test Suite**: **808 passed, 1 skipped, 0 failed** (100% green across all test modules).
 - **Public Announcements API**: 5/5 unit tests passed (`tests/test_public_announcements.py`).
 - **Librarian RBAC**: 3/3 unit tests passed (`tests/test_librarian_rbac.py`).
 - **Admission Document Overrides**: 4/4 unit tests passed (`tests/test_admission_documents_override.py`).
@@ -20,7 +20,7 @@ Sunrise School ERP is a multi-tenant school management system built for independ
 - **13 Public Website Views**: `/`, `/about`, `/academics`, `/admissions`, `/facilities`, `/school-life`, `/events`, `/gallery`, `/public-disclosure`, `/resources`, `/announcements`, `/announcements/:id`, and `/apply`.
 - **24 Active Teachers / Staff** in employee directory (`employees`), covering Pre-primary, Secondary, and Senior Secondary streams.
 - **19 Academic Groups / Sections**: Nursery-A, LKG-A, UKG-A, 1-A to 10-A, 11-Sci, 11-Com, 11-Hum, 12-Sci, 12-Com, 12-Hum (190 students enrolled).
-- **Database**: PostgreSQL on `localhost:5432` (`sunrise_test` live, `sunrise` dedicated test runner DB).
+- **Database**: PostgreSQL on `localhost:5432` (`sunrise_test` live, `sunrise` dedicated test runner DB) — **105 tables total** (72 live with rows, 33 reserved).
 - **TypeScript**: 0 errors across backend, web (`npx tsc -b`), and mobile (`npx tsc --noEmit`).
 - **Web Unit Tests**: Vitest 2.1 — **140 passed, 2 skipped across 26 test files** (100% green).
 - **Production Build**: Clean Vite production build (`npm run build`).
@@ -31,14 +31,10 @@ Sunrise School ERP is a multi-tenant school management system built for independ
   - Backend: `https://school-management-system-12ks.onrender.com`
   - Database: Neon Tech PostgreSQL
 - **Primary Canonical PDFs in `docs/`**:
-  1. `Sunrise-ERP-Admission-Demo-Guide.pdf` (265 KB, Complete Digital Admission Dossier & Interactive Testing Guide)
-  2. `Sunrise-ERP-Operational-Data-Flows.pdf` (1.31 MB, Simple Table-to-Table Data-Flow Guide)
-  3. `Sunrise-ERP-Database-Tables-and-Features.pdf` (7.76 MB, All-tables feature mapping)
-  4. `Sunrise-ERP-Database-Viva-100.pdf` (2.20 MB, 100 Viva questions & architectural answers)
-  5. `Sunrise-ERP-Features-Operational-and-Planned.pdf` (723 KB, 27 screens inventory)
-  6. `Sunrise-ERP-Database-Essentials-Explained.pdf` (1.78 MB, 16 business process workflows)
-  7. `Sunrise-ERP-Database-Essentials.pdf` (1.21 MB, 68 live tables & ERDs)
-  8. `Sunrise-ERP-Database.pdf` (1.92 MB, 93 tables full schema reference)
+  1. `Sunrise-ERP-Features-Operational-and-Planned.pdf` (778 KB, 28 operational feature cards)
+  2. `Sunrise-ERP-Operational-Data-Flows.pdf` (3.66 MB, Comprehensive operational workflows, highways, and ERDs)
+  3. `Sunrise-ERP-Database.pdf` (2.20 MB, 105 tables full schema reference)
+  4. `Sunrise-ERP-Database-Essentials.pdf` (1.32 MB, 72 live tables & Mermaid ERDs)
 
 ---
 
@@ -251,4 +247,16 @@ Canonical specification for Session 25 is defined in **`SESSION-HANDOFF-PROMPT-2
     - The global dark-blue announcement ticker renders across all standard public pages, but is strictly excluded from `/apply` (`PublicApplyPage.tsx`) to keep the multi-step admission application workflow focused and distraction-free.
 24. **School Life & Photo Gallery Merge**:
     - The photographic gallery is permanently consolidated at the bottom of School Life (`/school-life#gallery`) with category filter tabs and lightbox. Do not re-add a separate `/gallery` item to the primary navigation bar.
+25. **Hostel Class 9+ Eligibility Invariant**:
+    - Hostel accommodation is available strictly to students in **Class 9 and above**. Server-side validation, admission endpoints, and UI must block students in Class <= 8 with HTTP 422 Unprocessable Content.
+26. **Hostel Gender Scoping Invariant**:
+    - Male students can only be admitted to Boys Hostel; female students can only be admitted to Girls Hostel. Gender compatibility must be validated server-side.
+27. **Warden Tenant & Single-Hostel Scope Invariant**:
+    - A Warden is assigned to exactly one hostel. Backend/database authorization must reject any query, mutation, or URL manipulation by a Warden targeting other hostels or tenants with HTTP 403 Forbidden. Chief Provost has cross-hostel scope.
+28. **Hostel Fee Unity Invariant (No Separate Mess Fee)**:
+    - Accommodation and mess are billed under a single, unified hostel fee head integrated into `fee_plans` and `fee_invoices`. There is strictly NO separate mess fee, NO mess attendance, and NO cost-per-meal calculation.
+29. **Parent-Only Outing Request Invariant**:
+    - Only parents can submit leave and outing requests via the Parent App. Students cannot submit outing requests. Warden approves/rejects and must explicitly record student return.
+30. **Chief Provost Exclusive Exit Invariant**:
+    - Only the Chief Provost role can permanently exit a student from the hostel with an exit date and typed reason, closing active bed allocations and stopping hostel fee applicability.
 

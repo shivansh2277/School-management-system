@@ -160,6 +160,8 @@ export const api = {
     request<T>(path, { method: "POST", body: JSON.stringify(body ?? {}) }),
   rawPut: <T = any>(path: string, body?: any) =>
     request<T>(path, { method: "PUT", body: JSON.stringify(body ?? {}) }),
+  rawPatch: <T = any>(path: string, body?: any) =>
+    request<T>(path, { method: "PATCH", body: JSON.stringify(body ?? {}) }),
   rawDel: <T = any>(path: string, query?: string) =>
     request<T>(`${path}${query ?? ""}`, { method: "DELETE" }),
   upload: async <T = any>(path: string, formData: FormData): Promise<T> => {

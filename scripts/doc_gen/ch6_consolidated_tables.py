@@ -53,7 +53,7 @@ def render_ch6() -> str:
     <tr>
       <td><strong>Tenant-Scoped Tables</strong></td>
       <td>Every table deriving from <code>TenantBase</code> carrying a non-nullable <code>school_id</code> foreign key pointing to <code>schools.id</code>.</td>
-      <td>90 of 93 tables in Sunrise ERP; guarantees complete multi-tenant database isolation.</td>
+      <td>102 of 105 tables in Sunrise ERP (72 live with active records, 33 reserved); guarantees complete multi-tenant database isolation.</td>
     </tr>
   </tbody>
 </table>
@@ -252,6 +252,104 @@ def render_ch6() -> str:
       <td>Audit & History</td>
       <td>System</td>
       <td>Immutable audit trail with operator IDs, actions, and typed reasons.</td>
+      <td><code>user_id -> users.id</code>, <code>school_id -> schools.id</code></td>
+    </tr>
+    <tr>
+      <td><code>application_document_overrides</code></td>
+      <td>Transaction</td>
+      <td>Admissions</td>
+      <td>Document override/exception requests, pending review queue, and approval audit states.</td>
+      <td><code>application_id -> applications.id</code>, <code>reviewed_by_id -> users.id</code></td>
+    </tr>
+    <tr>
+      <td><code>application_authorized_persons</code></td>
+      <td>Core Master</td>
+      <td>Admissions</td>
+      <td>Authorized pickup persons and emergency contacts nominated during admission.</td>
+      <td><code>application_id -> applications.id</code>, <code>school_id -> schools.id</code></td>
+    </tr>
+    <tr>
+      <td><code>student_authorized_persons</code></td>
+      <td>Core Master</td>
+      <td>Students</td>
+      <td>Permanent authorized pickup individuals and identity proofs for enrolled students.</td>
+      <td><code>student_id -> students.id</code>, <code>school_id -> schools.id</code></td>
+    </tr>
+    <tr>
+      <td><code>books</code></td>
+      <td>Core Master</td>
+      <td>Library</td>
+      <td>Master book title catalog, ISBN, author, category, and total copy aggregates.</td>
+      <td><code>school_id -> schools.id</code></td>
+    </tr>
+    <tr>
+      <td><code>book_copies</code></td>
+      <td>Core Master</td>
+      <td>Library</td>
+      <td>Individual physical book copies with unique barcodes, accession numbers, and shelf states.</td>
+      <td><code>book_id -> books.id</code>, <code>school_id -> schools.id</code></td>
+    </tr>
+    <tr>
+      <td><code>library_loans</code></td>
+      <td>Transaction</td>
+      <td>Library</td>
+      <td>Circulation book loan records, due dates, return timestamps, and overdue fines.</td>
+      <td><code>book_copy_id -> book_copies.id</code>, <code>enrolment_id -> enrolments.id</code>, <code>employee_id -> employees.id</code></td>
+    </tr>
+    <tr>
+      <td><code>certificate_templates</code></td>
+      <td>Configuration</td>
+      <td>Certificates</td>
+      <td>Institutional certificate formats, dynamic text placeholders, headers, and seal controls.</td>
+      <td><code>school_id -> schools.id</code></td>
+    </tr>
+    <tr>
+      <td><code>student_certificates</code></td>
+      <td>Transaction</td>
+      <td>Certificates</td>
+      <td>Issued student certificates with sequential serial numbers and frozen data snapshots.</td>
+      <td><code>student_id -> students.id</code>, <code>enrolment_id -> enrolments.id</code>, <code>issued_by_id -> users.id</code></td>
+    </tr>
+    <tr>
+      <td><code>holiday_class_sections</code></td>
+      <td>Junction Table</td>
+      <td>Academics</td>
+      <td>Scopes academic holidays selectively to specific class sections or grades.</td>
+      <td><code>holiday_id -> holidays.id</code>, <code>class_section_id -> class_sections.id</code></td>
+    </tr>
+    <tr>
+      <td><code>student_passes</code></td>
+      <td>Transaction</td>
+      <td>Reception</td>
+      <td>Early departure gate passes for students with pickup person verification and exit codes.</td>
+      <td><code>student_id -> students.id</code>, <code>issued_by_id -> users.id</code>, <code>school_id -> schools.id</code></td>
+    </tr>
+    <tr>
+      <td><code>principal_meeting_requests</code></td>
+      <td>Transaction</td>
+      <td>Reception</td>
+      <td>Campus visitor meeting requests and executive appointment slips with leadership.</td>
+      <td><code>created_by_id -> users.id</code>, <code>school_id -> schools.id</code></td>
+    </tr>
+    <tr>
+      <td><code>found_items</code></td>
+      <td>Transaction</td>
+      <td>Reception</td>
+      <td>Unclaimed personal property catalog, campus found locations, and handover records.</td>
+      <td><code>recorded_by_id -> users.id</code>, <code>claimed_by_student_id -> students.id</code></td>
+    </tr>
+    <tr>
+      <td><code>directory_contacts</code></td>
+      <td>Core Master</td>
+      <td>Reception</td>
+      <td>Important emergency and institutional contacts directory for front desk reference.</td>
+      <td><code>school_id -> schools.id</code></td>
+    </tr>
+    <tr>
+      <td><code>alert_views</code></td>
+      <td>Transaction</td>
+      <td>Communications</td>
+      <td>Tracking recipient read/view status for broadcast notices and urgent school alarms.</td>
       <td><code>user_id -> users.id</code>, <code>school_id -> schools.id</code></td>
     </tr>
   </tbody>

@@ -17,7 +17,6 @@ const TRANSPORT_MANAGER = [
   "comms.notice.read",
   "comms.message.send",
 ];
-
 const ALL_MODULES = [
   "students",
   "attendance",
@@ -33,6 +32,7 @@ const ALL_MODULES = [
   "inventory",
   "library",
   "certificates",
+  "hostel",
 ];
 
 const can = (held: string[]) => (p: string) => held.includes(p);
@@ -578,6 +578,108 @@ describe("Session 13: Role-Specific Sidebar & RBAC Restrictions", () => {
       expect(labels).not.toContain("Students");
       expect(labels).not.toContain("App User Access & Security");
       expect(labels).not.toContain("Settings");
+    });
+
+    it("Admin / Office Administrator sees exactly two hostel sidebar entries: Hostel Dashboard and Hostel Admissions", () => {
+      const adminRoles = ["admin"];
+      const adminPerms = [
+        "admin.settings.read",
+        "hostel.structure.read",
+        "hostel.resident.admit",
+        "hostel.report.read",
+      ];
+      const hostelGroup = groupedNav(can(adminPerms), hasModule(ALL_MODULES), adminRoles).find(
+        (g) => g.group === "Hostel",
+      );
+      expect(hostelGroup).toBeDefined();
+      const labels = hostelGroup!.screens.map((s) => s.label);
+      expect(labels).toEqual(["Hostel Dashboard", "Hostel Admissions"]);
+      expect(labels).toHaveLength(2);
+      expect(labels).not.toContain("Rooms & Beds");
+      expect(labels).not.toContain("Residents");
+      expect(labels).not.toContain("Attendance");
+      expect(labels).not.toContain("Leave & Outing");
+      expect(labels).not.toContain("Complaints & Incidents");
+      expect(labels).not.toContain("Notices");
+      expect(labels).not.toContain("Mess Menu");
+    });
+
+    it("Chief Provost sees all 9 hostel navigation entries", () => {
+      const provostRoles = ["chief_provost"];
+      const provostPerms = [
+        "hostel.structure.read",
+        "hostel.structure.manage",
+        "hostel.resident.read",
+        "hostel.resident.admit",
+        "hostel.resident.transfer",
+        "hostel.resident.exit",
+        "hostel.attendance.read",
+        "hostel.attendance.mark",
+        "hostel.leave.read",
+        "hostel.leave.adjudicate",
+        "hostel.mess.read",
+        "hostel.mess.manage",
+        "hostel.incident.read",
+        "hostel.incident.manage",
+        "hostel.notice.read",
+        "hostel.notice.manage",
+        "hostel.report.read",
+      ];
+      const hostelGroup = groupedNav(can(provostPerms), hasModule(ALL_MODULES), provostRoles).find(
+        (g) => g.group === "Hostel",
+      );
+      expect(hostelGroup).toBeDefined();
+      const labels = hostelGroup!.screens.map((s) => s.label);
+      expect(labels).toEqual([
+        "Hostel Dashboard",
+        "Rooms & Beds",
+        "Residents",
+        "Hostel Admissions",
+        "Attendance",
+        "Leave & Outing",
+        "Complaints & Incidents",
+        "Notices",
+        "Mess Menu",
+      ]);
+      expect(labels).toHaveLength(9);
+    });
+
+    it("Warden sees exactly 8 navigation entries under 'My Hostel' and admissions is strictly absent and forbidden", () => {
+      const wardenRoles = ["warden"];
+      const wardenPerms = [
+        "hostel.structure.read",
+        "hostel.resident.read",
+        "hostel.attendance.read",
+        "hostel.attendance.mark",
+        "hostel.leave.read",
+        "hostel.leave.adjudicate",
+        "hostel.mess.read",
+        "hostel.incident.read",
+        "hostel.incident.manage",
+        "hostel.notice.read",
+        "hostel.report.read",
+      ];
+      const myHostelGroup = groupedNav(can(wardenPerms), hasModule(ALL_MODULES), wardenRoles).find(
+        (g) => g.group === "My Hostel",
+      );
+      expect(myHostelGroup).toBeDefined();
+      const labels = myHostelGroup!.screens.map((s) => s.label);
+      expect(labels).toEqual([
+        "Hostel Dashboard",
+        "Rooms & Beds",
+        "Residents",
+        "Attendance",
+        "Leave & Outing",
+        "Complaints & Incidents",
+        "Notices",
+        "Mess Menu",
+      ]);
+      expect(labels).toHaveLength(8);
+      expect(labels).not.toContain("Hostel Admissions");
+
+      // Verify isScreenAllowed strictly refuses warden for admissions
+      const admissionsScreen = SCREENS.find((s) => s.path === "/hostel/admissions")!;
+      expect(isScreenAllowed(admissionsScreen, wardenRoles)).toBe(false);
     });
   });
 });

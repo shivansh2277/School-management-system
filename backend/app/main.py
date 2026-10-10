@@ -37,13 +37,16 @@ from app.api.admin import reception as admin_reception
 from app.api.admin import users as admin_users
 from app.api.admin import library as admin_library
 from app.api.admin import certificates as admin_certificates
+from app.api.admin import hostel as admin_hostel
 from app.api.public import admission as public_admission
 from app.api.public import announcements as public_announcements
 from app.api.parent import children as parent_children
 from app.api.parent import fees as parent_fees
 from app.api.parent import grievances as parent_grievances
+from app.api.parent import hostel as parent_hostel
 from app.api.student import academics as student_academics
 from app.api.student import dashboard as student_dashboard
+from app.api.student import hostel as student_hostel
 from app.api.teacher import announcements as teacher_announcements
 from app.api.teacher import attendance as teacher_attendance
 from app.api.teacher import classes as teacher_classes
@@ -70,11 +73,11 @@ app.add_middleware(
 for module in (
     auth,
     admin_stats, admin_students, admin_teachers, admin_classes,
-    admin_exams, admin_grading, admin_schemes, admin_promotion, admin_report_cards, admin_hr, admin_staff_leave, admin_staff_attendance, admin_payroll, admin_notices, admin_comms, admin_fees, admin_fee_setup, admin_attendance, admin_timetable, admin_transport, admin_settings, admin_admission, admin_applications, admin_admission_documents, admin_admission_assessment, admin_selection, admin_conversion, admin_admission_reports, admin_reports, admin_inventory, admin_grievances, admin_reception, admin_users, admin_library, admin_certificates,
+    admin_exams, admin_grading, admin_schemes, admin_promotion, admin_report_cards, admin_hr, admin_staff_leave, admin_staff_attendance, admin_payroll, admin_notices, admin_comms, admin_fees, admin_fee_setup, admin_attendance, admin_timetable, admin_transport, admin_settings, admin_admission, admin_applications, admin_admission_documents, admin_admission_assessment, admin_selection, admin_conversion, admin_admission_reports, admin_reports, admin_inventory, admin_grievances, admin_reception, admin_users, admin_library, admin_certificates, admin_hostel,
     teacher_dashboard, teacher_classes, teacher_attendance,
     teacher_homework, teacher_marks, teacher_announcements, teacher_stock, teacher_grievances, teacher_leave, teacher_notifications,
-    student_dashboard, student_academics,
-    parent_children, parent_fees, parent_grievances,
+    student_dashboard, student_academics, student_hostel,
+    parent_children, parent_fees, parent_grievances, parent_hostel,
     public_admission, public_announcements,
 ):
     app.include_router(module.router)

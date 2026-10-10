@@ -298,6 +298,7 @@ class PublicApplication(BaseModel):
     photo_url: str | None = None
     admission_category: AdmissionCategory = AdmissionCategory.general
     transport_required: bool = False
+    hostel_required: bool = False
     address: dict | None = None
     previous_school: dict | None = None
     guardians: list[PublicGuardian]
@@ -698,6 +699,11 @@ def apply(
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             "Please mark exactly one parent or guardian as the main contact",
+        )
+    if body.hostel_required and body.class_applying_for not in {"9", "10", "11", "12"}:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "Hostel accommodation is available strictly to Class 9 and above",
         )
 
     app_fields = body.model_dump(

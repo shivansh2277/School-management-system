@@ -73,6 +73,8 @@ export type ApplicationRow = {
   submitted_at: string | null;
   source: string;
   student_id: number | null;
+  hostel_required?: boolean;
+  hostel_request_status?: string;
 };
 
 export type GuardianOut = {

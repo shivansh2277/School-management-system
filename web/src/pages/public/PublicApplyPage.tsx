@@ -282,6 +282,7 @@ export function PublicApplyPage() {
   const [aadhaarLast4, setAadhaarLast4] = useState("");
   const [secondLanguage, setSecondLanguage] = useState("Hindi");
   const [transportRequired, setTransportRequired] = useState(false);
+  const [hostelRequired, setHostelRequired] = useState(false);
   const [studentPhotoUrl, setStudentPhotoUrl] = useState<string | null>(null);
 
   // Draft & Document Override Reference
@@ -654,6 +655,7 @@ export function PublicApplyPage() {
       aadhaar_last4: aadhaarLast4.trim() || null,
       second_language: secondLanguage.trim() || null,
       transport_required: transportRequired,
+      hostel_required: hostelRequired,
       photo_url: studentPhotoUrl || null,
       address: {
         address_line: addressLine.trim(),
@@ -1600,6 +1602,32 @@ export function PublicApplyPage() {
                             Single Child (Eligible for Single Girl Child / Single Child Category)
                           </span>
                         </label>
+                        {["9", "10", "11", "12"].includes(selectedClass) ? (
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              name="hostel_required"
+                              checked={hostelRequired}
+                              onChange={(e) => setHostelRequired(e.target.checked)}
+                              className="rounded border-rule text-primary focus:ring-primary h-4 w-4"
+                            />
+                            <span className="text-xs font-medium text-ink">
+                              Hostel Accommodation Required (Residential facility with dining for Class {selectedClass})
+                            </span>
+                          </label>
+                        ) : (
+                          <div className="flex items-center gap-2 select-none text-ink-faint text-xs bg-ground/50 p-2 rounded border border-rule/50">
+                            <input
+                              type="checkbox"
+                              disabled
+                              checked={false}
+                              className="rounded border-rule opacity-50 h-4 w-4 cursor-not-allowed"
+                            />
+                            <span>
+                              Hostel Accommodation (Available only for Class 9 and above — Not applicable for Class {selectedClass || "N/A"})
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Photo Upload */}
@@ -2320,6 +2348,10 @@ export function PublicApplyPage() {
                             <div className="flex justify-between">
                               <span className="text-ink-soft">Transport Needed:</span>
                               <span className="text-ink">{transportRequired ? "Yes (School Bus)" : "No (Self)"}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-ink-soft">Hostel Accommodation:</span>
+                              <span className="text-ink">{hostelRequired ? "Yes (Residential Facility Requested)" : "No (Day Scholar)"}</span>
                             </div>
                           </div>
 

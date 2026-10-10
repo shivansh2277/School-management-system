@@ -37,6 +37,7 @@ MODULES: list[Module] = [
     Module("grievances", "Grievances and feedback", built=True, default_enabled=True),
     Module("library", "Library and circulation", built=True, default_enabled=True),
     Module("certificates", "Student Certificates", built=True, default_enabled=True),
+    Module("hostel", "Hostel and Mess", built=True, default_enabled=True),
 ]
 
 BY_CODE = {m.code: m for m in MODULES}

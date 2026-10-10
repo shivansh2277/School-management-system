@@ -32,6 +32,7 @@ from app.models import (
     EnquiryStatus,
     EnquirySource,
     GuardianRelation,
+    HostelAdmission,
     Student,
     User,
 )
@@ -79,6 +80,7 @@ class ApplicantDetails(BaseModel):
     preferred_section: str | None = None
     admission_category: AdmissionCategory = AdmissionCategory.general
     transport_required: bool = False
+    hostel_required: bool = False
     source: EnquirySource = EnquirySource.walk_in
     enquiry_id: int | None = None
     previous_application_id: int | None = None
@@ -107,6 +109,7 @@ class ApplicationUpdate(BaseModel):
     preferred_section: str | None = None
     admission_category: AdmissionCategory | None = None
     transport_required: bool | None = None
+    hostel_required: bool | None = None
     # Steps 5, 6 and 9: written and read whole by the form.
     address: dict | None = None
     previous_school: dict | None = None
@@ -271,6 +274,21 @@ def _detail(db: Session, a: Application) -> dict:
         "optional_subject": a.optional_subject,
         "preferred_section": a.preferred_section,
         "transport_required": a.transport_required,
+        "hostel_required": a.hostel_required,
+        "hostel_request_status": (
+            (
+                "Allocated"
+                if db.scalar(
+                    select(HostelAdmission.id).where(
+                        HostelAdmission.student_id == a.student_id,
+                        HostelAdmission.status == "active",
+                    )
+                )
+                else "Pending Allocation"
+            )
+            if a.hostel_required and a.student_id
+            else ("Application In Progress" if a.hostel_required else None)
+        ),
         "address": a.address or {},
         "previous_school": a.previous_school or {},
         "declarations": a.declarations or {},
@@ -354,6 +372,11 @@ def create_application(
         if body.cycle_id is not None
         else admission.open_cycle(db, user.school_id)
     )
+    if getattr(body, "hostel_required", False) and body.class_applying_for not in {"9", "10", "11", "12"}:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "Hostel accommodation is available strictly to Class 9 and above",
+        )
     fields = body.model_dump(exclude={"cycle_id", "enquiry_id"})
     app = Application(school_id=user.school_id, cycle_id=cycle.id, created_by=user.id, **fields)
     db.add(app)
@@ -458,7 +481,15 @@ def update_application(
     db: Session = Depends(get_db),
 ) -> dict:
     app = svc.get(db, user.school_id, application_id)
-    for field, value in body.model_dump(exclude_unset=True).items():
+    dump = body.model_dump(exclude_unset=True)
+    target_hostel = dump.get("hostel_required", app.hostel_required)
+    target_cls = dump.get("class_applying_for", app.class_applying_for)
+    if target_hostel and target_cls not in {"9", "10", "11", "12"}:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "Hostel accommodation is available strictly to Class 9 and above",
+        )
+    for field, value in dump.items():
         setattr(app, field, value)
     db.commit()
     return _detail(db, app)

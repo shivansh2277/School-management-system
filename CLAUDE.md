@@ -2,14 +2,14 @@
 
 ## Read these first, in this order
 
-0. **`SINGLE_SOURCE_OF_TRUTH.md`** & **`SESSION-HANDOFF-PROMPT-26.md`** — **start here.**
+0. **`SINGLE_SOURCE_OF_TRUTH.md`** & **`SESSION-HANDOFF-PROMPT-30.md`** — **start here.**
    The canonical single source of truth and active session handoff for the ERP.
    Details current git status (`slice/office-feedback` synced with `origin/main`), verified 32 live web screens,
-   18 active staff, database tables (reception, authorized pickup, route stop address, and user access fields added),
-   Alembic migration head `d5e6f7a8b9c0`, leadership credentials (`admin@sunrisepublic.edu` / `Admin@123`),
-   Session 25 completed & verified: Admin Dashboard UI Upgrade (`web/src/pages/Dashboard.tsx`) with modern SaaS visual hierarchy, 4-metric Attendance Overview, Fees Overview with demand and progress, compact Grievance list with inspect & reply modal, live Upcoming Events, Recent Notices, Top Performers, and Defaulters modal; Public Website Upgrades ("Personal Attention at Every Stage" ratio replacement, 4-photo building hero carousel with 3s auto-advance, standardized Principal Dr. Ananya Sengupta, M.Sc., M.Ed., Ph.D. everywhere, realistic Indian educationist portrait for Founder Dr. Anand Mohan Shukla, DEMO-SS-2026 school code in Public Disclosure, and universal scroll-to-top on all navigation clicks including already-active tabs).
-   Full test suite passes 100% green: 800 backend pytest tests (1 skipped, 0 failed), 135 web unit tests across 25 test files (2 skipped, 0 failed), 0 TypeScript errors on web and mobile, clean Vite production build.
-   Active next milestone is Session 26: Public Website Cleanups & Full ERP UI/UX Upgrade (`SESSION-HANDOFF-PROMPT-26.md`).
+   24 active teachers (28 staff total), 19 class sections (Nursery through 12-Hum), 190 active students,
+   105 database tables (72 live with rows, 33 reserved), Alembic migration head `f7a8b9c0d1e2`,
+   Session 29 completed & verified: Public Admission Enquiry Fix (tenant alias resolution to `SPS`), View Admission Steps smooth DOM scroll (`#process`), dedicated Librarian role RBAC (`librarian@sunrisepublic.edu` / `Admin@123`) with `/user-access` role management, Admission Document Overrides Automatic Pending Queue (`/admin/admission-exceptions`) with 1-click Approve/Reject, and 4 canonical PDFs recompiled and verified against the live PostgreSQL database.
+   Full test suite passes 100% green: 808 backend pytest tests (1 skipped, 0 failed), 140 web unit tests across 26 test files (2 skipped, 0 failed), 0 TypeScript errors on web and mobile, clean schema verification (17/17 checks).
+   Active next milestone is Session 30: Complete Hostel + Mess Management Module (`SESSION-HANDOFF-PROMPT-30.md` / `SESSION-HANDOFF-30.md`).
    Supersedes all previous session handoffs.
 1. **`FRONTEND-HANDOFF.md`** — the brief for **Parts Two to Six**: the
    three contracts, what "clean and easy for a school office" means, the
@@ -36,8 +36,8 @@ on both jobs** — backend lint, 615 tests, migrations from an empty schema, see
 and worker; web typecheck, schema drift, 31 tests and build. CI runs on every
 push to `main` or `part-*`.
 
-Those two figures are `main`'s. On `slice/office-feedback` they are **800 passed
-backend (1 skipped, 801 total, 0 failed)** and **135 passed web unit tests (2 skipped in 25 files)**;
+Those two figures are `main`'s. On `slice/office-feedback` they are **808 passed
+backend (1 skipped, 809 total, 0 failed)** and **140 passed web unit tests (2 skipped in 26 files)**;
 Branch is synced to `origin/main` and `origin/slice/office-feedback`.
 
 **Live Cloud Deployment**:

@@ -182,3 +182,17 @@ from app.models.library import (
     BookCopy,
     LibraryLoan,
 )
+from app.models.hostel import (
+    Hostel,
+    HostelFloor,
+    HostelRoom,
+    HostelBed,
+    HostelAdmission,
+    BedAllocation,
+    HostelAttendance,
+    HostelLeaveRequest,
+    HostelMessMenu,
+    HostelComplaint,
+    HostelIncident,
+    HostelNotice,
+)
