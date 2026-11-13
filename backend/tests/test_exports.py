@@ -31,13 +31,14 @@ def _rows(body: str) -> list[dict]:
     return list(csv.DictReader(io.StringIO("\n".join(lines[1:]))))
 
 
-def test_the_roster_exports_as_csv(client, admin):
+def test_the_roster_exports_as_csv(client, admin, db, ids):
     r = client.get("/admin/students/export", headers=admin)
     assert r.status_code == 200, r.text
     assert r.headers["content-type"].startswith("text/csv")
     assert "attachment" in r.headers["content-disposition"]
     rows = _rows(r.text)
-    assert len(rows) == 100  # the demo school's roll
+    from app.models import Student
+    assert len(rows) == db.query(Student).filter_by(school_id=ids["school"]).count()
     assert rows[0]["admission_no"] and rows[0]["full_name"]
 
 

@@ -179,6 +179,13 @@ export function LoginPage() {
                   </button>
                   <button
                     type="button"
+                    onClick={() => setDemoRole("coordinator@sunrisepublic.edu")}
+                    className="px-2 py-0.5 rounded-md bg-white border border-slate-200 hover:border-primary text-ink text-[11px] font-medium transition-colors cursor-pointer"
+                  >
+                    Academic Coordinator
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setDemoRole("accounts@sunrisepublic.edu")}
                     className="px-2 py-0.5 rounded-md bg-white border border-slate-200 hover:border-primary text-ink text-[11px] font-medium transition-colors cursor-pointer"
                   >

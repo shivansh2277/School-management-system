@@ -46,7 +46,10 @@ function Home() {
       userRoles.includes("chief_provost") || userRoles.includes("warden")
         ? screens.find((s) => s.path === "/hostel")
         : undefined;
-    const first = transportScreen ?? librarianScreen ?? hostelScreen ?? screens[0];
+    const coordinatorScreen = userRoles.includes("academic_coordinator")
+      ? screens.find((s) => s.path === "/timetable")
+      : undefined;
+    const first = coordinatorScreen ?? transportScreen ?? librarianScreen ?? hostelScreen ?? screens[0];
     if (!first) {
       return (
         <div className="min-h-[60vh] flex items-center justify-center p-4">

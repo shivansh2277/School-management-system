@@ -40,6 +40,7 @@ from app.api.admin import certificates as admin_certificates
 from app.api.admin import hostel as admin_hostel
 from app.api.public import admission as public_admission
 from app.api.public import announcements as public_announcements
+from app.api.public import webhooks as public_webhooks
 from app.api.parent import children as parent_children
 from app.api.parent import fees as parent_fees
 from app.api.parent import grievances as parent_grievances
@@ -78,7 +79,7 @@ for module in (
     teacher_homework, teacher_marks, teacher_announcements, teacher_stock, teacher_grievances, teacher_leave, teacher_notifications,
     student_dashboard, student_academics, student_hostel,
     parent_children, parent_fees, parent_grievances, parent_hostel,
-    public_admission, public_announcements,
+    public_admission, public_announcements, public_webhooks,
 ):
     app.include_router(module.router)
     app.include_router(module.router, prefix="/api/v1")

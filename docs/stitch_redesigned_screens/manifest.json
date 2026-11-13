@@ -1,0 +1,302 @@
+[
+  {
+    "index": 1,
+    "id": "efc08865a48c466190bd16036df00072",
+    "title": "Redesigned Navigation - Teacher Role",
+    "filename_base": "01_Redesigned_Navigation_-_Teacher_Role_efc08865",
+    "screenshot_ref": "projects/8221943163501724089/screens/efc08865a48c466190bd16036df00072/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/efc08865a48c466190bd16036df00072/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\01_Redesigned_Navigation_-_Teacher_Role_efc08865.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\01_Redesigned_Navigation_-_Teacher_Role_efc08865.html"
+  },
+  {
+    "index": 2,
+    "id": "987f4ee7ab384672bf4439f43485ce3b",
+    "title": "Sunrise ERP - Attendance Roster",
+    "filename_base": "02_Sunrise_ERP_-_Attendance_Roster_987f4ee7",
+    "screenshot_ref": "projects/8221943163501724089/screens/987f4ee7ab384672bf4439f43485ce3b/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/987f4ee7ab384672bf4439f43485ce3b/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\02_Sunrise_ERP_-_Attendance_Roster_987f4ee7.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\02_Sunrise_ERP_-_Attendance_Roster_987f4ee7.html"
+  },
+  {
+    "index": 3,
+    "id": "e536bed39833477b94625c1b6164893f",
+    "title": "Sunrise ERP - Homework",
+    "filename_base": "03_Sunrise_ERP_-_Homework_e536bed3",
+    "screenshot_ref": "projects/8221943163501724089/screens/e536bed39833477b94625c1b6164893f/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/e536bed39833477b94625c1b6164893f/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\03_Sunrise_ERP_-_Homework_e536bed3.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\03_Sunrise_ERP_-_Homework_e536bed3.html"
+  },
+  {
+    "index": 4,
+    "id": "387d4e316c7b46eeafb32a8e9b0cb99e",
+    "title": "Redesigned Teacher Dashboard",
+    "filename_base": "04_Redesigned_Teacher_Dashboard_387d4e31",
+    "screenshot_ref": "projects/8221943163501724089/screens/387d4e316c7b46eeafb32a8e9b0cb99e/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/387d4e316c7b46eeafb32a8e9b0cb99e/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\04_Redesigned_Teacher_Dashboard_387d4e31.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\04_Redesigned_Teacher_Dashboard_387d4e31.html"
+  },
+  {
+    "index": 5,
+    "id": "7321d4fd1bdf4f08ac42ffc89a230170",
+    "title": "Redesigned Navigation - Student Role",
+    "filename_base": "05_Redesigned_Navigation_-_Student_Role_7321d4fd",
+    "screenshot_ref": "projects/8221943163501724089/screens/7321d4fd1bdf4f08ac42ffc89a230170/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/7321d4fd1bdf4f08ac42ffc89a230170/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\05_Redesigned_Navigation_-_Student_Role_7321d4fd.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\05_Redesigned_Navigation_-_Student_Role_7321d4fd.html"
+  },
+  {
+    "index": 6,
+    "id": "ea47d221cf1e4a179055a3dd26e80071",
+    "title": "Sunrise ERP - Homework Manager",
+    "filename_base": "06_Sunrise_ERP_-_Homework_Manager_ea47d221",
+    "screenshot_ref": "projects/8221943163501724089/screens/ea47d221cf1e4a179055a3dd26e80071/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/ea47d221cf1e4a179055a3dd26e80071/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\06_Sunrise_ERP_-_Homework_Manager_ea47d221.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\06_Sunrise_ERP_-_Homework_Manager_ea47d221.html"
+  },
+  {
+    "index": 7,
+    "id": "b831840b4f9247f7825ea537067faf58",
+    "title": "Sunrise ERP - Timetable",
+    "filename_base": "07_Sunrise_ERP_-_Timetable_b831840b",
+    "screenshot_ref": "projects/8221943163501724089/screens/b831840b4f9247f7825ea537067faf58/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/b831840b4f9247f7825ea537067faf58/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\07_Sunrise_ERP_-_Timetable_b831840b.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\07_Sunrise_ERP_-_Timetable_b831840b.html"
+  },
+  {
+    "index": 8,
+    "id": "1aac83ef2c1346b0a372dfdecec31411",
+    "title": "Parent Attendance & Leave",
+    "filename_base": "08_Parent_Attendance___Leave_1aac83ef",
+    "screenshot_ref": "projects/8221943163501724089/screens/1aac83ef2c1346b0a372dfdecec31411/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/1aac83ef2c1346b0a372dfdecec31411/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\08_Parent_Attendance___Leave_1aac83ef.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\08_Parent_Attendance___Leave_1aac83ef.html"
+  },
+  {
+    "index": 9,
+    "id": "8f894e52788a476db1296ef6eec233a4",
+    "title": "Redesigned Student Timetable",
+    "filename_base": "09_Redesigned_Student_Timetable_8f894e52",
+    "screenshot_ref": "projects/8221943163501724089/screens/8f894e52788a476db1296ef6eec233a4/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/8f894e52788a476db1296ef6eec233a4/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\09_Redesigned_Student_Timetable_8f894e52.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\09_Redesigned_Student_Timetable_8f894e52.html"
+  },
+  {
+    "index": 10,
+    "id": "19cbc311991a43be8097dddc700e6b5a",
+    "title": "Parent Dashboard",
+    "filename_base": "10_Parent_Dashboard_19cbc311",
+    "screenshot_ref": "projects/8221943163501724089/screens/19cbc311991a43be8097dddc700e6b5a/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/19cbc311991a43be8097dddc700e6b5a/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\10_Parent_Dashboard_19cbc311.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\10_Parent_Dashboard_19cbc311.html"
+  },
+  {
+    "index": 11,
+    "id": "9952915e30434016820e48da36250d69",
+    "title": "Parent Child Profile",
+    "filename_base": "11_Parent_Child_Profile_9952915e",
+    "screenshot_ref": "projects/8221943163501724089/screens/9952915e30434016820e48da36250d69/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/9952915e30434016820e48da36250d69/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\11_Parent_Child_Profile_9952915e.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\11_Parent_Child_Profile_9952915e.html"
+  },
+  {
+    "index": 12,
+    "id": "15d7e853078a45a8996fe279d8c4e3ff",
+    "title": "Redesigned Navigation Drawer",
+    "filename_base": "12_Redesigned_Navigation_Drawer_15d7e853",
+    "screenshot_ref": "projects/8221943163501724089/screens/15d7e853078a45a8996fe279d8c4e3ff/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/15d7e853078a45a8996fe279d8c4e3ff/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\12_Redesigned_Navigation_Drawer_15d7e853.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\12_Redesigned_Navigation_Drawer_15d7e853.html"
+  },
+  {
+    "index": 13,
+    "id": "b21323a53658425f916525f6bcb523f0",
+    "title": "Redesigned Teacher Homework Manager",
+    "filename_base": "13_Redesigned_Teacher_Homework_Manager_b21323a5",
+    "screenshot_ref": "projects/8221943163501724089/screens/b21323a53658425f916525f6bcb523f0/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/b21323a53658425f916525f6bcb523f0/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\13_Redesigned_Teacher_Homework_Manager_b21323a5.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\13_Redesigned_Teacher_Homework_Manager_b21323a5.html"
+  },
+  {
+    "index": 14,
+    "id": "db73b1c0506e44f0aac3d82f5d5e0800",
+    "title": "Sunrise ERP - Student Dashboard",
+    "filename_base": "14_Sunrise_ERP_-_Student_Dashboard_db73b1c0",
+    "screenshot_ref": "projects/8221943163501724089/screens/db73b1c0506e44f0aac3d82f5d5e0800/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/db73b1c0506e44f0aac3d82f5d5e0800/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\14_Sunrise_ERP_-_Student_Dashboard_db73b1c0.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\14_Sunrise_ERP_-_Student_Dashboard_db73b1c0.html"
+  },
+  {
+    "index": 15,
+    "id": "c4d2b1b061024c4ea92f88deb1c99d4f",
+    "title": "Sunrise ERP - Teacher Leave Application",
+    "filename_base": "15_Sunrise_ERP_-_Teacher_Leave_Application_c4d2b1b0",
+    "screenshot_ref": "projects/8221943163501724089/screens/c4d2b1b061024c4ea92f88deb1c99d4f/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/c4d2b1b061024c4ea92f88deb1c99d4f/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\15_Sunrise_ERP_-_Teacher_Leave_Application_c4d2b1b0.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\15_Sunrise_ERP_-_Teacher_Leave_Application_c4d2b1b0.html"
+  },
+  {
+    "index": 16,
+    "id": "135ff5450e8f4a76a79e29ecd180aa65",
+    "title": "Redesigned Login - Student",
+    "filename_base": "16_Redesigned_Login_-_Student_135ff545",
+    "screenshot_ref": "projects/8221943163501724089/screens/135ff5450e8f4a76a79e29ecd180aa65/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/135ff5450e8f4a76a79e29ecd180aa65/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\16_Redesigned_Login_-_Student_135ff545.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\16_Redesigned_Login_-_Student_135ff545.html"
+  },
+  {
+    "index": 17,
+    "id": "868c6251426740e3ae5136cad381481b",
+    "title": "Redesigned Teacher Leave Application",
+    "filename_base": "17_Redesigned_Teacher_Leave_Application_868c6251",
+    "screenshot_ref": "projects/8221943163501724089/screens/868c6251426740e3ae5136cad381481b/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/868c6251426740e3ae5136cad381481b/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\17_Redesigned_Teacher_Leave_Application_868c6251.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\17_Redesigned_Teacher_Leave_Application_868c6251.html"
+  },
+  {
+    "index": 18,
+    "id": "4bf329cda4a54fe88a29c3f31f1956dc",
+    "title": "Redesigned Navigation - Parent Role",
+    "filename_base": "18_Redesigned_Navigation_-_Parent_Role_4bf329cd",
+    "screenshot_ref": "projects/8221943163501724089/screens/4bf329cda4a54fe88a29c3f31f1956dc/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/4bf329cda4a54fe88a29c3f31f1956dc/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\18_Redesigned_Navigation_-_Parent_Role_4bf329cd.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\18_Redesigned_Navigation_-_Parent_Role_4bf329cd.html"
+  },
+  {
+    "index": 19,
+    "id": "72bab24d0b014ce2a0bf268ae1934a5b",
+    "title": "Redesigned Login - Validation Error",
+    "filename_base": "19_Redesigned_Login_-_Validation_Error_72bab24d",
+    "screenshot_ref": "projects/8221943163501724089/screens/72bab24d0b014ce2a0bf268ae1934a5b/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/72bab24d0b014ce2a0bf268ae1934a5b/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\19_Redesigned_Login_-_Validation_Error_72bab24d.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\19_Redesigned_Login_-_Validation_Error_72bab24d.html"
+  },
+  {
+    "index": 20,
+    "id": "4a663011c4744a459a17277a58f888dd",
+    "title": "Redesigned Student Navigation Drawer",
+    "filename_base": "20_Redesigned_Student_Navigation_Drawer_4a663011",
+    "screenshot_ref": "projects/8221943163501724089/screens/4a663011c4744a459a17277a58f888dd/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/4a663011c4744a459a17277a58f888dd/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\20_Redesigned_Student_Navigation_Drawer_4a663011.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\20_Redesigned_Student_Navigation_Drawer_4a663011.html"
+  },
+  {
+    "index": 21,
+    "id": "49a73960575f4323955c1b6e89850b54",
+    "title": "Parent Fees & Ledger",
+    "filename_base": "21_Parent_Fees___Ledger_49a73960",
+    "screenshot_ref": "projects/8221943163501724089/screens/49a73960575f4323955c1b6e89850b54/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/49a73960575f4323955c1b6e89850b54/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\21_Parent_Fees___Ledger_49a73960.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\21_Parent_Fees___Ledger_49a73960.html"
+  },
+  {
+    "index": 22,
+    "id": "4cb7eaae6971467d88cbc815575896b7",
+    "title": "Redesigned Student Dashboard",
+    "filename_base": "22_Redesigned_Student_Dashboard_4cb7eaae",
+    "screenshot_ref": "projects/8221943163501724089/screens/4cb7eaae6971467d88cbc815575896b7/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/4cb7eaae6971467d88cbc815575896b7/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\22_Redesigned_Student_Dashboard_4cb7eaae.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\22_Redesigned_Student_Dashboard_4cb7eaae.html"
+  },
+  {
+    "index": 23,
+    "id": "7dcbe185c86b4869a6131171bf7e3ac9",
+    "title": "Redesigned Login - Parent",
+    "filename_base": "23_Redesigned_Login_-_Parent_7dcbe185",
+    "screenshot_ref": "projects/8221943163501724089/screens/7dcbe185c86b4869a6131171bf7e3ac9/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/7dcbe185c86b4869a6131171bf7e3ac9/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\23_Redesigned_Login_-_Parent_7dcbe185.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\23_Redesigned_Login_-_Parent_7dcbe185.html"
+  },
+  {
+    "index": 24,
+    "id": "21d55b0dee73402984582657dbd17c43",
+    "title": "Sunrise ERP - Teacher Dashboard",
+    "filename_base": "24_Sunrise_ERP_-_Teacher_Dashboard_21d55b0d",
+    "screenshot_ref": "projects/8221943163501724089/screens/21d55b0dee73402984582657dbd17c43/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/21d55b0dee73402984582657dbd17c43/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\24_Sunrise_ERP_-_Teacher_Dashboard_21d55b0d.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\24_Sunrise_ERP_-_Teacher_Dashboard_21d55b0d.html"
+  },
+  {
+    "index": 25,
+    "id": "1409d3c77a3d4b909228cc4a241382b6",
+    "title": "Redesigned Teacher Navigation Drawer",
+    "filename_base": "25_Redesigned_Teacher_Navigation_Drawer_1409d3c7",
+    "screenshot_ref": "projects/8221943163501724089/screens/1409d3c77a3d4b909228cc4a241382b6/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/1409d3c77a3d4b909228cc4a241382b6/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\25_Redesigned_Teacher_Navigation_Drawer_1409d3c7.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\25_Redesigned_Teacher_Navigation_Drawer_1409d3c7.html"
+  },
+  {
+    "index": 26,
+    "id": "5bf242ced606403b82c3d4b4ba5b3614",
+    "title": "Redesigned Login - Student",
+    "filename_base": "26_Redesigned_Login_-_Student_5bf242ce",
+    "screenshot_ref": "projects/8221943163501724089/screens/5bf242ced606403b82c3d4b4ba5b3614/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/5bf242ced606403b82c3d4b4ba5b3614/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\26_Redesigned_Login_-_Student_5bf242ce.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\26_Redesigned_Login_-_Student_5bf242ce.html"
+  },
+  {
+    "index": 27,
+    "id": "55388c96eddd43149ad69c94d1519b7c",
+    "title": "Sunrise ERP - Student Profile",
+    "filename_base": "27_Sunrise_ERP_-_Student_Profile_55388c96",
+    "screenshot_ref": "projects/8221943163501724089/screens/55388c96eddd43149ad69c94d1519b7c/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/55388c96eddd43149ad69c94d1519b7c/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\27_Sunrise_ERP_-_Student_Profile_55388c96.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\27_Sunrise_ERP_-_Student_Profile_55388c96.html"
+  },
+  {
+    "index": 28,
+    "id": "36a264d34d1f417089d3e8fe441e0f2b",
+    "title": "Redesigned Teacher Attendance Roster",
+    "filename_base": "28_Redesigned_Teacher_Attendance_Roster_36a264d3",
+    "screenshot_ref": "projects/8221943163501724089/screens/36a264d34d1f417089d3e8fe441e0f2b/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/36a264d34d1f417089d3e8fe441e0f2b/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\28_Redesigned_Teacher_Attendance_Roster_36a264d3.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\28_Redesigned_Teacher_Attendance_Roster_36a264d3.html"
+  },
+  {
+    "index": 29,
+    "id": "42b880e00d4c4b33af68d619afc1e648",
+    "title": "Redesigned Login - Teacher",
+    "filename_base": "29_Redesigned_Login_-_Teacher_42b880e0",
+    "screenshot_ref": "projects/8221943163501724089/screens/42b880e00d4c4b33af68d619afc1e648/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/42b880e00d4c4b33af68d619afc1e648/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\29_Redesigned_Login_-_Teacher_42b880e0.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\29_Redesigned_Login_-_Teacher_42b880e0.html"
+  },
+  {
+    "index": 30,
+    "id": "615cdeb5cede4af4b9d0cbcfa77f048c",
+    "title": "Redesigned Parent Navigation Drawer",
+    "filename_base": "30_Redesigned_Parent_Navigation_Drawer_615cdeb5",
+    "screenshot_ref": "projects/8221943163501724089/screens/615cdeb5cede4af4b9d0cbcfa77f048c/fileEntries/screenshot",
+    "html_ref": "projects/8221943163501724089/screens/615cdeb5cede4af4b9d0cbcfa77f048c/fileEntries/html",
+    "png_path": "school-management-system\\docs\\stitch_redesigned_screens\\30_Redesigned_Parent_Navigation_Drawer_615cdeb5.png",
+    "html_path": "school-management-system\\docs\\stitch_redesigned_screens\\30_Redesigned_Parent_Navigation_Drawer_615cdeb5.html"
+  }
+]

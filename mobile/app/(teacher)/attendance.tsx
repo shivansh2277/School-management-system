@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
@@ -5,6 +6,16 @@ import { Pressable, Text, View } from "react-native";
 import { api, formatDate } from "../../src/api/client";
 import { Button, Card, Empty, Loading, Screen, s } from "../../src/components/ui";
 import { theme } from "../../src/theme";
+
+const OFFLINE_QUEUE_KEY = "@offline_attendance_queue";
+
+interface QueuedAttendance {
+  id: string;
+  class_section_id: number;
+  date: string;
+  entries: { student_id: number; status: string }[];
+  queued_at: string;
+}
 
 type ClassRow = { class_section_id: number; class_label: string; is_class_teacher?: boolean };
 type Roll = {
@@ -15,10 +26,10 @@ type Roll = {
 };
 
 const STATUS_CHIPS = [
-  { key: "present", badge: "P", label: "Present", color: "#16A34A", bg: "#DCFCE7" },
-  { key: "absent", badge: "A", label: "Absent", color: "#EF4444", bg: "#FEE2E2" },
-  { key: "late", badge: "L", label: "Late", color: "#F59E0B", bg: "#FEF3C7" },
-  { key: "leave", badge: "M", label: "Medical", color: "#8B5CF6", bg: "#EDE9FE" },
+  { key: "present", badge: "P", label: "Present", color: "#059669", bg: "#ECFDF5", activeBg: "#059669" },
+  { key: "absent", badge: "A", label: "Absent", color: "#E11D48", bg: "#FFF1F2", activeBg: "#E11D48" },
+  { key: "late", badge: "L", label: "Late", color: "#D97706", bg: "#FFFBEB", activeBg: "#D97706" },
+  { key: "leave", badge: "M", label: "Medical", color: "#7C3AED", bg: "#F5F3FF", activeBg: "#7C3AED" },
 ] as const;
 
 type Status = (typeof STATUS_CHIPS)[number]["key"];
@@ -30,6 +41,8 @@ export default function TeacherAttendance() {
   const [classId, setClassId] = useState<number | null>(null);
   const [marks, setMarks] = useState<Record<number, Status>>({});
   const [note, setNote] = useState<string | null>(null);
+  const [offlinePendingCount, setOfflinePendingCount] = useState<number>(0);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
   const classes = useQuery({
     queryKey: ["teacher-classes"],
@@ -54,19 +67,123 @@ export default function TeacherAttendance() {
     setNote(null);
   }, [roll.data]);
 
+  // Read current offline queue length
+  const refreshQueueCount = async () => {
+    try {
+      const raw = await AsyncStorage.getItem(OFFLINE_QUEUE_KEY);
+      if (raw) {
+        const queue: QueuedAttendance[] = JSON.parse(raw);
+        setOfflinePendingCount(queue.length);
+      } else {
+        setOfflinePendingCount(0);
+      }
+    } catch {
+      setOfflinePendingCount(0);
+    }
+  };
+
+  // Automatically drain queued roll-calls to the backend
+  const drainOfflineQueue = async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    try {
+      const raw = await AsyncStorage.getItem(OFFLINE_QUEUE_KEY);
+      if (!raw) {
+        setIsSyncing(false);
+        return;
+      }
+      const queue: QueuedAttendance[] = JSON.parse(raw);
+      if (queue.length === 0) {
+        setIsSyncing(false);
+        return;
+      }
+
+      const remaining: QueuedAttendance[] = [];
+      let syncedCount = 0;
+
+      for (const item of queue) {
+        try {
+          await api.post("/teacher/attendance", {
+            class_section_id: item.class_section_id,
+            date: item.date,
+            entries: item.entries,
+            idempotency_key: item.id,
+          });
+          syncedCount++;
+        } catch {
+          // Keep item in queue if request fails / network unavailable
+          remaining.push(item);
+        }
+      }
+
+      await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(remaining));
+      setOfflinePendingCount(remaining.length);
+
+      if (syncedCount > 0) {
+        setNote(`Attendance synced with server (${syncedCount} synced).`);
+        qc.invalidateQueries({ queryKey: ["teacher-roll"] });
+      }
+    } catch {
+      // Ignore background sync errors
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshQueueCount();
+    drainOfflineQueue();
+
+    // Reconnection check every 15 seconds
+    const interval = setInterval(() => {
+      drainOfflineQueue();
+    }, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
   const save = useMutation({
-    mutationFn: () =>
-      api.post("/teacher/attendance", {
+    mutationFn: async () => {
+      if (!active) throw new Error("No active class selected");
+      const payload = {
         class_section_id: active,
         date,
         entries: (roll.data ?? []).map((r) => ({
           student_id: r.student_id,
           status: marks[r.student_id] ?? "present",
         })),
-      }),
-    onSuccess: () => {
-      setNote("Attendance saved.");
-      qc.invalidateQueries({ queryKey: ["teacher-roll"] });
+      };
+
+      try {
+        const res = await api.post("/teacher/attendance", payload);
+        return { online: true, res };
+      } catch {
+        // Enqueue offline if network times out or fails
+        const queueItem: QueuedAttendance = {
+          id: `offline-${active}-${date}-${Date.now()}`,
+          class_section_id: active,
+          date,
+          entries: payload.entries,
+          queued_at: new Date().toISOString(),
+        };
+
+        const raw = await AsyncStorage.getItem(OFFLINE_QUEUE_KEY);
+        const queue: QueuedAttendance[] = raw ? JSON.parse(raw) : [];
+        const filtered = queue.filter(
+          (q) => !(q.class_section_id === active && q.date === date)
+        );
+        filtered.push(queueItem);
+        await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(filtered));
+        setOfflinePendingCount(filtered.length);
+        return { online: false, queued: queueItem };
+      }
+    },
+    onSuccess: (data) => {
+      if (data.online) {
+        setNote("Attendance saved.");
+        qc.invalidateQueries({ queryKey: ["teacher-roll"] });
+      } else {
+        setNote("Saved Locally (Offline - Will Sync When Connected)");
+      }
     },
     onError: (e: Error) => setNote(e.message),
   });
@@ -94,148 +211,243 @@ export default function TeacherAttendance() {
         </Card>
       ) : (
         <>
-          <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-            {classTeacherSections.map((c) => (
-              <Pressable
-                key={c.class_section_id}
-                onPress={() => setClassId(c.class_section_id)}
-                style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 8,
-                  borderRadius: theme.radius.input,
-                  backgroundColor: active === c.class_section_id ? theme.primary : theme.surface,
-                }}
-              >
-                <Text
-                  style={{ color: active === c.class_section_id ? "#fff" : theme.inkSoft, fontSize: 13 }}
+          <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+            {classTeacherSections.map((c) => {
+              const isSelected = active === c.class_section_id;
+              return (
+                <Pressable
+                  key={c.class_section_id}
+                  onPress={() => setClassId(c.class_section_id)}
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    borderRadius: theme.radius.pill,
+                    backgroundColor: isSelected ? theme.primary : theme.surface,
+                    borderWidth: 1,
+                    borderColor: isSelected ? theme.primary : theme.ruleStrong,
+                    ...theme.shadow,
+                  }}
                 >
-                  {c.class_label}
-                </Text>
-              </Pressable>
-            ))}
+                  <Text
+                    style={{
+                      color: isSelected ? "#fff" : theme.ink,
+                      fontWeight: isSelected ? "700" : "500",
+                      fontSize: 13,
+                    }}
+                  >
+                    {c.class_label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
 
-          <Card title={`Roll sheet - ${formatDate(date)}`}>
-        {(roll.data ?? []).length === 0 ? (
-          <Empty text="No students in this section." />
-        ) : (
-          <>
-            {/* Counter Header */}
+          {offlinePendingCount > 0 && (
             <View
               style={{
+                backgroundColor: theme.warningBg,
+                borderColor: "#FDE68A",
+                borderWidth: 1,
+                borderRadius: theme.radius.card,
+                padding: 12,
+                marginBottom: 12,
                 flexDirection: "row",
                 justifyContent: "space-between",
-                backgroundColor: theme.ground,
-                padding: 10,
-                borderRadius: theme.radius.input,
-                marginBottom: 10,
+                alignItems: "center",
               }}
             >
-              <View style={{ alignItems: "center" }}>
-                <Text style={{ fontSize: 11, color: theme.inkFaint }}>Total</Text>
-                <Text style={{ fontSize: 15, fontWeight: "700", color: theme.ink }}>{total}</Text>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={{ color: "#92400E", fontSize: 13, fontWeight: "700" }}>
+                  Saved Locally (Offline - Will Sync When Connected)
+                </Text>
+                <Text style={{ color: "#B45309", fontSize: 11, marginTop: 2 }}>
+                  {offlinePendingCount} pending roll-call(s) queued
+                </Text>
               </View>
-              <View style={{ alignItems: "center" }}>
-                <Text style={{ fontSize: 11, color: "#16A34A" }}>Present (P)</Text>
-                <Text style={{ fontSize: 15, fontWeight: "700", color: "#16A34A" }}>{counts.present}</Text>
-              </View>
-              <View style={{ alignItems: "center" }}>
-                <Text style={{ fontSize: 11, color: "#EF4444" }}>Absent (A)</Text>
-                <Text style={{ fontSize: 15, fontWeight: "700", color: "#EF4444" }}>{counts.absent}</Text>
-              </View>
-              <View style={{ alignItems: "center" }}>
-                <Text style={{ fontSize: 11, color: "#F59E0B" }}>Late (L)</Text>
-                <Text style={{ fontSize: 15, fontWeight: "700", color: "#F59E0B" }}>{counts.late}</Text>
-              </View>
-              <View style={{ alignItems: "center" }}>
-                <Text style={{ fontSize: 11, color: "#8B5CF6" }}>Med/Leave (M)</Text>
-                <Text style={{ fontSize: 15, fontWeight: "700", color: "#8B5CF6" }}>{counts.leave}</Text>
-              </View>
-            </View>
-
-            <Button
-              label="Mark all present"
-              tone="ghost"
-              onPress={() =>
-                setMarks(
-                  Object.fromEntries(roll.data!.map((r) => [r.student_id, "present" as Status])),
-                )
-              }
-            />
-            {roll.data!.map((r) => (
-              <View
-                key={r.student_id}
+              <Pressable
+                onPress={() => drainOfflineQueue()}
+                disabled={isSyncing}
                 style={{
-                  paddingVertical: 10,
-                  borderBottomWidth: 1,
-                  borderBottomColor: theme.rule,
+                  backgroundColor: theme.warning,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: theme.radius.pill,
+                  opacity: isSyncing ? 0.6 : 1,
                 }}
               >
-                <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
-                  <Text style={[s.title, { fontSize: 14 }]}>
-                    {r.roll_no}. {r.full_name}
-                  </Text>
-                  {marks[r.student_id] && (
-                    <Text
+                <Text style={{ color: "#fff", fontSize: 12, fontWeight: "600" }}>
+                  {isSyncing ? "Syncing..." : "Sync Now"}
+                </Text>
+              </Pressable>
+            </View>
+          )}
+
+          <Card title={`Roll Sheet - ${formatDate(date)}`}>
+            {(roll.data ?? []).length === 0 ? (
+              <Empty text="No students in this section." />
+            ) : (
+              <>
+                {/* Counter Metric Header */}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    backgroundColor: theme.ground,
+                    padding: 12,
+                    borderRadius: theme.radius.card,
+                    marginBottom: 14,
+                    borderWidth: 1,
+                    borderColor: theme.rule,
+                  }}
+                >
+                  <View style={{ flex: 1, alignItems: "center" }}>
+                    <Text style={{ fontSize: 11, fontWeight: "600", color: theme.inkFaint, textTransform: "uppercase" }}>Total</Text>
+                    <Text style={{ fontSize: 18, fontWeight: "800", color: theme.ink, marginTop: 2 }}>{total}</Text>
+                  </View>
+                  <View style={{ width: 1, backgroundColor: theme.rule }} />
+                  <View style={{ flex: 1, alignItems: "center" }}>
+                    <Text style={{ fontSize: 11, fontWeight: "600", color: theme.success, textTransform: "uppercase" }}>Present</Text>
+                    <Text style={{ fontSize: 18, fontWeight: "800", color: theme.success, marginTop: 2 }}>{counts.present}</Text>
+                  </View>
+                  <View style={{ width: 1, backgroundColor: theme.rule }} />
+                  <View style={{ flex: 1, alignItems: "center" }}>
+                    <Text style={{ fontSize: 11, fontWeight: "600", color: theme.danger, textTransform: "uppercase" }}>Absent</Text>
+                    <Text style={{ fontSize: 18, fontWeight: "800", color: theme.danger, marginTop: 2 }}>{counts.absent}</Text>
+                  </View>
+                  <View style={{ width: 1, backgroundColor: theme.rule }} />
+                  <View style={{ flex: 1, alignItems: "center" }}>
+                    <Text style={{ fontSize: 11, fontWeight: "600", color: theme.warning, textTransform: "uppercase" }}>Late</Text>
+                    <Text style={{ fontSize: 18, fontWeight: "800", color: theme.warning, marginTop: 2 }}>{counts.late}</Text>
+                  </View>
+                </View>
+
+                <View style={{ marginBottom: 12 }}>
+                  <Button
+                    label="✓ Mark All Present"
+                    tone="ghost"
+                    onPress={() =>
+                      setMarks(
+                        Object.fromEntries(roll.data!.map((r) => [r.student_id, "present" as Status])),
+                      )
+                    }
+                  />
+                </View>
+
+                {roll.data!.map((r) => {
+                  const currentStatus = marks[r.student_id];
+                  const initials = r.full_name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase();
+
+                  return (
+                    <View
+                      key={r.student_id}
                       style={{
-                        fontSize: 12,
-                        fontWeight: "600",
-                        textTransform: "capitalize",
-                        color: STATUS_CHIPS.find((c) => c.key === marks[r.student_id])?.color,
+                        paddingVertical: 12,
+                        borderBottomWidth: 1,
+                        borderBottomColor: theme.rule,
                       }}
                     >
-                      {STATUS_CHIPS.find((c) => c.key === marks[r.student_id])?.label}
-                    </Text>
-                  )}
+                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+                          <View
+                            style={{
+                              width: 36,
+                              height: 36,
+                              borderRadius: 18,
+                              backgroundColor: theme.primarySoft,
+                              alignItems: "center",
+                              justifyContent: "center",
+                              borderWidth: 1,
+                              borderColor: theme.rule,
+                            }}
+                          >
+                            <Text style={{ fontSize: 13, fontWeight: "700", color: theme.primary }}>{initials}</Text>
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[s.title, { fontSize: 14, color: theme.ink }]} numberOfLines={1}>
+                              {r.full_name}
+                            </Text>
+                            <Text style={[s.meta, { fontSize: 11, color: theme.inkFaint }]}>Roll No. #{r.roll_no}</Text>
+                          </View>
+                        </View>
+                        {currentStatus && (
+                          <View
+                            style={{
+                              paddingHorizontal: 8,
+                              paddingVertical: 3,
+                              borderRadius: theme.radius.pill,
+                              backgroundColor: STATUS_CHIPS.find((c) => c.key === currentStatus)?.bg,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontSize: 11,
+                                fontWeight: "700",
+                                textTransform: "capitalize",
+                                color: STATUS_CHIPS.find((c) => c.key === currentStatus)?.color,
+                              }}
+                            >
+                              {STATUS_CHIPS.find((c) => c.key === currentStatus)?.label}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
+                      {/* 4 Status Pills */}
+                      <View style={{ flexDirection: "row", gap: 6 }}>
+                        {STATUS_CHIPS.map((chip) => {
+                          const on = (marks[r.student_id] ?? null) === chip.key;
+                          return (
+                            <Pressable
+                              key={chip.key}
+                              onPress={() => setMarks({ ...marks, [r.student_id]: chip.key })}
+                              style={{
+                                flex: 1,
+                                paddingVertical: 8,
+                                borderRadius: theme.radius.input,
+                                alignItems: "center",
+                                justifyContent: "center",
+                                backgroundColor: on ? chip.activeBg : theme.ground,
+                                borderWidth: 1,
+                                borderColor: on ? chip.activeBg : theme.ruleStrong,
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  fontSize: 13,
+                                  color: on ? "#ffffff" : theme.ink,
+                                  fontWeight: on ? "800" : "600",
+                                }}
+                              >
+                                {chip.badge}
+                              </Text>
+                              <Text
+                                style={{
+                                  fontSize: 10,
+                                  color: on ? "#ffffff" : theme.inkFaint,
+                                  fontWeight: on ? "600" : "400",
+                                  marginTop: 1,
+                                }}
+                              >
+                                {chip.label}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  );
+                })}
+                {note ? <Text style={[s.meta, { marginTop: 10, color: theme.primary, fontWeight: "600" }]}>{note}</Text> : null}
+                <View style={{ marginTop: 16 }}>
+                  <Button label="Save Attendance" onPress={() => save.mutate()} disabled={save.isPending} />
                 </View>
-                <View style={{ flexDirection: "row", gap: 8 }}>
-                  {STATUS_CHIPS.map((chip) => {
-                    const on = (marks[r.student_id] ?? null) === chip.key;
-                    return (
-                      <Pressable
-                        key={chip.key}
-                        onPress={() => setMarks({ ...marks, [r.student_id]: chip.key })}
-                        style={{
-                          flex: 1,
-                          paddingVertical: 7,
-                          borderRadius: theme.radius.input,
-                          alignItems: "center",
-                          backgroundColor: on ? chip.bg : theme.ground,
-                          borderWidth: 1.5,
-                          borderColor: on ? chip.color : "transparent",
-                        }}
-                      >
-                        <Text
-                          style={{
-                            fontSize: 13,
-                            color: on ? chip.color : theme.inkSoft,
-                            fontWeight: on ? "700" : "500",
-                          }}
-                        >
-                          {chip.badge}
-                        </Text>
-                        <Text
-                          style={{
-                            fontSize: 10,
-                            color: on ? chip.color : theme.inkFaint,
-                            fontWeight: on ? "600" : "400",
-                          }}
-                        >
-                          {chip.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-            ))}
-            {note ? <Text style={[s.meta, { marginTop: 8 }]}>{note}</Text> : null}
-            <View style={{ marginTop: 12 }}>
-              <Button label="Save Attendance" onPress={() => save.mutate()} disabled={save.isPending} />
-            </View>
-          </>
-        )}
-      </Card>
+              </>
+            )}
+          </Card>
         </>
       )}
     </Screen>

@@ -80,11 +80,21 @@ def collect_payment(
     """Offline collection only — §0.10 defers the gateway to V2 — so what is
     recorded is cash, a cheque or a UPI reference somebody actually saw."""
     app = app_svc.get(db, user.school_id, application_id)
-    payment_amount = (
-        body.amount
-        if body.amount is not None
-        else app.cycle.application_fee
-    )
+    if body.purpose is ApplicationFeePurpose.admission_fee:
+        from app.services.rbac import authz_for
+        authz_for(db, user).require("admission.application.convert")
+    if body.amount is not None:
+        payment_amount = body.amount
+    elif body.purpose is ApplicationFeePurpose.admission_fee:
+        from app.models.selection import ApplicationOffer
+        offer = db.scalar(
+            select(ApplicationOffer).where(
+                ApplicationOffer.application_id == app.id
+            ).order_by(ApplicationOffer.created_at.desc())
+        )
+        payment_amount = offer.offer_amount if offer and offer.offer_amount else Decimal("25000")
+    else:
+        payment_amount = app.cycle.application_fee
     try:
         payment = svc.collect(
             db,
@@ -106,9 +116,14 @@ def collect_payment(
         cr = payment._conversion_result
         student_data = {
             "id": cr.get("student_id"),
+            "student_id": cr.get("student_id"),
             "admission_no": cr.get("admission_no"),
             "class_label": cr.get("class_label"),
             "roll_no": cr.get("roll_no"),
+            "student_login": cr.get("student_login"),
+            "documents_migrated": cr.get("documents_migrated"),
+            "medical_transferred": cr.get("medical_transferred"),
+            "application_no": cr.get("application_no"),
         }
     elif app.student_id is not None:
         student = db.get(Student, app.student_id)

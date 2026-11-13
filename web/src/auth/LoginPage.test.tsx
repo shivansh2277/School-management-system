@@ -28,6 +28,7 @@ describe("LoginPage", () => {
     );
 
     expect(screen.getByRole("button", { name: "Admin" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Academic Coordinator" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Accounts" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Admissions" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reception" })).toBeInTheDocument();
@@ -36,6 +37,22 @@ describe("LoginPage", () => {
     expect(screen.getByRole("button", { name: "Chief Provost" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Boys Warden" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Girls Warden" })).toBeInTheDocument();
+  });
+
+  it("clicking Academic Coordinator populates coordinator login and password", () => {
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Academic Coordinator" }));
+
+    const emailInput = screen.getByPlaceholderText("admin@sunrisepublic.edu") as HTMLInputElement;
+    const passwordInput = screen.getByPlaceholderText("••••••••••••") as HTMLInputElement;
+
+    expect(emailInput.value).toBe("coordinator@sunrisepublic.edu");
+    expect(passwordInput.value).toBe("Admin@123");
   });
 
   it("clicking Chief Provost populates provost login and password", () => {

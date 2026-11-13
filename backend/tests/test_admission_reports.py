@@ -39,21 +39,31 @@ def _applicant(client, admin, surname, mobile, class_name="6", **over):
     return app
 
 
-def test_the_funnel_starts_at_enquiries_and_narrows(client, admin, cycle_id):
+def test_the_funnel_starts_at_enquiries_and_narrows(client, admin, cycle_id, db):
     """Most enquiries never become anything, and that ratio is the number the
     module exists to improve (§5.1.2(1))."""
+    from sqlalchemy import func
+    from app.models import Application, ApplicationStatus
+
     _applicant(client, admin, "FunnelOne", "9833300001")
     body = client.get(
         f"/admin/admission/cycles/{cycle_id}/reports", headers=admin
     ).json()["funnel"]
 
+    expected_enrolled = db.scalar(
+        select(func.count(Application.id)).where(
+            Application.cycle_id == cycle_id,
+            Application.status == ApplicationStatus.enrolled,
+        )
+    )
     stages = {s["stage"]: s["count"] for s in body["stages"]}
     assert stages["enquiries"] >= 6  # the seeded register
     assert stages["applied"] >= 1
-    assert stages["enrolled"] == 0
+    assert stages["enrolled"] == expected_enrolled
     # Each stage reports what fraction of the one before it survived.
     assert body["stages"][1]["of_previous"] is not None
-    assert body["overall_conversion_pct"] == 0.0
+    expected_pct = round(float(expected_enrolled) / float(stages["enquiries"]) * 100, 1)
+    assert body["overall_conversion_pct"] == pytest.approx(expected_pct, abs=0.1)
 
 
 def test_seat_utilisation_reports_offers_as_well_as_seats(client, admin, cycle_id):

@@ -182,6 +182,38 @@ def reverse(
     return _payment_out(svc.reverse(db, payment, body.reason, user))
 
 
+class DishonourPaymentIn(BaseModel):
+    reason: str
+    bank_charge: Decimal = Decimal("500.00")
+
+
+@router.post("/fees/payments/{payment_id}/dishonour")
+def dishonour_payment(
+    payment_id: int,
+    body: DishonourPaymentIn,
+    user: User = Depends(voider),
+    db: Session = Depends(get_db),
+) -> dict:
+    payment = db.get(FeePayment, payment_id)
+    if payment is None or payment.school_id != user.school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found")
+    payment, contra = svc.dishonour_payment(
+        db,
+        school_id=user.school_id,
+        payment_id=payment.id,
+        reason=body.reason,
+        bank_charge=body.bank_charge,
+        actor=user,
+    )
+    db.commit()
+    return {
+        "status": "dishonoured",
+        "payment": _payment_out(payment),
+        "contra": _payment_out(contra),
+        "bank_charge": float(body.bank_charge),
+    }
+
+
 @router.get("/fees/defaulters")
 def defaulters(
     min_amount: Decimal = Decimal("0"),
@@ -260,3 +292,93 @@ def collection(
     year: int | None = None, user: User = Depends(admin_only), db: Session = Depends(get_db)
 ) -> dict:
     return svc.collection(db, year or Date.today().year, user.school_id)
+
+
+from app.models import PaymentOrder, PaymentOrderStatus
+from app.services.payments import get_payment_provider
+
+
+class VerifyUTRIn(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    approved: bool
+    notes: str | None = Field(default=None, max_length=500)
+
+
+def _order_admin_out(order: PaymentOrder) -> dict:
+    student = order.student
+    return {
+        "id": order.id,
+        "order_no": order.order_no,
+        "school_id": order.school_id,
+        "enrolment_id": order.enrolment_id,
+        "student_id": order.student_id,
+        "student_name": student.user.full_name if student and student.user else "Unknown",
+        "admission_no": student.admission_no if student else "",
+        "invoice_id": order.invoice_id,
+        "invoice_no": order.invoice.invoice_no if order.invoice else None,
+        "amount": str(order.amount),
+        "currency": order.currency,
+        "provider": order.provider.value if hasattr(order.provider, "value") else str(order.provider),
+        "method": order.method.value if hasattr(order.method, "value") else str(order.method),
+        "status": order.status.value if hasattr(order.status, "value") else str(order.status),
+        "tr_ref": order.tr_ref,
+        "upi_intent_url": order.upi_intent_url,
+        "bank_utr": order.bank_utr,
+        "utr_submitted_at": order.utr_submitted_at.isoformat() if order.utr_submitted_at else None,
+        "expires_at": order.expires_at.isoformat() if order.expires_at else None,
+        "fee_payment_id": order.fee_payment_id,
+        "receipt_no": order.fee_payment.receipt_no if order.fee_payment else None,
+        "verified_by": order.verified_by,
+        "verified_at": order.verified_at.isoformat() if order.verified_at else None,
+        "verification_notes": order.verification_notes,
+        "created_at": order.created_at.isoformat() if order.created_at else None,
+    }
+
+
+@router.get("/fees/orders/pending-verification")
+def pending_verification_orders(
+    user: User = Depends(admin_only),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    """List payment orders with submitted UTRs waiting for Accounts Desk verification."""
+    orders = list(
+        db.scalars(
+            select(PaymentOrder)
+            .where(
+                PaymentOrder.school_id == user.school_id,
+                PaymentOrder.status == PaymentOrderStatus.pending_verification,
+            )
+            .order_by(PaymentOrder.utr_submitted_at.desc())
+        )
+    )
+    return [_order_admin_out(o) for o in orders]
+
+
+@router.post(
+    "/fees/orders/{order_id}/verify-utr",
+    dependencies=[Depends(collector)],
+)
+def verify_utr(
+    order_id: int,
+    body: VerifyUTRIn,
+    user: User = Depends(admin_only),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Accounts desk manual verification of submitted bank UTR."""
+    order = db.get(PaymentOrder, order_id)
+    if order is None or order.school_id != user.school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment order not found")
+
+    provider = get_payment_provider(order.provider)
+    order = provider.verify_utr(
+        db,
+        order=order,
+        approved=body.approved,
+        actor=user,
+        notes=body.notes,
+    )
+    res = _order_admin_out(order)
+    if order.fee_payment:
+        res["receipt"] = _payment_out(order.fee_payment)
+    return res

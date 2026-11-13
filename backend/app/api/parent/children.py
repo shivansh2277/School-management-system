@@ -296,6 +296,7 @@ def child_timetable(
         db,
         s.school_id,
         class_section_id=enrolment.class_section_id,
+        published_only=True,
     )
 
 

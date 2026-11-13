@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Sunrise School ERP - Classroom &amp; Lab Supplies</title>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Plus Jakarta Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<!-- Custom Tailwind Configuration -->
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+            },
+            surface: {
+              subtle: '#f8fafc',
+              card: '#ffffff',
+            }
+          },
+          boxShadow: {
+            'card-subtle': '0 2px 14px -2px rgba(15, 23, 42, 0.05), 0 1px 4px -1px rgba(15, 23, 42, 0.03)',
+            'card-hover': '0 8px 24px -4px rgba(67, 56, 202, 0.1), 0 2px 6px -1px rgba(15, 23, 42, 0.04)',
+            'nav-bar': '0 -4px 20px -2px rgba(15, 23, 42, 0.04)',
+          }
+        }
+      }
+    }
+  </script>
+<!-- BEGIN: Base Layout Styles -->
+<style data-purpose="base-layout">
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+<!-- END: Base Layout Styles -->
+</head>
+<body class="bg-slate-100 flex justify-center items-center min-h-screen text-slate-800 antialiased selection:bg-brand-100 selection:text-brand-800">
+<!-- BEGIN: Mobile Device Frame -->
+<div class="w-full max-w-[430px] min-h-screen bg-slate-50 flex flex-col relative shadow-2xl border-x border-slate-200/80 overflow-hidden" data-purpose="ios-frame-container">
+<!-- BEGIN: iOS Status Bar -->
+<header class="pt-3 px-7 pb-2 flex justify-between items-center bg-white sticky top-0 z-30 select-none text-slate-900" data-purpose="ios-status-bar">
+<span class="text-[14px] font-bold tracking-tight">9:41</span>
+<div class="flex items-center space-x-2 text-slate-900">
+<!-- Cellular Signal Icon -->
+<svg class="w-4 h-4 fill-current" viewbox="0 0 24 24">
+<path d="M2 17h3v4H2v-4zm5-4h3v8H7v-8zm5-4h3v12h-3V9zm5-5h3v17h-3V4z"></path>
+</svg>
+<!-- Wifi Icon -->
+<svg class="w-4 h-4 fill-current" viewbox="0 0 24 24">
+<path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98C20.93 5.9 16.69 4 12 4zm0 3.32c3.78 0 7.23 1.48 9.8 3.92L12 19.34 2.2 11.24C4.77 8.8 8.22 7.32 12 7.32z"></path>
+</svg>
+<!-- Battery Icon -->
+<div class="w-6 h-3 border border-slate-800 rounded-sm p-[1px] flex items-center relative">
+<div class="h-full bg-slate-900 rounded-[1px] w-4/5"></div>
+<div class="w-[2px] h-1.5 bg-slate-800 absolute -right-[3px] top-[2.5px] rounded-r-xs"></div>
+</div>
+</div>
+</header>
+<!-- END: iOS Status Bar -->
+<!-- BEGIN: App Navigation Header -->
+<nav class="bg-white border-b border-slate-100 px-5 py-3.5 flex items-center justify-between sticky top-[38px] z-20" data-purpose="top-app-bar">
+<button aria-label="Open menu" class="w-10 h-10 -ml-1 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 active:scale-95 transition-all" type="button">
+<i class="w-5 h-5 stroke-[2.2]" data-lucide="menu"></i>
+</button>
+<h1 class="text-base font-bold text-slate-900 tracking-tight">Supplies</h1>
+<button aria-label="Notifications" class="w-10 h-10 -mr-1 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-100 active:scale-95 transition-all relative" type="button">
+<i class="w-5 h-5 stroke-[2.2]" data-lucide="bell"></i>
+<span class="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white"></span>
+</button>
+</nav>
+<!-- END: App Navigation Header -->
+<!-- BEGIN: Main Scrollable Content Area -->
+<main class="flex-1 overflow-y-auto px-4 pt-4 pb-28 space-y-4" data-purpose="supplies-inventory-feed">
+<!-- BEGIN: Hero Info & Search Card -->
+<section class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-card-subtle space-y-4" data-purpose="inventory-filter-section">
+<div>
+<div class="flex items-center space-x-2">
+<span class="p-1.5 bg-brand-50 text-brand-700 rounded-lg">
+<i class="w-4 h-4" data-lucide="boxes"></i>
+</span>
+<h2 class="text-lg font-bold text-slate-900 tracking-tight">Classroom &amp; Lab Supplies</h2>
+</div>
+<p class="text-xs font-normal text-slate-500 mt-2 leading-relaxed">
+            Check availability of lab chemicals, glassware, art materials, and stationery. Flag depleting items to notify the admin store.
+          </p>
+</div>
+<!-- Search Bar Input -->
+<div class="relative" data-purpose="search-input-wrapper">
+<i class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" data-lucide="search"></i>
+<input class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-700 focus:border-brand-700 transition" placeholder="Search items or location..." type="text"/>
+</div>
+<!-- Horizontal Scrollable Category Filter Pills -->
+<div class="flex items-center space-x-2 overflow-x-auto hide-scrollbar pt-1 -mx-1 px-1" data-purpose="category-pills">
+<!-- Active Pill -->
+<button class="shrink-0 px-4 py-2 rounded-xl text-xs font-semibold bg-brand-700 text-white shadow-sm shadow-brand-700/20 transition-all hover:bg-brand-800">
+            All Supplies
+          </button>
+<!-- Inactive Pill 1 -->
+<button class="shrink-0 px-4 py-2 rounded-xl text-xs font-medium bg-slate-100/90 text-slate-600 hover:bg-slate-200 border border-slate-200/60 transition-all">
+            Art &amp; Craft
+          </button>
+<!-- Inactive Pill 2 -->
+<button class="shrink-0 px-4 py-2 rounded-xl text-xs font-medium bg-slate-100/90 text-slate-600 hover:bg-slate-200 border border-slate-200/60 transition-all">
+            Mathematics
+          </button>
+<!-- Inactive Pill 3 -->
+<button class="shrink-0 px-4 py-2 rounded-xl text-xs font-medium bg-slate-100/90 text-slate-600 hover:bg-slate-200 border border-slate-200/60 transition-all">
+            Medical / First Aid
+          </button>
+<!-- Inactive Pill 4 -->
+<button class="shrink-0 px-4 py-2 rounded-xl text-xs font-medium bg-slate-100/90 text-slate-600 hover:bg-slate-200 border border-slate-200/60 transition-all">
+            Science Lab
+          </button>
+</div>
+</section>
+<!-- END: Hero Info & Search Card -->
+<!-- BEGIN: Inventory Items List -->
+<section class="space-y-3.5" data-purpose="inventory-items-container">
+<!-- Item 1: A3 Cartridge Drawing Sheets (Low Stock) -->
+<article class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-card-subtle transition hover:shadow-card-hover" data-purpose="supply-item-card">
+<!-- Card Header & Badge -->
+<div class="flex items-start justify-between gap-3">
+<div>
+<h3 class="font-bold text-[15px] text-slate-900 leading-snug">A3 Cartridge Drawing Sheets</h3>
+<p class="text-xs font-medium text-slate-500 mt-1 flex items-center gap-1.5">
+<span>Art &amp; Craft</span>
+<span class="w-1 h-1 bg-slate-300 rounded-full"></span>
+<span class="text-slate-600">Art Room</span>
+</p>
+</div>
+<!-- Status Badge & Qty -->
+<div class="text-right shrink-0">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/60">
+<span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                Low Stock
+              </span>
+<p class="text-sm font-bold text-slate-900 mt-1 tracking-tight">2 reams</p>
+</div>
+</div>
+<!-- Divider line -->
+<hr class="my-3.5 border-slate-100"/>
+<!-- Card Footer & Actions -->
+<div class="flex items-center justify-between gap-2">
+<span class="text-xs font-medium text-slate-500 tracking-tight">
+              Min: <strong class="text-slate-700 font-semibold">8 reams</strong>
+</span>
+<div class="flex items-center space-x-2">
+<button class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-brand-700 text-white hover:bg-brand-800 active:scale-95 transition-all shadow-sm shadow-brand-700/20" type="button">
+                Use / Consume
+              </button>
+<button class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-50/80 text-rose-700 border border-rose-200 hover:bg-rose-100 active:scale-95 transition-all" type="button">
+                Flag →
+              </button>
+</div>
+</div>
+</article>
+<!-- Item 2: Acrylic Paint Tubes 12-Color Set (In Stock) -->
+<article class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-card-subtle transition hover:shadow-card-hover" data-purpose="supply-item-card">
+<!-- Card Header & Badge -->
+<div class="flex items-start justify-between gap-3">
+<div>
+<h3 class="font-bold text-[15px] text-slate-900 leading-snug">Acrylic Paint Tubes 12-Color Set</h3>
+<p class="text-xs font-medium text-slate-500 mt-1 flex items-center gap-1.5">
+<span>Art &amp; Craft</span>
+<span class="w-1 h-1 bg-slate-300 rounded-full"></span>
+<span class="text-slate-600">Art Room</span>
+</p>
+</div>
+<!-- Status Badge & Qty -->
+<div class="text-right shrink-0">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                In Stock
+              </span>
+<p class="text-sm font-bold text-slate-900 mt-1 tracking-tight">18 sets</p>
+</div>
+</div>
+<!-- Divider line -->
+<hr class="my-3.5 border-slate-100"/>
+<!-- Card Footer & Actions -->
+<div class="flex items-center justify-between gap-2">
+<span class="text-xs font-medium text-slate-500 tracking-tight">
+              Min: <strong class="text-slate-700 font-semibold">10 sets</strong>
+</span>
+<div class="flex items-center space-x-2">
+<button class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-brand-700 text-white hover:bg-brand-800 active:scale-95 transition-all shadow-sm shadow-brand-700/20" type="button">
+                Use / Consume
+              </button>
+<button class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-50/80 text-rose-700 border border-rose-200 hover:bg-rose-100 active:scale-95 transition-all" type="button">
+                Flag →
+              </button>
+</div>
+</div>
+</article>
+<!-- Item 3: Camel Poster Colours 12-Pack (Low Stock) -->
+<article class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-card-subtle transition hover:shadow-card-hover" data-purpose="supply-item-card">
+<!-- Card Header & Badge -->
+<div class="flex items-start justify-between gap-3">
+<div>
+<h3 class="font-bold text-[15px] text-slate-900 leading-snug">Camel Poster Colours 12-Pack</h3>
+<p class="text-xs font-medium text-slate-500 mt-1 flex items-center gap-1.5">
+<span>Art &amp; Craft</span>
+<span class="w-1 h-1 bg-slate-300 rounded-full"></span>
+<span class="text-slate-600">Art Room</span>
+</p>
+</div>
+<!-- Status Badge & Qty -->
+<div class="text-right shrink-0">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/60">
+<span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                Low Stock
+              </span>
+<p class="text-sm font-bold text-slate-900 mt-1 tracking-tight">6 boxes</p>
+</div>
+</div>
+<!-- Divider line -->
+<hr class="my-3.5 border-slate-100"/>
+<!-- Card Footer & Actions -->
+<div class="flex items-center justify-between gap-2">
+<span class="text-xs font-medium text-slate-500 tracking-tight">
+              Min: <strong class="text-slate-700 font-semibold">20 boxes</strong>
+</span>
+<div class="flex items-center space-x-2">
+<button class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-brand-700 text-white hover:bg-brand-800 active:scale-95 transition-all shadow-sm shadow-brand-700/20" type="button">
+                Use / Consume
+              </button>
+<button class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-50/80 text-rose-700 border border-rose-200 hover:bg-rose-100 active:scale-95 transition-all" type="button">
+                Flag →
+              </button>
+</div>
+</div>
+</article>
+<!-- Item 4: Safety Scissors Round Tip (Bonus / Screen parity) -->
+<article class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-card-subtle transition hover:shadow-card-hover opacity-90" data-purpose="supply-item-card">
+<div class="flex items-start justify-between gap-3">
+<div>
+<h3 class="font-bold text-[15px] text-slate-900 leading-snug">Craft Safety Scissors Round Tip</h3>
+<p class="text-xs font-medium text-slate-500 mt-1 flex items-center gap-1.5">
+<span>Stationery</span>
+<span class="w-1 h-1 bg-slate-300 rounded-full"></span>
+<span class="text-slate-600">Storage B3</span>
+</p>
+</div>
+<div class="text-right shrink-0">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                In Stock
+              </span>
+<p class="text-sm font-bold text-slate-900 mt-1 tracking-tight">34 units</p>
+</div>
+</div>
+<hr class="my-3.5 border-slate-100"/>
+<div class="flex items-center justify-between gap-2">
+<span class="text-xs font-medium text-slate-500 tracking-tight">
+              Min: <strong class="text-slate-700 font-semibold">15 units</strong>
+</span>
+<div class="flex items-center space-x-2">
+<button class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-brand-700 text-white hover:bg-brand-800 active:scale-95 transition-all shadow-sm shadow-brand-700/20" type="button">
+                Use / Consume
+              </button>
+<button class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-50/80 text-rose-700 border border-rose-200 hover:bg-rose-100 active:scale-95 transition-all" type="button">
+                Flag →
+              </button>
+</div>
+</div>
+</article>
+</section>
+<!-- END: Inventory Items List -->
+</main>
+<!-- END: Main Scrollable Content Area -->
+<!-- BEGIN: Bottom Navigation Bar -->
+<footer class="fixed bottom-0 max-w-[430px] w-full bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-4 pt-2.5 pb-6 shadow-nav-bar z-30" data-purpose="bottom-nav">
+<div class="grid grid-cols-4 items-center">
+<!-- Tab 1: Home -->
+<button class="flex flex-col items-center justify-center space-y-1 text-slate-400 hover:text-slate-600 transition group" type="button">
+<i class="w-5 h-5 stroke-[1.8] group-hover:scale-105 transition-transform" data-lucide="home"></i>
+<span class="text-[11px] font-medium tracking-tight">Home</span>
+</button>
+<!-- Tab 2: Classes -->
+<button class="flex flex-col items-center justify-center space-y-1 text-slate-400 hover:text-slate-600 transition group" type="button">
+<i class="w-5 h-5 stroke-[1.8] group-hover:scale-105 transition-transform" data-lucide="users"></i>
+<span class="text-[11px] font-medium tracking-tight">Classes</span>
+</button>
+<!-- Tab 3: Supplies (Active State) -->
+<button class="flex flex-col items-center justify-center space-y-1 text-brand-700 transition" type="button">
+<div class="relative">
+<i class="w-5 h-5 stroke-[2.2]" data-lucide="package-check"></i>
+<span class="absolute -top-1 -right-1.5 w-2 h-2 rounded-full bg-brand-600"></span>
+</div>
+<span class="text-[11px] font-bold tracking-tight">Supplies</span>
+</button>
+<!-- Tab 4: Profile -->
+<button class="flex flex-col items-center justify-center space-y-1 text-slate-400 hover:text-slate-600 transition group" type="button">
+<i class="w-5 h-5 stroke-[1.8] group-hover:scale-105 transition-transform" data-lucide="user"></i>
+<span class="text-[11px] font-medium tracking-tight">Profile</span>
+</button>
+</div>
+<!-- iOS Home Indicator Pill -->
+<div class="w-32 h-1 bg-slate-300 rounded-full mx-auto mt-3" data-purpose="ios-home-indicator"></div>
+</footer>
+<!-- END: Bottom Navigation Bar -->
+</div>
+<!-- END: Mobile Device Frame -->
+<!-- BEGIN: Lucide Icons Initializer Script -->
+<script data-purpose="icon-initialization">
+    document.addEventListener("DOMContentLoaded", () => {
+      lucide.createIcons();
+    });
+  </script>
+<!-- END: Lucide Icons Initializer Script -->
+</body></html>

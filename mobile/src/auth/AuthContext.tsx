@@ -46,9 +46,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       try {
-        adopt(await api.get<Me>("/auth/me"));
-      } catch {
-        await tokenStore.clear();
+        adopt(await api.get<Me>("/auth/me", { timeoutMs: 60_000 }));
+      } catch (err: any) {
+        // Only clear the stored token if the server explicitly rejects authentication (HTTP 401/403).
+        // On network failure or timeout (status 0), preserve the token so users are not logged out
+        // during temporary offline conditions or Render cold-start wakeups.
+        if (err?.status === 401 || err?.status === 403) {
+          await tokenStore.clear();
+        }
       } finally {
         setLoading(false);
       }
@@ -56,18 +61,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (role: Role, loginId: string, password: string) => {
-    const res = await api.post<{ access_token: string }>("/auth/login", {
-      role,
-      login_id: loginId,
-      password,
-    });
+    const res = await api.post<{ access_token: string }>(
+      "/auth/login",
+      { role, login_id: loginId, password },
+      { timeoutMs: 60_000 }
+    );
     await tokenStore.set(res.access_token);
     try {
-      adopt(await api.get<Me>("/auth/me"));
-    } catch (meErr) {
-      // Token was stored but profile fetch failed — clean up so the user
-      // isn't stuck with a token but no `me` on next app load.
-      await tokenStore.clear();
+      adopt(await api.get<Me>("/auth/me", { timeoutMs: 60_000 }));
+    } catch (meErr: any) {
+      if (meErr?.status === 401 || meErr?.status === 403) {
+        await tokenStore.clear();
+      }
       throw meErr;
     }
   };

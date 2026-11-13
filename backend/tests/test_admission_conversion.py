@@ -278,12 +278,13 @@ def test_checkpoint_2_portal_to_enrolled_student(client, admission_officer, db):
         headers=admission_officer,
     )
     assert pay_res.status_code == 201
+    body = pay_res.json()["student"]
 
-    result = client.post(
+    # Calling convert again after atomic enrollment raises 409
+    dup = client.post(
         f"/admin/admission/applications/{app_id}/convert", headers=admission_officer
     )
-    assert result.status_code == 200, result.text
-    body = result.json()
+    assert dup.status_code == 409
 
     # A student, with the admission number allocated here and not before.
     student = db.get(Student, body["student_id"])
@@ -428,11 +429,12 @@ def test_complete_admission_pipeline_enquiry_to_roster(client, receptionist, adm
     # 4. Status moves through decision to admitted
     _admit_and_offer(client, admission_officer, app_id)
 
-    # 5. Admission Officer collects Application Fee -> ATOMIC AUTO-ENROLLMENT TRIGGER
+    # 5. Admission Officer collects Admission Fee -> ATOMIC AUTO-ENROLLMENT TRIGGER
     pay_res = client.post(
         f"/admin/admission/applications/{app_id}/payments",
         json={
-            "purpose": "application_fee",
+            "purpose": "admission_fee",
+            "amount": "25000",
             "method": "cash",
             "reference": "COUNTER-CASH-001",
         },
@@ -497,7 +499,7 @@ def test_payment_atomically_creates_student_and_enrolment(client, admission_offi
 
     r = client.post(
         f"/admin/admission/applications/{app_id}/payments",
-        json={"purpose": "application_fee", "method": "upi", "reference": "UPI-111"},
+        json={"purpose": "admission_fee", "amount": "25000", "method": "upi", "reference": "UPI-111"},
         headers=admission_officer,
     )
     assert r.status_code == 201, r.text
@@ -557,7 +559,7 @@ def test_payment_failure_rolls_back_entire_transaction(client, admission_officer
 
     r = client.post(
         f"/admin/admission/applications/{app_id}/payments",
-        json={"purpose": "application_fee", "method": "cash"},
+        json={"purpose": "admission_fee", "amount": "25000", "method": "cash"},
         headers=admission_officer,
     )
     assert r.status_code == 409
@@ -582,7 +584,7 @@ def test_payment_idempotency_prevents_duplicate_charge_and_enrolment(client, adm
 
     first = client.post(
         f"/admin/admission/applications/{app_id}/payments",
-        json={"purpose": "application_fee", "method": "cash", "idempotency_key": "uniq-idem-999"},
+        json={"purpose": "admission_fee", "amount": "25000", "method": "cash", "idempotency_key": "uniq-idem-999"},
         headers=admission_officer,
     )
     assert first.status_code == 201
@@ -590,7 +592,7 @@ def test_payment_idempotency_prevents_duplicate_charge_and_enrolment(client, adm
 
     second = client.post(
         f"/admin/admission/applications/{app_id}/payments",
-        json={"purpose": "application_fee", "method": "cash", "idempotency_key": "uniq-idem-999"},
+        json={"purpose": "admission_fee", "amount": "25000", "method": "cash", "idempotency_key": "uniq-idem-999"},
         headers=admission_officer,
     )
     assert second.status_code == 201
@@ -696,7 +698,7 @@ def test_admission_officer_can_collect_and_auto_enroll(client, admission_officer
 
     res = client.post(
         f"/admin/admission/applications/{app_id}/payments",
-        json={"purpose": "application_fee", "amount": "500", "method": "cash"},
+        json={"purpose": "admission_fee", "amount": "25000", "method": "cash"},
         headers=admission_officer,
     )
     assert res.status_code == 201
@@ -724,14 +726,14 @@ def test_section_allocation_headcount_balancing(client, admission_officer, db):
     id1 = _application_id(db, c1["application_no"])
     _clear_documents(client, admission_officer, id1)
     _admit_and_offer(client, admission_officer, id1)
-    r1 = client.post(f"/admin/admission/applications/{id1}/payments", json={"purpose": "application_fee"}, headers=admission_officer).json()
+    r1 = client.post(f"/admin/admission/applications/{id1}/payments", json={"purpose": "admission_fee", "amount": "25000"}, headers=admission_officer).json()
 
     # Enroll child 2
     c2 = _apply_on_portal(client, first_name="Bal2", last_name="Test")
     id2 = _application_id(db, c2["application_no"])
     _clear_documents(client, admission_officer, id2)
     _admit_and_offer(client, admission_officer, id2)
-    r2 = client.post(f"/admin/admission/applications/{id2}/payments", json={"purpose": "application_fee"}, headers=admission_officer).json()
+    r2 = client.post(f"/admin/admission/applications/{id2}/payments", json={"purpose": "admission_fee", "amount": "25000"}, headers=admission_officer).json()
 
     # The two children should be assigned to section B first (which had 0 students)
     assert r1["student"]["class_label"] == "1-B"
@@ -790,7 +792,7 @@ def test_section_allocation_honors_preferred_section(client, admission_officer, 
 
     res = client.post(
         f"/admin/admission/applications/{app_id}/payments",
-        json={"purpose": "application_fee"},
+        json={"purpose": "admission_fee", "amount": "25000"},
         headers=admission_officer,
     )
     assert res.status_code == 201
@@ -806,7 +808,7 @@ def test_student_user_login_creation(client, admission_officer, db):
 
     res = client.post(
         f"/admin/admission/applications/{app_id}/payments",
-        json={"purpose": "application_fee"},
+        json={"purpose": "admission_fee", "amount": "25000"},
         headers=admission_officer,
     ).json()
 
@@ -830,7 +832,7 @@ def test_parent_user_login_deduplication(client, admission_officer, db):
     id1 = _application_id(db, c1["application_no"])
     _clear_documents(client, admission_officer, id1)
     _admit_and_offer(client, admission_officer, id1)
-    client.post(f"/admin/admission/applications/{id1}/payments", json={"purpose": "application_fee"}, headers=admission_officer)
+    client.post(f"/admin/admission/applications/{id1}/payments", json={"purpose": "admission_fee", "amount": "25000"}, headers=admission_officer)
 
     c2 = _apply_on_portal(
         client,
@@ -840,7 +842,7 @@ def test_parent_user_login_deduplication(client, admission_officer, db):
     id2 = _application_id(db, c2["application_no"])
     _clear_documents(client, admission_officer, id2)
     _admit_and_offer(client, admission_officer, id2)
-    client.post(f"/admin/admission/applications/{id2}/payments", json={"purpose": "application_fee"}, headers=admission_officer)
+    client.post(f"/admin/admission/applications/{id2}/payments", json={"purpose": "admission_fee", "amount": "25000"}, headers=admission_officer)
 
     users = db.scalars(select(User).where(User.login_id == mobile)).all()
     assert len(users) == 1
@@ -859,7 +861,7 @@ def test_document_migration_ownership(client, admission_officer, db):
 
     res = client.post(
         f"/admin/admission/applications/{app_id}/payments",
-        json={"purpose": "application_fee"},
+        json={"purpose": "admission_fee", "amount": "25000"},
         headers=admission_officer,
     ).json()
 
@@ -885,6 +887,8 @@ def test_void_payment_leaves_audit_record(client, admission_officer, db):
     """Voiding a payment retains receipt number and marks status voided."""
     created = _apply_on_portal(client, first_name="Voidtest", last_name="Student")
     app_id = _application_id(db, created["application_no"])
+    _clear_documents(client, admission_officer, app_id)
+    _admit_and_offer(client, admission_officer, app_id)
     pay = client.post(
         f"/admin/admission/applications/{app_id}/payments",
         json={"purpose": "admission_fee", "amount": "25000", "method": "cash"},
@@ -949,7 +953,7 @@ def test_no_separate_conversion_step_required(client, admission_officer, db):
 
     res = client.post(
         f"/admin/admission/applications/{app_id}/payments",
-        json={"purpose": "application_fee"},
+        json={"purpose": "admission_fee", "amount": "25000"},
         headers=admission_officer,
     )
     assert res.status_code == 201

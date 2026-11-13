@@ -349,3 +349,18 @@ class FeePeriod(TenantBase):
     closed_by: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id"))
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     note: Mapped[str | None] = mapped_column(Text)
+
+class GeneralLedger(TenantBase):
+    """Double-entry general ledger journal entries."""
+
+    __tablename__ = "general_ledger"
+
+    transaction_date: Mapped[date] = mapped_column(Date, nullable=False, default=date.today)
+    reference_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    reference_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
+    account_code: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    account_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    debit: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("0.00"))
+    credit: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("0.00"))
+    narration: Mapped[str | None] = mapped_column(Text)
+

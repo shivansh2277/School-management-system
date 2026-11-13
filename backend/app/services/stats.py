@@ -125,11 +125,11 @@ def exam_percentages(
     q = (
         select(
             Mark.student_id,
-            func.sum(Mark.marks_obtained),
+            func.coalesce(func.sum(Mark.marks_obtained), 0),
             func.sum(ExamSchedule.max_marks),
         )
         .join(ExamSchedule, ExamSchedule.id == Mark.exam_schedule_id)
-        .where(ExamSchedule.exam_id == exam_id, Mark.marks_obtained.is_not(None))
+        .where(ExamSchedule.exam_id == exam_id, Mark.is_exempted == False)
         .group_by(Mark.student_id)
     )
     if class_section_id is not None:

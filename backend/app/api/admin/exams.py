@@ -8,7 +8,7 @@ from app.core.db import get_db
 from app.services.rbac import require_permission
 from app.services import tenancy
 from app.services.school_settings import module_enabled
-from app.models import Exam, ExamSchedule, User
+from app.models import ClassSection, Exam, ExamSchedule, Subject, User
 from app.schemas.common import (
     MarksRequest,
     MarksRosterRow,
@@ -72,11 +72,17 @@ def add_paper(
     user: User = Depends(admin_only),
     db: Session = Depends(get_db),
 ) -> ExamScheduleOut:
-    if db.get(Exam, exam_id) is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Exam not found")
+    exam = tenancy.get_owned(db, Exam, exam_id, user, what="Exam")
+    tenancy.get_owned(db, ClassSection, body.class_section_id, user, what="ClassSection")
+    tenancy.get_owned(db, Subject, body.subject_id, user, what="Subject")
+    if body.exam_date < exam.start_date or body.exam_date > exam.end_date:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            f"exam_date must be between {exam.start_date} and {exam.end_date}",
+        )
     duplicate = db.scalar(
         select(ExamSchedule).where(
-            ExamSchedule.exam_id == exam_id,
+            ExamSchedule.exam_id == exam.id,
             ExamSchedule.class_section_id == body.class_section_id,
             ExamSchedule.subject_id == body.subject_id,
         )
@@ -86,7 +92,7 @@ def add_paper(
     if body.max_marks <= 0:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "max_marks must be positive")
     sched = ExamSchedule(
-        school_id=user.school_id, exam_id=exam_id, **body.model_dump()
+        school_id=user.school_id, exam_id=exam.id, **body.model_dump()
     )
     db.add(sched)
     db.commit()

@@ -8,7 +8,7 @@ import { useAuth } from "../auth/AuthContext";
 import { theme } from "../theme";
 import { Button, Card, Loading, Row, Screen, s } from "./ui";
 
-/** Shared by all three roles: profile fields, change password, logout. */
+/** Shared by teacher and student roles: profile fields, change password, logout. */
 export function ProfileScreen({
   path,
   fields,
@@ -18,7 +18,7 @@ export function ProfileScreen({
   fields: [string, string][];
 }) {
   const router = useRouter();
-  const { logout } = useAuth();
+  const { me, logout } = useAuth();
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [note, setNote] = useState<string | null>(null);
@@ -35,7 +35,7 @@ export function ProfileScreen({
         new_password: newPassword,
       }),
     onSuccess: () => {
-      setNote("Password changed.");
+      setNote("Password changed successfully.");
       setOldPassword("");
       setNewPassword("");
     },
@@ -47,9 +47,87 @@ export function ProfileScreen({
   const show = (value: unknown) =>
     value === null || value === undefined || value === "" ? "-" : String(value);
 
+  const fullName = String(data.full_name || me?.user.full_name || "User");
+  const initials = fullName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
     <Screen>
-      <Card title="Profile">
+      {/* Top Identity Card */}
+      <Card>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+          <View
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 28,
+              backgroundColor: theme.primarySoft,
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: 2,
+              borderColor: theme.primary,
+            }}
+          >
+            <Text style={{ fontSize: 20, fontWeight: "800", color: theme.primary }}>{initials}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 18, fontWeight: "800", color: theme.ink }}>{fullName}</Text>
+            <View style={{ flexDirection: "row", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
+              <View
+                style={{
+                  paddingHorizontal: 8,
+                  paddingVertical: 2,
+                  borderRadius: theme.radius.pill,
+                  backgroundColor: theme.primarySoft,
+                }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: "700", color: theme.primary, textTransform: "capitalize" }}>
+                  {me?.user.role || "Member"}
+                </Text>
+              </View>
+              {data.admission_no ? (
+                <View
+                  style={{
+                    paddingHorizontal: 8,
+                    paddingVertical: 2,
+                    borderRadius: theme.radius.pill,
+                    backgroundColor: theme.ground,
+                    borderWidth: 1,
+                    borderColor: theme.rule,
+                  }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: "600", color: theme.inkSoft }}>
+                    Adm #{String(data.admission_no)}
+                  </Text>
+                </View>
+              ) : null}
+              {data.employee_id ? (
+                <View
+                  style={{
+                    paddingHorizontal: 8,
+                    paddingVertical: 2,
+                    borderRadius: theme.radius.pill,
+                    backgroundColor: theme.ground,
+                    borderWidth: 1,
+                    borderColor: theme.rule,
+                  }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: "600", color: theme.inkSoft }}>
+                    Emp #{String(data.employee_id)}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+        </View>
+      </Card>
+
+      {/* Details Card */}
+      <Card title="Account Details">
         {fields.map(([label, key]) => (
           <Row
             key={key}
@@ -59,7 +137,8 @@ export function ProfileScreen({
         ))}
       </Card>
 
-      <Card title="Change password">
+      {/* Change Password Card */}
+      <Card title="Security & Password">
         <TextInput
           style={s.input}
           placeholder="Current password"
@@ -76,18 +155,19 @@ export function ProfileScreen({
           value={newPassword}
           onChangeText={setNewPassword}
         />
-        {note ? <Text style={s.meta}>{note}</Text> : null}
+        {note ? <Text style={[s.meta, { color: theme.primary, fontWeight: "600", marginBottom: 8 }]}>{note}</Text> : null}
         <Button
-          label="Update password"
+          label="Update Password"
           onPress={() => change.mutate()}
           disabled={change.isPending || newPassword.length < 8}
         />
       </Card>
 
-      <View style={{ marginTop: 4 }}>
+      {/* Sign Out Card / Action */}
+      <View style={{ marginTop: 8, marginBottom: 20 }}>
         <Button
-          label="Log out"
-          tone="ghost"
+          label="Sign Out"
+          tone="danger"
           onPress={async () => {
             await logout();
             router.replace("/");

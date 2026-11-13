@@ -36,6 +36,29 @@ type Detail = Row & {
   latest_result_percent: number | null;
   homework_pending: number;
   apaar_id?: string | null;
+  blood_group?: string | null;
+  nationality?: string | null;
+  religion?: string | null;
+  caste_category?: string | null;
+  mother_tongue?: string | null;
+  place_of_birth?: string | null;
+  identification_marks?: string | null;
+  is_single_child?: boolean | null;
+  aadhaar_last4?: string | null;
+  aadhaar_verified?: boolean | null;
+  emergency_doctor?: string | null;
+  emergency_doctor_phone?: string | null;
+  known_allergies?: string | null;
+  chronic_conditions?: string | null;
+  regular_medications?: string | null;
+  previous_school?: {
+    school_name?: string;
+    last_class_attended?: string;
+    board?: string;
+    tc_number?: string;
+    percentage?: number | string;
+  } | null;
+  application_id?: number | null;
 };
 
 /** The rows of /admin/fees/defaulters this screen actually reads. */
@@ -290,7 +313,7 @@ export function Students() {
       </Card>
 
       {openId !== null && (
-        <Modal title="Student" onClose={() => { setOpenId(null); setEditing(false); }}>
+        <Modal wide title={`Student Profile — ${detail.data?.full_name || ""}`} onClose={() => { setOpenId(null); setEditing(false); }}>
           {detail.data && editing ? (
             <EditStudent
               student={detail.data}
@@ -302,56 +325,184 @@ export function Students() {
               }}
             />
           ) : detail.data ? (
-            <dl className="grid grid-cols-2 gap-3 text-sm">
-              {[
-                ["Name", detail.data.full_name],
-                ["Admission No.", detail.data.admission_no],
-                ["Class", detail.data.class_label],
-                ["Roll No.", detail.data.roll_no],
-                ["Date of birth", detail.data.dob ?? "-"],
-                ["Gender", detail.data.gender ?? "-"],
-                ["Address", detail.data.address ?? "-"],
-                ["Guardian", detail.data.guardian_name ?? "-"],
-                [
-                  "Attendance",
-                  detail.data.attendance_percent === null
-                    ? "Not marked yet"
-                    : `${detail.data.attendance_percent}%`,
-                ],
-                [
-                  "Latest result",
-                  detail.data.latest_result_percent === null
-                    ? "No results yet"
-                    : `${detail.data.latest_result_percent}%`,
-                ],
-                ["Homework pending", detail.data.homework_pending],
-                ["APAAR ID", detail.data.apaar_id || "Not Linked"],
-              ].map(([k, v]) => (
-                <div key={String(k)}>
-                  <dt className="text-ink-faint text-xs">{k}</dt>
-                  <dd>{v}</dd>
+            <div className="space-y-6">
+              {/* Primary Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-rule/60">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 text-primary font-bold text-lg flex items-center justify-center">
+                    {detail.data.full_name.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-ink">{detail.data.full_name}</h3>
+                    <p className="text-xs text-ink-faint">
+                      Adm No: <span className="font-mono font-semibold text-slate-800">{detail.data.admission_no}</span>
+                      {detail.data.application_id && (
+                        <span className="ml-2 px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                          App #{detail.data.application_id}
+                        </span>
+                      )}
+                    </p>
+                  </div>
                 </div>
-              ))}
-              <div className="col-span-2 pt-2 flex items-center justify-between">
-                <ActionButton
-                  permission="students.profile.write"
-                  onClick={() => setEditing(true)}
-                >
-                  Edit details
-                </ActionButton>
-                <button
-                  type="button"
-                  onClick={() => detail.data && downloadSingleIdCard(detail.data.id)}
-                  disabled={idCardBusy}
-                  className="rounded-input bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  {idCardBusy ? "Generating ID Card..." : "Download ID Card (CR80)"}
-                </button>
+                <div className="flex items-center gap-2">
+                  <ActionButton
+                    permission="students.profile.write"
+                    onClick={() => setEditing(true)}
+                  >
+                    Edit details
+                  </ActionButton>
+                  <button
+                    type="button"
+                    onClick={() => detail.data && downloadSingleIdCard(detail.data.id)}
+                    disabled={idCardBusy}
+                    className="rounded-input bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    {idCardBusy ? "Generating ID Card..." : "Download ID Card"}
+                  </button>
+                </div>
               </div>
-            </dl>
+
+              {/* Academic & Attendance Details */}
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-ink-soft mb-2.5">Academic & Attendance</h4>
+                <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs bg-ground/50 p-3.5 rounded-card border border-rule/60">
+                  <div>
+                    <dt className="text-ink-faint">Class & Section</dt>
+                    <dd className="font-semibold text-ink mt-0.5">{detail.data.class_label}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-faint">Roll Number</dt>
+                    <dd className="font-semibold text-ink mt-0.5">{detail.data.roll_no}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-faint">Attendance</dt>
+                    <dd className="font-semibold text-ink mt-0.5">
+                      {detail.data.attendance_percent === null ? "Not marked" : `${detail.data.attendance_percent}%`}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-faint">Latest Result</dt>
+                    <dd className="font-semibold text-ink mt-0.5">
+                      {detail.data.latest_result_percent === null ? "No results" : `${detail.data.latest_result_percent}%`}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+
+              {/* Admission Dossier & Demographics */}
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-ink-soft mb-2.5">Admission Dossier & Demographics</h4>
+                <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                  <div>
+                    <dt className="text-ink-faint">Date of Birth</dt>
+                    <dd className="text-ink mt-0.5">{detail.data.dob ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-faint">Gender</dt>
+                    <dd className="text-ink mt-0.5 capitalize">{detail.data.gender ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-faint">Nationality</dt>
+                    <dd className="text-ink mt-0.5">{detail.data.nationality ?? "Indian"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-faint">Religion</dt>
+                    <dd className="text-ink mt-0.5">{detail.data.religion ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-faint">Caste Category</dt>
+                    <dd className="text-ink mt-0.5">{detail.data.caste_category ?? "General"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-faint">Mother Tongue</dt>
+                    <dd className="text-ink mt-0.5">{detail.data.mother_tongue ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-faint">Place of Birth</dt>
+                    <dd className="text-ink mt-0.5">{detail.data.place_of_birth ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-faint">Single Child</dt>
+                    <dd className="text-ink mt-0.5">{detail.data.is_single_child ? "Yes" : "No"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-faint">Aadhaar (Last 4)</dt>
+                    <dd className="text-ink mt-0.5 font-mono">
+                      {detail.data.aadhaar_last4 ? `•••• •••• ${detail.data.aadhaar_last4}` : "—"}
+                    </dd>
+                  </div>
+                  <div className="col-span-2">
+                    <dt className="text-ink-faint">Identification Marks</dt>
+                    <dd className="text-ink mt-0.5">{detail.data.identification_marks ?? "None"}</dd>
+                  </div>
+                  <div className="col-span-2 sm:col-span-3">
+                    <dt className="text-ink-faint">Address</dt>
+                    <dd className="text-ink mt-0.5">{detail.data.address ?? "—"}</dd>
+                  </div>
+                </dl>
+              </div>
+
+              {/* Medical & Emergency Care */}
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-ink-soft mb-2.5">Medical & Emergency Care</h4>
+                <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs bg-rose-50/40 p-3 rounded-card border border-rose-100">
+                  <div>
+                    <dt className="text-rose-900 font-medium">Blood Group</dt>
+                    <dd className="font-bold text-rose-700 text-sm mt-0.5">{detail.data.blood_group || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-faint">Emergency Doctor</dt>
+                    <dd className="text-ink font-medium mt-0.5">{detail.data.emergency_doctor || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-faint">Doctor Phone</dt>
+                    <dd className="text-ink font-mono mt-0.5">{detail.data.emergency_doctor_phone || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-faint">Known Allergies</dt>
+                    <dd className="text-ink mt-0.5">{detail.data.known_allergies || "None reported"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-faint">Chronic Conditions</dt>
+                    <dd className="text-ink mt-0.5">{detail.data.chronic_conditions || "None"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-faint">Regular Medications</dt>
+                    <dd className="text-ink mt-0.5">{detail.data.regular_medications || "None"}</dd>
+                  </div>
+                </dl>
+              </div>
+
+              {/* Previous Schooling */}
+              {detail.data.previous_school && (
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-ink-soft mb-2.5">Previous School History</h4>
+                  <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs bg-slate-50 p-3 rounded-card border border-rule/60">
+                    <div>
+                      <dt className="text-ink-faint">School Name</dt>
+                      <dd className="font-medium text-ink mt-0.5">{detail.data.previous_school.school_name || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-ink-faint">Last Class</dt>
+                      <dd className="font-medium text-ink mt-0.5">{detail.data.previous_school.last_class_attended || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-ink-faint">Board</dt>
+                      <dd className="font-medium text-ink mt-0.5">{detail.data.previous_school.board || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-ink-faint">Previous Marks</dt>
+                      <dd className="font-medium text-ink mt-0.5">
+                        {detail.data.previous_school.percentage ? `${detail.data.previous_school.percentage}%` : "—"}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              )}
+            </div>
           ) : (
             <p className="text-ink-faint text-sm">Loading...</p>
           )}
@@ -529,6 +680,12 @@ function EditStudent({
     dob: student.dob ?? "",
     gender: student.gender ?? "",
     address: student.address ?? "",
+    blood_group: student.blood_group ?? "",
+    emergency_doctor: student.emergency_doctor ?? "",
+    emergency_doctor_phone: student.emergency_doctor_phone ?? "",
+    known_allergies: student.known_allergies ?? "",
+    chronic_conditions: student.chronic_conditions ?? "",
+    regular_medications: student.regular_medications ?? "",
   });
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm({ ...form, [k]: e.target.value });
@@ -544,6 +701,12 @@ function EditStudent({
       if (form.dob !== (student.dob ?? "")) body.dob = form.dob || null;
       if (form.gender !== (student.gender ?? "")) body.gender = form.gender || null;
       if (form.address !== (student.address ?? "")) body.address = form.address || null;
+      if (form.blood_group !== (student.blood_group ?? "")) body.blood_group = form.blood_group || null;
+      if (form.emergency_doctor !== (student.emergency_doctor ?? "")) body.emergency_doctor = form.emergency_doctor || null;
+      if (form.emergency_doctor_phone !== (student.emergency_doctor_phone ?? "")) body.emergency_doctor_phone = form.emergency_doctor_phone || null;
+      if (form.known_allergies !== (student.known_allergies ?? "")) body.known_allergies = form.known_allergies || null;
+      if (form.chronic_conditions !== (student.chronic_conditions ?? "")) body.chronic_conditions = form.chronic_conditions || null;
+      if (form.regular_medications !== (student.regular_medications ?? "")) body.regular_medications = form.regular_medications || null;
       return api.patch(
         `/admin/students/${student.id}` as "/admin/students/{student_id}",
         body as never,
@@ -595,6 +758,32 @@ function EditStudent({
       <FormField label="Address" error={save.fields.address}>
         <textarea className={inputClass} rows={2} value={form.address} onChange={set("address")} />
       </FormField>
+
+      <div className="border-t border-rule/60 pt-3 mt-3">
+        <h4 className="text-xs font-semibold uppercase text-ink-soft mb-2">Medical & Emergency Dossier</h4>
+        <div className="grid grid-cols-3 gap-2">
+          <FormField label="Blood Group">
+            <input className={inputClass} placeholder="e.g. O+, A-" value={form.blood_group} onChange={set("blood_group")} />
+          </FormField>
+          <FormField label="Emergency Doctor">
+            <input className={inputClass} value={form.emergency_doctor} onChange={set("emergency_doctor")} />
+          </FormField>
+          <FormField label="Doctor Phone">
+            <input className={inputClass} value={form.emergency_doctor_phone} onChange={set("emergency_doctor_phone")} />
+          </FormField>
+        </div>
+        <div className="grid grid-cols-3 gap-2 mt-2">
+          <FormField label="Known Allergies">
+            <input className={inputClass} value={form.known_allergies} onChange={set("known_allergies")} />
+          </FormField>
+          <FormField label="Chronic Conditions">
+            <input className={inputClass} value={form.chronic_conditions} onChange={set("chronic_conditions")} />
+          </FormField>
+          <FormField label="Regular Medications">
+            <input className={inputClass} value={form.regular_medications} onChange={set("regular_medications")} />
+          </FormField>
+        </div>
+      </div>
 
       <FormError error={save.error} />
 

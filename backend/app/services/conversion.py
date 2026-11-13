@@ -127,16 +127,28 @@ def collect(
         action=AuditAction.create,
         after={"receipt_no": receipt_no, "amount": str(amount), "purpose": purpose.value},
     )
-    if purpose is ApplicationFeePurpose.admission_fee and app.status in (
-        ApplicationStatus.offer_accepted,
-        ApplicationStatus.offer_issued,
-    ):
-        app_svc.move(db, app, ApplicationStatus.fee_paid, actor=actor)
-
-    if purpose is ApplicationFeePurpose.application_fee:
-        # Atomic enrollment: fee payment is the single, automatic trigger
-        conversion_info = _do_conversion(db, app, actor)
-        payment._conversion_result = conversion_info
+    if purpose is ApplicationFeePurpose.admission_fee:
+        if app.student_id is not None or app.status == ApplicationStatus.enrolled:
+            raise HTTPException(
+                http.HTTP_409_CONFLICT, "This application has already been enrolled"
+            )
+        if app.status in (
+            ApplicationStatus.offer_accepted,
+            ApplicationStatus.offer_issued,
+            ApplicationStatus.admitted,
+        ):
+            app_svc.move(db, app, ApplicationStatus.fee_paid, actor=actor)
+            conversion_info = _do_conversion(db, app, actor)
+            payment._conversion_result = conversion_info
+        else:
+            raise HTTPException(
+                http.HTTP_409_CONFLICT,
+                f"Application in status '{app.status.value}' cannot be enrolled on admission fee payment",
+            )
+    elif purpose is ApplicationFeePurpose.application_fee:
+        # Form fee payment does NOT enroll the applicant. Advances draft to submitted.
+        if app.status == ApplicationStatus.draft:
+            app_svc.move(db, app, ApplicationStatus.submitted, actor=actor)
 
     db.flush()
     return payment
@@ -162,6 +174,24 @@ def void_payment(
         after={"status": PaymentStatus.voided.value},
         reason=reason,
     )
+    if payment.purpose is ApplicationFeePurpose.admission_fee:
+        app = db.get(Application, payment.application_id)
+        if app and app.student_id:
+            student = db.get(Student, app.student_id)
+            if student:
+                student.status = StudentStatus.suspended
+                if student.user:
+                    student.user.is_active = False
+            enrolment = db.scalar(
+                select(Enrolment).where(
+                    Enrolment.student_id == app.student_id,
+                    Enrolment.status == EnrolmentStatus.active,
+                )
+            )
+            if enrolment:
+                enrolment.status = EnrolmentStatus.transferred_out
+            app.status = ApplicationStatus.offer_accepted
+            app.student_id = None
     db.flush()
     return payment
 
@@ -351,13 +381,23 @@ def _do_conversion(db: Session, app: Application, actor: User) -> dict:
     db.add(student_user)
     db.flush()
 
+    medical = db.scalar(
+        select(ApplicationMedical).where(ApplicationMedical.application_id == app.id)
+    )
+    gender_val = None
+    if app.gender:
+        try:
+            gender_val = Gender(app.gender)
+        except Exception:
+            gender_val = None
+
     student = Student(
         school_id=app.school_id,
         user_id=student_user.id,
         admission_no=admission_no,
         status=StudentStatus.active,
         dob=app.date_of_birth,
-        gender=app.gender,
+        gender=gender_val,
         address=_address_line(app.address),
         admission_date=date.today(),
         apaar_id=app.apaar_id,
@@ -365,6 +405,23 @@ def _do_conversion(db: Session, app: Application, actor: User) -> dict:
         apaar_consent_guardian_name=app.apaar_consent_guardian_name,
         apaar_consent_guardian_relation=app.apaar_consent_guardian_relation,
         apaar_consent_at=app.apaar_consent_at,
+        blood_group=medical.blood_group if medical else None,
+        nationality=app.nationality,
+        religion=app.religion,
+        caste_category=app.caste_category,
+        mother_tongue=app.mother_tongue,
+        place_of_birth=app.place_of_birth,
+        identification_marks=app.identification_marks,
+        is_single_child=app.is_single_child,
+        aadhaar_last4=app.aadhaar_last4,
+        aadhaar_verified=app.aadhaar_verified,
+        emergency_doctor=medical.emergency_doctor if medical else None,
+        emergency_doctor_phone=medical.emergency_doctor_phone if medical else None,
+        known_allergies=medical.known_allergies if medical else None,
+        chronic_conditions=medical.chronic_conditions if medical else None,
+        regular_medications=(getattr(medical, "regular_medication", None) or getattr(medical, "regular_medications", None)) if medical else None,
+        previous_school=app.previous_school,
+        application_id=app.id,
     )
     db.add(student)
     db.flush()

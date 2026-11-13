@@ -231,7 +231,7 @@ def test_the_dashboard_and_the_report_card_agree_about_an_absent_child(
 
     row = next(r for r in card["rows"] if r["is_absent"])
     assert row["marks_obtained"] is None
-    assert float(card["total_max"]) == float(p.max_marks) * 5, "the absent paper is out"
+    assert float(card["total_max"]) == float(p.max_marks) * 6, "absent paper contributes to total_max denominator"
 
 
 def test_a_teacher_cannot_reach_a_paper_they_do_not_teach(client, other_teacher, db, ids):

@@ -50,6 +50,7 @@ def _slots(db: Session, student: Student, day_key: str | None) -> list[SlotOut]:
         student.school_id,
         class_section_id=enrolment.class_section_id,
         day_of_week=day_key,
+        published_only=True,
     )
 
 

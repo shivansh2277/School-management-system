@@ -38,43 +38,39 @@ export function ImportantAlerts({
     switch (type) {
       case "attendance":
         return {
-          bg: "rgba(245, 158, 11, 0.09)",
-          border: "#F59E0B",
-          text: "#B45309",
+          bg: theme.warningBg,
+          border: "rgba(217, 119, 6, 0.2)",
+          text: theme.warning,
           badgeBg: "#FEF3C7",
           iconName: "alert-circle" as const,
-          iconColor: "#D97706",
-          emoji: "⚠️",
+          iconColor: theme.warning,
         };
       case "fee":
         return {
-          bg: "rgba(239, 68, 68, 0.09)",
-          border: "#EF4444",
-          text: "#B91C1C",
-          badgeBg: "#FEE2E2",
+          bg: theme.dangerBg,
+          border: "rgba(225, 29, 72, 0.2)",
+          text: theme.danger,
+          badgeBg: "#FFE4E6",
           iconName: "wallet" as const,
-          iconColor: "#DC2626",
-          emoji: "💰",
+          iconColor: theme.danger,
         };
       case "report_card":
         return {
-          bg: "rgba(79, 70, 229, 0.09)",
-          border: "#6366F1",
-          text: "#4338CA",
-          badgeBg: "#EEF2FF",
+          bg: theme.primarySoft,
+          border: "rgba(67, 56, 202, 0.2)",
+          text: theme.primary,
+          badgeBg: "#E0E7FE",
           iconName: "document-text" as const,
-          iconColor: "#4F46E5",
-          emoji: "📄",
+          iconColor: theme.primary,
         };
       case "periodic_test":
         return {
-          bg: "rgba(2, 132, 199, 0.09)",
-          border: "#0284C7",
-          text: "#0369A1",
+          bg: theme.infoBg,
+          border: "rgba(2, 132, 199, 0.2)",
+          text: theme.info,
           badgeBg: "#E0F2FE",
           iconName: "ribbon" as const,
-          iconColor: "#0284C7",
-          emoji: "📊",
+          iconColor: theme.info,
         };
     }
   };
@@ -112,13 +108,13 @@ export function ImportantAlerts({
               <View style={styles.cardHeader}>
                 <View style={styles.cardHeaderLeft}>
                   <View style={[styles.iconContainer, { backgroundColor: style.badgeBg }]}>
-                    <Text style={styles.emojiText}>{style.emoji}</Text>
+                    <Ionicons name={style.iconName} size={15} color={style.iconColor} />
                   </View>
                   <Text style={[styles.alertTitle, { color: style.text }]} numberOfLines={1}>
                     {item.title}
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color={style.border} />
+                <Ionicons name="chevron-forward" size={16} color={style.text} />
               </View>
 
               <Text style={styles.alertMessage}>{item.message}</Text>
@@ -132,13 +128,13 @@ export function ImportantAlerts({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 12,
+    marginBottom: 8,
   },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
     marginBottom: 8,
   },
   headerLeft: {
@@ -147,45 +143,43 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   headerIndicator: {
-    width: 3,
-    height: 12,
+    width: 3.5,
+    height: 14,
     borderRadius: 2,
     backgroundColor: theme.danger,
   },
   sectionTitle: {
     fontSize: 11,
     fontWeight: "700",
-    color: theme.inkSoft,
+    color: theme.danger,
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },
   countBadge: {
-    backgroundColor: "rgba(239, 68, 68, 0.15)",
-    paddingHorizontal: 6,
-    paddingVertical: 1,
+    backgroundColor: theme.dangerBg,
+    paddingHorizontal: 7,
+    paddingVertical: 1.5,
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(225, 29, 72, 0.2)",
   },
   countText: {
     fontSize: 10,
-    fontWeight: "700",
+    fontWeight: "800",
     color: theme.danger,
   },
   cardsList: {
-    gap: 8,
+    gap: 10,
   },
   alertCard: {
     borderRadius: theme.radius.card,
-    borderWidth: 1.2,
-    padding: 12,
+    borderWidth: 1,
+    padding: 14,
     gap: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    ...theme.shadow.subtle,
   },
   cardPressed: {
-    opacity: 0.85,
+    opacity: 0.88,
     transform: [{ scale: 0.99 }],
   },
   cardHeader: {
@@ -201,24 +195,22 @@ const styles = StyleSheet.create({
     paddingRight: 6,
   },
   iconContainer: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
   },
-  emojiText: {
-    fontSize: 13,
-  },
   alertTitle: {
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: "700",
     flex: 1,
+    letterSpacing: -0.2,
   },
   alertMessage: {
     fontSize: 12,
-    color: theme.ink,
+    color: theme.inkSoft,
     lineHeight: 17,
-    paddingLeft: 34,
+    paddingLeft: 36,
   },
 });

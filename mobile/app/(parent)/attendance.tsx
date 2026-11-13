@@ -23,11 +23,11 @@ type LeaveRequest = {
 };
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  present: { bg: "#DCFCE7", text: "#16A34A", label: "P" },
-  absent: { bg: "#FEE2E2", text: "#EF4444", label: "A" },
-  late: { bg: "#FEF3C7", text: "#F59E0B", label: "L" },
-  leave: { bg: "#EDE9FE", text: "#8B5CF6", label: "M" },
-  half_day: { bg: "#FEF3C7", text: "#D97706", label: "H" },
+  present: { bg: "#ECFDF5", text: "#059669", label: "P" },
+  absent: { bg: "#FFF1F2", text: "#E11D48", label: "A" },
+  late: { bg: "#FFFBEB", text: "#D97706", label: "L" },
+  leave: { bg: "#F5F3FF", text: "#7C3AED", label: "M" },
+  half_day: { bg: "#FFFBEB", text: "#D97706", label: "H" },
 };
 
 export default function ParentAttendance() {
@@ -136,17 +136,62 @@ export default function ParentAttendance() {
         </View>
       )}
 
+      {/* Summary Card */}
+      {data && (
+        <Card title={t("att_monthly_summary")}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <View style={{ alignItems: "center", flex: 1 }}>
+              <Text style={{ fontSize: 11, fontWeight: "600", color: "#059669", textTransform: "uppercase" }}>{t("status_present")}</Text>
+              <Text style={{ fontSize: 20, fontWeight: "800", color: "#059669", marginTop: 2 }}>{data.summary.present}</Text>
+            </View>
+            <View style={{ width: 1, height: 28, backgroundColor: theme.rule }} />
+            <View style={{ alignItems: "center", flex: 1 }}>
+              <Text style={{ fontSize: 11, fontWeight: "600", color: "#E11D48", textTransform: "uppercase" }}>{t("status_absent")}</Text>
+              <Text style={{ fontSize: 20, fontWeight: "800", color: "#E11D48", marginTop: 2 }}>{data.summary.absent}</Text>
+            </View>
+            <View style={{ width: 1, height: 28, backgroundColor: theme.rule }} />
+            <View style={{ alignItems: "center", flex: 1 }}>
+              <Text style={{ fontSize: 11, fontWeight: "600", color: "#7C3AED", textTransform: "uppercase" }}>{t("status_leave")}</Text>
+              <Text style={{ fontSize: 20, fontWeight: "800", color: "#7C3AED", marginTop: 2 }}>{data.summary.leave}</Text>
+            </View>
+            <View style={{ width: 1, height: 28, backgroundColor: theme.rule }} />
+            <View style={{ alignItems: "center", flex: 1 }}>
+              <Text style={{ fontSize: 11, fontWeight: "600", color: theme.inkFaint, textTransform: "uppercase" }}>{t("att_overall")}</Text>
+              <Text style={{ fontSize: 20, fontWeight: "800", color: isShortage ? theme.danger : theme.success, marginTop: 2 }}>
+                {percent === null ? "-" : `${percent}%`}
+              </Text>
+            </View>
+          </View>
+        </Card>
+      )}
+
       {/* Calendar Card */}
       <Card>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <Pressable onPress={() => setMonth((m) => (m === 1 ? 12 : m - 1))}>
-            <Text style={{ color: theme.primary, fontWeight: "600" }}>{t("att_prev_month")}</Text>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <Pressable
+            onPress={() => setMonth((m) => (m === 1 ? 12 : m - 1))}
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              borderRadius: theme.radius.pill,
+              backgroundColor: theme.ground,
+            }}
+          >
+            <Text style={{ color: theme.primary, fontWeight: "700", fontSize: 12 }}>← {t("att_prev_month")}</Text>
           </Pressable>
-          <Text style={{ fontWeight: "700", fontSize: 15, color: theme.ink }}>
+          <Text style={{ fontWeight: "800", fontSize: 15, color: theme.ink }}>
             {new Date(year, month - 1).toLocaleString("en", { month: "long" })} {year}
           </Text>
-          <Pressable onPress={() => setMonth((m) => (m === 12 ? 1 : m + 1))}>
-            <Text style={{ color: theme.primary, fontWeight: "600" }}>{t("att_next_month")}</Text>
+          <Pressable
+            onPress={() => setMonth((m) => (m === 12 ? 1 : m + 1))}
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              borderRadius: theme.radius.pill,
+              backgroundColor: theme.ground,
+            }}
+          >
+            <Text style={{ color: theme.primary, fontWeight: "700", fontSize: 12 }}>{t("att_next_month")} →</Text>
           </Pressable>
         </View>
 
@@ -163,17 +208,17 @@ export default function ParentAttendance() {
                   style={{
                     width: 38,
                     height: 42,
-                    borderRadius: 8,
+                    borderRadius: theme.radius.input,
                     alignItems: "center",
                     justifyContent: "center",
                     backgroundColor: conf ? conf.bg : theme.ground,
                     borderWidth: 1,
-                    borderColor: conf ? conf.text : "transparent",
+                    borderColor: conf ? conf.text : theme.rule,
                   }}
                 >
-                  <Text style={{ fontSize: 12, color: theme.ink, fontWeight: "600" }}>{d}</Text>
+                  <Text style={{ fontSize: 12, color: theme.ink, fontWeight: "700" }}>{d}</Text>
                   {conf ? (
-                    <Text style={{ fontSize: 10, color: conf.text, fontWeight: "700" }}>{conf.label}</Text>
+                    <Text style={{ fontSize: 9, color: conf.text, fontWeight: "800", marginTop: 1 }}>{conf.label}</Text>
                   ) : null}
                 </View>
               );
@@ -182,39 +227,25 @@ export default function ParentAttendance() {
         )}
 
         {/* Legend */}
-        <View style={{ flexDirection: "row", gap: 12, marginTop: 12, paddingTop: 8, borderTopWidth: 1, borderTopColor: theme.rule }}>
-          <Text style={{ fontSize: 11, color: "#16A34A" }}>{t("att_legend_present")}</Text>
-          <Text style={{ fontSize: 11, color: "#EF4444" }}>{t("att_legend_absent")}</Text>
-          <Text style={{ fontSize: 11, color: "#F59E0B" }}>{t("att_legend_late")}</Text>
-          <Text style={{ fontSize: 11, color: "#8B5CF6" }}>{t("att_legend_leave")}</Text>
+        <View style={{ flexDirection: "row", gap: 12, marginTop: 14, paddingTop: 10, borderTopWidth: 1, borderTopColor: theme.rule, flexWrap: "wrap" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#059669" }} />
+            <Text style={{ fontSize: 11, color: "#059669", fontWeight: "600" }}>{t("att_legend_present")}</Text>
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#E11D48" }} />
+            <Text style={{ fontSize: 11, color: "#E11D48", fontWeight: "600" }}>{t("att_legend_absent")}</Text>
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#D97706" }} />
+            <Text style={{ fontSize: 11, color: "#D97706", fontWeight: "600" }}>{t("att_legend_late")}</Text>
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#7C3AED" }} />
+            <Text style={{ fontSize: 11, color: "#7C3AED", fontWeight: "600" }}>{t("att_legend_leave")}</Text>
+          </View>
         </View>
       </Card>
-
-      {/* Summary Card */}
-      {data && (
-        <Card title={t("att_monthly_summary")}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <View style={{ alignItems: "center", flex: 1 }}>
-              <Text style={s.meta}>{t("status_present")}</Text>
-              <Text style={{ fontSize: 18, fontWeight: "700", color: "#16A34A" }}>{data.summary.present}</Text>
-            </View>
-            <View style={{ alignItems: "center", flex: 1 }}>
-              <Text style={s.meta}>{t("status_absent")}</Text>
-              <Text style={{ fontSize: 18, fontWeight: "700", color: "#EF4444" }}>{data.summary.absent}</Text>
-            </View>
-            <View style={{ alignItems: "center", flex: 1 }}>
-              <Text style={s.meta}>{t("status_leave")}</Text>
-              <Text style={{ fontSize: 18, fontWeight: "700", color: "#8B5CF6" }}>{data.summary.leave}</Text>
-            </View>
-            <View style={{ alignItems: "center", flex: 1 }}>
-              <Text style={s.meta}>{t("att_overall")}</Text>
-              <Text style={{ fontSize: 18, fontWeight: "700", color: isShortage ? theme.danger : theme.ink }}>
-                {percent === null ? "-" : `${percent}%`}
-              </Text>
-            </View>
-          </View>
-        </Card>
-      )}
 
       {/* Apply for Leave Action */}
       <View style={{ marginVertical: 8 }}>

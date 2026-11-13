@@ -789,13 +789,12 @@ export function PublicApplyPage() {
   // -------------------------------------------------------------------
   // Application Status Check Handler
   // -------------------------------------------------------------------
-  const handleStatusCheck = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const checkStatusFor = async (targetAppNo?: string | null, targetMobile?: string | null) => {
     setStatusError(null);
     setStatusResult(null);
 
-    const cleanApp = searchAppNo.trim().toUpperCase();
-    const cleanMobile = searchMobile.trim().replace(/\D/g, "");
+    const cleanApp = (targetAppNo ?? searchAppNo).trim().toUpperCase();
+    const cleanMobile = (targetMobile ?? searchMobile).trim().replace(/\D/g, "");
     const cleanDob = searchDob.trim();
 
     if (!cleanApp) {
@@ -831,6 +830,11 @@ export function PublicApplyPage() {
     } finally {
       setStatusLoading(false);
     }
+  };
+
+  const handleStatusCheck = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    await checkStatusFor();
   };
 
   // -------------------------------------------------------------------
@@ -1079,10 +1083,10 @@ export function PublicApplyPage() {
                 <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
                   <button
                     onClick={() => {
-                      setSearchAppNo(submittedAppNo);
-                      setSearchMobile(guardianMobile);
+                      setSearchAppNo(submittedAppNo || "");
+                      setSearchMobile(guardianMobile || "");
                       setActiveTab("status");
-                      handleStatusCheck();
+                      checkStatusFor(submittedAppNo, guardianMobile);
                     }}
                     className="px-6 py-3 bg-primary text-white text-sm font-semibold rounded-input shadow-md hover:bg-primary-dark transition-all flex items-center gap-2"
                   >

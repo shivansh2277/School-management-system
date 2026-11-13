@@ -10,6 +10,7 @@ from sqlalchemy import (
     Text,
     Time,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -84,13 +85,25 @@ class SchoolPeriod(TenantBase):
 class TimetableSlot(TenantBase):
     __tablename__ = "timetable_slots"
     __table_args__ = (
-        # A section cannot be taught two things at once. v0 had this and it is
-        # kept deliberately (§5.7.9).
+        # A section cannot be taught two things at once.
         UniqueConstraint(
             "class_section_id", "day_of_week", "period_id", name="uq_timetable_slot"
         ),
-        # The access path for "is this teacher free then?", which is now asked
-        # on every save rather than never.
+        # A teacher cannot be scheduled in two places at once.
+        UniqueConstraint(
+            "teacher_id", "day_of_week", "period_id", name="uq_timetable_teacher_slot"
+        ),
+        # A room cannot host two classes at once.
+        Index(
+            "uq_timetable_room_slot",
+            "school_id",
+            "room",
+            "day_of_week",
+            "period_id",
+            unique=True,
+            postgresql_where=text("room IS NOT NULL AND room != ''"),
+            sqlite_where=text("room IS NOT NULL AND room != ''"),
+        ),
         Index("ix_slot_teacher_day_period", "teacher_id", "day_of_week", "period_id"),
     )
 
@@ -104,6 +117,9 @@ class TimetableSlot(TenantBase):
     subject_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("subjects.id"), nullable=False)
     teacher_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("employees.id"), nullable=False)
     room: Mapped[str | None] = mapped_column(String(20))
+    is_published: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
 
     period = relationship("SchoolPeriod", lazy="joined")
     class_section = relationship("ClassSection", lazy="joined")

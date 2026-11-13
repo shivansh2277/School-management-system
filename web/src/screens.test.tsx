@@ -6,6 +6,15 @@ import { SCREENS, groupedNav, isScreenAllowed, visibleScreens } from "./screens"
 const FEE_COLLECTOR = ["students.profile.read", "fees.invoice.read", "fees.payment.collect"];
 
 /** The transport_manager role. */
+const ACADEMIC_COORDINATOR = [
+  "academics.class.read",
+  "timetable.slot.read",
+  "timetable.slot.write",
+  "timetable.slot.override",
+  "timetable.substitution.manage",
+  "comms.notice.read",
+];
+
 const TRANSPORT_MANAGER = [
   "students.profile.read",
   "academics.class.read",
@@ -46,6 +55,20 @@ describe("the two gates", () => {
     expect(labels).toContain("Fees");
     expect(labels).not.toContain("Staff");
     expect(labels).not.toContain("Settings");
+  });
+
+  it("shows an academic coordinator timetable and classes, but strictly no fees, hr, or settings", () => {
+    const labels = labelsFor(ACADEMIC_COORDINATOR, ALL_MODULES);
+    expect(labels).toContain("Timetable");
+    expect(labels).toContain("Classes");
+    expect(labels).toContain("Notices");
+    expect(labels).not.toContain("Fees");
+    expect(labels).not.toContain("Staff");
+    expect(labels).not.toContain("Students");
+    expect(labels).not.toContain("Settings");
+    expect(labels).not.toContain("Attendance");
+    expect(labels).not.toContain("Payroll");
+    expect(labels).not.toContain("Transport");
   });
 
   it("shows a transport manager no Fees entry", () => {

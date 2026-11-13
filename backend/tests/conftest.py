@@ -156,6 +156,12 @@ def librarian(client):
 
 
 @pytest.fixture()
+def academic_coordinator(client):
+    """Academic coordinator: timetable operations only."""
+    return auth(_token(client, "admin", "coordinator@sunrisepublic.edu", "Admin@123"))
+
+
+@pytest.fixture()
 def chief_provost(client):
     """Chief Provost: cross-hostel authority."""
     return auth(_token(client, "admin", "provost@sunrisepublic.edu", "Admin@123"))

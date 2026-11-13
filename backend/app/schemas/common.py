@@ -289,14 +289,18 @@ class NoticeOut(BaseModel):
 class SlotOut(BaseModel):
     id: int | None = None
     period: int
+    period_id: int | None = None
     day_of_week: str
     start_time: time
     end_time: time
     class_section_id: int
     class_label: str
     subject: str
+    subject_id: int | None = None
     teacher: str
+    teacher_id: int | None = None
     room: str | None = None
+    is_published: bool = False
     is_relief: bool = False
     relief_teacher: str | None = None
 

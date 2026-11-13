@@ -11,7 +11,7 @@ import { theme } from "../../src/theme";
 
 export default function ParentProfile() {
   const router = useRouter();
-  const { logout } = useAuth();
+  const { me, logout } = useAuth();
   const { language, setLanguage, t } = useTranslation();
 
   const [oldPassword, setOldPassword] = useState("");
@@ -42,8 +42,69 @@ export default function ParentProfile() {
   const show = (value: unknown) =>
     value === null || value === undefined || value === "" ? "-" : String(value);
 
+  const fullName = String(data.full_name || me?.user.full_name || "Parent");
+  const initials = fullName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
     <Screen>
+      {/* Guardian Identity Hero Card */}
+      <Card>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+          <View
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 28,
+              backgroundColor: theme.primarySoft,
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: 2,
+              borderColor: theme.primary,
+            }}
+          >
+            <Text style={{ fontSize: 20, fontWeight: "800", color: theme.primary }}>{initials}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 18, fontWeight: "800", color: theme.ink }}>{fullName}</Text>
+            <View style={{ flexDirection: "row", gap: 6, marginTop: 4 }}>
+              <View
+                style={{
+                  paddingHorizontal: 8,
+                  paddingVertical: 2,
+                  borderRadius: theme.radius.pill,
+                  backgroundColor: theme.primarySoft,
+                }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: "700", color: theme.primary }}>
+                  Parent / Guardian
+                </Text>
+              </View>
+              {data.phone ? (
+                <View
+                  style={{
+                    paddingHorizontal: 8,
+                    paddingVertical: 2,
+                    borderRadius: theme.radius.pill,
+                    backgroundColor: theme.ground,
+                    borderWidth: 1,
+                    borderColor: theme.rule,
+                  }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: "600", color: theme.inkSoft }}>
+                    {String(data.phone)}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+        </View>
+      </Card>
+
       {/* Language Preference Card */}
       <Card title={t("prof_app_settings")}>
         <Text style={styles.sectionLabel}>{t("prof_language")}</Text>
@@ -91,7 +152,7 @@ export default function ParentProfile() {
       </Card>
 
       {/* Change Password Card */}
-      <Card title="Change Password">
+      <Card title="Security & Password">
         <TextInput
           style={s.input}
           placeholder="Current password"
@@ -108,7 +169,7 @@ export default function ParentProfile() {
           value={newPassword}
           onChangeText={setNewPassword}
         />
-        {note ? <Text style={s.meta}>{note}</Text> : null}
+        {note ? <Text style={[s.meta, { color: theme.primary, fontWeight: "600", marginBottom: 8 }]}>{note}</Text> : null}
         <Button
           label="Update Password"
           onPress={() => change.mutate()}
@@ -117,10 +178,10 @@ export default function ParentProfile() {
       </Card>
 
       {/* Sign Out Button */}
-      <View style={{ marginTop: 4 }}>
+      <View style={{ marginTop: 8, marginBottom: 20 }}>
         <Button
           label={t("nav_sign_out")}
-          tone="ghost"
+          tone="danger"
           onPress={async () => {
             await logout();
             router.replace("/");

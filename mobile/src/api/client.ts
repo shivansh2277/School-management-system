@@ -5,12 +5,18 @@ import { Platform } from "react-native";
 export function resolveApiBaseUrl(): string {
   const envUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 
-  // 1. Explicit remote cloud URL (e.g. Render / staging / production)
+  // 1. Explicit remote cloud URL (e.g. Render production / staging)
   if (envUrl && envUrl.startsWith("https://")) {
     return envUrl;
   }
 
-  // 2. Web browser: respect explicit env or use current browser host
+  // 2. Production standalone release build: ALWAYS connect to deployed live backend
+  // Never attempt to contact localhost, local LAN IPs, or emulator loopbacks in release builds.
+  if (!__DEV__) {
+    return "https://school-management-system-12ks.onrender.com";
+  }
+
+  // 3. Web browser in development: respect explicit env or use current browser host
   if (Platform.OS === "web") {
     if (envUrl) return envUrl;
     if (typeof window !== "undefined" && window.location?.hostname) {
@@ -19,9 +25,9 @@ export function resolveApiBaseUrl(): string {
     return "http://127.0.0.1:8000";
   }
 
-  // 3. Dynamic Expo packager host detection for physical devices & emulators
-  // When running in Expo Go or dev client, hostUri (e.g. "10.109.197.170:8081") is the
-  // exact IP of the machine serving the app bundle. The device is already connected to it.
+  // 4. Dynamic Expo packager host detection for physical devices & emulators in development
+  // When running in Expo Go or dev client, hostUri (e.g. "192.168.29.227:8081") is the
+  // exact IP of the machine serving the app bundle.
   const hostUri =
     Constants.expoConfig?.hostUri ??
     (Constants as any).manifest2?.extra?.expoGo?.debuggerHost ??
@@ -34,7 +40,7 @@ export function resolveApiBaseUrl(): string {
     }
   }
 
-  // 4. Fallback URL parsing from experienceUrl or linkingUri
+  // 5. Fallback URL parsing from experienceUrl or linkingUri in development
   const fallbackUrl = Constants.experienceUrl || Constants.linkingUri;
   if (fallbackUrl) {
     try {
@@ -45,22 +51,22 @@ export function resolveApiBaseUrl(): string {
     } catch {}
   }
 
-  // 5. Explicit custom LAN or emulator override if provided
+  // 6. Explicit custom LAN override if provided in development
   if (envUrl && !envUrl.includes("127.0.0.1") && !envUrl.includes("localhost")) {
     return envUrl;
   }
 
-  // 6. Android emulator loopback alias (10.0.2.2 maps to host PC loopback)
+  // 7. Android emulator loopback alias (10.0.2.2 maps to host PC loopback) only in development
   if (Platform.OS === "android") {
     return "http://10.0.2.2:8000";
   }
 
-  // 7. Explicit env if provided (even if loopback)
+  // 8. Explicit env if provided (even if loopback)
   if (envUrl) {
     return envUrl;
   }
 
-  // 8. Default cloud fallback so physical devices without local packager never hang on dead loopback
+  // 9. Default cloud fallback so devices outside local network connect to live cloud
   return "https://school-management-system-12ks.onrender.com";
 }
 
@@ -88,15 +94,21 @@ export const tokenStore = {
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);
+    this.name = "ApiError";
   }
 }
 
-/** Default request timeout in milliseconds (15 s). */
-const REQUEST_TIMEOUT_MS = 15_000;
+/** Default request timeout in milliseconds (30 s). */
+const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+export type ApiRequestOptions = RequestInit & {
+  timeoutMs?: number;
+};
+
+async function request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  const { timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS, ...init } = options;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   let res: Response;
   try {
@@ -111,13 +123,27 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     });
   } catch (err: any) {
     clearTimeout(timer);
-    if (err?.name === "AbortError") {
-      throw new ApiError(0, `Request timed out — could not reach ${BASE}. Is the backend running?`);
+
+    // Resilient abort / cancellation detection across Web, iOS, and Android (Hermes runtime)
+    const rawMsg = String(err?.message ?? err ?? "");
+    const isAborted =
+      controller.signal.aborted ||
+      err?.name === "AbortError" ||
+      rawMsg.toLowerCase().includes("canceled") ||
+      rawMsg.toLowerCase().includes("cancelled") ||
+      rawMsg.toLowerCase().includes("aborted");
+
+    if (isAborted) {
+      throw new ApiError(
+        0,
+        `Request timed out after ${Math.round(timeoutMs / 1000)}s — could not reach ${BASE}. If the cloud server was in standby (Render cold start), it is waking up. Please try again.`,
+      );
     }
-    // Network error (unreachable host, DNS failure, etc.)
+
+    // Network error (unreachable host, DNS failure, offline device, etc.)
     throw new ApiError(
       0,
-      `Network error — could not connect to ${BASE}. Check that the backend is running and reachable. (${err?.message ?? err})`,
+      `Network connection failed — could not connect to ${BASE}. Check your internet connection or verify the server status. (${rawMsg})`,
     );
   } finally {
     clearTimeout(timer);
@@ -133,12 +159,12 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 export const api = {
   base: BASE,
-  get: <T>(path: string) => request<T>(path),
-  post: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "POST", body: JSON.stringify(body ?? {}) }),
-  patch: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "PATCH", body: JSON.stringify(body ?? {}) }),
-  delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  get: <T>(path: string, options?: ApiRequestOptions) => request<T>(path, options),
+  post: <T>(path: string, body?: unknown, options?: ApiRequestOptions) =>
+    request<T>(path, { method: "POST", body: JSON.stringify(body ?? {}), ...options }),
+  patch: <T>(path: string, body?: unknown, options?: ApiRequestOptions) =>
+    request<T>(path, { method: "PATCH", body: JSON.stringify(body ?? {}), ...options }),
+  delete: <T>(path: string, options?: ApiRequestOptions) => request<T>(path, { method: "DELETE", ...options }),
   token: () => memoryToken,
 };
 

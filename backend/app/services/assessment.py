@@ -340,13 +340,18 @@ def report_card(db: Session, student_id: int, exam_id: int) -> ReportCard:
     rows, total_obtained, total_max = [], Decimal(0), Decimal(0)
     for sched in sorted(schedules, key=lambda s: s.exam_date):
         mark = marks.get(sched.id)
+        is_absent = bool(mark and mark.is_absent)
+        is_exempted = bool(mark and mark.is_exempted)
         obtained = mark.marks_obtained if mark else None
         percent = None
-        if obtained is not None:
-            # A subject with no mark is excluded from the totals rather than
-            # counted as zero (BLUEPRINT §8, kept from v0). Absent and exempted
-            # are both "no mark" for this purpose and are labelled separately
-            # on the row, so the card can print AB rather than a blank.
+        if is_exempted:
+            # Exempted paper: excluded from both totals
+            pass
+        elif is_absent:
+            # Absent paper: scheduled max marks contributes to denominator, 0 to obtained
+            total_max += sched.max_marks
+            percent = 0.0
+        elif obtained is not None:
             total_obtained += obtained
             total_max += sched.max_marks
             percent = round(float(obtained) / float(sched.max_marks) * 100, 1)
@@ -357,8 +362,8 @@ def report_card(db: Session, student_id: int, exam_id: int) -> ReportCard:
                 max_marks=sched.max_marks,
                 percent=percent,
                 grade=grade_for(db, student.school_id, percent),
-                is_absent=bool(mark and mark.is_absent),
-                is_exempted=bool(mark and mark.is_exempted),
+                is_absent=is_absent,
+                is_exempted=is_exempted,
             )
         )
     overall = round(float(total_obtained) / float(total_max) * 100, 1) if total_max else None

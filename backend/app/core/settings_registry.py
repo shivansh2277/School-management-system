@@ -40,6 +40,30 @@ SETTINGS: list[SettingDef] = [
         "Discount for a sibling of a child already enrolled, as a percentage",
     ),
     SettingDef("fees.due_day", int, 10, "Day of the month a monthly invoice falls due"),
+    SettingDef(
+        "fees.upi.merchant_vpa",
+        str,
+        "8004400433@pthdfc",
+        "Merchant Virtual Payment Address (VPA) for direct UPI payments",
+    ),
+    SettingDef(
+        "fees.upi.merchant_name",
+        str,
+        "Sunrise Public School",
+        "Merchant payee name shown in parent UPI applications",
+    ),
+    SettingDef(
+        "fees.upi.mcc",
+        str,
+        "8220",
+        "NPCI Merchant Category Code (MCC) for educational services",
+    ),
+    SettingDef(
+        "fees.upi.webhook_secret",
+        str,
+        "sunrise_psp_webhook_secret_key_2026",
+        "HMAC shared secret for acquiring bank / PSP payment webhooks",
+    ),
     # --- attendance. What counts as short attendance is a policy, not a
     # constant: CBSE's 75% is the common answer and a school may set its own,
     # and the shortage list is what a child is warned or debarred on. It sat as

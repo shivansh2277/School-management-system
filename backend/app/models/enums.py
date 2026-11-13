@@ -268,6 +268,7 @@ class FeePaymentStatus(StrEnum):
 
     success = "success"
     reversed = "reversed"
+    dishonoured = "dishonoured"
 
 
 class Gender(StrEnum):
@@ -569,3 +570,31 @@ class DeliveryStatus(StrEnum):
     sent = "sent"
     failed = "failed"
     opted_out = "opted_out"
+
+class PaymentOrderStatus(StrEnum):
+    """Lifecycle of a payment order before and after gateway/intent resolution."""
+
+    created = "created"
+    pending = "pending"
+    pending_verification = "pending_verification"
+    success = "success"
+    failed = "failed"
+    cancelled = "cancelled"
+    expired = "expired"
+
+
+class PaymentProviderType(StrEnum):
+    """Payment gateway or provider engine."""
+
+    direct_upi = "direct_upi"
+    razorpay = "razorpay"
+
+
+class PaymentMethodType(StrEnum):
+    """Payment instrument / rail."""
+
+    upi = "upi"
+    card = "card"
+    netbanking = "netbanking"
+    wallet = "wallet"
+

@@ -256,6 +256,18 @@ SUPER_ADMIN_PERMISSIONS = [c for c in _ALL if c not in _HOSTEL_OPERATIONAL_PERMS
 SYSTEM_ROLES: list[tuple[str, str, list[str]]] = [
     ("super_admin", "Super Admin", SUPER_ADMIN_PERMISSIONS),
     (
+        "academic_coordinator",
+        "Academic Coordinator",
+        [
+            "academics.class.read",
+            "timetable.slot.read",
+            "timetable.slot.write",
+            "timetable.slot.override",
+            "timetable.substitution.manage",
+            "comms.notice.read",
+        ],
+    ),
+    (
         "principal",
         "Principal",
         [

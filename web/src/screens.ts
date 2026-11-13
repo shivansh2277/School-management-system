@@ -222,6 +222,15 @@ export const SCREENS: Screen[] = [
     ),
   },
   {
+    path: "/timetable",
+    label: "Timetable",
+    group: "Academics",
+    permissions: ["timetable.slot.read"],
+    modules: ["timetable"],
+    excludeRoles: ["transport_incharge"],
+    element: lazy(() => import("./pages/Timetable").then((m) => ({ default: m.Timetable }))),
+  },
+  {
     path: "/classes",
     label: "Classes",
     group: "Academics",

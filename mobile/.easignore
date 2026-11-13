@@ -1,0 +1,6 @@
+.git
+.expo
+.env.local
+dist
+web-build
+*.log

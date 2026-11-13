@@ -7,9 +7,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../src/auth/AuthContext";
 import { NavDrawer } from "../../src/components/NavDrawer";
 import { Loading, tabIcon } from "../../src/components/ui";
+import { I18nProvider, useTranslation } from "../../src/i18n/I18nContext";
 import { theme } from "../../src/theme";
 
-/** Horizontal child switcher chips rendered when parent has 2+ children. */
+/** Horizontal child switcher chips rendered when parent has 2+ children matching Stitch Screen 10. */
 function ChildSwitcherBar() {
   const { me, selectedChildId, selectChild } = useAuth();
   const children = me?.children ?? [];
@@ -30,15 +31,19 @@ function ChildSwitcherBar() {
               onPress={() => selectChild(c.id)}
               style={[
                 styles.childChip,
-                { backgroundColor: on ? theme.primary : theme.ground },
+                on ? styles.childChipActive : styles.childChipInactive,
               ]}
             >
+              <Ionicons
+                name={on ? "school" : "person-outline"}
+                size={14}
+                color={on ? "#FFFFFF" : theme.inkSoft}
+              />
               <Text
-                style={{
-                  fontSize: 12,
-                  fontWeight: on ? "600" : "400",
-                  color: on ? "#fff" : theme.inkSoft,
-                }}
+                style={[
+                  styles.childChipText,
+                  on ? styles.childChipTextActive : styles.childChipTextInactive,
+                ]}
               >
                 {c.name} ({c.class_label})
               </Text>
@@ -66,18 +71,24 @@ function ParentCustomHeader({
       <View style={styles.headerRow}>
         <Pressable
           onPress={onOpenDrawer}
-          style={styles.hamburgerBtn}
+          style={styles.headerIconBtn}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           accessibilityRole="button"
           accessibilityLabel="Open Menu"
         >
-          <Ionicons name="menu-outline" size={26} color={theme.ink} />
+          <Ionicons name="menu-outline" size={24} color={theme.ink} />
         </Pressable>
 
         <Text style={styles.headerTitle}>{title}</Text>
 
-        {/* Balance layout with right-aligned spacer */}
-        <View style={styles.headerRightSpacer} />
+        <Pressable
+          style={styles.headerIconBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Notifications"
+        >
+          <Ionicons name="notifications-outline" size={22} color={theme.inkSoft} />
+          <View style={styles.notificationDot} />
+        </Pressable>
       </View>
 
       {children.length > 1 ? <ChildSwitcherBar /> : null}
@@ -85,25 +96,32 @@ function ParentCustomHeader({
   );
 }
 
-import { I18nProvider, useTranslation } from "../../src/i18n/I18nContext";
-
 function ParentLayoutContent() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { me, loading } = useAuth();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   if (loading) return <Loading />;
   if (!me) return <Redirect href="/" />;
   if (me.user.role !== "parent") return <Redirect href={`/(${me.user.role})/dashboard`} />;
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: theme.ground }}>
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: theme.primary,
           tabBarInactiveTintColor: theme.inkFaint,
-          tabBarLabelStyle: { fontSize: 10, fontWeight: "600" },
-          tabBarStyle: { backgroundColor: theme.surface },
+          tabBarLabelStyle: { fontSize: 10.5, fontWeight: "700", letterSpacing: 0.1 },
+          tabBarStyle: {
+            backgroundColor: theme.surface,
+            borderTopWidth: 1,
+            borderTopColor: theme.rule,
+            height: 60 + (insets.bottom > 0 ? insets.bottom - 4 : 0),
+            paddingBottom: insets.bottom > 0 ? insets.bottom : 6,
+            paddingTop: 6,
+            ...theme.shadow.subtle,
+          },
           header: ({ options, route }) => (
             <ParentCustomHeader
               title={(options.title as string) ?? route.name}
@@ -130,30 +148,34 @@ function ParentLayoutContent() {
           options={{ title: t("nav_profile"), tabBarIcon: tabIcon("person-outline") }}
         />
 
-        {/* Hidden Stack Routes (href: null) - accessible via Drawer and router.push */}
+        {/* Hidden Stack Routes - accessible via Drawer and router.push */}
         <Tabs.Screen
           name="timetable"
-          options={{ href: null, title: t("nav_timetable") }}
+          options={{ tabBarItemStyle: { display: "none" }, title: t("nav_timetable") }}
         />
         <Tabs.Screen
           name="attendance"
-          options={{ href: null, title: t("nav_attendance") }}
+          options={{ tabBarItemStyle: { display: "none" }, title: t("nav_attendance") }}
         />
         <Tabs.Screen
           name="homework"
-          options={{ href: null, title: t("nav_homework") }}
+          options={{ tabBarItemStyle: { display: "none" }, title: t("nav_homework") }}
         />
         <Tabs.Screen
           name="results"
-          options={{ href: null, title: t("nav_results") }}
+          options={{ tabBarItemStyle: { display: "none" }, title: t("nav_results") }}
         />
         <Tabs.Screen
           name="grievances"
-          options={{ href: null, title: t("nav_grievances") }}
+          options={{ tabBarItemStyle: { display: "none" }, title: t("nav_grievances") }}
         />
         <Tabs.Screen
           name="notices"
-          options={{ href: null, title: t("nav_notices") }}
+          options={{ tabBarItemStyle: { display: "none" }, title: t("nav_notices") }}
+        />
+        <Tabs.Screen
+          name="hostel"
+          options={{ tabBarItemStyle: { display: "none" }, title: "Hostel & Mess" }}
         />
       </Tabs>
 
@@ -174,36 +196,73 @@ export default function ParentLayout() {
 const styles = StyleSheet.create({
   headerContainer: {
     backgroundColor: theme.surface,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 1,
     borderBottomColor: theme.rule,
+    ...theme.shadow.subtle,
   },
   headerRow: {
-    height: 48,
+    height: 52,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
   },
-  hamburgerBtn: {
-    padding: 4,
+  headerIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: theme.groundAlt,
     justifyContent: "center",
     alignItems: "center",
   },
+  notificationDot: {
+    position: "absolute",
+    top: 7,
+    right: 7,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: theme.danger,
+    borderWidth: 1.5,
+    borderColor: theme.surface,
+  },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 17,
+    fontWeight: "700",
     color: theme.ink,
+    letterSpacing: -0.3,
     textAlign: "center",
   },
-  headerRightSpacer: {
-    width: 34,
-  },
   childBar: {
-    paddingBottom: 8,
+    paddingBottom: 10,
+    paddingTop: 4,
   },
   childChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: theme.radius.pill,
+  },
+  childChipActive: {
+    backgroundColor: theme.primary,
+    ...theme.shadow.button,
+  },
+  childChipInactive: {
+    backgroundColor: theme.groundAlt,
+    borderWidth: 1,
+    borderColor: theme.ruleStrong,
+  },
+  childChipText: {
+    fontSize: 12,
+  },
+  childChipTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  childChipTextInactive: {
+    color: theme.inkSoft,
+    fontWeight: "600",
   },
 });

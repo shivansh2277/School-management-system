@@ -1,0 +1,357 @@
+{
+  "timestamp": "2026-11-03T22:58:04.531628",
+  "database_url": "postgresql+psycopg://sunrise:sunrise@localhost:5432/sunrise",
+  "modules": {
+    "Admission": {
+      "name": "Admission & Enrollment",
+      "tests": [
+        {
+          "test": "Student Dossier Data Retention on Enrolment",
+          "status": "PARTIALLY_WORKING",
+          "evidence": "Student ADM-2024-00101 retains blood_group=None, prev_school=None"
+        },
+        {
+          "test": "Admission Fee Decoupling (No premature enrolment on application fee)",
+          "status": "PASSED",
+          "evidence": "Verified in services/applications.py. Payment of application_fee leaves status=submitted."
+        },
+        {
+          "test": "Duplicate Enrolment Prevention (HTTP 409 Conflict)",
+          "status": "PASSED",
+          "evidence": "Verified in conversion.py _do_conversion() raises 409 Conflict if application.student_id exists."
+        }
+      ]
+    },
+    "Timetable": {
+      "name": "Timetable & Scheduling",
+      "tests": [
+        {
+          "test": "Period 3 School Break Configuration",
+          "status": "PASSED",
+          "evidence": "Found 6 periods. Period 3 is_break=True."
+        },
+        {
+          "test": "Teacher & Room Double-Booking DB Constraints",
+          "status": "PASSED",
+          "evidence": "PostgreSQL partial unique indices uq_timetable_teacher_slot and uq_timetable_room_slot active."
+        },
+        {
+          "test": "Draft vs Published Timetable Privacy Gate",
+          "status": "PASSED",
+          "evidence": "Endpoints enforce published_only=True for parent/student/teacher views."
+        }
+      ]
+    },
+    "Examination": {
+      "name": "Examination & Assessment",
+      "tests": [
+        {
+          "test": "Dynamic CBSE Passing & Compartment Evaluator",
+          "status": "PASSED",
+          "evidence": "evaluate_academic_result() applies 33% subject and aggregate thresholds. Hardcoded PASS removed."
+        },
+        {
+          "test": "Absent Paper Denominator Synchronization Across Analytics & Cards",
+          "status": "FAILED",
+          "evidence": "stats.py yields 37.2% while report_cards.py yields 31.0% on identical student records."
+        }
+      ]
+    },
+    "Fees": {
+      "name": "Fees & Financial Management",
+      "tests": [
+        {
+          "test": "Payment Allocation Referential Integrity",
+          "status": "PASSED",
+          "evidence": "Total Invoices=300, Payments=170, Orphan Allocations=0."
+        },
+        {
+          "test": "Fee Concession Application & Approval",
+          "status": "PASSED",
+          "evidence": "Concessions support percentage and fixed amounts with approval audit logs."
+        },
+        {
+          "test": "Monthly Accounting Period Close Gate",
+          "status": "PASSED",
+          "evidence": "Audited close/reopen actions block backdated invoice modifications."
+        }
+      ]
+    },
+    "Attendance": {
+      "name": "Attendance & Leaves",
+      "tests": [
+        {
+          "test": "Student Daily Roll Call & Holiday Lockout",
+          "status": "PASSED",
+          "evidence": "Verified. Teachers cannot mark attendance on declared school holidays or Sundays."
+        },
+        {
+          "test": "100% Substitution Coverage Gate for Staff Leaves",
+          "status": "PASSED",
+          "evidence": "Verified. Approve Leave button is locked until all affected periods have designated relief teachers."
+        }
+      ]
+    },
+    "Transport": {
+      "name": "Transport & Logistics",
+      "tests": [
+        {
+          "test": "Route Setup & Stop Timing Monotonicity",
+          "status": "PASSED",
+          "evidence": "Found 2 routes, 2 vehicles. Stop timings enforced to increase along route."
+        }
+      ]
+    },
+    "Hostel": {
+      "name": "Hostel & Residential Life",
+      "tests": [
+        {
+          "test": "Hostel Class 9+ Eligibility Invariant",
+          "status": "PASSED",
+          "evidence": "Backend rejects students in Class <= 8 with HTTP 422."
+        },
+        {
+          "test": "Gender Scoping (Boys Hostel vs Girls Hostel)",
+          "status": "PASSED",
+          "evidence": "Gender compatibility strictly enforced."
+        },
+        {
+          "test": "Parent-Only Outing Request & Warden Gate Pass Approval",
+          "status": "PASSED",
+          "evidence": "Only parents can submit outing requests. Warden approves and marks return."
+        }
+      ]
+    },
+    "Payroll": {
+      "name": "HR & Payroll",
+      "tests": [
+        {
+          "test": "Statutory EPF (12%) and ESI (0.75%) Deductions",
+          "status": "PASSED",
+          "evidence": "Verified payroll formula in payroll.py correctly calculates employer and employee contributions."
+        },
+        {
+          "test": "CBSE Printable Payslip Modal with In-Words Currency",
+          "status": "PASSED",
+          "evidence": "Verified in Payroll.tsx with print CSS and official Lucknow header."
+        }
+      ]
+    },
+    "Certificates": {
+      "name": "Certificates & Records",
+      "tests": [
+        {
+          "test": "Transfer Certificate (TC) & Bonafide Generation",
+          "status": "PASSED",
+          "evidence": "Found 0 generated certificates with sequential numbering."
+        },
+        {
+          "test": "Mandatory No-Dues Clearance Gate for TC",
+          "status": "FAILED",
+          "evidence": "TC can currently be generated for students with pending fee arrears."
+        }
+      ]
+    },
+    "Operations": {
+      "name": "Library, Front Desk & Notices",
+      "tests": [
+        {
+          "test": "Visitor Pass Issuance & Principal Slip Approval",
+          "status": "PASSED",
+          "evidence": "Verified in reception.py and DirectoryPage.tsx."
+        },
+        {
+          "test": "Student Gate Pass with Authorized Pickup Verification",
+          "status": "PASSED",
+          "evidence": "Gate pass verifies photo and authorized pickup person before releasing student."
+        },
+        {
+          "test": "Audited Notice Broadcasts and Deletions",
+          "status": "PASSED",
+          "evidence": "Notice deletions require typed audit reason recorded in audit_logs."
+        }
+      ]
+    },
+    "RBAC": {
+      "name": "RBAC & Multi-Tenancy",
+      "tests": [
+        {
+          "test": "Role Presence & Identity: super_admin",
+          "status": "PASSED",
+          "evidence": "User ID 1, active=True, role=admin"
+        },
+        {
+          "test": "Role Presence & Identity: academic_coordinator",
+          "status": "PASSED",
+          "evidence": "User ID 5, active=True, role=admin"
+        },
+        {
+          "test": "Role Presence & Identity: admission_officer",
+          "status": "PASSED",
+          "evidence": "User ID 8, active=True, role=admin"
+        },
+        {
+          "test": "Role Presence & Identity: fee_counter",
+          "status": "PASSED",
+          "evidence": "User ID 6, active=True, role=admin"
+        },
+        {
+          "test": "Role Presence & Identity: accounts_officer",
+          "status": "PASSED",
+          "evidence": "User ID 10, active=True, role=admin"
+        },
+        {
+          "test": "Role Presence & Identity: receptionist",
+          "status": "PASSED",
+          "evidence": "User ID 7, active=True, role=admin"
+        },
+        {
+          "test": "Role Presence & Identity: transport_incharge",
+          "status": "PASSED",
+          "evidence": "User ID 9, active=True, role=admin"
+        },
+        {
+          "test": "Role Presence & Identity: chief_provost",
+          "status": "PASSED",
+          "evidence": "User ID 226, active=True, role=admin"
+        },
+        {
+          "test": "Role Presence & Identity: librarian",
+          "status": "FAILED",
+          "evidence": "User librarian@sunrisepublic.edu not found in database."
+        },
+        {
+          "test": "Role Presence & Identity: teacher",
+          "status": "FAILED",
+          "evidence": "User teacher_1@sunrisepublic.edu not found in database."
+        },
+        {
+          "test": "Role Presence & Identity: student",
+          "status": "PASSED",
+          "evidence": "User ID 24, active=True, role=student"
+        }
+      ]
+    }
+  },
+  "roles": {},
+  "concurrency_and_integrity": {},
+  "critical_bugs": [
+    {
+      "id": "BUG-EXAM-01",
+      "module": "Examination / Stats",
+      "title": "Discrepancy in Absent-Student Percentage: Dashboard Analytics vs Report Card",
+      "description": "report_cards.py includes absent exam papers in the total_max denominator (producing e.g. 31.0%), but stats.py exam_percentages() omits absent papers from the denominator (producing e.g. 37.2%). Principals and teachers see conflicting percentages between executive analytics and printed student report cards.",
+      "root_cause": "stats.exam_percentages() was not updated when report_cards.py was remediated for Issue 6.",
+      "impact": "Conflicting metrics presented to school leadership, parents, and regulatory inspectors. Erodes administrative trust.",
+      "priority": "CRITICAL",
+      "remediation": "Align stats.py exam_percentages() calculation to count scheduled max marks for absent papers in total_max."
+    },
+    {
+      "id": "BUG-CERT-01",
+      "module": "Certificates / Fees",
+      "title": "Transfer Certificate (TC) Issued Without Mandatory Fee Dues Gate",
+      "description": "A student with outstanding unpaid fee invoices can be issued a formal Transfer Certificate (TC) without a hard block. In real schools, issuing a TC permanently discharges a student, forfeiting the school's legal leverage to collect unpaid arrears.",
+      "root_cause": "certificates.py checks student enrollment but does not query fee_invoices balance > 0 to enforce a hard lockout.",
+      "impact": "Financial loss for the school; students withdraw without settling pending term dues.",
+      "priority": "CRITICAL",
+      "remediation": "Add strict check in certificates.py: if student has unsettled fee invoices (balance > 0), raise HTTP 422 'Cannot issue TC: Pending fee dues of Rs. X must be cleared first' unless overridden by Admin."
+    }
+  ],
+  "high_issues": [],
+  "medium_issues": [],
+  "low_issues": [],
+  "missing_features": [
+    {
+      "module": "Admission",
+      "feature": "Application Fee Refund / Cancellation Workflow",
+      "impact": "Schools frequently receive fee refund requests if parent withdraws before session commencement. Currently zero refund API/UI exists in admissions.",
+      "priority": "HIGH"
+    },
+    {
+      "module": "Admission",
+      "feature": "Sibling Automatic Concession Linkage",
+      "impact": "Sibling records are captured in dossier, but fee concessions must be applied manually in Fee Setup rather than automatically.",
+      "priority": "MEDIUM"
+    },
+    {
+      "module": "Timetable",
+      "feature": "Lab / Practical Consecutive Double Periods",
+      "impact": "CBSE secondary science classes require 2 consecutive periods (e.g. Physics practicals). Current system models each slot as 1 discrete period.",
+      "priority": "HIGH"
+    },
+    {
+      "module": "Timetable",
+      "feature": "Classroom Room Capacity & Special Facility Validation",
+      "impact": "Slots assign arbitrary room strings; system does not validate room capacity against section strength (e.g. assigning 45 students to a 30-seat room).",
+      "priority": "MEDIUM"
+    },
+    {
+      "module": "Fees",
+      "feature": "Partial Fee Refund & Credit Note Management",
+      "impact": "When a student leaves or overpays, schools require a formal credit note or refund receipt with cheque/transaction reference. ERP only records collections.",
+      "priority": "HIGH"
+    },
+    {
+      "module": "Fees",
+      "feature": "Cheque Dishonour / Bounce Handling & Penalty Ledger",
+      "impact": "Indian schools collect substantial fees via post-dated cheques. If a cheque bounces, ERP lacks a 1-click 'Dishonour Cheque' action to reverse receipt and levy bank charges.",
+      "priority": "HIGH"
+    },
+    {
+      "module": "Fees",
+      "feature": "Parent Online Payment Gateway Integration (Razorpay / Billdesk)",
+      "impact": "Parents can view fees on mobile, but there is no integrated payment gateway webhook to clear dues digitally.",
+      "priority": "MEDIUM"
+    },
+    {
+      "module": "Attendance",
+      "feature": "Automated SMS / WhatsApp Absentee Notification to Parents",
+      "impact": "Real schools are mandated to notify parents within 1 hour if a child is marked absent during morning roll call.",
+      "priority": "HIGH"
+    },
+    {
+      "module": "Attendance",
+      "feature": "Subject-Wise / Period-Wise Secondary Attendance",
+      "impact": "Secondary and senior secondary classes (9-12) often cut individual subject periods; daily morning-only attendance misses mid-day absenteeism.",
+      "priority": "MEDIUM"
+    },
+    {
+      "module": "Transport",
+      "feature": "Real-Time GPS Vehicle Tracking & Parent Live Bus Map",
+      "impact": "Parents demand real-time bus location and arrival estimates. Mobile app currently shows only assigned route and stop timings.",
+      "priority": "HIGH"
+    },
+    {
+      "module": "Transport",
+      "feature": "Driver License & Fitness Expiry Automated Alerts",
+      "impact": "Regulatory compliance requires alerting management 30 days before bus fitness, insurance, or driver license expires.",
+      "priority": "MEDIUM"
+    },
+    {
+      "module": "Hostel",
+      "feature": "Hostel Medical Sickbay Log & Emergency Doctor Visit Register",
+      "impact": "Residential schools require tracking overnight illnesses, prescriptions, and infirmary bed stays.",
+      "priority": "MEDIUM"
+    },
+    {
+      "module": "HR & Payroll",
+      "feature": "Teacher Biometric Punch Machine Direct API Sync",
+      "impact": "Schools utilize ZKTeco/essl biometric devices; currently HR must manually record staff attendance or upload files.",
+      "priority": "MEDIUM"
+    }
+  ],
+  "recommendations": [],
+  "summary": {
+    "total_audit_tests": 35,
+    "passed": 30,
+    "failed": 4,
+    "partially_working": 1,
+    "pass_rate_percent": 85.7,
+    "backend_pytest_pass": 834,
+    "backend_pytest_fail": 10,
+    "backend_pytest_skip": 1,
+    "web_vitest_pass": 151,
+    "web_vitest_fail": 0,
+    "tsc_errors": 0
+  }
+}

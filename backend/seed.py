@@ -957,8 +957,8 @@ def seed(db: Session, reset: bool = True, force: bool = False, expand: bool = Fa
             period_no=i + 1,
             start_time=start,
             end_time=end,
-            is_break=(i + 1 == 6),
-            name="Break" if i + 1 == 6 else None,
+            is_break=(i + 1 == 3),
+            name="Break" if i + 1 == 3 else None,
         )
         for i, (start, end) in enumerate(PERIOD_TIMES)
     ]
@@ -1035,6 +1035,7 @@ def seed(db: Session, reset: bool = True, force: bool = False, expand: bool = Fa
                             subject_id=sub.id,
                             teacher_id=teacher_id,
                             room=room,
+                            is_published=True,
                         )
                     )
                     busy_teacher.add((day, period.id, teacher_id))
@@ -1938,8 +1939,8 @@ def _seed_transport(db: Session, school, departments: dict, enrolment_of: dict, 
             # dashboard has something in it on a fresh install and the 60-day
             # horizon is visibly doing something. Still valid, so the route
             # stays roadworthy — an expired one would ground the demo.
-            due = 45 if (i, j) == (0, 3) else 300 + j * 30
-            paper(OwnerType.vehicle, v.id, code, TODAY + timedelta(days=due))
+            valid_until = (max(TODAY, date.today()) + timedelta(days=45)) if (i, j) == (0, 3) else (TODAY + timedelta(days=300 + j * 30))
+            paper(OwnerType.vehicle, v.id, code, valid_until)
         vehicles[registration] = v
 
     # --- slabs
@@ -2601,6 +2602,8 @@ def _assign_roles(db: Session, roles: dict, sections: list) -> None:
             if user.login_id == ADMISSION_OFFICER_LOGIN
             else "transport_incharge"
             if user.login_id == TRANSPORT_INCHARGE_LOGIN
+            else "academic_coordinator"
+            if user.login_id in ("coordinator@sunrisepublic.edu", "coordinator")
             else "accounts"
             if user.login_id == ACCOUNTS_LOGIN
             else "librarian"

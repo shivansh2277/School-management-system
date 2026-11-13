@@ -3,8 +3,8 @@
 A reference for every table in `sunrise_test`: what it is for, every column it
 has, and how it joins to the rest.
 
-**117 tables, 1437 columns, 328 foreign keys.** Of those tables **82 hold data** in
-the seeded demo school and **35 are empty** - not unfinished, simply features
+**117 tables, 1437 columns, 328 foreign keys.** Of those tables **81 hold data** in
+the seeded demo school and **36 are empty** - not unfinished, simply features
 this demo school has not exercised.
 
 Columns, types, foreign keys and row counts below were **introspected from the
@@ -61,7 +61,7 @@ would bury the relationships that actually tell you something.
 
 ## Index
 
-**Tenancy, identity and access** - `schools`, `academic_years`, `users`, `roles`, `permissions`, `role_permissions`, `user_roles`, `settings`, `custom_fields`, `number_sequences`, `alembic_version`
+**Tenancy, identity and access** - `schools`, `academic_years`, `users`, `roles`, `permissions`, `role_permissions`, `user_roles`, `settings`, `custom_fields`, `number_sequences` &middot; *empty:* `alembic_version`
 
 **People - students and guardians** - `students`, `guardians`, `student_guardian`, `enrolments` &middot; *empty:* `student_authorized_persons`
 
@@ -101,7 +101,7 @@ would bury the relationships that actually tell you something.
 
 ---
 
-# Part 1 - Tables in use (82)
+# Part 1 - Tables in use (81)
 
 Every table here holds data in the seeded school, and the row counts are live.
 
@@ -251,7 +251,7 @@ A thing that can be done, named `module.resource.action`.
 
 ### `role_permissions`
 
-*515 rows / 6 columns*
+*498 rows / 6 columns*
 
 Which permissions a role grants. Per school, so two tenants can define the same
 role differently.
@@ -358,19 +358,6 @@ A gapless counter per school, per type, per year.
 | `id` | bigint | no | primary key |
 | `created_at` | timestamptz | no | default `now()` |
 | `updated_at` | timestamptz | no | default `now()` |
-
-### `alembic_version`
-
-*1 rows / 1 columns*
-
-Alembic's own bookkeeping - the single row naming the migration this database is
-at. Not part of the product; never edit it by hand.
-
-_Stands alone: nothing references it and it references nothing._
-
-| Column | Type | Null | Notes |
-|---|---|---|---|
-| `version_num` | varchar(32) | no | - |
 
 ## People - students and guardians
 
@@ -2460,9 +2447,24 @@ non-technical administrator to read in a settings screen.
 
 ---
 
-# Part 2 - Tables not yet used (35)
+# Part 2 - Tables not yet used (36)
 
 These are empty in the demo school. Each belongs to a feature that is built and has working endpoints - admission has taken no applications, payroll has run no cycle, nobody has requested leave. The schema is real; only the rows are missing.
+
+## Tenancy, identity and access
+
+### `alembic_version`
+
+*0 rows / 1 columns*
+
+Alembic's own bookkeeping - the single row naming the migration this database is
+at. Not part of the product; never edit it by hand.
+
+_Stands alone: nothing references it and it references nothing._
+
+| Column | Type | Null | Notes |
+|---|---|---|---|
+| `version_num` | varchar(32) | no | - |
 
 ## People - students and guardians
 

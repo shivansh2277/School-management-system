@@ -13,7 +13,7 @@ Everything here obeys three rules from ERP_BLUEPRINT §3.9:
 import calendar
 import uuid
 from collections.abc import Callable
-from datetime import UTC, date as Date, datetime
+from datetime import UTC, date as Date, datetime, timedelta
 from decimal import Decimal
 
 from fastapi import HTTPException, status
@@ -29,6 +29,7 @@ from app.models import (
     FeeFrequency,
     FeeHead,
     FeeHeadType,
+    GeneralLedger,
     Guardian,
     FeeInvoice,
     FeeInvoiceLine,
@@ -810,6 +811,229 @@ def reverse(db: Session, payment: FeePayment, reason: str, actor: User) -> FeePa
 
 
 # --- views ------------------------------------------------------------------
+
+
+def dishonour_payment(
+    db: Session,
+    school_id: int,
+    payment_id: int,
+    reason: str,
+    bank_charge: Decimal = Decimal("500.00"),
+    actor: User | None = None,
+) -> tuple[FeePayment, FeePayment]:
+    """Record a cheque dishonour (bounce), reverse allocations, restore invoice balance,
+    levy cheque bounce penalty charge, record audit log and general ledger entries.
+    """
+    payment = db.get(FeePayment, payment_id)
+    if not payment or payment.school_id != school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found")
+
+    if payment.status in (FeePaymentStatus.reversed, FeePaymentStatus.dishonoured):
+        raise HTTPException(status.HTTP_409_CONFLICT, f"This payment is already {payment.status.value}")
+    if payment.amount <= ZERO:
+        raise HTTPException(status.HTTP_409_CONFLICT, "A contra entry or negative payment cannot be dishonoured")
+
+    now = datetime.now(UTC)
+    assert_period_open(db, payment.school_id, now.year, now.month)
+
+    # 1. Contra payment entry
+    contra = FeePayment(
+        school_id=payment.school_id,
+        enrolment_id=payment.enrolment_id,
+        receipt_no=audit.next_number(
+            db,
+            payment.school_id,
+            kind="receipt",
+            year=now.year,
+            prefix=f"{_school_code(db, payment.school_id)}/RCP/{now.year}/",
+            width=6,
+        ),
+        amount=-payment.amount,
+        method=payment.method,
+        instrument_ref=payment.instrument_ref,
+        received_at=now,
+        received_by=actor.id if actor else payment.received_by,
+        idempotency_key=f"dishonour-{payment.id}",
+        status=FeePaymentStatus.dishonoured,
+        reverses_payment_id=payment.id,
+        reason=reason,
+    )
+    db.add(contra)
+    db.flush()
+
+    # 2. Reverse allocations
+    touched_invoice_ids: set[int] = set()
+    for allocation in payment.allocations:
+        db.add(
+            PaymentAllocation(
+                school_id=payment.school_id,
+                payment_id=contra.id,
+                invoice_line_id=allocation.invoice_line_id,
+                amount=-allocation.amount,
+            )
+        )
+        line = db.get(FeeInvoiceLine, allocation.invoice_line_id)
+        if line:
+            touched_invoice_ids.add(line.invoice_id)
+
+    # 3. Mark original payment as dishonoured
+    payment.status = FeePaymentStatus.dishonoured
+    db.flush()
+
+    # 4. Restate touched invoices
+    for inv_id in touched_invoice_ids:
+        inv = db.get(FeeInvoice, inv_id)
+        if inv:
+            _restate(db, inv, now.date())
+
+    # 5. Levy bank charge penalty fee
+    if bank_charge > ZERO:
+        penalty_head = db.scalar(
+            select(FeeHead).where(
+                FeeHead.school_id == payment.school_id,
+                FeeHead.code == "CHEQUE_BOUNCE",
+            )
+        )
+        if not penalty_head:
+            penalty_head = FeeHead(
+                school_id=payment.school_id,
+                name="Cheque Bounce Penalty Fee",
+                code="CHEQUE_BOUNCE",
+                type=FeeHeadType.one_time,
+                is_active=True,
+            )
+            db.add(penalty_head)
+            db.flush()
+
+        target_invoice = None
+        if touched_invoice_ids:
+            target_invoice = db.scalars(
+                select(FeeInvoice)
+                .where(FeeInvoice.id.in_(touched_invoice_ids))
+                .order_by(FeeInvoice.period_year.desc(), FeeInvoice.period_month.desc(), FeeInvoice.id.desc())
+            ).first()
+        if not target_invoice:
+            target_invoice = db.scalars(
+                select(FeeInvoice)
+                .where(
+                    FeeInvoice.school_id == payment.school_id,
+                    FeeInvoice.enrolment_id == payment.enrolment_id,
+                    FeeInvoice.status != InvoiceStatus.void,
+                )
+                .order_by(FeeInvoice.period_year.desc(), FeeInvoice.period_month.desc(), FeeInvoice.id.desc())
+            ).first()
+        if not target_invoice:
+            enr = db.get(Enrolment, payment.enrolment_id)
+            target_invoice = FeeInvoice(
+                school_id=payment.school_id,
+                enrolment_id=payment.enrolment_id,
+                academic_year_id=enr.academic_year_id if enr else 1,
+                invoice_no=audit.next_number(
+                    db,
+                    payment.school_id,
+                    kind="invoice",
+                    year=now.year,
+                    prefix=f"{_school_code(db, payment.school_id)}/INV/{now.year}/",
+                    width=6,
+                ),
+                period_month=now.month,
+                period_year=now.year,
+                issued_on=now.date(),
+                due_date=now.date() + timedelta(days=7),
+                status=InvoiceStatus.issued,
+            )
+            db.add(target_invoice)
+            db.flush()
+
+        penalty_line = FeeInvoiceLine(
+            school_id=payment.school_id,
+            invoice_id=target_invoice.id,
+            fee_head_id=penalty_head.id,
+            description=f"Cheque Bounce Penalty Fee ({reason})",
+            amount=bank_charge,
+            discount=Decimal("0.00"),
+        )
+        db.add(penalty_line)
+        db.flush()
+        _restate(db, target_invoice, now.date())
+
+    # 6. General Ledger postings
+    # Debit AR, Credit Bank (Payment reversal)
+    db.add(
+        GeneralLedger(
+            school_id=payment.school_id,
+            transaction_date=now.date(),
+            reference_type="fee_payment_dishonour",
+            reference_id=payment.id,
+            account_code="AR",
+            account_name="Accounts Receivable",
+            debit=payment.amount,
+            credit=Decimal("0.00"),
+            narration=f"Dishonoured cheque {payment.instrument_ref or payment.receipt_no}: {reason}",
+        )
+    )
+    db.add(
+        GeneralLedger(
+            school_id=payment.school_id,
+            transaction_date=now.date(),
+            reference_type="fee_payment_dishonour",
+            reference_id=payment.id,
+            account_code="BANK",
+            account_name="Bank Account",
+            debit=Decimal("0.00"),
+            credit=payment.amount,
+            narration=f"Dishonoured cheque {payment.instrument_ref or payment.receipt_no}: {reason}",
+        )
+    )
+
+    if bank_charge > ZERO:
+        db.add(
+            GeneralLedger(
+                school_id=payment.school_id,
+                transaction_date=now.date(),
+                reference_type="fee_payment_dishonour_penalty",
+                reference_id=payment.id,
+                account_code="AR",
+                account_name="Accounts Receivable",
+                debit=bank_charge,
+                credit=Decimal("0.00"),
+                narration=f"Cheque bounce penalty fee: {reason}",
+            )
+        )
+        db.add(
+            GeneralLedger(
+                school_id=payment.school_id,
+                transaction_date=now.date(),
+                reference_type="fee_payment_dishonour_penalty",
+                reference_id=payment.id,
+                account_code="PENALTY_INCOME",
+                account_name="Cheque Bounce Penalty Income",
+                debit=Decimal("0.00"),
+                credit=bank_charge,
+                narration=f"Cheque bounce penalty fee: {reason}",
+            )
+        )
+
+    # 7. Audit log
+    if actor:
+        audit.record(
+            db,
+            actor=actor,
+            school_id=payment.school_id,
+            entity_type="fee_payment",
+            entity_id=payment.id,
+            action=AuditAction.void,
+            before={"status": FeePaymentStatus.success.value},
+            after={
+                "status": payment.status.value,
+                "contra_receipt_no": contra.receipt_no,
+                "bank_charge": str(bank_charge),
+            },
+            reason=f"Cheque dishonoured: {reason}",
+        )
+
+    db.flush()
+    return payment, contra
 
 
 def invoice_out(db: Session, invoice: FeeInvoice, today: Date | None = None) -> dict:

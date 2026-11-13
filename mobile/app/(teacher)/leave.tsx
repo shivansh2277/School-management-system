@@ -1121,20 +1121,23 @@ function LeaveSubstitutionsViewer({
 const styles = StyleSheet.create({
   segmentContainer: {
     flexDirection: "row",
-    backgroundColor: theme.surface,
-    borderRadius: theme.radius.input,
+    backgroundColor: theme.groundAlt,
+    borderRadius: theme.radius.pill,
     padding: 4,
     borderWidth: 1,
     borderColor: theme.rule,
+    marginBottom: 8,
   },
   segmentBtn: {
     flex: 1,
     paddingVertical: 8,
     alignItems: "center",
-    borderRadius: theme.radius.input - 2,
+    justifyContent: "center",
+    borderRadius: theme.radius.pill,
   },
   segmentBtnActive: {
     backgroundColor: theme.primary,
+    ...theme.shadow,
   },
   segmentText: {
     fontSize: 12,
@@ -1143,13 +1146,14 @@ const styles = StyleSheet.create({
   },
   segmentTextActive: {
     color: "#fff",
+    fontWeight: "700",
   },
   policyNotice: {
-    backgroundColor: `${theme.primary}10`,
+    backgroundColor: theme.primarySoft,
     borderLeftWidth: 4,
     borderLeftColor: theme.primary,
-    padding: 10,
-    borderRadius: 4,
+    padding: 12,
+    borderRadius: theme.radius.input,
   },
   policyTitle: {
     fontSize: 12,

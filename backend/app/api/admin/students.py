@@ -89,6 +89,19 @@ class StudentUpdate(BaseModel):
     apaar_consent: bool | None = None
     apaar_consent_guardian_name: str | None = None
     apaar_consent_guardian_relation: str | None = None
+    blood_group: str | None = None
+    nationality: str | None = None
+    religion: str | None = None
+    caste_category: str | None = None
+    mother_tongue: str | None = None
+    place_of_birth: str | None = None
+    identification_marks: str | None = None
+    emergency_doctor: str | None = None
+    emergency_doctor_phone: str | None = None
+    known_allergies: str | None = None
+    chronic_conditions: str | None = None
+    regular_medications: str | None = None
+    previous_school: dict | None = None
     custom: dict | None = None
 
 
@@ -407,6 +420,23 @@ def student_detail(
         "gender": s.gender,
         "address": s.address,
         "admission_date": s.admission_date,
+        "blood_group": s.blood_group,
+        "nationality": s.nationality,
+        "religion": s.religion,
+        "caste_category": s.caste_category,
+        "mother_tongue": s.mother_tongue,
+        "place_of_birth": s.place_of_birth,
+        "identification_marks": s.identification_marks,
+        "is_single_child": s.is_single_child,
+        "aadhaar_last4": s.aadhaar_last4,
+        "aadhaar_verified": s.aadhaar_verified,
+        "emergency_doctor": s.emergency_doctor,
+        "emergency_doctor_phone": s.emergency_doctor_phone,
+        "known_allergies": s.known_allergies,
+        "chronic_conditions": s.chronic_conditions,
+        "regular_medications": s.regular_medications,
+        "previous_school": s.previous_school,
+        "application_id": s.application_id,
         "attendance_percent": attendance.student_percent(db, s.id),
         "latest_result_percent": (
             assessment.student_average_percent(db, s.id, exam.id) if exam else None
@@ -440,8 +470,13 @@ def update_student(
             enrolment.class_section_id = section.id
         if body.roll_no is not None:
             enrolment.roll_no = body.roll_no
-    for field in ("dob", "gender", "address"):
-        value = getattr(body, field)
+    for field in (
+        "dob", "gender", "address", "blood_group", "nationality", "religion",
+        "caste_category", "mother_tongue", "place_of_birth", "identification_marks",
+        "emergency_doctor", "emergency_doctor_phone", "known_allergies",
+        "chronic_conditions", "regular_medications", "previous_school",
+    ):
+        value = getattr(body, field, None)
         if value is not None:
             setattr(s, field, value)
     if body.custom is not None:

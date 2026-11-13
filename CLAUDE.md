@@ -2,14 +2,13 @@
 
 ## Read these first, in this order
 
-0. **`SINGLE_SOURCE_OF_TRUTH.md`** & **`SESSION-HANDOFF-PROMPT-30.md`** — **start here.**
-   The canonical single source of truth and active session handoff for the ERP.
+0. **`SINGLE_SOURCE_OF_TRUTH.md`** & **`remediation_plan.md`** — **start here.**
+   The canonical single source of truth and active QA audit remediation record for the ERP.
    Details current git status (`slice/office-feedback` synced with `origin/main`), verified 32 live web screens,
    24 active teachers (28 staff total), 19 class sections (Nursery through 12-Hum), 190 active students,
-   105 database tables (72 live with rows, 33 reserved), Alembic migration head `f7a8b9c0d1e2`,
-   Session 29 completed & verified: Public Admission Enquiry Fix (tenant alias resolution to `SPS`), View Admission Steps smooth DOM scroll (`#process`), dedicated Librarian role RBAC (`librarian@sunrisepublic.edu` / `Admin@123`) with `/user-access` role management, Admission Document Overrides Automatic Pending Queue (`/admin/admission-exceptions`) with 1-click Approve/Reject, and 4 canonical PDFs recompiled and verified against the live PostgreSQL database.
-   Full test suite passes 100% green: 808 backend pytest tests (1 skipped, 0 failed), 140 web unit tests across 26 test files (2 skipped, 0 failed), 0 TypeScript errors on web and mobile, clean schema verification (17/17 checks).
-   Active next milestone is Session 30: Complete Hostel + Mess Management Module (`SESSION-HANDOFF-PROMPT-30.md` / `SESSION-HANDOFF-30.md`).
+   105 database tables (72 live with rows, 33 reserved), Alembic migration head `a2b3c4d5e6f0`,
+   QA Audit Defect Remediation completed & verified: Student Data Loss resolved (17 dossier columns preserved to `Student`), Admission Fee Trigger decoupled from application fee, interactive web Timetable Builder in `Classes.tsx`, DB-level teacher & room double-booking constraints (`uq_timetable_teacher_slot`, `uq_timetable_room_slot`), Timetable Draft vs Published lifecycle management, Absent-student exam calculation score-inflation fix, genuine CBSE pass/fail/compartment evaluation, and Cross-tenant exam security with date boundary validation.
+   Full test suite passes: 9/9 dedicated `test_audit_defect_remediations.py`, 3/3 `test_migrations.py` (empty DB, seed, worker), 149 passed web unit tests across 28 test files (2 skipped, 0 failed), 0 TypeScript errors on web (`npx tsc -b`) and mobile (`npx tsc --noEmit`), clean production build (`npm run build`).
    Supersedes all previous session handoffs.
 1. **`FRONTEND-HANDOFF.md`** — the brief for **Parts Two to Six**: the
    three contracts, what "clean and easy for a school office" means, the
@@ -119,14 +118,29 @@ cd mobile && npx tsc --noEmit && npx expo start --go --lan --port 8081
     - **Admission Dossier Print Enhancement**: Upgraded `PrintableAdmissionDossier.tsx` with all mandatory audit fields.
     - **Sidebar Navigation Leak Fix**: Removed `fees.invoice.read` from receptionist to cleanly eliminate admin fee screens (`Fees`, `Defaulters`, `Fee setup`, `Period close`) from front desk sidebar navigation. Verified with 12/12 automated browser checks.
 
-## Active Status (Session 10 Complete, Session 11 Handoff)
+15. **Session 30–32 — Complete Hostel + Mess Management Module**:
+    - Optional residential facility for Class 9+ students with physical hierarchy (`Hostel` -> `HostelFloor` -> `HostelRoom` -> `HostelBed`).
+    - Three-tier RBAC architecture: Chief Provost (`chief_provost`, 9 sidebar items), Scoped Warden (`warden`, 8 sidebar items, single-hostel isolation, no admissions), Admin (overview and admissions only; operational routes 403).
+    - Unified fee engine integration (`HOSTEL` fee head, no separate mess fee), golden-amber Lucide SVG icons.
+16. **QA Audit Critical Defect Remediation Milestone (29 Oct 2026 — 8 Issues Resolved)**:
+    - **Student Data Loss Fix**: Preserved 17 dossier fields (medical, emergency doctor, demographic, previous school) from admission application into permanent `Student` record (`a2b3c4d5e6f0_audit_defect_remediations.py`).
+    - **Admission Fee Trigger Decoupled**: Paying application fee advances status to `submitted` without enrolling; paying admission fee on accepted offer triggers atomic enrollment into `Student` and `Enrolment`; duplicate 409 prevention; void payment rollback.
+    - **Interactive Web Timetable Builder**: Full slot builder in `Classes.tsx` (Add/Edit/Delete slots, `SlotModal`, live conflict checking via `/admin/timetable/slots/check`, draft/published badges).
+    - **Teacher & Room Double-Booking Concurrency**: Composite unique constraint `uq_timetable_teacher_slot` and partial unique index `uq_timetable_room_slot` on `(school_id, UPPER(TRIM(room)), day_of_week, period_id)` with room normalization.
+    - **Timetable Draft vs Published Lifecycle**: Default draft (`is_published=false`), admin publish/unpublish actions, published-only filtering for student, parent, and teacher APIs.
+    - **Absent-Student Score Inflation Fix**: Absent papers contribute scheduled `max_marks` to denominator (`total_max`) with 0 marks obtained. Only explicitly exempted papers are omitted from both numerator and denominator.
+    - **Genuine CBSE Pass/Fail Evaluation**: Standard 33% subject and aggregate thresholds with compartment evaluation in `evaluate_academic_result()`; no hardcoded PASS; fee dues withholding cleanly separated into `is_withheld`.
+    - **Cross-Tenant Exam Security**: `tenancy.get_owned()` on Exam, ClassSection, and Subject; exam paper date bounded by exam start/end dates.
 
-Canonical specification for Session 11 is defined in **`SESSION-HANDOFF-10.md`**:
-1. **Teacher Meeting Slip Response Interface**: Wire teacher view on web/mobile (`mobile/app/(teacher)/meetings.tsx`) to inspect incoming visitor slips and respond (`ACCEPTED` / `DECLINED`).
-2. **Real Image / Photo Upload Pipeline for Front Desk**: Multipart upload endpoint `POST /admin/reception/upload` for found items and handover photos, replacing plain text URLs with file pickers / camera capture.
-3. **End-to-End Visual Verification for Live Printable Slips**: Automated Puppeteer runner creating live transactions and capturing proof screenshots of all 4 printable slips (`PrintableStudentPass`, `PrintablePrincipalMeetingSlip`, `PrintableTeacherMeetingSlip`, `PrintableFeeReceiptSlip`).
-4. **Public Online Admission Portal UI (`/apply`)**: Unauthenticated parent application portal.
-5. **System-Wide Audit Reason Sweep (Packet 4 Contract 3)**: Ensuring 100% of destructive operations prompt mandatory user-typed reasons.
+## Active Status (QA Audit Defect Remediation Complete & Verified)
+
+All 8 QA audit defects resolved and verified against live PostgreSQL:
+1. `backend/tests/test_audit_defect_remediations.py`: 9 passed, 0 failed (100% green).
+2. `backend/tests/test_migrations.py`: 3 passed, 0 failed (clean SQLite/Postgres empty DB upgrade, seed, worker).
+3. Web unit tests: 149 passed, 2 skipped across 28 test files (100% green).
+4. TypeScript compilation: 0 errors on web (`npx tsc -b`) and mobile (`npx tsc --noEmit`).
+5. Web production build: Clean Vite build (`npm run build` in 8.75s).
+6. Alembic migration head: `a2b3c4d5e6f0`.
 
 Upcoming Web Roadmap:
 1. **Public Online Admission Portal UI (`/apply`)**: Parent-facing unauthenticated landing page and registration form with CAPTCHA/bot protection connecting to existing `/public/admission/*` endpoints.
@@ -236,6 +250,14 @@ Postgres runs natively on this machine, not in Docker. `make testdb` uses
 - **Public Admission Enquiry Model Unity**: Never create a separate public enquiry model or table; public enquiries write directly to the existing ERP `enquiries` table (`source=EnquirySource.website`, `status=EnquiryStatus.new`). Duplicate phone submissions within the active cycle append an `EnquiryInteraction` with `occurred_at=datetime.now(UTC)` rather than creating orphan duplicate rows.
 - **Global Announcement Strip Exclusions**: The global dark-blue announcement ticker renders across all standard public pages, but is strictly excluded from `/apply` (`PublicApplyPage.tsx`) to keep the multi-step admission application workflow focused and distraction-free.
 - **School Life & Photo Gallery Merge**: The photographic gallery is permanently consolidated at the bottom of School Life (`/school-life#gallery`) with category filter tabs and lightbox. Do not re-add a separate `/gallery` item to the primary navigation bar.
+- **Application Fee vs Admission Fee Trigger**: Paying `application_fee` advances application to `submitted` without enrolling. Only `admission_fee` on accepted offer triggers atomic enrollment into `Student` and `Enrolment`. Calling enrollment prematurely creates duplicate accounts and violates the admission offer lifecycle.
+- **Absent vs Exempt Exam Calculation**: Absent scheduled exam papers MUST contribute their scheduled `max_marks` to the report card denominator (`total_max`) with 0 marks obtained. Excluding absent papers from the denominator inflates percentages. Only papers marked `is_exempt=True` may be omitted from both numerator and denominator.
+- **Timetable Draft vs Published Scoping**: Timetable slots default to `is_published=false`. View endpoints for students, parents, and teachers must enforce `published_only=True` to prevent exposing half-configured or draft slots.
+- **Room Slot Unique Constraint Normalization**: PostgreSQL partial index `uq_timetable_room_slot` enforces uniqueness on `UPPER(TRIM(room))`. In SQLite migrations, batch mode requires explicit constraint names (`name='fk_students_application_id'`). Room strings must always be trimmed and normalized in Python before querying or saving.
+- **Report Card Academic Result vs Withholding**: Academic evaluation (`pass`, `fail`, `compartment`) is determined strictly by CBSE criteria (33% subject & aggregate threshold). Never hardcode PASS. Fee-related report-card withholding is recorded in `is_withheld` and must never alter the academic grade or result string.
+- **Configurable Timetable Break Periods**: School breaks (recess/lunch) are dynamically driven by `school_periods.is_break` and never hardcoded by index. Period 3 is the configured default recess, with Period 6 as instructional lesson. All timetable conflict detection, teacher load statistics, completeness matrices, and UI slots dynamically reflect periods according to their database `is_break` flag.
+- **Parent Dashboard Fee Dues Integer vs Amount Trap**: `/parent/children/{id}/summary` returns `fee_dues: 2` (count of overdue invoices), NOT the monetary currency balance. Never format `summary.fee_dues` as currency. The authentic monetary balance must be resolved from `/parent/children/{id}/fees/summary` (`balance` or `total_dues`), otherwise an integer like `2` renders as "Pending balance: ₹2" instead of the true amount (e.g. ₹7,200).
+- **Android 11+ UPI Intent Package Visibility Trap**: On Android 11+ (API 30+), `Linking.canOpenURL("upi://pay...")` returns `false` and direct app-launching fails unless `<queries>` declarations for the `upi` scheme and target packages (`com.google.android.apps.nbu.paisa.user`, `com.phonepe.app`, `net.one97.paytm`, `in.org.npci.upiapp`, `com.dreamplug.androidapp`) are injected into `AndroidManifest.xml` via an Expo Config Plugin (`mobile/plugins/withAndroidQueries.js`). Furthermore, specific app targeting requires standard Android intent format `intent://pay?<params>#Intent;scheme=upi;package=<pkg>;end` rather than non-standard `&pkg=...` URL query parameters.
 
 ## Working style for this project
 
@@ -243,3 +265,15 @@ Postgres runs natively on this machine, not in Docker. `make testdb` uses
 - Commit messages carry the reasoning — why, not just what.
 - Show the exact file list before any push.
 - Ask before adding a dependency over 100 MB.
+
+17. **Academic Coordinator Role & Dedicated Timetable Module Workspace**:
+    - **Role & RBAC**: `academic_coordinator` installed in RBAC system granting full administrative control over Timetable without leaking Admin, HR, Finance, Student, or Exam permissions.
+    - **Web Timetable Workspace**: `web/src/pages/Timetable.tsx` registered at `/timetable` under Academics, with 5 comprehensive management tabs.
+    - **Audit Logs**: All slot mutations, deletions, publications, unpublications, period additions, and substitutions logged to PostgreSQL `audit_logs`.
+    - **Verification**: Verified with 20/20 pytest tests (`test_academic_coordinator_rbac.py`, `test_timetable.py`), 42/42 vitest screens tests, and 8 Playwright E2E screenshots.
+18. **Standalone Production Android APK v1.0.1 (Build 2) & Direct UPI Payment System (Nov 2026)**:
+    - **Release APK**: EAS Build ID `2d756308-e13e-4bde-8efb-d621d5e1cbea`, package `edu.sunrisepublic.app`, version `1.0.1`, build `2`, standalone release APK (`88.15 MB`) with offline Hermes bytecode and embedded assets. Zero Expo Go or local dev server dependency.
+    - **Direct UPI Intent Engine**: Fixed package visibility restrictions via custom plugin `mobile/plugins/withAndroidQueries.js` declaring `<queries>` for `upi://` and major apps (GPay, PhonePe, Paytm, BHIM, CRED). Implemented resilient dual-mode intent launcher in `mobile/app/(parent)/fees.tsx` targeting apps via `intent://pay` with universal system chooser fallback and client-side NPCI URL generation (`8004400433@pthdfc`). Integrated `expo-clipboard` for 1-tap VPA and amount copying.
+    - **Parent Dashboard Fee Ledger Correction**: Resolved `mobile/app/(parent)/dashboard.tsx` anomaly where invoice count (`2`) was formatted as ₹2. Integrated `/parent/children/{id}/fees/summary` to display authentic ledger balance (`₹7,200 (2 invoices)`).
+    - **Physical Device Verified**: Streamed and verified live via ADB on Xiaomi/Redmi 13C (`model: 2310FPCA4I`). Real-device tested with parent and student authentication against live Render cloud backend (`https://school-management-system-12ks.onrender.com`).
+    - **Distribution Artifacts**: Direct APK download URL, local binary `school-management-system/sunrise-school.apk`, and scannable QR code `apk_download_qr.png` for instant WhatsApp sharing.

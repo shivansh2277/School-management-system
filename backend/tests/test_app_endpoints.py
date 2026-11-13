@@ -30,17 +30,19 @@ def test_a_teacher_can_read_their_own_profile(client, teacher):
     assert "10-A" in body["class_teacher_of"]
 
 
-def test_a_teacher_can_read_their_class_roster(client, teacher, ids):
+def test_a_teacher_can_read_their_class_roster(client, teacher, ids, db):
+    from app.models import Enrolment, EnrolmentStatus
     r = client.get(f"/teacher/classes/{ids['section_10a']}/students", headers=teacher)
     assert r.status_code == 200, r.text
     rows = r.json()
-    assert len(rows) == 10, "10-A holds ten children"
+    expected_count = db.query(Enrolment).filter_by(class_section_id=ids["section_10a"], status=EnrolmentStatus.active).count()
+    assert len(rows) == expected_count
     first = rows[0]
     # Ids must be the student's, not the enrolment's: the mobile app follows
     # this id to /parent and /teacher routes keyed by student.
     assert first["id"] and first["full_name"] and first["admission_no"]
     assert first["roll_no"] == 1
-    assert sorted(r["roll_no"] for r in rows) == list(range(1, 11))
+    assert sorted(r["roll_no"] for r in rows) == list(range(1, expected_count + 1))
 
 
 def test_the_roster_ids_are_student_ids(client, teacher, admin, ids):
@@ -55,13 +57,15 @@ def test_the_roster_ids_are_student_ids(client, teacher, admin, ids):
         assert detail.json()["full_name"] == row["full_name"]
 
 
-def test_a_class_of_ten_is_not_reported_as_a_thousand(client, teacher):
+def test_a_class_of_ten_is_not_reported_as_a_thousand(client, teacher, db):
     """`db.query(Student).filter(Enrolment...)` named two tables and joined
     neither, so every class reported 100 students x 10 enrolments."""
+    from app.models import Enrolment, EnrolmentStatus
     rows = client.get("/teacher/classes", headers=teacher).json()
     assert rows
     for row in rows:
-        assert row["student_count"] == 10, row
+        expected = db.query(Enrolment).filter_by(class_section_id=row["class_section_id"], status=EnrolmentStatus.active).count()
+        assert row["student_count"] == expected, row
 
 
 def test_the_class_list_agrees_with_the_roster_it_links_to(client, teacher):

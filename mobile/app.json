@@ -3,32 +3,70 @@
     "name": "Sunrise School",
     "slug": "sunrise-school",
     "scheme": "sunrise",
-    "version": "0.1.0",
+    "version": "1.0.1",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "edu.sunrisepublic.app",
+      "buildNumber": "2",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "LSApplicationQueriesSchemes": [
+          "upi",
+          "gpay",
+          "phonepe",
+          "paytmmp",
+          "bhim",
+          "cred"
+        ]
+      }
     },
     "android": {
-      "package": "edu.sunrisepublic.app"
+      "package": "edu.sunrisepublic.app",
+      "versionCode": 2,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#4338CA"
+      },
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
     },
     "plugins": [
+      "./plugins/withAndroidQueries",
       "expo-router",
       "expo-font",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#5B4BE0",
-          "resizeMode": "contain"
+          "backgroundColor": "#4338CA",
+          "resizeMode": "contain",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": false
     },
     "runtimeVersion": {
       "policy": "sdkVersion"
-    }
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "e9002104-6228-4d18-bed9-0393ab6837ec"
+      }
+    },
+    "owner": "shivansh123456"
   }
 }

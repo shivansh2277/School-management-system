@@ -80,6 +80,31 @@ class Student(TenantBase):
     apaar_consent_guardian_relation: Mapped[str | None] = mapped_column(String(40))
     apaar_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    # Extended dossier demographic & identification data
+    blood_group: Mapped[str | None] = mapped_column(String(10))
+    nationality: Mapped[str | None] = mapped_column(String(50))
+    religion: Mapped[str | None] = mapped_column(String(50))
+    caste_category: Mapped[str | None] = mapped_column(String(50))
+    mother_tongue: Mapped[str | None] = mapped_column(String(50))
+    place_of_birth: Mapped[str | None] = mapped_column(String(100))
+    identification_marks: Mapped[str | None] = mapped_column(Text)
+    is_single_child: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    aadhaar_last4: Mapped[str | None] = mapped_column(String(4))
+    aadhaar_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+
+    # Medical & emergency contact data
+    emergency_doctor: Mapped[str | None] = mapped_column(String(120))
+    emergency_doctor_phone: Mapped[str | None] = mapped_column(String(20))
+    known_allergies: Mapped[str | None] = mapped_column(Text)
+    chronic_conditions: Mapped[str | None] = mapped_column(Text)
+    regular_medications: Mapped[str | None] = mapped_column(Text)
+
+    # Previous school data
+    previous_school: Mapped[dict | None] = mapped_column(JSON)
+
+    # Source admission application
+    application_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("applications.id"))
+
     # School-defined attributes (§3.15 level 2). Validated against
     # `custom_fields` on write; never read without going through
     # services/custom_fields.py, which drops definitions that were retired.

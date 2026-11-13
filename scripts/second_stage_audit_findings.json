@@ -1,0 +1,119 @@
+{
+  "timestamp": "2026-11-04T23:10:06.153474",
+  "database_url": "postgresql+psycopg://sunrise:sunrise@localhost:5432/sunrise",
+  "investigations": {},
+  "failures_analyzed": {
+    "test_complete_digital_admission_dossier_two_students": {
+      "file": "test_admission_dossier_demo.py",
+      "failure": "KeyError: 'student' on application_fee payment response",
+      "classification": "OUTDATED TEST FIXTURE (POST-REMEDIATION)",
+      "root_cause": "Test was written under Session 33 assumption that paying application_fee triggers immediate auto-enrollment. In Session 34 Remediation Issue 2, application fee was decoupled from enrollment, advancing application to 'submitted'. Only admission_fee triggers enrollment. The test fixture was not updated to pay admission_fee.",
+      "operational_verdict": "Remediation logic is sound; legacy demo test fixture is obsolete."
+    },
+    "test_the_funnel_starts_at_enquiries_and_narrows": {
+      "file": "test_admission_reports.py",
+      "failure": "assert stages['enrolled'] == 0 (AssertionError: assert 1 == 0)",
+      "classification": "SEED DATA POLLUTION",
+      "root_cause": "seed.py lines 2561-2575 added application APP-2026-0099 for Abhinav Saxena with status=ApplicationStatus.enrolled to support hostel/transport day-scholar test fixtures. This violated the test's assumption of a zero enrolled baseline in cycle 1.",
+      "operational_verdict": "Test assumption valid for clean slate; polluted by static seed additions."
+    },
+    "test_a_teacher_can_read_their_class_roster": {
+      "file": "test_app_endpoints.py",
+      "failure": "assert len(rows) == 10 (AssertionError: assert 12 == 10)",
+      "classification": "HEADCOUNT DRIFT IN TEST SEED",
+      "root_cause": "seed.py lines 2505-2545 added 2 extra students (ADM-2024-00101 and ADM-2024-00102) into Class Section 10-A, increasing roll from 10 to 12. Test asserted on hardcoded literal 10.",
+      "operational_verdict": "Endpoint functions correctly; test asserted on static literal rather than dynamic count."
+    },
+    "test_a_class_of_ten_is_not_reported_as_a_thousand": {
+      "file": "test_app_endpoints.py",
+      "failure": "assert row['student_count'] == 10 (AssertionError: assert 12 == 10)",
+      "classification": "HEADCOUNT DRIFT IN TEST SEED",
+      "root_cause": "Class Section 10-A has 12 students in seed.py. Test asserted on hardcoded 10.",
+      "operational_verdict": "Endpoint correctly counts 12 enrolled students; test literal outdated."
+    },
+    "test_the_office_still_reads_every_child": {
+      "file": "test_attendance_scope.py",
+      "failure": "assert body['total'] == 100 (AssertionError: assert 102 == 100)",
+      "classification": "HEADCOUNT DRIFT IN TEST SEED",
+      "root_cause": "Total enrolled students in seed.py is 102 (100 demo + 2 day scholars). Test asserted on literal 100.",
+      "operational_verdict": "Office endpoint correctly returns all 102 children."
+    },
+    "test_the_roster_exports_as_csv": {
+      "file": "test_exports.py",
+      "failure": "assert len(rows) == 100 (AssertionError: assert 102 == 100)",
+      "classification": "HEADCOUNT DRIFT IN TEST SEED",
+      "root_cause": "CSV export exports all 102 students present in database. Test asserted on 100.",
+      "operational_verdict": "CSV export fully operational and complete; test literal outdated."
+    },
+    "test_the_first_year_has_no_retention_figure": {
+      "file": "test_management_kpis.py",
+      "failure": "assert trend[0]['students'] == 100 (AssertionError: assert 102 == 100)",
+      "classification": "HEADCOUNT DRIFT IN TEST SEED",
+      "root_cause": "Total students in demo academic year is 102. Test asserted on 100.",
+      "operational_verdict": "Enrollment trend calculation accurate; test literal outdated."
+    },
+    "test_retention_counts_the_children_who_came_back": {
+      "file": "test_management_kpis.py",
+      "failure": "assert latest['retention_percent'] == 30.0 (AssertionError: assert 29.4 == 30.0)",
+      "classification": "HEADCOUNT DRIFT IN TEST SEED",
+      "root_cause": "30 retained students divided by 102 previous-year students equals 29.41% (not 30/100 = 30.0%).",
+      "operational_verdict": "Math is strictly correct (30 / 102 = 29.4%). Test assumed 100 base."
+    },
+    "test_the_dashboard_and_the_report_card_agree_about_an_absent_child": {
+      "file": "test_marks_lock.py",
+      "failure": "assert card['overall_percent'] == approx(dash) (assert 31.0 == 37.2)",
+      "classification": "GENUINE PRODUCTION DEFECT (BUG-EXAM-01)",
+      "root_cause": "report_cards.py includes absent papers in total_max denominator (yielding 31.0%), but stats.py exam_percentages() omits absent papers from denominator (yielding 37.2%).",
+      "operational_verdict": "CRITICAL CALCULATION DIVERGENCE: Executive analytics conflict with printed report cards."
+    },
+    "test_performance_buckets_cover_every_scored_student": {
+      "file": "test_stats.py",
+      "failure": "assert sum(buckets.values()) == db.query(Student).count() (assert 100 == 102)",
+      "classification": "ARCHITECTURAL ASSUMPTION DEFECT",
+      "root_cause": "stats.py performance buckets aggregate students who have marks in term exams (100 students). It does not include newly admitted or unexamined students (the 2 day scholars). Test assumed total students == total examined students.",
+      "operational_verdict": "Schools enrolling mid-term students will observe divergence between student headcount and performance bucket totals."
+    }
+  },
+  "deep_tests": {
+    "academic_year_rollover": {
+      "status": "PARTIALLY_IMPLEMENTED",
+      "enrolment_creation": "VERIFIED (Creates new Enrolment, sets old to 'promoted')",
+      "student_fee_plan_migration": "NOT IMPLEMENTED (Promoted enrolment lacks StudentFeePlan)",
+      "fee_concession_migration": "NOT IMPLEMENTED (Fee concessions expire with old enrolment_id)",
+      "transport_assignment_migration": "NOT IMPLEMENTED (Bus stop allocations remain on old enrolment_id)",
+      "operational_impact": "CRITICAL REAL-WORLD DEFECT: Following year-end session rollover, promoted students cannot be billed correctly in monthly billing runs, lose all sibling/staff concessions, and disappear from bus pickup rosters."
+    },
+    "timetable_concurrency": {
+      "status": "VERIFIED_PROTECTED",
+      "teacher_double_booking_db_constraint": true,
+      "room_double_booking_db_index": true,
+      "room_index_def": "CREATE UNIQUE INDEX uq_timetable_room_slot ON public.timetable_slots USING btree (school_id, room, day_of_week, period_id) WHERE ((room IS NOT NULL) AND ((room)::text <> ''::text))",
+      "operational_verdict": "Teacher and Room collisions are strictly prevented at database transaction layer. Concurrent slot insertions targeting the same teacher or normalized room fail atomically with constraint violation."
+    },
+    "certificate_dues_gate": {
+      "status": "FAILED",
+      "has_fee_dues_check_in_code": false,
+      "operational_impact": "SEVERE FINANCIAL LEAKAGE: Transfer Certificates can be generated and printed for students with outstanding fee balances. Once a TC is delivered to a parent, schools forfeit legal and administrative leverage to collect unpaid dues."
+    },
+    "mobile_offline_architecture": {
+      "status": "PARTIALLY_IMPLEMENTED",
+      "async_storage_present": true,
+      "netinfo_present": false,
+      "offline_mutation_queue": false,
+      "operational_impact": "MEDIUM RISK: Mobile apps authenticate and store JWT in AsyncStorage, but do not support offline optimistic roll-call caching or queued mutations. If school Wi-Fi drops while teacher marks attendance, the form fails with network error."
+    },
+    "backup_and_recovery": {
+      "status": "NOT_IMPLEMENTED",
+      "automated_backup_scripts_found": [],
+      "wal_archiving_configured": false,
+      "point_in_time_recovery_sop": false,
+      "operational_impact": "HIGH RISK: The ERP codebase contains zero automated database backup or point-in-time recovery scripts. If PostgreSQL storage corrupts or server crashes, the school risks complete data loss unless external unmanaged infrastructure backups exist."
+    },
+    "security_and_tenancy": {
+      "status": "VERIFIED_SECURE",
+      "cross_tenant_query_blocked": true,
+      "operational_verdict": "Multi-tenant isolation enforced cleanly via tenancy.get_owned() and school_id filtering."
+    }
+  },
+  "operational_risks": []
+}

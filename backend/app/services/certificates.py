@@ -1,3 +1,4 @@
+from decimal import Decimal
 """Student Certificates Service.
 
 Manages Transfer Certificates (TC), Bonafide Certificates, and Character Certificates.
@@ -137,7 +138,25 @@ def _build_student_snapshot(
         "dues_cleared": extra.get("dues_cleared", "Cleared"),
         "leaving_date": extra.get("leaving_date", str(date.today())),
         "remarks": extra.get("remarks", ""),
+        "dues_override": extra.get("dues_override"),
     }
+
+
+
+def get_student_outstanding_dues(db: Session, school_id: int, student_id: int) -> Decimal:
+    from app.services import fees
+    from app.models.fees import FeeInvoice, InvoiceStatus
+    from app.models.enrolment import Enrolment
+    invoices = db.scalars(
+        select(FeeInvoice)
+        .join(Enrolment, Enrolment.id == FeeInvoice.enrolment_id)
+        .where(
+            Enrolment.student_id == student_id,
+            FeeInvoice.school_id == school_id,
+            FeeInvoice.status.not_in([InvoiceStatus.voided, InvoiceStatus.written_off]),
+        )
+    ).all()
+    return sum((fees.totals(db, inv)["balance"] for inv in invoices), Decimal("0.00"))
 
 
 def request_certificate(
@@ -303,6 +322,7 @@ def issue_certificate(
     reason: str | None = None,
     remarks: str | None = None,
     leaving_date: date | None = None,
+    dues_override_reason: str | None = None,
 ) -> StudentCertificate:
     """Issue a certificate (directly or from an existing request).
 
@@ -390,6 +410,44 @@ def issue_certificate(
         width=4,
     )
 
+    # FEE DUES CLEARANCE GATE FOR TRANSFER CERTIFICATES (BUG-CERT-01)
+    if cert_type == "transfer_certificate":
+        dues = get_student_outstanding_dues(db, school_id, student.id)
+        if dues > Decimal("0.00"):
+            if not dues_override_reason:
+                raise HTTPException(
+                    status.HTTP_400_BAD_REQUEST,
+                    f"Outstanding fee dues pending: Rs. {dues:.2f}. TC cannot be issued without full dues clearance or authorized Admin override",
+                )
+            from app.models.enums import UserRole
+            from app.models.rbac import Role, ScopeType, UserRoleAssignment
+            is_super_admin = (
+                issued_by.role == UserRole.admin
+                or db.scalar(
+                    select(UserRoleAssignment.id)
+                    .join(Role, Role.id == UserRoleAssignment.role_id)
+                    .where(
+                        UserRoleAssignment.user_id == issued_by.id,
+                        Role.code.in_(("super_admin", "principal")),
+                        UserRoleAssignment.scope_type == ScopeType.school,
+                    )
+                ) is not None
+            )
+            if not is_super_admin:
+                raise HTTPException(
+                    status.HTTP_403_FORBIDDEN,
+                    "Only Super Admin can authorize TC issuance with pending dues",
+                )
+            audit.record(
+                db,
+                actor=issued_by,
+                school_id=school_id,
+                entity_type="transfer_certificate",
+                entity_id=student.id,
+                action=AuditAction.status_change,
+                reason=f"Fee dues override: {dues_override_reason} (Outstanding: Rs. {dues:.2f})",
+            )
+
     # Freeze snapshot
     snapshot_extras = {
         "conduct": conduct,
@@ -397,6 +455,7 @@ def issue_certificate(
         "remarks": remarks or "",
         "leaving_date": str(leaving_date or date.today()),
         "issue_date": str(date.today()),
+        "dues_override": dues_override_reason if (cert_type == "transfer_certificate" and dues_override_reason) else None,
     }
     snapshot = _build_student_snapshot(db, student, enrolment, snapshot_extras)
 
@@ -508,6 +567,16 @@ def get_certificate_pdf_bytes(
         raise HTTPException(
             status.HTTP_409_CONFLICT, "Certificate PDF is only available for issued certificates"
         )
+
+    if cert.certificate_type == "transfer_certificate":
+        snapshot = cert.data_snapshot or {}
+        if not snapshot.get("dues_override"):
+            dues = get_student_outstanding_dues(db, school_id, cert.student_id)
+            if dues > Decimal("0.00"):
+                raise HTTPException(
+                    status.HTTP_400_BAD_REQUEST,
+                    f"Outstanding fee dues pending: Rs. {dues:.2f}. TC cannot be printed without full dues clearance or authorized Admin override",
+                )
 
     school = db.get(School, school_id)
     template = get_template(db, school_id, cert.certificate_type)

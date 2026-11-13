@@ -17,10 +17,16 @@ from sqlalchemy.orm import Session
 from app.models import (
     AcademicYear,
     ClassSection,
+    ConcessionStatus,
     Enrolment,
     EnrolmentStatus,
+    FeeConcession,
+    FeePlan,
     Student,
+    StudentFeePlan,
     StudentStatus,
+    TransportAssignment,
+    TransportAssignmentStatus,
 )
 from app.services.common import roster
 from app.services.tenancy import assert_writable
@@ -235,23 +241,24 @@ def commit(
     today = date.today()
 
     by_student = {e.student_id: e for e in roster(db, class_section_id)}
+    promoted_or_detained: list[tuple[Enrolment, Enrolment, ClassSection]] = []
     for line in plan.lines:
         old = by_student[line.student_id]
         student = db.get(Student, line.student_id)
 
         if line.outcome == Outcome.promote:
             old.status = EnrolmentStatus.promoted
-            db.add(
-                Enrolment(
-                    school_id=section.school_id,
-                    student_id=line.student_id,
-                    academic_year_id=to_year.id,
-                    class_section_id=target.id,
-                    roll_no=line.to_roll_no,
-                    joined_on=to_year.start_date,
-                    house=old.house,
-                )
+            new_enr = Enrolment(
+                school_id=section.school_id,
+                student_id=line.student_id,
+                academic_year_id=to_year.id,
+                class_section_id=target.id,
+                roll_no=line.to_roll_no,
+                joined_on=to_year.start_date,
+                house=old.house,
             )
+            db.add(new_enr)
+            promoted_or_detained.append((new_enr, old, target))
         elif line.outcome == Outcome.detain:
             old.status = EnrolmentStatus.detained
             # Repeats the same class, so the target section is the same class
@@ -268,16 +275,17 @@ def commit(
                     status.HTTP_409_CONFLICT,
                     f"Cannot detain into {to_year.code}: {section.label} does not exist there",
                 )
-            db.add(
-                Enrolment(
-                    school_id=section.school_id,
-                    student_id=line.student_id,
-                    academic_year_id=to_year.id,
-                    class_section_id=repeat.id,
-                    roll_no=line.to_roll_no or old.roll_no,
-                    joined_on=to_year.start_date,
-                )
+            new_enr = Enrolment(
+                school_id=section.school_id,
+                student_id=line.student_id,
+                academic_year_id=to_year.id,
+                class_section_id=repeat.id,
+                roll_no=line.to_roll_no or old.roll_no,
+                joined_on=to_year.start_date,
+                house=old.house,
             )
+            db.add(new_enr)
+            promoted_or_detained.append((new_enr, old, repeat))
         elif line.outcome == Outcome.pass_out:
             old.status = EnrolmentStatus.passed_out
             old.left_on = today
@@ -287,5 +295,92 @@ def commit(
             old.left_on = today
             student.status = StudentStatus.transferred_out
 
-    db.commit()
+    # Flush all newly added enrolments to populate their primary keys
+    db.flush()
+
+    for new_enr, old_enr, target_sec in promoted_or_detained:
+        # 1. Identify active fee structure for promoted class section in target year
+        fee_plan = db.scalar(
+            select(FeePlan).where(
+                FeePlan.school_id == section.school_id,
+                FeePlan.academic_year_id == to_year.id,
+                FeePlan.class_name == target_sec.class_name,
+                FeePlan.is_active.is_(True),
+            )
+        )
+        if fee_plan is None:
+            fee_plan = db.scalar(
+                select(FeePlan).where(
+                    FeePlan.school_id == section.school_id,
+                    FeePlan.academic_year_id == to_year.id,
+                    FeePlan.class_name == target_sec.class_name,
+                )
+            )
+        if fee_plan:
+            existing_sfp = db.scalar(
+                select(StudentFeePlan).where(StudentFeePlan.enrolment_id == new_enr.id)
+            )
+            if not existing_sfp:
+                db.add(
+                    StudentFeePlan(
+                        school_id=section.school_id,
+                        enrolment_id=new_enr.id,
+                        fee_plan_id=fee_plan.id,
+                    )
+                )
+
+        # 2. Carry forward valid ongoing FeeConcessions
+        old_concessions = db.scalars(
+            select(FeeConcession).where(
+                FeeConcession.enrolment_id == old_enr.id,
+                FeeConcession.status == ConcessionStatus.approved,
+            )
+        ).all()
+        for c in old_concessions:
+            if c.valid_to and c.valid_to < to_year.start_date:
+                continue
+            v_from = max(c.valid_from, to_year.start_date) if c.valid_from else to_year.start_date
+            new_concession = FeeConcession(
+                school_id=section.school_id,
+                enrolment_id=new_enr.id,
+                type=c.type,
+                fee_head_id=c.fee_head_id,
+                percent=c.percent,
+                amount=c.amount,
+                reason=c.reason,
+                status=ConcessionStatus.approved,
+                requested_by=c.requested_by,
+                approved_by=c.approved_by,
+                decided_at=c.decided_at,
+                valid_from=v_from,
+                valid_to=c.valid_to,
+            )
+            db.add(new_concession)
+
+        # 3. Re-link active TransportAssignments
+        old_transports = db.scalars(
+            select(TransportAssignment).where(
+                TransportAssignment.enrolment_id == old_enr.id,
+                TransportAssignment.status.in_([
+                    TransportAssignmentStatus.active,
+                    TransportAssignmentStatus.requested,
+                    TransportAssignmentStatus.suspended,
+                ]),
+            )
+        ).all()
+        for ta in old_transports:
+            ta.status = TransportAssignmentStatus.ended
+            ta.end_date = to_year.start_date
+            ta.end_reason = f"Promoted to {to_year.code}"
+            new_ta = TransportAssignment(
+                school_id=section.school_id,
+                enrolment_id=new_enr.id,
+                route_stop_id=ta.route_stop_id,
+                direction=ta.direction,
+                start_date=to_year.start_date,
+                status=TransportAssignmentStatus.active,
+            )
+            db.add(new_ta)
+
+    db.flush()
     return plan

@@ -444,150 +444,205 @@ export default function TeacherHomework() {
           <Empty text="You have not assigned any homework yet." />
         </Card>
       ) : (
-        list.data!.map((item) => (
-          <Card key={item.id}>
-            <Pressable onPress={() => setOpen(open === item.id ? null : item.id)}>
-              <Row
-                left={
-                  <>
-                    <Pill label={`${item.subject} - ${item.class_label}`} />
-                    <Text style={[s.title, { marginTop: 4 }]}>{item.title}</Text>
-                    <Text style={s.meta}>Due {formatDate(item.due_date)}</Text>
-                    {item.attachment_url ? (
-                      <Text style={[s.meta, { color: theme.primary }]}>📎 Attachment attached</Text>
-                    ) : null}
-                  </>
-                }
-                right={
-                  <Text style={{ fontWeight: "600" }}>
-                    {item.submitted_count}/{item.total_students}
-                  </Text>
-                }
-              />
-            </Pressable>
+        list.data!.map((item) => {
+          const ratio = item.total_students > 0 ? (item.submitted_count / item.total_students) * 100 : 0;
+          const isExpanded = open === item.id;
 
-            {open === item.id && (
-              <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: theme.rule, paddingTop: 10 }}>
-                <Text style={[s.meta, { fontWeight: "600", marginBottom: 8 }]}>Student Submissions & Grading</Text>
-                {(submissions.data ?? []).map((sub) => {
-                  const subIdentifier = sub.id ?? sub.enrolment_id ?? sub.student_id;
-                  const isGradingThis = gradingSubId === subIdentifier;
-                  return (
+          return (
+            <Card key={item.id}>
+              <Pressable onPress={() => setOpen(isExpanded ? null : item.id)}>
+                {/* Header Pills: Subject, Class, Due Date */}
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <View style={{ flexDirection: "row", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                     <View
-                      key={sub.student_id}
                       style={{
-                        paddingVertical: 8,
-                        borderBottomWidth: 1,
-                        borderBottomColor: theme.rule,
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                        borderRadius: theme.radius.pill,
+                        backgroundColor: theme.primarySoft,
                       }}
                     >
-                      <Row
-                        left={
-                          <>
-                            <Text style={s.title}>
-                              {sub.roll_no}. {sub.full_name}
-                            </Text>
-                            {sub.answer_text ? (
-                              <Text style={s.meta} numberOfLines={2}>
-                                {sub.answer_text}
-                              </Text>
-                            ) : null}
-                            {sub.attachment_url ? (
-                              <Pressable onPress={() => sub.attachment_url && Linking.openURL(sub.attachment_url)}>
-                                <Text style={[s.meta, { color: theme.primary, textDecorationLine: "underline" }]}>
-                                  📎 View submitted work
-                                </Text>
-                              </Pressable>
-                            ) : null}
-                            {sub.marks !== null && sub.marks !== undefined ? (
-                              <Text style={{ fontSize: 12, color: theme.success, fontWeight: "600", marginTop: 2 }}>
-                                Graded: {Number(sub.marks)} marks {sub.remarks ? `(${sub.remarks})` : ""}
-                              </Text>
-                            ) : null}
-                          </>
-                        }
-                        right={
-                          <View style={{ alignItems: "flex-end", gap: 4 }}>
-                            {sub.submitted ? (
-                              <Pill status={sub.late ? "pending" : "submitted"} label={sub.late ? "Late" : "Submitted"} />
-                            ) : (
-                              <Pill status="absent" label="Not submitted" />
-                            )}
-                            {sub.submitted && (
-                              <Pressable
-                                onPress={() => {
-                                  if (isGradingThis) {
-                                    setGradingSubId(null);
-                                  } else {
-                                    setGradingSubId(subIdentifier);
-                                    setGradeMarks(sub.marks !== null && sub.marks !== undefined ? String(sub.marks) : "");
-                                    setGradeRemarks(sub.remarks ?? "");
-                                  }
-                                }}
-                                style={{
-                                  paddingHorizontal: 8,
-                                  paddingVertical: 3,
-                                  borderRadius: 4,
-                                  backgroundColor: theme.ground,
-                                }}
-                              >
-                                <Text style={{ fontSize: 11, color: theme.primary, fontWeight: "600" }}>
-                                  {isGradingThis ? "Cancel" : sub.marks != null ? "Edit Grade" : "Grade"}
-                                </Text>
-                              </Pressable>
-                            )}
-                          </View>
-                        }
-                      />
-
-                      {isGradingThis && (
-                        <View
-                          style={{
-                            marginTop: 8,
-                            padding: 10,
-                            backgroundColor: theme.ground,
-                            borderRadius: theme.radius.input,
-                            gap: 8,
-                          }}
-                        >
-                          <Text style={{ fontSize: 12, fontWeight: "600", color: theme.ink }}>
-                            Evaluate {sub.full_name}'s Submission
-                          </Text>
-                          <TextInput
-                            style={[s.input, { backgroundColor: theme.surface }]}
-                            placeholder="Marks (e.g. 8.5)"
-                            placeholderTextColor={theme.inkFaint}
-                            keyboardType="numeric"
-                            value={gradeMarks}
-                            onChangeText={setGradeMarks}
-                          />
-                          <TextInput
-                            style={[s.input, { backgroundColor: theme.surface }]}
-                            placeholder="Teacher Remarks / Feedback"
-                            placeholderTextColor={theme.inkFaint}
-                            value={gradeRemarks}
-                            onChangeText={setGradeRemarks}
-                          />
-                          <Button
-                            label={saveGrade.isPending ? "Saving..." : "Save Grade"}
-                            onPress={() =>
-                              saveGrade.mutate({
-                                subId: subIdentifier,
-                                marks: gradeMarks.trim() !== "" ? Number(gradeMarks) : null,
-                                remarks: gradeRemarks.trim() || null,
-                              })
-                            }
-                            disabled={saveGrade.isPending}
-                          />
-                        </View>
-                      )}
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: theme.primary }}>{item.subject}</Text>
                     </View>
-                  );
-                })}
-              </View>
-            )}
-          </Card>
-        ))
+                    <View
+                      style={{
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                        borderRadius: theme.radius.pill,
+                        backgroundColor: theme.ground,
+                        borderWidth: 1,
+                        borderColor: theme.rule,
+                      }}
+                    >
+                      <Text style={{ fontSize: 11, fontWeight: "600", color: theme.inkSoft }}>{item.class_label}</Text>
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 11, color: theme.inkFaint }}>Due {formatDate(item.due_date)}</Text>
+                </View>
+
+                {/* Title */}
+                <Text style={[s.title, { fontSize: 15, color: theme.ink, marginBottom: 8 }]}>{item.title}</Text>
+
+                {item.attachment_url ? (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 }}>
+                    <Ionicons name="attach" size={14} color={theme.primary} />
+                    <Text style={{ fontSize: 11, color: theme.primary, fontWeight: "500" }}>Attachment attached</Text>
+                  </View>
+                ) : null}
+
+                {/* Submission Progress Bar */}
+                <View style={{ marginTop: 4 }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <Text style={{ fontSize: 11, color: theme.inkFaint }}>Submissions</Text>
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: theme.ink }}>
+                      {item.submitted_count} / {item.total_students} ({Math.round(ratio)}%)
+                    </Text>
+                  </View>
+                  <View style={{ height: 6, borderRadius: 3, backgroundColor: theme.rule, overflow: "hidden" }}>
+                    <View
+                      style={{
+                        width: `${Math.min(100, ratio)}%`,
+                        height: "100%",
+                        backgroundColor: ratio === 100 ? theme.success : theme.primary,
+                        borderRadius: 3,
+                      }}
+                    />
+                  </View>
+                </View>
+
+                <View style={{ flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 4, marginTop: 10 }}>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: theme.primary }}>
+                    {isExpanded ? "Hide Submissions" : "View Submissions"}
+                  </Text>
+                  <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={14} color={theme.primary} />
+                </View>
+              </Pressable>
+
+              {isExpanded && (
+                <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: theme.rule, paddingTop: 10 }}>
+                  <Text style={[s.meta, { fontWeight: "700", color: theme.ink, marginBottom: 8 }]}>Student Submissions & Grading</Text>
+                  {(submissions.data ?? []).map((sub) => {
+                    const subIdentifier = sub.id ?? sub.enrolment_id ?? sub.student_id;
+                    const isGradingThis = gradingSubId === subIdentifier;
+                    return (
+                      <View
+                        key={sub.student_id}
+                        style={{
+                          paddingVertical: 10,
+                          borderBottomWidth: 1,
+                          borderBottomColor: theme.rule,
+                        }}
+                      >
+                        <Row
+                          left={
+                            <View style={{ flex: 1, marginRight: 8 }}>
+                              <Text style={[s.title, { fontSize: 13, color: theme.ink }]}>
+                                {sub.roll_no}. {sub.full_name}
+                              </Text>
+                              {sub.answer_text ? (
+                                <Text style={[s.meta, { marginTop: 2 }]} numberOfLines={2}>
+                                  {sub.answer_text}
+                                </Text>
+                              ) : null}
+                              {sub.attachment_url ? (
+                                <Pressable onPress={() => sub.attachment_url && Linking.openURL(sub.attachment_url)} style={{ marginTop: 4 }}>
+                                  <Text style={[s.meta, { color: theme.primary, textDecorationLine: "underline" }]}>
+                                    📎 View submitted work
+                                  </Text>
+                                </Pressable>
+                              ) : null}
+                              {sub.marks !== null && sub.marks !== undefined ? (
+                                <Text style={{ fontSize: 11, color: theme.success, fontWeight: "700", marginTop: 4 }}>
+                                  ✓ Graded: {Number(sub.marks)} marks {sub.remarks ? `(${sub.remarks})` : ""}
+                                </Text>
+                              ) : null}
+                            </View>
+                          }
+                          right={
+                            <View style={{ alignItems: "flex-end", gap: 4 }}>
+                              {sub.submitted ? (
+                                <Pill status={sub.late ? "pending" : "submitted"} label={sub.late ? "Late" : "Submitted"} />
+                              ) : (
+                                <Pill status="absent" label="Not submitted" />
+                              )}
+                              {sub.submitted && (
+                                <Pressable
+                                  onPress={() => {
+                                    if (isGradingThis) {
+                                      setGradingSubId(null);
+                                    } else {
+                                      setGradingSubId(subIdentifier);
+                                      setGradeMarks(sub.marks !== null && sub.marks !== undefined ? String(sub.marks) : "");
+                                      setGradeRemarks(sub.remarks ?? "");
+                                    }
+                                  }}
+                                  style={{
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 4,
+                                    borderRadius: theme.radius.pill,
+                                    backgroundColor: theme.primarySoft,
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 11, color: theme.primary, fontWeight: "700" }}>
+                                    {isGradingThis ? "Cancel" : sub.marks != null ? "Edit Grade" : "Grade"}
+                                  </Text>
+                                </Pressable>
+                              )}
+                            </View>
+                          }
+                        />
+
+                        {isGradingThis && (
+                          <View
+                            style={{
+                              marginTop: 8,
+                              padding: 12,
+                              backgroundColor: theme.ground,
+                              borderRadius: theme.radius.input,
+                              borderWidth: 1,
+                              borderColor: theme.rule,
+                              gap: 8,
+                            }}
+                          >
+                            <Text style={{ fontSize: 12, fontWeight: "700", color: theme.ink }}>
+                              Evaluate {sub.full_name}'s Submission
+                            </Text>
+                            <TextInput
+                              style={[s.input, { backgroundColor: theme.surface, marginBottom: 0 }]}
+                              placeholder="Marks (e.g. 8.5)"
+                              placeholderTextColor={theme.inkFaint}
+                              keyboardType="numeric"
+                              value={gradeMarks}
+                              onChangeText={setGradeMarks}
+                            />
+                            <TextInput
+                              style={[s.input, { backgroundColor: theme.surface, marginBottom: 0 }]}
+                              placeholder="Teacher Remarks / Feedback"
+                              placeholderTextColor={theme.inkFaint}
+                              value={gradeRemarks}
+                              onChangeText={setGradeRemarks}
+                            />
+                            <Button
+                              label={saveGrade.isPending ? "Saving..." : "Save Grade"}
+                              onPress={() =>
+                                saveGrade.mutate({
+                                  subId: subIdentifier,
+                                  marks: gradeMarks.trim() !== "" ? Number(gradeMarks) : null,
+                                  remarks: gradeRemarks.trim() || null,
+                                })
+                              }
+                              disabled={saveGrade.isPending}
+                            />
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            </Card>
+          );
+        })
       )}
     </Screen>
   );

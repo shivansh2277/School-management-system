@@ -117,11 +117,12 @@ def conflicts(
                     "slot_id": other.id,
                 }
             )
-        if room and other.room == room:
+        norm_room = room.strip().upper() if room and room.strip() else None
+        if norm_room and other.room and other.room.strip().upper() == norm_room:
             found.append(
                 {
                     "kind": "room",
-                    "detail": f"Room {room} is taken by {other.class_section.label} then",
+                    "detail": f"Room {other.room} is taken by {other.class_section.label} then",
                     "slot_id": other.id,
                 }
             )
@@ -160,6 +161,7 @@ def save_slot(
     """Place or move one lesson. Refuses a clash; a workload breach needs a
     reason, which is recorded rather than merely accepted."""
     school_id = actor.school_id
+    norm_room = room.strip().upper() if room and room.strip() else None
     problems = conflicts(
         db,
         school_id,
@@ -167,7 +169,7 @@ def save_slot(
         day_of_week=day_of_week,
         period_id=period_id,
         teacher_id=teacher_id,
-        room=room,
+        room=norm_room,
         exclude_slot_id=slot_id,
     )
     blocking = [p for p in problems if not p.get("overridable")]
@@ -186,32 +188,51 @@ def save_slot(
     # not the same question as "may this customer touch it". `delete_slot`
     # next door has always checked; this path did not.
     slot = None
+    is_new = True
+    before_state = None
     if slot_id:
         slot = db.get(TimetableSlot, slot_id)
         if slot is None or slot.school_id != school_id:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Timetable slot not found")
+        is_new = False
+        before_state = {
+            "class_section_id": slot.class_section_id,
+            "day_of_week": slot.day_of_week.value if hasattr(slot.day_of_week, "value") else str(slot.day_of_week),
+            "period_id": slot.period_id,
+            "subject_id": slot.subject_id,
+            "teacher_id": slot.teacher_id,
+            "room": slot.room,
+        }
     if slot is None:
-        slot = TimetableSlot(school_id=school_id)
+        slot = TimetableSlot(school_id=school_id, is_published=False)
         db.add(slot)
     slot.class_section_id = class_section_id
     slot.day_of_week = day_of_week
     slot.period_id = period_id
     slot.subject_id = subject_id
     slot.teacher_id = teacher_id
-    slot.room = room
+    slot.room = room.strip() if room and room.strip() else None
     db.flush()
 
-    if overridable:
-        audit.record(
-            db,
-            actor=actor,
-            school_id=school_id,
-            entity_type="timetable_slot",
-            entity_id=slot.id,
-            action=AuditAction.update,
-            after={"override": [p["detail"] for p in overridable], "reason": override_reason},
-        )
-    db.commit()
+    audit.record(
+        db,
+        actor=actor,
+        school_id=school_id,
+        entity_type="timetable_slot",
+        entity_id=slot.id,
+        action=AuditAction.create if is_new else AuditAction.update,
+        before=before_state,
+        after={
+            "class_section_id": class_section_id,
+            "day_of_week": day_of_week.value if hasattr(day_of_week, "value") else str(day_of_week),
+            "period_id": period_id,
+            "subject_id": subject_id,
+            "teacher_id": teacher_id,
+            "room": slot.room,
+            "override": [p["detail"] for p in overridable] if overridable else None,
+        },
+        reason=override_reason,
+    )
     return slot
 
 
@@ -234,6 +255,7 @@ def slot_out(
         "class_label": slot.class_section.label if slot.class_section else "",
         "day_of_week": slot.day_of_week.value if hasattr(slot.day_of_week, "value") else str(slot.day_of_week),
         "period": slot.period.period_no if slot.period else 0,
+        "period_id": slot.period_id,
         "start_time": slot.period.start_time if slot.period else None,
         "end_time": slot.period.end_time if slot.period else None,
         "subject": subj.name if subj else "",
@@ -241,6 +263,7 @@ def slot_out(
         "teacher": emp.user.full_name if emp and emp.user else "",
         "teacher_id": slot.teacher_id,
         "room": slot.room,
+        "is_published": getattr(slot, "is_published", False),
         "is_relief": bool(relief_name),
         "relief_teacher": relief_name,
     }
@@ -253,9 +276,12 @@ def grid(
     teacher_id: int | None = None,
     day_of_week: DayOfWeek | str | None = None,
     target_date: Date | None = None,
+    published_only: bool = False,
 ) -> list[dict]:
     today = target_date or Date.today()
     q = select(TimetableSlot).where(TimetableSlot.school_id == school_id)
+    if published_only:
+        q = q.where(TimetableSlot.is_published.is_(True))
     if class_section_id is not None:
         q = q.where(TimetableSlot.class_section_id == class_section_id)
     if teacher_id is not None:
@@ -500,6 +526,7 @@ def arrange(
             Substitution.timetable_slot_id == slot.id, Substitution.date == on
         )
     )
+    is_new = row is None
     if row is None:
         row = Substitution(
             school_id=actor.school_id,
@@ -514,6 +541,23 @@ def arrange(
         SubstitutionStatus.assigned
         if substitute_teacher_id is not None
         else SubstitutionStatus.unfilled
+    )
+    db.flush()
+    audit.record(
+        db,
+        actor=actor,
+        school_id=actor.school_id,
+        entity_type="substitution",
+        entity_id=row.id,
+        action=AuditAction.create if is_new else AuditAction.update,
+        after={
+            "slot_id": slot.id,
+            "date": str(on),
+            "absent_teacher_id": slot.teacher_id,
+            "substitute_teacher_id": substitute_teacher_id,
+            "reason": reason,
+            "status": row.status.value if hasattr(row.status, "value") else str(row.status),
+        },
     )
     db.commit()
     return row
@@ -603,3 +647,37 @@ def day_plan(db: Session, school_id: int, on: Date) -> list[dict]:
             row["substituted"] = False
         out.append(row)
     return sorted(out, key=lambda r: (r["period"], r["class_label"]))
+
+
+def publish_timetable(
+    db: Session, school_id: int, class_section_id: int | None = None
+) -> int:
+    """Publish draft timetable slots so they become visible to students, parents, and teachers."""
+    q = select(TimetableSlot).where(
+        TimetableSlot.school_id == school_id,
+        TimetableSlot.is_published.is_(False),
+    )
+    if class_section_id is not None:
+        q = q.where(TimetableSlot.class_section_id == class_section_id)
+    slots = list(db.scalars(q))
+    for s in slots:
+        s.is_published = True
+    db.flush()
+    return len(slots)
+
+
+def unpublish_timetable(
+    db: Session, school_id: int, class_section_id: int | None = None
+) -> int:
+    """Revert timetable slots back to draft status."""
+    q = select(TimetableSlot).where(
+        TimetableSlot.school_id == school_id,
+        TimetableSlot.is_published.is_(True),
+    )
+    if class_section_id is not None:
+        q = q.where(TimetableSlot.class_section_id == class_section_id)
+    slots = list(db.scalars(q))
+    for s in slots:
+        s.is_published = False
+    db.flush()
+    return len(slots)

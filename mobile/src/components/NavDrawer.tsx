@@ -18,7 +18,7 @@ import { useTranslation } from "../i18n/I18nContext";
 import { theme } from "../theme";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.82, 340);
+const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.84, 340);
 
 type MenuItem = {
   id: string;
@@ -87,7 +87,7 @@ export function NavDrawer({
     Alert.alert(
       "Sunrise ERP Helpdesk",
       "For student credentials, fee ledger disputes, or tech support:\n\nEmail: office@sunrisepublic.edu\nPhone: +91 (0522) 234-5678\nHours: Mon–Sat, 8:00 AM – 3:30 PM",
-      [{ text: "OK" }],
+      [{ text: "OK" }]
     );
   };
 
@@ -95,7 +95,7 @@ export function NavDrawer({
     Alert.alert(
       "Settings & Preferences",
       "Academic Year: 2025-26\nSystem Language: English (CBSE)\nNotifications: Enabled\nApp Cache: Up to date",
-      [{ text: "Done" }],
+      [{ text: "Done" }]
     );
   };
 
@@ -148,22 +148,29 @@ export function NavDrawer({
           path: "/(parent)/timetable",
         },
         {
-          id: "p_homework",
-          title: t("nav_homework"),
-          icon: "book-outline",
-          path: "/(parent)/homework",
-        },
-        {
           id: "p_attendance",
           title: t("nav_attendance"),
           icon: "checkbox-outline",
           path: "/(parent)/attendance",
         },
         {
+          id: "p_homework",
+          title: t("nav_homework"),
+          icon: "book-outline",
+          path: "/(parent)/homework",
+        },
+        {
           id: "p_results",
           title: t("nav_results"),
           icon: "school-outline",
           path: "/(parent)/results",
+        },
+        {
+          id: "p_todays_class",
+          title: "Today's Class",
+          icon: "newspaper-outline",
+          disabled: true,
+          badge: "Coming Soon",
         },
       ],
     });
@@ -183,18 +190,11 @@ export function NavDrawer({
           path: "/(parent)/grievances",
         },
         {
-          id: "p_call_teacher",
-          title: t("call_teacher_coming_soon"),
-          icon: "call-outline",
+          id: "p_teacher_chat",
+          title: "Teacher Chat",
+          icon: "chatbubbles-outline",
           disabled: true,
-          badge: t("coming_soon_badge"),
-        },
-        {
-          id: "p_message_teacher",
-          title: t("message_teacher_coming_soon"),
-          icon: "chatbubble-ellipses-outline",
-          disabled: true,
-          badge: t("coming_soon_badge"),
+          badge: "Coming Soon",
         },
       ],
     });
@@ -424,8 +424,8 @@ export function NavDrawer({
     });
   }
 
-  const roleLabel =
-    role === "parent" ? "Parent" : role === "teacher" ? "Faculty" : "Student";
+  const roleBadgeLabel =
+    role === "parent" ? "PARENT" : role === "teacher" ? "FACULTY" : "STUDENT";
   const initials = getInitials(me?.user.full_name);
   const children = me?.children ?? [];
 
@@ -437,7 +437,6 @@ export function NavDrawer({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        {/* Semi-transparent backdrop */}
         <Pressable
           style={styles.backdrop}
           onPress={onClose}
@@ -452,7 +451,7 @@ export function NavDrawer({
             { paddingTop: Math.max(insets.top, 16), paddingBottom: Math.max(insets.bottom, 16) },
           ]}
         >
-          {/* Header with User Profile & Top-Right Red X */}
+          {/* Header with User Profile matching Stitch Screens 25 & 30 */}
           <View style={styles.header}>
             <View style={styles.profileRow}>
               <View style={styles.avatar}>
@@ -463,15 +462,19 @@ export function NavDrawer({
                   <Text style={styles.userName} numberOfLines={1}>
                     {me?.user.full_name ?? "Sunrise User"}
                   </Text>
+                </View>
+                <View style={styles.roleRow}>
                   <View style={styles.roleBadge}>
-                    <Text style={styles.roleBadgeText}>{roleLabel}</Text>
+                    <Text style={styles.roleBadgeText}>{roleBadgeLabel}</Text>
+                  </View>
+                  <View style={styles.statusIndicatorBox}>
+                    <View style={styles.pulseDot} />
+                    <Text style={styles.statusText}>ACTIVE</Text>
                   </View>
                 </View>
-                <Text style={styles.schoolName}>Sunrise Public School</Text>
               </View>
             </View>
 
-            {/* Red X Close Button */}
             <Pressable
               onPress={onClose}
               style={styles.closeBtn}
@@ -479,18 +482,18 @@ export function NavDrawer({
               accessibilityRole="button"
               accessibilityLabel="Close"
             >
-              <Ionicons name="close" size={22} color="#ef4444" />
+              <Ionicons name="close" size={20} color={theme.inkSoft} />
             </Pressable>
           </View>
 
-          {/* Child Switcher in Drawer (for Parents with multiple children) */}
+          {/* Child Switcher in Drawer (Parent Role) */}
           {role === "parent" && children.length > 1 && (
             <View style={styles.childSwitcherBox}>
-              <Text style={styles.childSwitcherLabel}>ACTIVE CHILD</Text>
+              <Text style={styles.childSwitcherLabel}>SELECT WARD</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 6, paddingTop: 4 }}
+                contentContainerStyle={{ gap: 8, paddingTop: 4 }}
               >
                 {children.map((c) => {
                   const on = c.id === selectedChildId;
@@ -503,6 +506,11 @@ export function NavDrawer({
                         on ? styles.childChipActive : styles.childChipInactive,
                       ]}
                     >
+                      <Ionicons
+                        name={on ? "school" : "school-outline"}
+                        size={14}
+                        color={on ? "#FFFFFF" : theme.inkSoft}
+                      />
                       <Text
                         style={[
                           styles.childChipText,
@@ -544,7 +552,7 @@ export function NavDrawer({
                       <View style={[styles.itemIconBox, isDisabled && styles.itemIconBoxDisabled]}>
                         <Ionicons
                           name={item.icon}
-                          size={20}
+                          size={18}
                           color={isDisabled ? theme.inkFaint : theme.primary}
                         />
                       </View>
@@ -560,8 +568,8 @@ export function NavDrawer({
                         </View>
                       ) : (
                         <Ionicons
-                          name="chevron-forward-outline"
-                          size={16}
+                          name="chevron-forward"
+                          size={15}
                           color={theme.inkFaint}
                         />
                       )}
@@ -572,7 +580,7 @@ export function NavDrawer({
             ))}
           </ScrollView>
 
-          {/* Drawer Footer with Language Switcher, App Version and Red Logout */}
+          {/* Drawer Footer */}
           <View style={styles.footer}>
             {role === "parent" && (
               <View style={styles.langSwitchContainer}>
@@ -607,11 +615,11 @@ export function NavDrawer({
               accessibilityRole="button"
               accessibilityLabel="Logout"
             >
-              <Ionicons name="log-out-outline" size={20} color="#ef4444" />
+              <Ionicons name="log-out-outline" size={18} color={theme.danger} />
               <Text style={styles.logoutText}>{role === "parent" ? t("nav_sign_out") : "Logout"}</Text>
             </Pressable>
 
-            <Text style={styles.versionText}>Sunrise ERP • v1.0.0</Text>
+            <Text style={styles.versionText}>Sunrise School ERP • EdTech Luxe</Text>
           </View>
         </View>
       </View>
@@ -620,45 +628,10 @@ export function NavDrawer({
 }
 
 const styles = StyleSheet.create({
-  langSwitchContainer: {
-    marginBottom: 10,
-    gap: 4,
-  },
-  langSwitchLabel: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: theme.inkFaint,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  langSwitchPills: {
-    flexDirection: "row",
-    backgroundColor: theme.ground,
-    borderRadius: theme.radius.input,
-    padding: 3,
-    gap: 4,
-  },
-  langPill: {
-    flex: 1,
-    paddingVertical: 5,
-    alignItems: "center",
-    borderRadius: theme.radius.input - 2,
-  },
-  langPillActive: {
-    backgroundColor: theme.primary,
-  },
-  langPillText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: theme.inkSoft,
-  },
-  langPillTextActive: {
-    color: "#fff",
-  },
   overlay: {
     flex: 1,
     flexDirection: "row",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
   },
   backdrop: {
     position: "absolute",
@@ -671,19 +644,15 @@ const styles = StyleSheet.create({
     width: DRAWER_WIDTH,
     backgroundColor: theme.surface,
     height: "100%",
-    elevation: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 4, height: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
+    ...theme.shadow.elevated,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 18,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
     borderBottomColor: theme.rule,
   },
   profileRow: {
@@ -691,180 +660,247 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
     paddingRight: 8,
-    gap: 10,
+    gap: 12,
   },
   avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     backgroundColor: theme.primary,
     alignItems: "center",
     justifyContent: "center",
+    ...theme.shadow.subtle,
   },
   avatarText: {
-    color: "#fff",
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "800",
   },
   profileInfo: {
     flex: 1,
-    gap: 2,
+    gap: 3,
   },
   nameBadgeRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    flexWrap: "wrap",
   },
   userName: {
     fontSize: 15,
     fontWeight: "700",
     color: theme.ink,
-    maxWidth: 130,
+    letterSpacing: -0.2,
+  },
+  roleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   roleBadge: {
-    backgroundColor: `${theme.primary}1A`,
+    backgroundColor: theme.primarySoft,
     paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingVertical: 1.5,
     borderRadius: 6,
   },
   roleBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
+    fontSize: 9.5,
+    fontWeight: "800",
     color: theme.primary,
-    textTransform: "uppercase",
+    letterSpacing: 0.4,
   },
-  schoolName: {
-    fontSize: 11,
-    color: theme.inkFaint,
+  statusIndicatorBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  pulseDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: theme.successCore,
+  },
+  statusText: {
+    fontSize: 9.5,
+    fontWeight: "700",
+    color: theme.success,
   },
   closeBtn: {
-    padding: 6,
-    borderRadius: 20,
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: theme.groundAlt,
     alignItems: "center",
     justifyContent: "center",
   },
   childSwitcherBox: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
     backgroundColor: theme.ground,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 1,
     borderBottomColor: theme.rule,
   },
   childSwitcherLabel: {
     fontSize: 10,
-    fontWeight: "700",
+    fontWeight: "800",
     letterSpacing: 0.8,
     color: theme.inkFaint,
   },
   childChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: theme.radius.pill,
   },
   childChipActive: {
     backgroundColor: theme.primary,
+    ...theme.shadow.subtle,
   },
   childChipInactive: {
     backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: theme.rule,
+    borderColor: theme.ruleStrong,
   },
   childChipText: {
-    fontSize: 11,
+    fontSize: 11.5,
   },
   childChipTextActive: {
-    color: "#fff",
-    fontWeight: "600",
+    color: "#FFFFFF",
+    fontWeight: "700",
   },
   childChipTextInactive: {
     color: theme.inkSoft,
+    fontWeight: "600",
   },
   menuScroll: {
     flex: 1,
   },
   menuContent: {
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   section: {
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1,
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 0.8,
     color: theme.inkFaint,
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     marginBottom: 6,
     textTransform: "uppercase",
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 11,
+    paddingHorizontal: 18,
+    paddingVertical: 9.5,
     gap: 12,
   },
   menuItemDisabled: {
-    opacity: 0.55,
+    opacity: 0.5,
   },
   menuItemPressed: {
     backgroundColor: theme.ground,
   },
   itemIconBox: {
-    width: 28,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: theme.primarySoft,
     alignItems: "center",
     justifyContent: "center",
   },
   itemIconBoxDisabled: {
-    opacity: 0.8,
+    backgroundColor: theme.groundAlt,
   },
   itemTitle: {
     flex: 1,
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: 13.5,
+    fontWeight: "600",
     color: theme.ink,
+    letterSpacing: -0.1,
   },
   itemTitleDisabled: {
     color: theme.inkFaint,
   },
   comingSoonBadge: {
-    backgroundColor: `${theme.primary}18`,
+    backgroundColor: theme.primarySoft,
     borderWidth: 1,
-    borderColor: `${theme.primary}33`,
+    borderColor: "rgba(67, 56, 202, 0.2)",
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: theme.radius.pill,
   },
   comingSoonText: {
-    fontSize: 10,
-    fontWeight: "600",
+    fontSize: 9.5,
+    fontWeight: "700",
     color: theme.primary,
   },
   footer: {
-    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopWidth: 1,
     borderTopColor: theme.rule,
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     paddingTop: 12,
     gap: 10,
+  },
+  langSwitchContainer: {
+    marginBottom: 4,
+    gap: 6,
+  },
+  langSwitchLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: theme.inkFaint,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  langSwitchPills: {
+    flexDirection: "row",
+    backgroundColor: theme.ground,
+    borderRadius: 10,
+    padding: 3,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: theme.ruleStrong,
+  },
+  langPill: {
+    flex: 1,
+    paddingVertical: 6,
+    alignItems: "center",
+    borderRadius: 8,
+  },
+  langPillActive: {
+    backgroundColor: theme.surface,
+    ...theme.shadow.subtle,
+  },
+  langPillText: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: theme.inkSoft,
+  },
+  langPillTextActive: {
+    color: theme.primary,
+    fontWeight: "700",
   },
   logoutBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "rgba(239, 68, 68, 0.08)",
-    paddingVertical: 10,
+    backgroundColor: theme.dangerBg,
+    borderWidth: 1,
+    borderColor: "rgba(225, 29, 72, 0.15)",
+    paddingVertical: 11,
     borderRadius: theme.radius.input,
   },
   logoutText: {
-    color: "#ef4444",
-    fontSize: 14,
+    color: theme.danger,
+    fontSize: 13.5,
     fontWeight: "700",
   },
   versionText: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: theme.inkFaint,
     textAlign: "center",
   },

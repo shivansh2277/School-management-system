@@ -149,10 +149,30 @@ def main():
             badge_color=(217, 119, 6)
         )
 
-        # C. Combined image
+        # C. Standalone Android APK QR Code
+        apk_download_url = "https://expo.dev/artifacts/eas/WpvEepEkhGN4NRYntwo_YxI_pPdrP4U8T40UQtSDPmM.apk"
+        qr_apk = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=8,
+            border=2,
+        )
+        qr_apk.add_data(apk_download_url)
+        qr_apk.make(fit=True)
+        img_apk_raw = qr_apk.make_image(fill_color="#042954", back_color="white").convert("RGB")
+        card_apk = create_card_image(
+            img_apk_raw,
+            title="Sunrise ERP - Standalone APK",
+            subtitle="Android Release APK",
+            target_url="expo.dev/artifacts/eas/...apk",
+            badge_text="APK v1.0.1",
+            badge_color=(16, 185, 129)
+        )
+
+        # D. Combined image
         gap = 20
-        combined_w = card_web.width + card_expo.width + gap + 40
-        combined_h = max(card_web.height, card_expo.height) + 85
+        combined_w = card_web.width + card_expo.width + card_apk.width + gap * 2 + 40
+        combined_h = max(card_web.height, card_expo.height, card_apk.height) + 85
         combined = Image.new("RGB", (combined_w, combined_h), (248, 250, 252))
         draw_comb = ImageDraw.Draw(combined)
         
@@ -167,42 +187,37 @@ def main():
         # Paste cards
         combined.paste(card_web, (20, 65))
         combined.paste(card_expo, (20 + card_web.width + gap, 65))
+        combined.paste(card_apk, (20 + card_web.width + gap + card_expo.width + gap, 65))
 
         # Save paths
         root_web_qr = root_dir / "website_qr_code.png"
         root_expo_qr = root_dir / "expo_qr_code.png"
+        root_apk_qr = root_dir / "apk_download_qr.png"
         root_combined_qr = root_dir / "combined_qr_codes.png"
 
         card_web.save(root_web_qr)
         card_expo.save(root_expo_qr)
+        card_apk.save(root_apk_qr)
         combined.save(root_combined_qr)
+
+        # Also save to parent workspace root
+        parent_root = root_dir.parent
+        card_web.save(parent_root / "website_qr_code.png")
+        card_expo.save(parent_root / "expo_qr_code.png")
+        card_apk.save(parent_root / "apk_download_qr.png")
+        combined.save(parent_root / "combined_qr_codes.png")
 
         # Also save to web/public
         web_public = root_dir / "web" / "public"
         if web_public.exists():
             card_web.save(web_public / "website_qr_code.png")
             card_expo.save(web_public / "expo_qr_code.png")
+            card_apk.save(web_public / "apk_download_qr.png")
             combined.save(web_public / "combined_qr_codes.png")
-
-        # Copy to brain artifact directory if present
-        current_brain = Path(r"C:\Users\SHIVANSH\.gemini\antigravity\brain\3440cd6b-87e9-4ca5-9ed1-6cfa2320f638")
-        if current_brain.exists():
-            card_web.save(current_brain / "website_qr_code.png")
-            card_expo.save(current_brain / "expo_qr_code.png")
-            combined.save(current_brain / "combined_qr_codes.png")
-        brain_base = Path(r"C:\Users\SHIVANSH\.gemini\antigravity\brain")
-        if brain_base.exists():
-            for d in brain_base.iterdir():
-                if d.is_dir():
-                    try:
-                        card_web.save(d / "website_qr_code.png")
-                        card_expo.save(d / "expo_qr_code.png")
-                        combined.save(d / "combined_qr_codes.png")
-                    except Exception:
-                        pass
 
         print(f" [OK] Saved Website QR Code : {root_web_qr}")
         print(f" [OK] Saved Mobile App QR Code: {root_expo_qr}")
+        print(f" [OK] Saved APK Download QR Code: {root_apk_qr}")
         print(f" [OK] Saved Combined QR Image : {root_combined_qr}")
 
     except Exception as e:
@@ -283,26 +298,62 @@ def main():
           <li><strong>Backend API Docs:</strong> <br><a href="http://localhost:8000/docs" target="_blank">http://localhost:8000/docs &rarr;</a></li>
         </ul>
       </div>
+
+      <!-- Standalone Production APK Card -->
+      <div class="card">
+        <h2>Standalone Android APK <span class="badge badge-green">Release v1.0.1</span></h2>
+        <p style="font-size: 13px; color: #64748b;">Direct installable APK for Android phones (Offline Hermes engine, zero Expo Go required):</p>
+        <div class="qr-container">
+          <img src="apk_download_qr.png" alt="APK Download QR Code">
+        </div>
+        <ul class="link-list">
+          <li><strong>Direct Download Link:</strong> <br><a href="{apk_download_url}" target="_blank" style="background: #042954; color: #fff; padding: 6px 14px; border-radius: 6px; font-size: 12px; text-decoration: none; margin-top: 4px; display: inline-block;">Download APK (88 MB) &darr;</a></li>
+          <li><strong>Package ID:</strong> <br><code>edu.sunrisepublic.app</code> (VersionCode: 2)</li>
+          <li><strong>Cloud Backend:</strong> <br><a href="https://school-management-system-12ks.onrender.com" target="_blank">Render Live Backend &rarr;</a></li>
+        </ul>
+      </div>
     </div>
 
     <!-- Credentials Card -->
-    <div class="card">
-      <h2>Default Demo Credentials <span class="badge badge-green">Unified Password: Admin@123</span></h2>
-      <div class="credentials">
-        <table>
-          <thead>
-            <tr><th>Role</th><th>Login Email</th><th>Password</th><th>Scope & Features</th></tr>
-          </thead>
-          <tbody>
-            <tr><td><strong>Admin / Management</strong></td><td><code>admin@sunrisepublic.edu</code></td><td><code>Admin@123</code></td><td>Full ERP Access (All Modules, Exceptions, Settings)</td></tr>
-            <tr><td><strong>Librarian</strong></td><td><code>librarian@sunrisepublic.edu</code></td><td><code>Admin@123</code></td><td>Library Catalogue & Circulation Desk, Notices</td></tr>
-            <tr><td><strong>Admission Officer</strong></td><td><code>admission@sunrisepublic.edu</code></td><td><code>Admin@123</code></td><td>Enquiries, Applications, Exceptions, Merit, Reports</td></tr>
-            <tr><td><strong>Front Desk Receptionist</strong></td><td><code>receptionist@sunrisepublic.edu</code></td><td><code>Admin@123</code></td><td>Enquiries, Gate Passes, Visitors, Directory</td></tr>
-            <tr><td><strong>Senior Teacher</strong></td><td><code>anita@sunrisepublic.edu</code></td><td><code>Admin@123</code></td><td>Attendance, Marks Entry, Homework Grading</td></tr>
-            <tr><td><strong>Parent</strong></td><td><code>parent@sunrisepublic.edu</code></td><td><code>Admin@123</code></td><td>Fee Ledger, Attendance, CBSE Report Card</td></tr>
-            <tr><td><strong>Student</strong></td><td><code>student@sunrisepublic.edu</code></td><td><code>Admin@123</code></td><td>Timetable, Homework Turn-in, Results</td></tr>
-          </tbody>
-        </table>
+    <div class="card" style="grid-column: 1 / -1;">
+      <h2>Demo Login Credentials <span class="badge badge-green">Unified Password: Admin@123 / Role Passwords</span></h2>
+      
+      <div style="margin-top: 16px;">
+        <h3 style="font-size: 15px; color: #042954; margin-bottom: 8px;">1. Mobile App Credentials (Expo Go / Physical Phone)</h3>
+        <p style="font-size: 13px; color: #64748b; margin-bottom: 8px;">Switch between Teacher, Parent, and Student tabs on the mobile login screen:</p>
+        <div class="credentials">
+          <table>
+            <thead>
+              <tr><th>Role Tab</th><th>Login Identifier</th><th>Hint / Type</th><th>Password</th><th>Key Features</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><strong style="color: #4338ca;">Teacher</strong></td><td><code>TCH001</code></td><td>Teacher ID</td><td><code>Teacher@123</code></td><td>Attendance, Marks Entry, Homework Grading, Stock/Inventory</td></tr>
+              <tr><td><strong style="color: #0284c7;">Parent</strong></td><td><code>9876500001</code></td><td>Registered Mobile</td><td><code>Parent@123</code></td><td>CBSE Report Card, Direct UPI Fees, Attendance & Notices</td></tr>
+              <tr><td><strong style="color: #059669;">Student</strong></td><td><code>2024000001</code></td><td>Admission Number</td><td><code>Student@123</code></td><td>Timetable, Homework Turn-in, Subject Marks & Report Cards</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="margin-top: 24px;">
+        <h3 style="font-size: 15px; color: #042954; margin-bottom: 8px;">2. Web ERP Credentials (Desktop & Tablet)</h3>
+        <p style="font-size: 13px; color: #64748b; margin-bottom: 8px;">Log in at <a href="{web_url}/#/login" target="_blank">{web_url}/#/login</a> with email and password:</p>
+        <div class="credentials">
+          <table>
+            <thead>
+              <tr><th>Role</th><th>Login Email</th><th>Password</th><th>Scope & Access</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>Admin / Management</strong></td><td><code>admin@sunrisepublic.edu</code></td><td><code>Admin@123</code></td><td>Full ERP Access (All Modules, Exceptions, Settings)</td></tr>
+              <tr><td><strong>Librarian</strong></td><td><code>librarian@sunrisepublic.edu</code></td><td><code>Admin@123</code></td><td>Library Catalogue & Circulation Desk, Notices</td></tr>
+              <tr><td><strong>Admission Officer</strong></td><td><code>admission@sunrisepublic.edu</code></td><td><code>Admin@123</code></td><td>Enquiries, Applications, Exceptions, Merit, Reports</td></tr>
+              <tr><td><strong>Front Desk Receptionist</strong></td><td><code>receptionist@sunrisepublic.edu</code></td><td><code>Admin@123</code></td><td>Enquiries, Gate Passes, Visitors, Directory</td></tr>
+              <tr><td><strong>Senior Teacher</strong></td><td><code>anita@sunrisepublic.edu</code></td><td><code>Admin@123</code></td><td>Attendance, Marks Entry, Homework Grading</td></tr>
+              <tr><td><strong>Parent</strong></td><td><code>parent@sunrisepublic.edu</code></td><td><code>Admin@123</code></td><td>Fee Ledger, Attendance, CBSE Report Card</td></tr>
+              <tr><td><strong>Student</strong></td><td><code>student@sunrisepublic.edu</code></td><td><code>Admin@123</code></td><td>Timetable, Homework Turn-in, Results</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>

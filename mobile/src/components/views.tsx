@@ -12,6 +12,14 @@ type AttendanceMonth = {
   summary: { present: number; absent: number; leave: number; percent: number | null };
 };
 
+const STATUS_CONF: Record<string, { bg: string; text: string; label: string }> = {
+  present: { bg: "#ECFDF5", text: "#059669", label: "P" },
+  absent: { bg: "#FFF1F2", text: "#E11D48", label: "A" },
+  late: { bg: "#FFFBEB", text: "#D97706", label: "L" },
+  leave: { bg: "#F5F3FF", text: "#7C3AED", label: "M" },
+  half_day: { bg: "#FFFBEB", text: "#D97706", label: "H" },
+};
+
 export function AttendanceView({ path }: { path: string }) {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -26,19 +34,67 @@ export function AttendanceView({ path }: { path: string }) {
 
   const byDay = new Map((data?.days ?? []).map((d) => [Number(d.date.slice(8, 10)), d.status]));
   const daysInMonth = new Date(year, month, 0).getDate();
+  const pct = data?.summary.percent ?? null;
+  const isShortage = pct !== null && pct < 75;
 
   return (
     <Screen>
+      {/* 4-Stat Monthly Metric Breakdown */}
+      {data && (
+        <Card title="Monthly Summary">
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <View style={{ alignItems: "center", flex: 1 }}>
+              <Text style={{ fontSize: 11, fontWeight: "600", color: "#059669", textTransform: "uppercase" }}>Present</Text>
+              <Text style={{ fontSize: 20, fontWeight: "800", color: "#059669", marginTop: 2 }}>{data.summary.present}</Text>
+            </View>
+            <View style={{ width: 1, height: 28, backgroundColor: theme.rule }} />
+            <View style={{ alignItems: "center", flex: 1 }}>
+              <Text style={{ fontSize: 11, fontWeight: "600", color: "#E11D48", textTransform: "uppercase" }}>Absent</Text>
+              <Text style={{ fontSize: 20, fontWeight: "800", color: "#E11D48", marginTop: 2 }}>{data.summary.absent}</Text>
+            </View>
+            <View style={{ width: 1, height: 28, backgroundColor: theme.rule }} />
+            <View style={{ alignItems: "center", flex: 1 }}>
+              <Text style={{ fontSize: 11, fontWeight: "600", color: "#7C3AED", textTransform: "uppercase" }}>Leave</Text>
+              <Text style={{ fontSize: 20, fontWeight: "800", color: "#7C3AED", marginTop: 2 }}>{data.summary.leave}</Text>
+            </View>
+            <View style={{ width: 1, height: 28, backgroundColor: theme.rule }} />
+            <View style={{ alignItems: "center", flex: 1 }}>
+              <Text style={{ fontSize: 11, fontWeight: "600", color: theme.inkFaint, textTransform: "uppercase" }}>Overall</Text>
+              <Text style={{ fontSize: 20, fontWeight: "800", color: isShortage ? theme.danger : theme.success, marginTop: 2 }}>
+                {pct === null ? "-" : `${pct}%`}
+              </Text>
+            </View>
+          </View>
+        </Card>
+      )}
+
+      {/* Calendar Card */}
       <Card>
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Pressable onPress={() => setMonth((m) => (m === 1 ? 12 : m - 1))}>
-            <Text style={{ color: theme.primary, fontWeight: "600" }}>Previous</Text>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <Pressable
+            onPress={() => setMonth((m) => (m === 1 ? 12 : m - 1))}
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              borderRadius: theme.radius.pill,
+              backgroundColor: theme.ground,
+            }}
+          >
+            <Text style={{ color: theme.primary, fontWeight: "700", fontSize: 12 }}>← Prev</Text>
           </Pressable>
-          <Text style={{ fontWeight: "600" }}>
+          <Text style={{ fontWeight: "800", fontSize: 15, color: theme.ink }}>
             {new Date(year, month - 1).toLocaleString("en", { month: "long" })} {year}
           </Text>
-          <Pressable onPress={() => setMonth((m) => (m === 12 ? 1 : m + 1))}>
-            <Text style={{ color: theme.primary, fontWeight: "600" }}>Next</Text>
+          <Pressable
+            onPress={() => setMonth((m) => (m === 12 ? 1 : m + 1))}
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              borderRadius: theme.radius.pill,
+              backgroundColor: theme.ground,
+            }}
+          >
+            <Text style={{ color: theme.primary, fontWeight: "700", fontSize: 12 }}>Next →</Text>
           </Pressable>
         </View>
 
@@ -48,154 +104,51 @@ export function AttendanceView({ path }: { path: string }) {
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
             {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => {
               const status = byDay.get(d);
+              const conf = status ? STATUS_CONF[status] : null;
               return (
                 <View
                   key={d}
                   style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 8,
+                    width: 38,
+                    height: 42,
+                    borderRadius: theme.radius.input,
                     alignItems: "center",
                     justifyContent: "center",
-                    backgroundColor: status ? `${statusColor[status]}22` : theme.ground,
+                    backgroundColor: conf ? conf.bg : theme.ground,
+                    borderWidth: 1,
+                    borderColor: conf ? conf.text : theme.rule,
                   }}
                 >
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      color: status ? statusColor[status] : theme.inkFaint,
-                      fontWeight: status ? "600" : "400",
-                    }}
-                  >
-                    {d}
-                  </Text>
+                  <Text style={{ fontSize: 12, color: theme.ink, fontWeight: "700" }}>{d}</Text>
+                  {conf ? (
+                    <Text style={{ fontSize: 9, color: conf.text, fontWeight: "800", marginTop: 1 }}>{conf.label}</Text>
+                  ) : null}
                 </View>
               );
             })}
           </View>
         )}
-      </Card>
 
-      {data && (
-        <Card title="Summary">
-          <View style={{ flexDirection: "row" }}>
-            <Stat label="Present" value={data.summary.present} />
-            <Stat label="Absent" value={data.summary.absent} />
-            <Stat label="Leave" value={data.summary.leave} />
-            <Stat
-              label="Attendance"
-              value={data.summary.percent === null ? "-" : `${data.summary.percent}%`}
-            />
+        {/* Legend */}
+        <View style={{ flexDirection: "row", gap: 12, marginTop: 14, paddingTop: 10, borderTopWidth: 1, borderTopColor: theme.rule, flexWrap: "wrap" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#059669" }} />
+            <Text style={{ fontSize: 11, color: "#059669", fontWeight: "600" }}>Present</Text>
           </View>
-          <Text style={s.meta}>Leave counts against presence.</Text>
-        </Card>
-      )}
-    </Screen>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: number | string }) {
-  return (
-    <View style={{ flex: 1 }}>
-      <Text style={s.meta}>{label}</Text>
-      <Text style={{ fontSize: 18, fontWeight: "600", color: theme.ink }}>{value}</Text>
-    </View>
-  );
-}
-
-type ExamRow = { exam_id: number; name: string; term: string; overall_percent: number | null };
-type ReportCard = {
-  exam_name: string;
-  rows: {
-    subject: string;
-    marks_obtained: string | null;
-    max_marks: string;
-    percent: number | null;
-    grade: string | null;
-  }[];
-  total_obtained: string;
-  total_max: string;
-  overall_percent: number | null;
-  overall_grade: string | null;
-};
-
-export function ResultsView({ listPath, cardPath }: { listPath: string; cardPath: string }) {
-  const [openExam, setOpenExam] = useState<number | null>(null);
-  const exams = useQuery({
-    queryKey: ["results", listPath],
-    queryFn: () => api.get<ExamRow[]>(listPath),
-  });
-  const card = useQuery({
-    queryKey: ["report-card", cardPath, openExam],
-    queryFn: () => api.get<ReportCard>(`${cardPath}/${openExam}`),
-    enabled: openExam !== null,
-  });
-
-  if (exams.isLoading) return <Loading />;
-
-  return (
-    <Screen>
-      <Card title="Exams">
-        {(exams.data ?? []).length === 0 ? (
-          <Empty text="No results published yet." />
-        ) : (
-          exams.data!.map((e) => (
-            <Pressable key={e.exam_id} onPress={() => setOpenExam(e.exam_id)}>
-              <Row
-                left={
-                  <>
-                    <Text style={s.title}>{e.name}</Text>
-                    <Text style={s.meta}>{e.term}</Text>
-                  </>
-                }
-                right={
-                  <Text style={{ fontWeight: "600", color: theme.ink }}>
-                    {e.overall_percent === null ? "-" : `${e.overall_percent}%`}
-                  </Text>
-                }
-              />
-            </Pressable>
-          ))
-        )}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#E11D48" }} />
+            <Text style={{ fontSize: 11, color: "#E11D48", fontWeight: "600" }}>Absent</Text>
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#D97706" }} />
+            <Text style={{ fontSize: 11, color: "#D97706", fontWeight: "600" }}>Late</Text>
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#7C3AED" }} />
+            <Text style={{ fontSize: 11, color: "#7C3AED", fontWeight: "600" }}>Leave</Text>
+          </View>
+        </View>
       </Card>
-
-      {openExam !== null && card.data && (
-        <Card title={card.data.exam_name}>
-          {card.data.rows.map((r) => (
-            <Row
-              key={r.subject}
-              left={
-                <>
-                  <Text style={s.title}>{r.subject}</Text>
-                  <Text style={s.meta}>
-                    {r.marks_obtained === null
-                      ? "Absent - excluded from the total"
-                      : `${Number(r.marks_obtained)} / ${Number(r.max_marks)}`}
-                  </Text>
-                </>
-              }
-              right={
-                r.grade ? (
-                  <Pill label={`${r.grade} - ${r.percent}%`} />
-                ) : (
-                  <Text style={s.meta}>-</Text>
-                )
-              }
-            />
-          ))}
-          <Row
-            left={<Text style={{ fontWeight: "700" }}>Total</Text>}
-            right={
-              <Text style={{ fontWeight: "700" }}>
-                {Number(card.data.total_obtained)} / {Number(card.data.total_max)}
-                {card.data.overall_percent !== null
-                  ? `  ${card.data.overall_percent}% ${card.data.overall_grade}`
-                  : ""}
-              </Text>
-            }
-          />
-        </Card>
-      )}
     </Screen>
   );
 }
@@ -220,98 +173,34 @@ export function NoticesView({ path }: { path: string }) {
     <Screen>
       {(data ?? []).length === 0 ? (
         <Card>
-          <Empty text="No notices for you yet." />
+          <Empty text="No circulars or notices for you yet." />
         </Card>
       ) : (
         data!.map((n) => (
           <Card key={n.id}>
-            <Text style={{ fontWeight: "600", color: theme.ink }}>{n.title}</Text>
-            <Text style={{ color: theme.inkSoft, fontSize: 13 }}>{n.body}</Text>
-            <Text style={s.meta}>
-              {n.audience}
-              {n.class_label ? ` - ${n.class_label}` : ""} -{" "}
-              {new Date(n.published_at).toLocaleDateString()}
-            </Text>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <View
+                style={{
+                  paddingHorizontal: 8,
+                  paddingVertical: 2,
+                  borderRadius: theme.radius.pill,
+                  backgroundColor: theme.primarySoft,
+                }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: "700", color: theme.primary, textTransform: "capitalize" }}>
+                  {n.audience}
+                  {n.class_label ? ` • ${n.class_label}` : ""}
+                </Text>
+              </View>
+              <Text style={{ fontSize: 11, color: theme.inkFaint }}>
+                {new Date(n.published_at).toLocaleDateString()}
+              </Text>
+            </View>
+            <Text style={[s.title, { fontSize: 15, color: theme.ink, marginBottom: 4 }]}>{n.title}</Text>
+            <Text style={{ color: theme.inkSoft, fontSize: 13, lineHeight: 18 }}>{n.body}</Text>
           </Card>
         ))
       )}
-    </Screen>
-  );
-}
-
-type Slot = {
-  period: number;
-  day_of_week: string;
-  start_time: string;
-  end_time: string;
-  subject: string;
-  teacher: string;
-  room: string | null;
-  class_label: string;
-};
-
-const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat"];
-
-export function TimetableView({ path, showClass = false }: { path: string; showClass?: boolean }) {
-  const [day, setDay] = useState(DAYS[Math.min(new Date().getDay() - 1, 5)] ?? "mon");
-  const { data, isLoading } = useQuery({
-    queryKey: ["timetable", path],
-    queryFn: () => api.get<Slot[]>(path),
-  });
-  if (isLoading) return <Loading />;
-
-  const slots = (data ?? []).filter((s) => s.day_of_week === day);
-
-  return (
-    <Screen>
-      <View style={{ flexDirection: "row", gap: 6 }}>
-        {DAYS.map((d) => (
-          <Pressable
-            key={d}
-            onPress={() => setDay(d)}
-            style={{
-              flex: 1,
-              paddingVertical: 8,
-              borderRadius: theme.radius.input,
-              alignItems: "center",
-              backgroundColor: day === d ? theme.primary : theme.surface,
-            }}
-          >
-            <Text style={{ color: day === d ? "#fff" : theme.inkSoft, fontSize: 12 }}>
-              {d.toUpperCase()}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <Card>
-        {slots.length === 0 ? (
-          <Empty text="No periods scheduled for this day." />
-        ) : (
-          slots.map((slot) => (
-            <Row
-              key={`${slot.day_of_week}-${slot.period}-${slot.class_label}`}
-              left={
-                <>
-                  <Text style={s.title}>
-                    {slot.subject}
-                    {showClass ? ` - ${slot.class_label}` : ""}
-                  </Text>
-                  <Text style={s.meta}>
-                    {slot.teacher}
-                    {slot.room ? ` - ${slot.room}` : ""}
-                  </Text>
-                </>
-              }
-              right={
-                <Text style={s.meta}>
-                  {slot.start_time.slice(0, 5)}-{slot.end_time.slice(0, 5)}
-                </Text>
-              }
-            />
-          ))
-        )}
-      </Card>
     </Screen>
   );
 }

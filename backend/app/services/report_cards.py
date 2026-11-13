@@ -45,7 +45,51 @@ from app.services.school_settings import get as get_setting
 # §0.6b withholds the card and the transfer certificate until dues clear.
 PASS = "pass"
 FAIL = "fail"
+COMPARTMENT = "compartment"
 WITHHELD = "withheld"
+
+PASSING_PERCENT = 33.0
+
+
+def evaluate_academic_result(card: dict, passing_threshold: float = PASSING_PERCENT) -> str:
+    """Evaluate CBSE subject-wise and overall pass/fail/compartment status.
+    - If overall percent < passing_threshold or 2+ subjects failed: FAIL
+    - If exactly 1 subject failed: COMPARTMENT
+    - If 0 subjects failed and overall percent >= passing_threshold: PASS
+    """
+    rows = card.get("rows", [])
+    if not rows:
+        return PASS
+
+    failed_subjects = 0
+    total_evaluated = 0
+
+    for r in rows:
+        percent = r.get("percent")
+        if percent is not None:
+            total_evaluated += 1
+            if percent < passing_threshold:
+                failed_subjects += 1
+
+    overall = card.get("overall_percent")
+    if overall is None:
+        try:
+            tot_obt = Decimal(str(card.get("total_obtained", 0)))
+            tot_max = Decimal(str(card.get("total_max", 0)))
+            overall = float(tot_obt / tot_max * 100) if tot_max else None
+        except Exception:
+            overall = None
+
+    if total_evaluated == 0:
+        return PASS
+
+    if overall is not None and overall < passing_threshold:
+        return FAIL
+    if failed_subjects >= 2:
+        return FAIL
+    elif failed_subjects == 1:
+        return COMPARTMENT
+    return PASS
 
 
 def _papers_of_term(db: Session, scheme_id: int, term: str, class_section_id: int):
@@ -125,20 +169,27 @@ def build(db: Session, enrolment: Enrolment, term: str, *, scale: GradingScale) 
             },
         )
         obtained = mark.marks_obtained if mark else None
+        is_absent = bool(mark and mark.is_absent)
+        is_exempted = bool(mark and mark.is_exempted)
         row["components"].append(
             {
                 "code": component.code,
                 "name": component.name,
                 "max_marks": str(component.max_marks),
                 "marks_obtained": str(obtained) if obtained is not None else None,
-                "is_absent": bool(mark and mark.is_absent),
-                "is_exempted": bool(mark and mark.is_exempted),
+                "is_absent": is_absent,
+                "is_exempted": is_exempted,
             }
         )
-        if obtained is not None:
-            # A component with no mark is excluded from both halves rather than
-            # counted as zero — the same rule the exam card and the dashboard
-            # already share (§5.10.9).
+        if is_exempted:
+            # An explicitly exempted component is excluded from both halves (§5.10.9)
+            pass
+        elif is_absent:
+            # Student was absent for a scheduled paper: contributes scheduled max marks
+            # to denominator, 0 to obtained so absent papers do not inflate percentage
+            row["obtained"] += Decimal(0)
+            row["max"] += component.max_marks
+        elif obtained is not None:
             row["obtained"] += obtained
             row["max"] += component.max_marks
 
@@ -194,6 +245,13 @@ def preview(db: Session, enrolment: Enrolment, term: str) -> dict:
         )
     card = build(db, enrolment, term, scale=scale)
     card["published"] = False
+    card["academic_result"] = evaluate_academic_result(card)
+    card["result_status"] = card["academic_result"]
+    if get_setting(db, enrolment.school_id, "exams.withhold_results_for_dues"):
+        owed = outstanding_for(db, enrolment)
+        if owed > 0:
+            card["result_status"] = WITHHELD
+            card["withheld_reason"] = f"Unpaid fees of {owed}"
     return card
 
 
@@ -254,9 +312,9 @@ def publish(
     scheme = schemes.active_scheme(db, enrolment.academic_year_id)
     card = build(db, enrolment, term, scale=scale)
 
-    # §0.6b, and §5.4.9's "configurable policy, not hardcoded": a school that
-    # does not withhold turns the switch off, and the card publishes as normal.
-    status_value = PASS
+    academic_status = evaluate_academic_result(card)
+    card["academic_result"] = academic_status
+    status_value = academic_status
     if get_setting(db, enrolment.school_id, "exams.withhold_results_for_dues"):
         owed = outstanding_for(db, enrolment)
         if owed > 0:
@@ -337,6 +395,8 @@ def release_withheld(
             f"This family still owes {owed}. §0.6b withholds the card until "
             "that is cleared.",
         )
+    payload = dict(publication.payload)
+    restored_status = payload.get("academic_result", PASS)
     audit.record(
         db,
         actor=user,
@@ -345,12 +405,11 @@ def release_withheld(
         entity_id=publication.id,
         action=AuditAction.status_change,
         before={"result_status": publication.result_status},
-        after={"result_status": PASS},
+        after={"result_status": restored_status},
         reason=reason,
     )
-    publication.result_status = PASS
-    payload = dict(publication.payload)
-    payload["result_status"] = PASS
+    publication.result_status = restored_status
+    payload["result_status"] = restored_status
     payload.pop("withheld_reason", None)
     publication.payload = payload
     db.commit()

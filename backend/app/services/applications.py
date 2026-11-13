@@ -468,7 +468,7 @@ def move(
         # `record` only insists on a reason for the ones that matter.
         reason=reason or f"Advanced to {to.value}",
     )
-    db.commit()
+    db.flush()
     return app
 
 

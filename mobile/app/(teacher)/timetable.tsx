@@ -87,69 +87,97 @@ export default function TeacherTimetable() {
       ) : (
         slots.map((slot) => {
           const isRelief = slot.is_relief || Boolean(slot.relief_teacher);
+          const periodNum = String(slot.period).padStart(2, "0");
 
           return (
             <Card key={`${slot.day_of_week}-${slot.period}-${slot.class_label}`}>
-              <Row
-                left={
-                  <View style={{ gap: 4 }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                      <View
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 6,
-                          backgroundColor: theme.primarySoft,
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Text style={{ fontSize: 13, fontWeight: "700", color: theme.primary }}>
-                          {slot.period}
-                        </Text>
-                      </View>
-                      <Text style={[s.title, { fontSize: 16 }]}>{slot.subject}</Text>
-                    </View>
-
-                    <Text style={{ fontSize: 13, fontWeight: "600", color: theme.ink }}>
-                      Class: {slot.class_label || "General"}
-                      {slot.room ? ` • Room: ${slot.room}` : ""}
+              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+                {/* Timeline Column */}
+                <View style={{ alignItems: "center", width: 56 }}>
+                  <View
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: theme.primarySoft,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderWidth: 1,
+                      borderColor: theme.rule,
+                    }}
+                  >
+                    <Text style={{ fontSize: 14, fontWeight: "800", color: theme.primary }}>
+                      {periodNum}
                     </Text>
-
-                    <Text style={s.meta}>
-                      {slot.start_time?.slice(0, 5)} - {slot.end_time?.slice(0, 5)}
-                    </Text>
-
-                    {isRelief && (
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 6,
-                          marginTop: 4,
-                          paddingHorizontal: 8,
-                          paddingVertical: 3,
-                          borderRadius: 4,
-                          backgroundColor: "#FEF3C7",
-                          alignSelf: "flex-start",
-                        }}
-                      >
-                        <Text style={{ fontSize: 11, fontWeight: "700", color: "#D97706" }}>
-                          🔄 Relief Substitution
-                        </Text>
-                        {slot.relief_teacher && (
-                          <Text style={{ fontSize: 11, color: "#92400E" }}>
-                            ({slot.relief_teacher})
-                          </Text>
-                        )}
-                      </View>
-                    )}
                   </View>
-                }
-                right={
-                  <Pill label={`Period ${slot.period}`} />
-                }
-              />
+                  <Text style={{ fontSize: 10, color: theme.inkFaint, marginTop: 4, textAlign: "center" }}>
+                    {slot.start_time?.slice(0, 5)}
+                  </Text>
+                  <Text style={{ fontSize: 9, color: theme.inkFaint, textAlign: "center" }}>
+                    to {slot.end_time?.slice(0, 5)}
+                  </Text>
+                </View>
+
+                {/* Content Column */}
+                <View style={{ flex: 1, gap: 4 }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <Text style={[s.title, { fontSize: 16, color: theme.ink }]}>{slot.subject}</Text>
+                    {slot.room ? (
+                      <View
+                        style={{
+                          paddingHorizontal: 8,
+                          paddingVertical: 2,
+                          borderRadius: theme.radius.pill,
+                          backgroundColor: theme.ground,
+                          borderWidth: 1,
+                          borderColor: theme.rule,
+                        }}
+                      >
+                        <Text style={{ fontSize: 11, fontWeight: "600", color: theme.inkSoft }}>
+                          {slot.room}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    <View
+                      style={{
+                        paddingHorizontal: 8,
+                        paddingVertical: 2,
+                        borderRadius: theme.radius.pill,
+                        backgroundColor: theme.primarySoft,
+                      }}
+                    >
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: theme.primary }}>
+                        {slot.class_label || "General"}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {isRelief && (
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
+                        marginTop: 4,
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                        borderRadius: theme.radius.pill,
+                        backgroundColor: theme.warningBg,
+                        borderWidth: 1,
+                        borderColor: "#FDE68A",
+                        alignSelf: "flex-start",
+                      }}
+                    >
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: theme.warning }}>
+                        🔄 Relief Duty {slot.relief_teacher ? `(${slot.relief_teacher})` : ""}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
             </Card>
           );
         })

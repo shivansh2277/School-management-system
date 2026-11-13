@@ -56,6 +56,7 @@ class IssueCertificateInput(BaseModel):
     reason: str | None = None
     remarks: str | None = None
     leaving_date: Date | None = None
+    dues_override_reason: str | None = None
 
 
 class ReissueCertificateInput(BaseModel):
@@ -176,6 +177,7 @@ def issue_certificate(
         reason=body.reason,
         remarks=body.remarks,
         leaving_date=body.leaving_date,
+        dues_override_reason=body.dues_override_reason,
     )
     return {
         "id": cert.id,

@@ -168,9 +168,14 @@ def list_subjects(user: User = Depends(admin_only), db: Session = Depends(get_db
 
 @router.get("/timetable", response_model=list[SlotOut])
 def timetable(
-    class_section_id: int, user: User = Depends(admin_only), db: Session = Depends(get_db)
+    class_section_id: int,
+    published_only: bool = False,
+    user: User = Depends(admin_only),
+    db: Session = Depends(get_db),
 ) -> list[SlotOut]:
     section = tenancy.get_owned(
         db, ClassSection, class_section_id, user, what="Class section"
     )
-    return timetable_svc.grid(db, user.school_id, class_section_id=section.id)
+    return timetable_svc.grid(
+        db, user.school_id, class_section_id=section.id, published_only=published_only
+    )

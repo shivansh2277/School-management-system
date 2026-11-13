@@ -1,6 +1,7 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { api } from "../../src/api/client";
 import { Card, Empty, Loading, Pill, Row, Screen, s } from "../../src/components/ui";
@@ -33,25 +34,13 @@ type ReportCard = {
   overall_grade: string | null;
 };
 
-function getGradeColor(grade: string | null): string {
-  if (!grade) return theme.inkFaint;
-  if (grade.startsWith("A")) return "#16A34A";
-  if (grade.startsWith("B")) return "#2563EB";
-  if (grade.startsWith("C")) return "#D97706";
-  if (grade === "D") return "#EA580C";
-  return "#DC2626";
-}
-
-function getPerformanceRemark(grade: string | null): string {
-  if (!grade) return "";
-  if (grade === "A1") return "Outstanding Achievement";
-  if (grade === "A2") return "Excellent Performance";
-  if (grade === "B1") return "Very Good";
-  if (grade === "B2") return "Good Effort";
-  if (grade === "C1") return "Above Average";
-  if (grade === "C2") return "Average";
-  if (grade === "D") return "Passing Grade";
-  return "Needs Improvement";
+function getGradeBadgeStyle(grade: string | null) {
+  if (!grade) return { bg: "#F1F5F9", text: "#64748B", border: "#E2E8F0" };
+  if (grade.startsWith("A")) return { bg: "#ECFDF5", text: "#059669", border: "#A7F3D0" };
+  if (grade.startsWith("B")) return { bg: "#EEF2FF", text: "#4338CA", border: "#C7D2FE" };
+  if (grade.startsWith("C")) return { bg: "#FFFBEB", text: "#D97706", border: "#FDE68A" };
+  if (grade === "D") return { bg: "#FFF7ED", text: "#EA580C", border: "#FFEDD5" };
+  return { bg: "#FFF1F2", text: "#E11D48", border: "#FECDD3" };
 }
 
 export default function StudentResults() {
@@ -72,128 +61,256 @@ export default function StudentResults() {
 
   return (
     <Screen>
-      <Card title="My Examination Results">
+      {/* Stitch Examinations List Card */}
+      <View style={styles.examsCard}>
+        <Text style={styles.examsCardTitle}>My Examination Results</Text>
+
         {(exams.data ?? []).length === 0 ? (
           <Empty text="No published results available yet." />
         ) : (
-          exams.data!.map((e) => (
-            <Pressable
-              key={e.exam_id}
-              onPress={() => setOpenExam(openExam === e.exam_id ? null : e.exam_id)}
-              style={{ paddingVertical: 8 }}
-            >
-              <Row
-                left={
-                  <>
-                    <Text style={s.title}>{e.name}</Text>
-                    <Text style={s.meta}>{e.term}</Text>
-                  </>
-                }
-                right={
-                  <View style={{ alignItems: "flex-end", gap: 2 }}>
-                    <Text style={{ fontWeight: "700", color: theme.ink, fontSize: 16 }}>
+          <View>
+            {exams.data!.map((e, index) => {
+              const isOpen = openExam === e.exam_id;
+              return (
+                <Pressable
+                  key={e.exam_id}
+                  onPress={() => setOpenExam(isOpen ? null : e.exam_id)}
+                  style={[
+                    styles.examItem,
+                    index > 0 && { borderTopWidth: 1, borderTopColor: "#F1F5F9" },
+                  ]}
+                >
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <Text style={styles.examName}>{e.name}</Text>
+                    <View style={styles.examTermChip}>
+                      <Text style={styles.examTermText}>{e.term}</Text>
+                    </View>
+                  </View>
+
+                  <View style={{ alignItems: "flex-end", gap: 3 }}>
+                    <Text style={styles.examPercent}>
                       {e.overall_percent === null ? "-" : `${e.overall_percent}%`}
                     </Text>
-                    <Text style={{ fontSize: 11, color: theme.primary }}>
-                      {openExam === e.exam_id ? "Hide Details" : "View Breakdown ›"}
+                    <Text style={styles.examActionText}>
+                      {isOpen ? "Hide Details" : "View Breakdown ›"}
                     </Text>
                   </View>
-                }
-              />
-            </Pressable>
-          ))
+                </Pressable>
+              );
+            })}
+          </View>
         )}
-      </Card>
+      </View>
 
+      {/* Stitch Scorecard Details */}
       {openExam !== null && card.data && (
-        <Card title={`${card.data.exam_name} Performance`}>
-          {/* Overall Badge Header */}
-          <View
-            style={{
-              backgroundColor: theme.ground,
-              padding: 12,
-              borderRadius: theme.radius.input,
-              marginBottom: 12,
-              alignItems: "center",
-              gap: 4,
-            }}
-          >
-            <Text style={{ fontSize: 12, color: theme.inkFaint }}>OVERALL RESULT</Text>
-            <Text style={{ fontSize: 24, fontWeight: "800", color: theme.ink }}>
+        <View style={styles.scorecardCard}>
+          {/* Overall Result Banner */}
+          <View style={styles.overallBanner}>
+            <Text style={styles.overallLabel}>OVERALL RESULT</Text>
+            <Text style={styles.overallPercentText}>
               {card.data.overall_percent !== null ? `${card.data.overall_percent}%` : "-"}
             </Text>
             {card.data.overall_grade && (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Pill status="paid" label={`Grade: ${card.data.overall_grade}`} />
-                <Text style={{ fontSize: 12, fontWeight: "600", color: getGradeColor(card.data.overall_grade) }}>
-                  {getPerformanceRemark(card.data.overall_grade)}
-                </Text>
+              <View style={styles.gradeContainer}>
+                <View style={styles.overallGradeBadge}>
+                  <Text style={styles.overallGradeText}>Grade: {card.data.overall_grade}</Text>
+                </View>
               </View>
             )}
-            <Text style={s.meta}>
+            <Text style={styles.totalScoreSubtext}>
               Total Score: {Number(card.data.total_obtained)} / {Number(card.data.total_max)}
             </Text>
           </View>
 
-          {/* Subject Breakdown with Visual Progress Bars */}
-          <Text style={[s.title, { marginBottom: 8 }]}>Subject Scores & Grade Points</Text>
+          {/* Subject Rows */}
+          <Text style={styles.subjectSectionHeading}>Subject Scores & Grade Points</Text>
 
-          {card.data.rows.map((r) => {
-            const pct = r.percent ?? 0;
-            const barColor = getGradeColor(r.grade);
-
-            return (
-              <View
-                key={r.subject}
-                style={{
-                  paddingVertical: 10,
-                  borderBottomWidth: 1,
-                  borderBottomColor: theme.rule,
-                  gap: 6,
-                }}
-              >
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <Text style={[s.title, { fontSize: 14 }]}>{r.subject}</Text>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: theme.ink }}>
-                      {r.marks_obtained !== null ? `${Number(r.marks_obtained)}/${Number(r.max_marks)}` : "Absent"}
+          <View style={{ gap: 10 }}>
+            {card.data.rows.map((r) => {
+              const badgeStyle = getGradeBadgeStyle(r.grade);
+              return (
+                <View key={r.subject} style={styles.subjectRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.subjectName}>{r.subject}</Text>
+                    <Text style={styles.subjectMarks}>
+                      {r.marks_obtained === null
+                        ? "Absent / Excluded"
+                        : `${Number(r.marks_obtained)} / ${Number(r.max_marks)} marks`}
                     </Text>
-                    {r.grade && <Pill label={r.grade} />}
                   </View>
-                </View>
 
-                {/* Visual Progress Bar */}
-                {r.marks_obtained !== null && (
-                  <View style={{ gap: 2 }}>
+                  {r.grade ? (
                     <View
-                      style={{
-                        height: 7,
-                        backgroundColor: theme.ground,
-                        borderRadius: 999,
-                        overflow: "hidden",
-                      }}
+                      style={[
+                        styles.gradeBadge,
+                        {
+                          backgroundColor: badgeStyle.bg,
+                          borderColor: badgeStyle.border,
+                        },
+                      ]}
                     >
-                      <View
-                        style={{
-                          height: "100%",
-                          width: `${Math.min(Math.max(pct, 0), 100)}%`,
-                          backgroundColor: barColor,
-                          borderRadius: 999,
-                        }}
-                      />
+                      <Text style={[styles.gradeBadgeText, { color: badgeStyle.text }]}>
+                        {r.grade} {r.percent !== null ? `(${r.percent}%)` : ""}
+                      </Text>
                     </View>
-                    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                      <Text style={{ fontSize: 10, color: theme.inkFaint }}>0%</Text>
-                      <Text style={{ fontSize: 10, fontWeight: "600", color: barColor }}>{pct}%</Text>
-                      <Text style={{ fontSize: 10, color: theme.inkFaint }}>100%</Text>
-                    </View>
-                  </View>
-                )}
-              </View>
-            );
-          })}
-        </Card>
+                  ) : (
+                    <Text style={s.meta}>-</Text>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        </View>
       )}
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  examsCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+    marginBottom: 12,
+  },
+  examsCardTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#0F172A",
+    letterSpacing: -0.2,
+    marginBottom: 12,
+  },
+  examItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  examName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  examTermChip: {
+    alignSelf: "flex-start",
+    backgroundColor: "#EEF2FF",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginTop: 4,
+  },
+  examTermText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#4338CA",
+  },
+  examPercent: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#0F172A",
+  },
+  examActionText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#4338CA",
+  },
+  scorecardCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+    marginBottom: 20,
+  },
+  overallBanner: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 16,
+    padding: 16,
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 16,
+  },
+  overallLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#94A3B8",
+    letterSpacing: 0.6,
+  },
+  overallPercentText: {
+    fontSize: 26,
+    fontWeight: "900",
+    color: "#0F172A",
+  },
+  gradeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 2,
+  },
+  overallGradeBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+    backgroundColor: "#ECFDF5",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+  },
+  overallGradeText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#059669",
+  },
+  totalScoreSubtext: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: 4,
+  },
+  subjectSectionHeading: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginBottom: 10,
+    letterSpacing: -0.1,
+  },
+  subjectRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 6,
+  },
+  subjectName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1E293B",
+  },
+  subjectMarks: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: 1,
+  },
+  gradeBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  gradeBadgeText: {
+    fontSize: 11,
+    fontWeight: "800",
+  },
+});

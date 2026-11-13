@@ -24,7 +24,7 @@ router = APIRouter(
     prefix="/admin", tags=["admin"],
     dependencies=[Depends(module_enabled("hr"))],
 )
-admin_only = require_permission("hr.employee.read", school_wide=True)
+admin_only = require_permission("hr.employee.read", "timetable.slot.read", school_wide=True)
 
 
 class EmployeeCreate(BaseModel):

@@ -85,7 +85,7 @@ def my_timetable(
     user: User = Depends(teacher_only), db: Session = Depends(get_db)
 ) -> list[SlotOut]:
     me = scoping.employee_for(db, user)
-    return timetable_svc.grid(db, user.school_id, teacher_id=me.id)
+    return timetable_svc.grid(db, user.school_id, teacher_id=me.id, published_only=True)
 
 
 
