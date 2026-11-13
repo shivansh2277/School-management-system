@@ -1,8 +1,8 @@
 # MEMORY.md — Sunrise School ERP
 
-**Date:** 12 November 2026  
+**Date:** 13 November 2026  
 **Canonical State Document:** [`SINGLE_SOURCE_OF_TRUTH.md`](SINGLE_SOURCE_OF_TRUTH.md)  
-**Completed Milestone:** QA Audit Critical Defect Remediation Completed & Verified: **All 8 Issues Resolved** ([`remediation_plan.md`](remediation_plan.md)).
+**Completed Milestone:** Production Reliability, Standalone APK Isolation, iOS Compatibility, Mobile Login Hardening, Attendance 10-Day Retention & Synthetic Seed Verified. Baseline: 8/8 pytest attendance tests passed, 151 passed web vitest across 28 test files (0 failures, 2 skipped), 0 web TypeScript errors (`npx tsc -b`), 0 mobile TypeScript errors (`npx tsc --noEmit`), clean web production build (`npm run build` in 14.44s). Active migration head: `a2b3c4d5e6f0`.
 **Active Branch:** `slice/office-feedback` (synced with `origin/main` and `origin/slice/office-feedback`)  
 
 ---
@@ -326,10 +326,13 @@ The QA Audit Critical Defect Remediation milestone has been fully delivered and 
   - `eas.json`: Added iOS `preview` (simulator: true) and `production` (internal distribution) build profiles.
   - Safe Area Bottom Tabs: Fixed hardcoded `height: 60` in `_layout.tsx` across Parent, Student, and Teacher navigation to dynamically incorporate `insets.bottom` on modern iPhones with home indicators.
   - Build Export Verified: Clean iOS Hermes compilation (`npx expo export --platform ios`) with 0 errors in 8.4s. Android export also verified clean in 13.7s.
-- **Attendance Database Optimization & Demo Generation**:
+- **Attendance Database Optimization & Demo Generation (Applied & Verified)**:
   - Full recoverable SQL (`1.78 MB`) and JSON (`1.93 MB`) backups created in `backend/var/backups/attendance_backup_pre_retention_20261113.*` and verified 100% recoverable (5,800 / 5,800 rows).
-  - Calculated impact: 4,800 rows to prune (82.76% reduction, saving ~1.06 MB table & index storage).
-  - Target 10 working days: 2026-08-21 through 2026-09-01 (Mon-Sat, excluding Sundays and holidays).
-  - Created idempotent CLI script `backend/scripts/attendance_retention_and_demo_seed.py` with `--dry-run` and `--apply`.
-  - Dry-run verified: Covers all 102 active students, expected 1,020 records, realistic distribution (93.3% Present, 4.5% Absent, 2.2% Leave), tagged `DEMO/SYNTHETIC`.
-  - Deletion plan prepared and held for explicit user approval before execution.
+  - Executed retention via `backend/scripts/attendance_retention_and_demo_seed.py --apply`: 4,800 obsolete rows deleted (`date < 2026-08-21`), multi-tenant isolation preserved (`school_id = 1`).
+  - Physical Storage Optimization: Executed `VACUUM FULL attendance`. Table footprint dropped from 1,294,336 bytes (1.29 MB) to 278,528 bytes (278 KB) — **78.5% physical storage reduction**.
+  - Generated Synthetic Attendance: Exactly 10 actual working days (2026-08-21 through 2026-09-01, excluding Sundays 2026-08-23 and 2026-08-30). Covers 100% of all 102 active students across 10 sections. Exactly 1,020 rows (0 mismatches, 0 duplicates).
+  - Realistic Distribution: 952 Present (93.3%), 46 Absent (4.5%), 22 Leave (2.2%), all marked with `remarks = 'DEMO/SYNTHETIC'`. Verified with 8/8 pytest suite tests passing.
+- **Git History Purge & Distribution Channels Updated**:
+  - Pushed clean commit (`21696ea`) to remote `origin/main` and `origin/slice/office-feedback`. Confirmed `origin/main` has 0 APK binaries in git history.
+  - Standalone APK (`88.15 MB`) preserved locally at `school-management-system/sunrise-school.apk`.
+  - Added official Standalone APK download card, direct link, and QR code to public website `ResourcesPage.tsx` and updated `test_links.html` in both root and web public directories. Baseline verified: 28 vitest files passed (151 tests passed, 0 failures), clean Vite production build.

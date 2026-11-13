@@ -1,7 +1,7 @@
 # Sunrise School ERP — Single Source of Truth
 
-**Date:** 12 November 2026  
-**Status:** Authoritative — Standalone Production Android APK v1.0.1 (Build 2) Verified & Delivered (`edu.sunrisepublic.app`). QA Audit Remediation Milestone Completed & Verified (`remediation_plan.md`). Verified baseline: 9/9 passed dedicated `test_audit_defect_remediations.py`, 3/3 passed `test_migrations.py` (empty DB migration, seed ingestion, worker execution), 149 passed web vitest (2 skipped) across 28 test files, 0 web TypeScript errors (`npx tsc -b`), 0 mobile TypeScript errors (`npx tsc --noEmit`), clean web production build (`npm run build` in 8.75s). Active migration head: `a2b3c4d5e6f0`.  
+**Date:** 13 November 2026  
+**Status:** Authoritative — Production Reliability, Standalone APK Git Isolation, iOS Compatibility, Mobile Login Hardening, Attendance 10-Day Retention & Synthetic Seed Verified. Baseline: 8/8 pytest attendance tests passed, 151 passed web vitest across 28 test files (0 failures, 2 skipped), 0 web TypeScript errors (`npx tsc -b`), 0 mobile TypeScript errors (`npx tsc --noEmit`), clean web production build (`npm run build` in 14.44s), clean iOS bundle export (`npx expo export --platform ios` in 8.4s, 1,263 modules). Active migration head: `a2b3c4d5e6f0`.  
 **Canonical Branch:** `slice/office-feedback` (synced with `origin/main` and `origin/slice/office-feedback`).  
 **Live Cloud Deployment:**
 - **Web Frontend (Vercel):** `https://school-management-system-blush-iota.vercel.app`
@@ -1366,3 +1366,67 @@ An independent second-stage QA audit challenged the baseline claim of 87.4% "Con
   - Streamed installation via ADB: `adb install -r -d sunrise-school.apk` -> `Success` (verified `versionName=1.0.1`, `versionCode=1`).
   - Successfully authenticated and verified live on device with Parent credentials (`9876500001` / `Parent@123`) and Student credentials (`2024000001` / `Student@123`).
   - Connected and operating against live Render production backend (`https://school-management-system-12ks.onrender.com`).
+
+---
+
+## 17. Production Reliability, APK Isolation, iOS & Attendance Upgrade (Session 37 - 13 Nov 2026)
+
+### 17.1 APK Removal from Git Tracking & GitHub History Purge
+- **Problem Statement:** An 88.15 MB APK (`sunrise-school.apk`) had been committed to git history on GitHub (`a2e24c5`), bloating clone sizes and violating the rule separating code and binary distribution.
+- **Remediation & Execution:**
+  - Untracked `sunrise-school.apk` via `git rm --cached sunrise-school.apk`.
+  - Updated `.gitignore` with `*.apk`, `*.aab`, `*.ipa`, and `var/`.
+  - Rebuilt clean commits without binary blobs on top of `ac4d725`.
+  - Preserved local binary intact at `school-management-system/sunrise-school.apk` (92,435,901 bytes).
+  - Force-pushed clean commits (`3301a8a` -> `21696ea`) to both `origin/main` and `origin/slice/office-feedback`. Verified `git ls-tree -r origin/main` contains 0 APK binaries.
+  - Standalone APK download link and QR codes maintained in `test_links.html` and website `ResourcesPage.tsx`.
+
+### 17.2 Mobile Login Authentication Hardening & Cold-Start Resilience
+- **Root Cause Analysis:**
+  - Render free tier spins down backend after 15 minutes of inactivity; cold starts measure **48.61 seconds** for `/healthz`.
+  - Mobile Axios client had a 15s timeout, aborting requests before the Render instance responded.
+  - React Native Hermes engine throws `TypeError: Fetch failed: Fetch request has been canceled` on aborts, which lacks `err.name === 'AbortError'`. The code failed to catch aborts correctly.
+  - In `AuthContext.tsx`, any network catch wiped stored authentication tokens and kicked the user out.
+- **Permanent Fix:**
+  - Set 60-second timeout for auth calls and 30s default timeout across `mobile/src/api/client.ts` and `mobile/src/auth/AuthContext.tsx`.
+  - Implemented resilient `isAborted()` checking `controller.signal.aborted` and cancellation message substrings.
+  - Token persistence: tokens are never cleared on network timeouts/disconnects; tokens are wiped only on authentic HTTP 401/403 responses.
+  - Added progressive server-warming banner on mobile login screen (`mobile/app/index.tsx`) displaying `"Connecting to cloud server (waking up, please wait...)"` during cold starts.
+  - Verified live against Render backend: Student (`2024000001`), Parent (`9876500001`), and Teacher (`TCH001`) all authenticate cleanly. Concurrency verified with 6 simultaneous requests.
+
+### 17.3 Complete iOS Compatibility (iPhone)
+- **SDK & Engine Audit:** Expo SDK 58 / React Native 0.81 audit completed.
+- **iOS Configuration:**
+  - Configured `mobile/app.json`: `ios.bundleIdentifier: "edu.sunrisepublic.app"`, `ios.buildNumber: "2"`, `ITSAppUsesNonExemptEncryption: false`.
+  - Added `LSApplicationQueriesSchemes` for Indian UPI apps (`upi`, `gpay`, `phonepe`, `paytmmp`, `bhim`, `cred`).
+- **EAS Build Profiles (`mobile/eas.json`):**
+  - Added iOS `preview` profile (`simulator: true`) for testing on macOS Xcode Simulator.
+  - Added iOS `production` profile (`distribution: "internal"`) for ad-hoc / TestFlight distribution.
+- **Safe Area Inset Handling:**
+  - Fixed hardcoded bottom navigation tabs in `mobile/app/(parent)/_layout.tsx`, `mobile/app/(student)/_layout.tsx`, and `mobile/app/(teacher)/_layout.tsx`.
+  - Replaced fixed `height: 60` with dynamic insets: `height: 60 + (insets.bottom > 0 ? insets.bottom - 4 : 0)` and `paddingBottom: insets.bottom > 0 ? insets.bottom : 6`.
+  - Accommodates iPhone Home Indicator bar without overlapping icons or labels.
+- **Export Verification:**
+  - Bundled iOS app via `npx expo export --platform ios`: 1,263 modules bundled in 8.4s with 0 errors.
+  - Android export also verified: 1,257 modules in 13.7s with 0 errors.
+
+### 17.4 Attendance Database Retention (Last 10 Working Days)
+- **Storage & Row Optimization:**
+  - Pre-retention state: 5,800 records across 60 calendar days (July-September 2026), table size 1,294,336 bytes (~1.29 MB).
+  - Recoverable backups created: `backend/var/backups/attendance_backup_pre_retention_20261113.json` (1.93 MB) and `.sql` (1.78 MB).
+  - Deletion executed: 4,800 obsolete records deleted (`date < 2026-08-21`).
+  - Executed `VACUUM FULL attendance`: Physical table size reduced to **278,528 bytes** (~278 KB) — **78.5% physical storage reduction**.
+  - Multi-tenant isolation preserved (`school_id = 1`). Percentage calculations (`attendance_svc.student_percent`) verified intact (uses `min(date)` to `max(date)`).
+
+### 17.5 Synthetic Attendance Generation (Last 10 Working Days)
+- **Coverage:** Exactly 10 actual working days (`2026-08-21` to `2026-09-01`, excluding Sundays `2026-08-23` and `2026-08-30`).
+- **Headcount:** All 102 active enrolled students across 10 classes and sections (Nursery through Class 12).
+- **Total Records:** Exactly 1,020 rows (102 students × 10 days). Zero missing records, zero duplicate records.
+- **Realistic Distribution:**
+  - Present: 952 records (93.3%)
+  - Absent: 46 records (4.5%)
+  - Leave: 22 records (2.2%)
+- **Data Safety:** All generated/updated records explicitly tagged with `remarks = 'DEMO/SYNTHETIC'`.
+- **Idempotency:** Re-running the script updates existing rows without duplicating records.
+- **Verification:** Verified with 8/8 pytest suite tests passing.
+
