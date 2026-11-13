@@ -113,6 +113,56 @@ export function ResourcesPage() {
           </div>
         </div>
 
+        {/* Official Standalone Android Mobile App Card */}
+        <div className="rounded-2xl bg-gradient-to-br from-[#042954] via-indigo-950 to-[#042954] text-white p-6 sm:p-8 shadow-md border border-indigo-900 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="space-y-3 max-w-xl text-center md:text-left">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+              <span className="bg-amber-400 text-slate-900 text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md">
+                Official Release v1.0.1
+              </span>
+              <span className="bg-white/10 text-indigo-200 text-[11px] font-mono px-2 py-0.5 rounded-md">
+                Build 2 • 88.15 MB
+              </span>
+              <span className="bg-emerald-500/20 text-emerald-300 text-[11px] font-medium px-2 py-0.5 rounded-md">
+                Hermes Engine
+              </span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold font-serif tracking-tight text-white">
+              Sunrise School ERP — Mobile App (Android)
+            </h2>
+            <p className="text-xs sm:text-sm text-indigo-100 leading-relaxed">
+              Standalone installable Android APK for Students, Parents, and Teachers. Includes instant CBSE report cards, real-time attendance, homework turn-in, and direct UPI fee payments with zero local server requirement.
+            </p>
+            <div className="pt-2 flex flex-wrap items-center justify-center md:justify-start gap-3">
+              <a
+                href="https://expo.dev/artifacts/eas/WpvEepEkhGN4NRYntwo_YxI_pPdrP4U8T40UQtSDPmM.apk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-slate-900 text-xs sm:text-sm font-bold px-5 py-2.5 rounded-lg shadow-sm transition-all"
+              >
+                <span>Download APK (88 MB)</span>
+                <svg className="w-4 h-4 text-slate-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </a>
+              <span className="text-xs text-indigo-300 font-mono">
+                Package: edu.sunrisepublic.app
+              </span>
+            </div>
+          </div>
+
+          <div className="shrink-0 flex flex-col items-center bg-white p-3 rounded-xl shadow-inner text-slate-900">
+            <img
+              src="/apk_download_qr.png"
+              alt="Scan QR code to download Sunrise School ERP APK"
+              className="w-28 h-28 object-contain"
+            />
+            <span className="text-[10px] font-bold text-slate-600 mt-1 uppercase tracking-wide">
+              Scan to Download APK
+            </span>
+          </div>
+        </div>
+
         {/* Resource Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {APPROVED_RESOURCES.map((item) => (

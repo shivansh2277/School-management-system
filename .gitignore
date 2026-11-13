@@ -17,6 +17,7 @@ dist/
 # Object storage when running without a bucket: LocalStorage writes uploaded
 # documents here. Test and demo artefacts, never source.
 backend/var/
+var/
 
 # Mobile build artifacts and binaries (EAS / standalone builds)
 *.apk
